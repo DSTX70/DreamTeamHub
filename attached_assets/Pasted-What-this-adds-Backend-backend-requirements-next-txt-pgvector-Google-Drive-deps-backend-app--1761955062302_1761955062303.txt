@@ -1,0 +1,134 @@
+What this adds:
+
+Backend
+
+backend/requirements.next.txt (pgvector + Google Drive deps)
+
+backend/app/agents/semantic/{models.py, service.py, router.py}
+
+backend/app/agents/tools/threads_post.py (now real Threads/Assistants when USE_OPENAI=1)
+
+backend/app/integrations/drive_client.py (service-account search + move)
+
+README notes in backend/README_NEXT_PATCH.md
+
+Frontend
+
+frontend/ Agent Console (Vite + React)
+
+2) Mount the semantic router (tiny edit)
+
+Open backend/app/main.py and add:
+
+from app.agents.semantic.router import router as semantic_router
+app.include_router(semantic_router, prefix="/agents/semantic", tags=["agents-semantic"])
+
+3) Install new deps
+cd backend
+pip install -r requirements.next.txt
+# Only if you want real LLM + Threads now:
+pip install -r requirements.agent.txt
+
+4) Choose your DB for semantic memory
+
+Option 1 — Stay on SQLite (no semantic, everything else works): skip to Step 5.
+Option 2 — Enable semantic memory (pgvector/Postgres/Supabase):
+
+Create a Supabase project (or Postgres with pgvector).
+
+In your DB, run:
+
+CREATE EXTENSION IF NOT EXISTS vector;
+
+
+Set env (Replit Secrets or backend/.env):
+
+DATABASE_URL=postgresql+psycopg://<user>:<pass>@<host>:<port>/<db>?sslmode=require
+USE_OPENAI=1
+EMBED_MODEL=text-embedding-3-small
+OPENAI_API_KEY=sk-...
+
+
+(If you’re using Alembic) run migrations; otherwise first boot will create tables.
+
+5) Wire external services (optional but ready)
+A) OpenAI live posts & agent calls
+USE_OPENAI=1
+OPENAI_API_KEY=sk-...
+LLM_MODEL=gpt-4o-mini
+
+
+Agents now call the model.
+
+/agents/run with "post_to_thread": true will call Threads via threads_post if the agent’s thread_id is set.
+
+B) Google Drive (service account)
+
+Base64-encode your service-account JSON:
+
+macOS: base64 -i sa.json | pbcopy
+
+Add to env:
+
+GOOGLE_SERVICE_ACCOUNT_JSON_BASE64=<paste>
+
+
+The funcs you can call (already available):
+
+from app.integrations.drive_client import drive_search, drive_move
+# Examples:
+# drive_search("name contains 'Spec' and trashed=false")
+# drive_move("<fileId>", "<folderId>")
+
+6) Run backend again
+cd backend
+uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+
+
+Open /docs and you’ll now see agents-semantic endpoints.
+
+7) Start the Front-end Agent Console
+
+New tab in the shell:
+
+cd frontend
+cp .env.sample .env      # ensure VITE_API_URL points to http://localhost:8000
+npm install
+npm run dev -- --host
+
+
+Open the URL shown by Vite to use the Agent Console (run tasks, give feedback, semantic search).
+
+Quick tests (copy/paste)
+Agents run (stub or real depending on USE_OPENAI)
+curl -X POST http://localhost:8000/agents/run \
+  -H "content-type: application/json" \
+  -d '{
+    "agent":"Prism",
+    "task":"Draft Week-1 OUAS A+ outline",
+    "links":["drive://Specs/OUAS_Aplus_Spec.pdf"],
+    "post_to_thread": false
+  }' | jq -r '.output' | sed -n '1,80p'
+
+Teach agents (learning memory)
+curl -X POST http://localhost:8000/agents/feedback \
+  -H "content-type: application/json" \
+  -d '{ "agent":"Prism","feedback":"Prefer 3-hook headlines","score":2,"kind":"rule" }'
+
+See memory
+curl "http://localhost:8000/agents/Prism/memory?limit=20"
+
+Semantic memory (pgvector enabled only)
+
+Add embeddings:
+
+curl -X POST http://localhost:8000/agents/semantic/add \
+  -H "content-type: application/json" \
+  -d '{ "handle":"Prism","kind":"note","text_value":"Use Journey Panel layout; 3 hooks; 2 CTA variants." }'
+
+
+Search:
+
+curl -X POST http://localhost:8000/agents/semantic/search \
+  -H "content-type: application/json" \
+  -d '{ "handle":"Prism","query":"hooks and CTA variants", "top_k":5 }'
