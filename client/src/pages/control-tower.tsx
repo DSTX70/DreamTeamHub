@@ -1,11 +1,14 @@
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/status-badge";
 import { EmptyState } from "@/components/empty-state";
-import { AlertCircle, CheckCircle2, Clock, Target } from "lucide-react";
+import { AlertCircle, CheckCircle2, Clock, Target, MessageSquare, Lightbulb, ClipboardCheck, Mic, History, MessageCircle } from "lucide-react";
 import type { WorkItem } from "@shared/schema";
 import { format } from "date-fns";
+import { QuickStartDialog } from "@/components/quick-start-dialog";
 
 interface ControlTowerData {
   top5: WorkItem[];
@@ -19,10 +22,53 @@ interface ControlTowerData {
   };
 }
 
+type QuickStartAction = 'discussion' | 'brainstorm' | 'audit' | 'conversation' | 'previous' | 'chat' | null;
+
 export default function ControlTower() {
+  const [selectedAction, setSelectedAction] = useState<QuickStartAction>(null);
+  
   const { data, isLoading } = useQuery<ControlTowerData>({
     queryKey: ['/api/control/dashboard'],
   });
+
+  const quickStartActions = [
+    {
+      id: 'discussion' as const,
+      title: 'New Discussion',
+      description: 'Start a new discussion',
+      icon: MessageSquare,
+    },
+    {
+      id: 'brainstorm' as const,
+      title: 'New Brainstorm',
+      description: 'Launch brainstorm session',
+      icon: Lightbulb,
+    },
+    {
+      id: 'audit' as const,
+      title: 'Conduct an Audit',
+      description: 'Run compliance checklist',
+      icon: ClipboardCheck,
+    },
+    {
+      id: 'conversation' as const,
+      title: 'Start a Conversation',
+      description: 'Begin verbal discussion',
+      icon: Mic,
+    },
+    {
+      id: 'previous' as const,
+      title: 'Continue Previous',
+      description: 'Resume past activity',
+      icon: History,
+    },
+    {
+      id: 'chat' as const,
+      title: 'Quick Chat',
+      description: 'Quick messaging',
+      icon: MessageCircle,
+    },
+  ];
 
   if (isLoading) {
     return (
@@ -60,6 +106,40 @@ export default function ControlTower() {
         <h1 className="text-2xl font-semibold mb-2" data-testid="page-title">Control Tower</h1>
         <p className="text-sm text-muted-foreground">Live priorities, assignments, and escalations</p>
       </div>
+
+      {/* Quick Start Section */}
+      <div>
+        <h2 className="text-lg font-semibold mb-4">Quick Start</h2>
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          {quickStartActions.map((action) => {
+            const Icon = action.icon;
+            return (
+              <Card
+                key={action.id}
+                className="hover-elevate active-elevate-2 cursor-pointer"
+                onClick={() => setSelectedAction(action.id)}
+                data-testid={`quick-start-${action.id}`}
+              >
+                <CardContent className="flex items-start gap-4 p-4">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+                    <Icon className="h-5 w-5 text-primary" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="font-semibold text-sm mb-1">{action.title}</div>
+                    <div className="text-xs text-muted-foreground">{action.description}</div>
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
+      </div>
+
+      <QuickStartDialog
+        action={selectedAction}
+        open={selectedAction !== null}
+        onOpenChange={(open: boolean) => !open && setSelectedAction(null)}
+      />
 
       {/* Stats Grid */}
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
