@@ -207,6 +207,27 @@ export const events = pgTable("events", {
 });
 
 // ===========================
+// CHAT CONVERSATIONS
+// ===========================
+
+export const conversations = pgTable("conversations", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  title: text("title").notNull(),
+  roleHandle: text("role_handle").notNull(), // Which Dream Team persona
+  userId: integer("user_id").references(() => persons.id),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const messages = pgTable("messages", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  conversationId: integer("conversation_id").notNull().references(() => conversations.id, { onDelete: 'cascade' }),
+  role: text("role").notNull(), // user, assistant
+  content: text("content").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+// ===========================
 // RELATIONS
 // ===========================
 
@@ -328,6 +349,21 @@ export const auditArtifactsRelations = relations(auditArtifacts, ({ one }) => ({
   }),
 }));
 
+export const conversationsRelations = relations(conversations, ({ one, many }) => ({
+  user: one(persons, {
+    fields: [conversations.userId],
+    references: [persons.id],
+  }),
+  messages: many(messages),
+}));
+
+export const messagesRelations = relations(messages, ({ one }) => ({
+  conversation: one(conversations, {
+    fields: [messages.conversationId],
+    references: [conversations.id],
+  }),
+}));
+
 // ===========================
 // INSERT SCHEMAS & TYPES
 // ===========================
@@ -411,3 +447,13 @@ export type AuditArtifact = typeof auditArtifacts.$inferSelect;
 export const insertEventSchema = createInsertSchema(events).omit({ id: true, createdAt: true });
 export type InsertEvent = z.infer<typeof insertEventSchema>;
 export type Event = typeof events.$inferSelect;
+
+// Conversations
+export const insertConversationSchema = createInsertSchema(conversations).omit({ id: true, createdAt: true, updatedAt: true });
+export type InsertConversation = z.infer<typeof insertConversationSchema>;
+export type Conversation = typeof conversations.$inferSelect;
+
+// Messages
+export const insertMessageSchema = createInsertSchema(messages).omit({ id: true, createdAt: true });
+export type InsertMessage = z.infer<typeof insertMessageSchema>;
+export type Message = typeof messages.$inferSelect;

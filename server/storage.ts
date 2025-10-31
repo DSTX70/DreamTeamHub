@@ -3,12 +3,15 @@ import {
   pods, persons, roleCards, roleRaci, workItems, decisions,
   brainstormSessions, brainstormParticipants, brainstormIdeas, brainstormClusters, brainstormArtifacts,
   audits, auditChecks, auditFindings, auditArtifacts, events,
+  conversations, messages,
   type Pod, type Person, type RoleCard, type RoleRaci, type WorkItem, type Decision,
   type BrainstormSession, type BrainstormParticipant, type BrainstormIdea, type BrainstormCluster, type BrainstormArtifact,
   type Audit, type AuditCheck, type AuditFinding, type AuditArtifact, type Event,
+  type Conversation, type Message,
   type InsertPod, type InsertPerson, type InsertRoleCard, type InsertRoleRaci, type InsertWorkItem, type InsertDecision,
   type InsertBrainstormSession, type InsertBrainstormParticipant, type InsertBrainstormIdea, type InsertBrainstormCluster, type InsertBrainstormArtifact,
   type InsertAudit, type InsertAuditCheck, type InsertAuditFinding, type InsertAuditArtifact, type InsertEvent,
+  type InsertConversation, type InsertMessage,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, or, sql, inArray } from "drizzle-orm";
@@ -84,6 +87,16 @@ export interface IStorage {
   
   // Events
   createEvent(event: InsertEvent): Promise<Event>;
+  
+  // Conversations
+  getConversations(userId?: number): Promise<Conversation[]>;
+  getConversation(id: number): Promise<Conversation | undefined>;
+  createConversation(conversation: InsertConversation): Promise<Conversation>;
+  updateConversation(id: number, conversation: Partial<InsertConversation>): Promise<Conversation | undefined>;
+  
+  // Messages
+  getMessages(conversationId: number): Promise<Message[]>;
+  createMessage(message: InsertMessage): Promise<Message>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -353,6 +366,46 @@ export class DatabaseStorage implements IStorage {
   // ===== EVENTS =====
   async createEvent(event: InsertEvent): Promise<Event> {
     const [created] = await db.insert(events).values(event).returning();
+    return created;
+  }
+
+  // ===== CONVERSATIONS =====
+  async getConversations(userId?: number): Promise<Conversation[]> {
+    if (userId) {
+      return await db.select().from(conversations)
+        .where(eq(conversations.userId, userId))
+        .orderBy(desc(conversations.updatedAt));
+    }
+    return await db.select().from(conversations).orderBy(desc(conversations.updatedAt));
+  }
+
+  async getConversation(id: number): Promise<Conversation | undefined> {
+    const [conversation] = await db.select().from(conversations).where(eq(conversations.id, id));
+    return conversation || undefined;
+  }
+
+  async createConversation(conversation: InsertConversation): Promise<Conversation> {
+    const [created] = await db.insert(conversations).values(conversation).returning();
+    return created;
+  }
+
+  async updateConversation(id: number, conversation: Partial<InsertConversation>): Promise<Conversation | undefined> {
+    const [updated] = await db.update(conversations)
+      .set({ ...conversation, updatedAt: new Date() })
+      .where(eq(conversations.id, id))
+      .returning();
+    return updated || undefined;
+  }
+
+  // ===== MESSAGES =====
+  async getMessages(conversationId: number): Promise<Message[]> {
+    return await db.select().from(messages)
+      .where(eq(messages.conversationId, conversationId))
+      .orderBy(messages.createdAt);
+  }
+
+  async createMessage(message: InsertMessage): Promise<Message> {
+    const [created] = await db.insert(messages).values(message).returning();
     return created;
   }
 }
