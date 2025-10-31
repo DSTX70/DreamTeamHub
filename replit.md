@@ -66,7 +66,15 @@ Dream Team Hub is a sophisticated control platform designed to provide a "single
 - **Milestone Tracking**: Associate work with sprints or releases
 - **Due Dates**: Set and track deadlines
 
-### 7. Pods & Persons
+### 7. Dream Team Chat
+- **AI-Powered Conversations**: Live chat with 32 Dream Team personas powered by OpenAI GPT-4
+- **Persona Selection**: Choose from complete roster (OS, Aegis, Nova, Prism, Sentinel, etc.)
+- **Context-Aware Responses**: Each persona responds according to their role, expertise, tone/voice, and responsibilities
+- **Conversation Management**: Create, track, and manage multiple ongoing conversations
+- **Message History**: Full conversation persistence with timestamp tracking
+- **Role-Based Intelligence**: Personas provide guidance aligned with their core functions and definition of done
+
+### 8. Pods & Persons
 - **Pod Management**: Organizational units with charters and owners
 - **Person Management**: Team members with handles, roles, and contact info
 - **Hierarchical Structure**: Link persons to pods
@@ -92,13 +100,14 @@ Dream Team Hub is a sophisticated control platform designed to provide a "single
 - **RESTful API** design
 
 ### Database Schema
-Comprehensive relational model with 15+ tables:
+Comprehensive relational model with 17+ tables:
 - Pods & Persons
 - Role Cards & RACI
 - Work Items
 - Decisions
 - Brainstorm Sessions, Participants, Ideas, Clusters, Artifacts
 - Audits, Checks, Findings, Artifacts
+- Conversations & Messages
 - Events (audit trail)
 
 ## Design System
@@ -164,6 +173,13 @@ All routes prefixed with `/api`:
 - `POST /api/audits/:id/findings` - Add finding
 - `POST /api/audits/:id/pack` - Generate audit pack (ZIP + INDEX.txt)
 
+### Chat Conversations
+- `GET /api/conversations` - List conversations (optional userId filter)
+- `POST /api/conversations` - Create new conversation
+- `GET /api/conversations/:id` - Get conversation details
+- `GET /api/conversations/:id/messages` - Get all messages in conversation
+- `POST /api/conversations/:id/messages` - Send message and receive AI response
+
 ## Seed Data
 
 **Includes 33 role cards** covering the complete Dream Team:
@@ -202,10 +218,15 @@ All routes prefixed with `/api`:
 - 32 role cards imported and searchable
 - 7 canonical pods seeded
 
-**Phase 2 In Progress**: Enhanced user experience features
+**Phase 2 Complete**: AI-powered collaboration features
 - ✅ Quick Start section on Control Tower dashboard
 - ✅ Integrated Brainstorm Studio and Audit Engine creation flows
 - ✅ Smart modal dialogs with pod/person selection and file uploads
-- 🔄 OpenAI integration for auto-clustering and summaries
+- ✅ Dream Team Chat with OpenAI GPT-4 integration
+- ✅ Live conversations with 32 role-based AI personas
+- ✅ Context-aware responses based on role card characteristics
+
+**Phase 3 Planned**: Advanced features
+- 🔄 OpenAI auto-clustering for Brainstorm Studio
 - 🔄 One-click Kits (Attorney Packet, A+ Content, Brand-Lock Pack)
 - 🔄 Advanced audit templates with validators
