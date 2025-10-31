@@ -1,0 +1,197 @@
+Sweet — here’s a **copy-paste runbook** to open and implement the full backend merge in Replit exactly as you listed. I’ll keep it tight and command-ready.
+
+---
+
+# 0) Get the ZIP into Replit
+
+1. Create/open your Replit (Python template is fine).
+2. Upload **`dream-team-hub-full-backend-merge.zip`** to the root of your Replit project.
+3. In the Replit Shell:
+
+   ```bash
+   unzip -o dream-team-hub-full-backend-merge.zip
+   tree -L 3 backend | sed -n '1,120p'
+   ```
+
+You should see:
+
+```
+backend/
+  app/
+    main.py
+    db/{init.py,models.py,create_db.py}
+    routers/{control_tower.py,brainstorm.py,audits.py,decisions.py,intake.py,pods.py,roles.py,agents.py}
+    agents/{memory.py,registry.py,tools/,specs/...}
+    utils/import_roster.py
+  data/dream_team_roster_full.json
+  alembic/{env.py,versions/}
+  alembic.ini
+  generate_initial_migration.py
+  requirements.txt
+  requirements.agent.txt
+Procfile
+```
+
+---
+
+# 1) Install & initialize (backend)
+
+```bash
+cd backend
+pip install -r requirements.txt
+# Only if you’ll enable real LLM calls:
+pip install -r requirements.agent.txt
+```
+
+Seed base tables and minimal data:
+
+```bash
+python -c "from app.seed import seed; seed()"
+```
+
+---
+
+# 2) Environment (Replit Secrets or `.env`)
+
+Add these (use the Secrets UI in Replit or create `backend/.env` and load via Replit’s run config):
+
+```
+DATABASE_URL=sqlite:///./dream_team_hub.db
+IMPORT_ROSTER_ON_BOOT=1
+ROSTER_JSON_PATH=backend/data/dream_team_roster_full.json
+
+# Agents (optional LLM; leave OFF first run)
+USE_OPENAI=0
+LLM_MODEL=gpt-4o-mini
+OPENAI_API_KEY=sk-...
+```
+
+> Tip: keep `USE_OPENAI=0` for the first smoke test (agents will return a safe stub). Flip to `1` later when ready.
+
+---
+
+# 3) Run the API
+
+```bash
+uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+```
+
+Open the built-in browser → go to `/docs`. You should see all routers:
+
+* `/control`, `/intake`, `/decisions`, `/brainstorm`, `/audits`, `/pods`, `/roles`, `/agents`
+
+> On startup you’ll see `[boot] roster import: {'ok': True, 'created': ..., 'updated': ...}`
+
+---
+
+# 4) Quick smoke tests (copy/paste)
+
+### Top-5 (Control Tower)
+
+```bash
+curl http://localhost:8000/control/top5
+```
+
+### Create a Work Item (Intake)
+
+```bash
+curl -X POST http://localhost:8000/intake -H "content-type: application/json" \
+  -d '{"title":"OUAS A+ content v1","pod_id":1,"owner_id":1,"due":"2025-11-04","source_links":["drive://specs/doc.pdf"]}'
+```
+
+### Role Cards present?
+
+```bash
+curl http://localhost:8000/roles | head
+```
+
+### Agents live?
+
+```bash
+curl http://localhost:8000/agents
+```
+
+You should get a list including **Prism, Nova, Aegis, Sentinel, OS,** etc. (specs loaded on boot).
+
+---
+
+# 5) Agents API (as requested)
+
+### Run an agent task
+
+```bash
+curl -X POST http://localhost:8000/agents/run \
+  -H "content-type: application/json" \
+  -d '{
+    "agent":"Prism",
+    "task":"Draft Week-1 OUAS A+ outline",
+    "links":["drive://Specs/OUAS_Aplus_Spec.pdf"],
+    "post_to_thread": false
+  }' | jq -r '.output' | sed -n '1,80p'
+```
+
+### Give feedback (teaches the agent)
+
+```bash
+curl -X POST http://localhost:8000/agents/feedback \
+  -H "content-type: application/json" \
+  -d '{ "agent": "Prism", "feedback": "Prefer 3-hook headlines", "score": 2, "kind": "rule" }'
+```
+
+### Retrieve recent memory
+
+```bash
+curl "http://localhost:8000/agents/Prism/memory?limit=20"
+```
+
+**Learning behavior:** each `run` is logged; each `feedback` creates a memory note. On every run, the agent gets a compact “recent runs + top-scored notes” context automatically.
+
+---
+
+# 6) Optional: Alembic (migrations)
+
+You can stay on “create_all” for dev. To adopt migrations:
+
+```bash
+cd backend
+python generate_initial_migration.py "init schema"
+alembic -c alembic.ini upgrade head
+```
+
+---
+
+# 7) Replit “Run” button (optional)
+
+Create/ensure a `Procfile` exists (already included):
+
+```
+web: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+```
+
+Then set Replit’s Run to:
+
+```
+cd backend && pip install -r requirements.txt && uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+```
+
+(Include `requirements.agent.txt` only if `USE_OPENAI=1`.)
+
+---
+
+## Troubleshooting (fast)
+
+* **/docs not loading:** check Shell logs for import errors; ensure `pip install -r requirements.txt` ran inside `backend/`.
+* **Roster not imported:** confirm `IMPORT_ROSTER_ON_BOOT=1` and `ROSTER_JSON_PATH=backend/data/dream_team_roster_full.json`.
+* **Agents list is empty:** make sure `load_all_specs()` is called (it is in `app/main.py`). Verify JSON files exist under `backend/app/agents/specs/`.
+* **SQLite thread error:** if you changed `DATABASE_URL`, keep SQLite for first run, or ensure Postgres is reachable.
+
+---
+
+## Next upgrades (when ready)
+
+* **Semantic memory + Front-end Agent Console + Threads/Drive wiring:** use the “Next Patch” ZIP I prepared; I can also bake it into a single, all-in bundle if you want zero manual edits.
+* **OpenAI live posts:** set `USE_OPENAI=1` and add your `OPENAI_API_KEY` (agents will call the model; the `threads_post` tool posts to your thread IDs when supplied).
+
+---
+
+If anything isn’t exactly where you want it, tell me your Replit tree and I’ll adjust commands or patch files on the spot.
