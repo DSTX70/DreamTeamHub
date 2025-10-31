@@ -13,6 +13,7 @@ import Audits from "@/pages/audits";
 import Decisions from "@/pages/decisions";
 import Intake from "@/pages/intake";
 import Pods from "@/pages/pods";
+import ChatPage from "@/pages/chat";
 
 function Router() {
   return (
@@ -24,6 +25,7 @@ function Router() {
       <Route path="/decisions" component={Decisions} />
       <Route path="/intake" component={Intake} />
       <Route path="/pods" component={Pods} />
+      <Route path="/chat" component={ChatPage} />
       <Route component={NotFound} />
     </Switch>
   );
