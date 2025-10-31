@@ -1,0 +1,49 @@
+* backend/app/main.py — all routers mounted + startup hooks:
+    * init_db() (creates tables)
+    * load_all_specs() (loads agent specs)
+    * import_roster() (auto-import Role Cards if IMPORT_ROSTER_ON_BOOT=1)
+* Core routers: /control, /intake, /decisions, /brainstorm, /audits, /pods, /roles, /agents
+* Role Cards + RACI models and endpoints; bulk import supported
+* Agents runtime:
+    * Specs for every Dream Team member in backend/app/agents/specs/
+    * Memory layer (agent_memories, agent_runs) so agents learn with feedback
+    * Tools stubs (threads_post, drive_search, zip_kit, hash_index)
+* Roster data: backend/data/dream_team_roster_full.json (imports on boot)
+* Alembic scaffolding: alembic/, alembic.ini, generate_initial_migration.py
+* Procfile for easy process start
+Quick start (Replit)
+cd backend
+pip install -r requirements.txt
+# Only if you want real OpenAI calls:
+pip install -r requirements.agent.txt
+
+# Create tables and seed base data
+python -c "from app.seed import seed; seed()"
+
+# Run the API
+uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+Open /docs to explore endpoints.
+Environment (set in .env or Replit Secrets)
+DATABASE_URL=sqlite:///./dream_team_hub.db
+IMPORT_ROSTER_ON_BOOT=1
+ROSTER_JSON_PATH=backend/data/dream_team_roster_full.json
+
+# Agents (optional LLM)
+USE_OPENAI=0
+LLM_MODEL=gpt-4o-mini
+OPENAI_API_KEY=sk-...
+Agents API (now live)
+* GET /agents – list all agents (specs loaded at boot)
+* POST /agents/run – run an agent task {
+*   "agent": "Prism",
+*   "task": "Draft Week-1 OUAS A+ outline",
+*   "links": ["drive://Specs/OUAS_Aplus_Spec.pdf"],
+*   "post_to_thread": false
+* }
+* 
+* POST /agents/feedback – store learning feedback { "agent": "Prism", "feedback": "Prefer 3-hook headlines", "score": 2, "kind": "rule" }
+* 
+* GET /agents/{handle}/memory?limit=20 – pull recent notes & runs (used in prompts)
+Learning behavior
+* Each agent run is logged; feedback/notes are stored with optional scores.
+* On each run, agents receive a compact context of recent runs + top-scored notes, so they improve as you use them.
