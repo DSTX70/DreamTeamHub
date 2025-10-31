@@ -177,7 +177,7 @@ All routes prefixed with `/api`:
 
 ## Future Enhancements (Phase 2)
 
-- **Google Drive Integration**: Automated artifact sync with SHA256 checksums
+- **Google Drive Integration**: Automated artifact sync with SHA256 checksums (Note: Requires Replit Google Drive connector setup - user dismissed initial setup flow)
 - **OpenAI Integration**: Auto-clustering for Brainstorm Studio, decision summaries
 - **Summon/Mirror-Back**: Post updates to pod canonical threads via chat APIs
 - **One-Click Kits**: Attorney Packet, A+ Content Kit, Brand-Lock Pack with INDEX.txt
