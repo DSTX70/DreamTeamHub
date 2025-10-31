@@ -1,0 +1,199 @@
+Awesome—here’s a complete, paste-ready creative brief plus a runnable starter repo you can drop into Replit right now.
+
+# Creative Brief — Dream Team Hub (MVP)
+
+## Objective
+
+Build a lightweight control platform that gives Dustin a “single pane of glass” across Pods and projects, reduces copy/paste, and syncs key actions with team threads and Google Drive.
+
+## Scope (MVP)
+
+* **Control Tower:** Live Top-5, Assignments, Escalations.
+* **Intake & Routing:** Create work items with pod/owner/due + links.
+* **Decision Log:** Immutable decisions w/ approver, rationale, artifacts.
+* **Brainstorm Studio:** Multi-pod ideation (ideas → clusters → scores → commit to work).
+* **Audit Engine:** Cross-pod checklists (Security/IP/Brand/Finance/Product) with evidence and exportable “audit pack.”
+
+## Success Criteria (Definition of Done)
+
+* API is live with Swagger (`/docs`) and persists to SQLite.
+* You can add **Pods**, **People**, **Work Items**, **Decisions**, run a **Brainstorm** and **Audit** via REST.
+* Control Tower endpoint returns Top-5 and Assignments.
+* Seed script creates canonical Pods and “OS” persona.
+* Frontend (optional) shows Top-5 from API.
+* Ready to evolve toward Supabase/Postgres, Drive sync, and Chat thread “Summon/Mirror-Back.”
+
+## Architecture
+
+* **Backend:** FastAPI + SQLAlchemy (SQLite dev), Alembic-ready.
+* **Frontend:** Vite + React (optional for day-1).
+* **Data:** SQLite file `dream_team_hub.db` (swap to Postgres later).
+* **Auth & Integrations (Phase 2):** Google OIDC + Drive Changes API; OpenAI Threads/Assistants API.
+
+## Core Data Model (MVP)
+
+* `pods(id, name, charter, owners[], thread_id)`
+* `persons(id, handle, name, roles[], pod_id, contact)`
+* `work_items(id, title, pod_id, owner_id, status, due, milestone, source_links[])`
+* `decisions(id, summary, rationale, approver, effective_at, status, links[])`
+* `events(id, type, ts, actor, payload)` (audit trail)
+* `brainstorm_sessions/brainstorm_ideas`
+* `audits/audit_checks/audit_findings`
+
+## API (initial routes)
+
+* `GET /control/top5`, `GET /control/assignments`
+* `POST /intake` (create work), `GET /intake`
+* `POST /decisions`, `GET /decisions`
+* `POST /pods`, `GET /pods`, `POST /pods/persons`, `GET /pods/persons`
+* `POST /brainstorm`, `POST /brainstorm/{id}/ideas`
+* `POST /audits`, `POST /audits/{id}/checks`
+
+## UX (Phase 1 simple)
+
+* Command-light UI: Control Tower page shows Top-5; everything else reachable via Swagger or light forms.
+* Command Palette & Summon/Mirror actions come in Phase 2.
+
+---
+
+# Download the starter repo
+
+**[Download the ZIP](sandbox:/mnt/data/dream-team-hub-starter.zip)**
+Unzip into a fresh Replit (Python template). The folder includes:
+
+```
+/backend
+  app/main.py
+  app/db/init.py, models.py, create_db.py
+  app/routers/{control_tower,brainstorm,audits,decisions,intake,pods}.py
+  app/seed.py
+  .env.sample
+  requirements.txt
+/frontend
+  index.html
+  src/main.tsx
+  package.json
+  vite.config.ts
+  tsconfig.json
+  .env.sample
+README.md
+```
+
+---
+
+# Replit Quick Start
+
+### 1) Backend
+
+```bash
+cd backend
+pip install -r requirements.txt
+python -c "from app.seed import seed; seed()"   # init DB + seed Pods/OS
+uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+```
+
+Visit the API docs at `/docs`.
+
+### 2) (Optional) Frontend
+
+Open a new shell:
+
+```bash
+cd frontend
+npm install
+npm run dev -- --host
+```
+
+Set `VITE_API_URL` in `frontend/.env` if your API is on a different URL.
+
+---
+
+# Smoke Test (copy/paste these curl calls)
+
+**Create a Pod**
+
+```bash
+curl -X POST http://localhost:8000/pods -H "content-type: application/json" \
+  -d '{"name":"Marketing","owners":["Prism"],"charter":"Canonical Marketing Pod"}'
+```
+
+**Create a Person**
+
+```bash
+curl -X POST http://localhost:8000/pods/persons -H "content-type: application/json" \
+  -d '{"handle":"Prism","name":"Prism","roles":["lead"],"pod_id":1,"contact":"@prism"}'
+```
+
+**Create an Intake Work Item**
+
+```bash
+curl -X POST http://localhost:8000/intake -H "content-type: application/json" \
+  -d '{"title":"OUAS A+ content v1","pod_id":1,"owner_id":1,"due":"2025-11-04","source_links":["https://example.com/spec"]}'
+```
+
+**List Top-5**
+
+```bash
+curl http://localhost:8000/control/top5
+```
+
+**Start a Brainstorm + Add an Idea**
+
+```bash
+curl -X POST http://localhost:8000/brainstorm -H "content-type: application/json" \
+  -d '{"title":"OUAS A+ Concepts","goal":"Generate 10 PDP modules"}'
+
+curl -X POST http://localhost:8000/brainstorm/1/ideas -H "content-type: application/json" \
+  -d '{"text":"Journey panel with 3 badges","author_id":1}'
+```
+
+**Create an Audit + Add a Check**
+
+```bash
+curl -X POST http://localhost:8000/audits -H "content-type: application/json" \
+  -d '{"title":"Brand-Lock spot check","type":"brand_lock","pods":["Brand","Marketing"]}'
+
+curl -X POST http://localhost:8000/audits/1/checks -H "content-type: application/json" \
+  -d '{"key":"brand.palette.locked","title":"Palette matches locked refs","severity":"high"}'
+```
+
+**Log a Decision**
+
+```bash
+curl -X POST http://localhost:8000/decisions -H "content-type: application/json" \
+  -d '{"summary":"Use Journey Panel layout for A+ v1","approver":"Prism","links":["drive://a-plus/spec.pdf"]}'
+```
+
+---
+
+# Environment & Config
+
+**Backend `.env` (copy from sample)**
+
+```
+DATABASE_URL=sqlite:///./dream_team_hub.db
+OPENAI_API_KEY=sk-...            # (Phase 2: Summon/Mirror posts)
+GOOGLE_SERVICE_ACCOUNT_JSON_BASE64=  # (Phase 2: Drive sync)
+DEFAULT_TIMEZONE=America/Phoenix
+POD_THREAD_IDS_JSON={}            # {"Marketing":"thread_abc123", ...}
+```
+
+**Frontend `.env`**
+
+```
+VITE_API_URL=http://localhost:8000
+```
+
+---
+
+# Roadmap Next (Phase 2)
+
+* **Sync Jobs:** Drive Changes API polling, checksums, lane classifier.
+* **Thread Actions:** Summon/Mirror via OpenAI API (store per-pod thread IDs).
+* **RBAC:** Admin/Pod Lead/Contributor/Viewer (JWT or session).
+* **Kits:** One-click “Attorney Packet”, “A+ Content Kit” (ZIP + INDEX.txt).
+* **Brand/Spec validators:** KDP image spec, Shopify asset rules, figure legibility @66%.
+
+---
+
+If you want, I can also generate the **Alembic** migration scaffolding or a **Supabase** connection variant.

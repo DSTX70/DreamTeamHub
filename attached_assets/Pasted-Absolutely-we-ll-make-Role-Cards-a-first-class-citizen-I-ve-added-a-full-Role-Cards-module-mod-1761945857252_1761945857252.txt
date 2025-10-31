@@ -1,0 +1,130 @@
+Absolutely—we’ll make Role Cards a first-class citizen. I’ve added a full **Role Cards** module (models, API, seed data) to the starter so you can catalog every Dream Team persona with purpose, core functions, responsibilities, tone/voice, DoD, tags, links, and optional RACI entries.
+
+**Download the updated repo:**
+[Dream Team Hub — Starter v2 (with Role Cards)](sandbox:/mnt/data/dream-team-hub-starter-v2-rolecards.zip)
+
+---
+
+# What’s included (Role Cards)
+
+## New database tables
+
+* `role_cards`
+
+  * `handle` (e.g., Prism, Aegis), `title`, `pod`, `purpose`
+  * `core_functions[]`, `responsibilities[]`
+  * `tone_voice`, `definition_of_done[]`, `links[]`, `tags[]`, `updated_at`
+* `role_raci`
+
+  * `workstream`, `role_handle`, `r[]`, `a[]`, `c[]`, `i[]`
+
+## New API routes
+
+`/roles` (CRUD Role Cards) and `/roles/raci`:
+
+* `POST /roles` – create a role card
+* `GET /roles?pod=Marketing&handle=Prism` – list/filter role cards
+* `GET /roles/{id}` – fetch one
+* `PUT /roles/{id}` – update
+* `DELETE /roles/{id}` – delete
+* `POST /roles/raci` – create a RACI mapping
+* `GET /roles/raci?workstream=OUAS%20Launch&role_handle=Prism` – list RACIs
+
+These are wired into FastAPI and show up in `/docs`.
+
+## Seeded role cards (edit/expand as you like)
+
+Starter cards for: **OS**, **Aegis**, **Sentinel**, **Nova**, **Prism**, **Storybloom**, **Foundry**, **Ledger**, **Lume** — prefilled with purpose, core functions, responsibilities, tone/voice, and DoD checklists from your canon.
+
+---
+
+# How to run (updated)
+
+```bash
+cd backend
+pip install -r requirements.txt
+python -c "from app.seed import seed; seed()"   # creates tables and seeds pods + role cards
+uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+```
+
+Open **`/docs`** to use the Role Cards and RACI endpoints.
+
+(Optional frontend remains the same; you can add a “Roster” page later that hits `/roles` to render cards.)
+
+---
+
+# Quick test (copy/paste)
+
+**List all role cards**
+
+```bash
+curl http://localhost:8000/roles
+```
+
+**Filter by pod**
+
+```bash
+curl "http://localhost:8000/roles?pod=Marketing"
+```
+
+**Create a new role card**
+
+```bash
+curl -X POST http://localhost:8000/roles -H "content-type: application/json" -d '{
+  "handle":"Echo",
+  "title":"Social Media Lead",
+  "pod":"Marketing",
+  "purpose":"Plan, publish, and measure social content across channels.",
+  "core_functions":["Calendar","Publishing","Community replies","Analytics"],
+  "responsibilities":["Channel health","UTMs","Weekly snapshot"],
+  "tone_voice":"Warm, witty, on-brand.",
+  "definition_of_done":["Posts scheduled","Assets approved","KPI snapshot posted"],
+  "tags":["social","content","analytics"]
+}'
+```
+
+**Add a RACI entry**
+
+```bash
+curl -X POST http://localhost:8000/roles/raci -H "content-type: application/json" -d '{
+  "workstream":"OUAS Launch",
+  "role_handle":"Prism",
+  "r":["Campaign brief v1","Budget sheet"],
+  "a":["Channel mix","KPI targets"],
+  "c":["Nova on creative","Ledger on budget"],
+  "i":["Control Tower rollup"]
+}'
+```
+
+**List RACIs for a workstream**
+
+```bash
+curl "http://localhost:8000/roles/raci?workstream=OUAS%20Launch"
+```
+
+---
+
+# Where the code lives (so you can tweak)
+
+* **Models:** `backend/app/db/models.py` → `RoleCard`, `RoleRaci`
+* **Router:** `backend/app/routers/roles.py`
+* **Main registration:** `backend/app/main.py` (adds `app.include_router(roles.router, …)`)
+* **Seed:** `backend/app/seed.py` (`seed_role_cards(db)` with starter personas)
+
+---
+
+# Suggested next steps
+
+1. **Import all remaining personas** (Prism’s full team, Amani, Atlas, Coda, Archivist, Conductor, Pulse, Bridge, Verifier, Beacon, etc.) using `POST /roles`.
+2. Add a **Roster UI** page:
+
+   * Filter by Pod, search by handle.
+   * Card layout with Purpose, Core Functions, DoD checklist.
+   * “Add to RACI” button that posts to `/roles/raci`.
+3. Link Role Cards into:
+
+   * **Summon Composer** defaults (Phase 2).
+   * **Audit Engine** ownership suggestions by Pod/handle.
+   * **Brainstorm Studio** role chips (Pro/Adv/Neutral/Customer) mapped from tags.
+
+Want me to auto-generate Role Cards for the rest of your Dream Team from our canon and drop them into a CSV you can bulk import—or wire a simple `/roles/import` endpoint next?

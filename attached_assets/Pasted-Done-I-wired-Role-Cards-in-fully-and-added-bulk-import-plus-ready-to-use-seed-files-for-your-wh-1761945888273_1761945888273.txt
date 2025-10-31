@@ -1,0 +1,70 @@
+Done! I wired Role Cards in fully and added **bulk import** plus ready-to-use seed files for your whole Dream Team.
+
+**Downloads**
+
+* Starter repo v3 (with bulk import): [dream-team-hub-starter-v3-rolecards-import.zip](sandbox:/mnt/data/dream-team-hub-starter-v3-rolecards-import.zip)
+* Seed CSV (editable): [rolecards_seed.csv](sandbox:/mnt/data/dream-team-hub/rolecards_seed.csv)
+* Seed JSON (for API import): [rolecards_seed.json](sandbox:/mnt/data/dream-team-hub/rolecards_seed.json)
+
+---
+
+# What’s new
+
+## 1) Bulk Import API
+
+New endpoint in FastAPI:
+
+* `POST /roles/import` — accepts a JSON array of RoleCard objects (same fields as `POST /roles`), creates them in one shot, returns created records.
+
+Visible in your `/docs` once you run the backend.
+
+**Example import (from seed JSON)**
+
+```bash
+# Start API first, then:
+curl -X POST http://localhost:8000/roles/import \
+  -H "content-type: application/json" \
+  --data-binary @rolecards_seed.json
+```
+
+## 2) Seed files (complete roster)
+
+Covers all key personas from your canon: **OS, Aegis, Atlas, Sentinel, Praetor, Coda, Nova, Prism, Storybloom, Echo, Ledger, Lume, Forge, LexiCode, CodeBlock, App Development Guru, Foundry, Amani, Archivist, Conductor, Pulse, Bridge, Verifier, Beacon, Kaoru Arai, Izumi Takahashi, English Poet, English Lyricist, Dr. Rowan Vagus, Avery Marlowe, Patent Illustrator, IP Paralegal/Docketing.**
+Each has: Purpose, Core Functions, Responsibilities, Tone/Voice, Definition of Done, Tags, and mapped **Pod**.
+
+You can edit the CSV in any spreadsheet app and re-import via JSON (or I can add CSV upload in a future patch).
+
+---
+
+# How to use now
+
+1. **Run backend**
+
+```bash
+cd backend
+pip install -r requirements.txt
+python -c "from app.seed import seed; seed()"
+uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+```
+
+2. **Import the roster**
+
+```bash
+curl -X POST http://localhost:8000/roles/import \
+  -H "content-type: application/json" \
+  --data-binary @rolecards_seed.json
+```
+
+3. **Browse**
+
+* Go to `/docs` → **roles** tag → list, filter by `pod`, or update entries.
+* (Optional) Build a **Roster** UI page that lists cards from `GET /roles?pod=Marketing`.
+
+---
+
+# Optional next patch (say the word)
+
+* CSV upload endpoint (`POST /roles/import/csv`) that accepts a file.
+* Roster UI page with filters and a “Add to RACI” button.
+* Export all Role Cards to CSV (`GET /roles/export.csv`) for quick backup.
+* Link Role Cards into **Summon Composer** defaults and **Audit Engine** ownership suggestions.

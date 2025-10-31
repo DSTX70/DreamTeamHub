@@ -1,0 +1,136 @@
+Love it. We’ll add two first-class modules to the Hub:
+
+# Brainstorm Studio (multi-pod)
+
+**What it does**
+
+* Runs structured ideation with **roles** (Pro, Devil’s Advocate, Neutral, Customer Voice), **rounds** (Diverge → Cluster → Converge), and **scoring** (Impact × Effort × Confidence).
+* “Summon” multiple Pods/members, capture turns, auto-generate **themes**, shortlist, and **Mirror-Back** to the right Canonical threads + Decision Log.
+
+**Core flows**
+
+1. **Create Session** → pick Pods/members, timebox, goal, template.
+2. **Round 1 — Diverge** (timed idea dump)
+3. **Round 2 — Cluster** (LLM + humans tag/merge)
+4. **Round 3 — Score** (ICE or RICE; weights configurable)
+5. **Commit** → top picks become **Work Items** with owner/due; publish Mirror-Back + Decision entry.
+
+**DB (add)**
+
+* `brainstorm_sessions(id, title, goal, template, facilitator_id, status, started_at, ended_at)`
+* `brainstorm_participants(id, session_id, person_id, role)`  // pro | adv | neutral | customer
+* `brainstorm_ideas(id, session_id, author_id, text, tags[], cluster_id, score_json, status)`
+* `brainstorm_clusters(id, session_id, label, rationale)`
+* `brainstorm_artifacts(id, session_id, link, kind)`  // doc, fig, zip
+
+**API (add)**
+
+* `POST /brainstorm` (create)
+* `POST /brainstorm/:id/ideas` (submit)
+* `POST /brainstorm/:id/cluster` (auto + manual)
+* `POST /brainstorm/:id/score` (weights, rubric)
+* `POST /brainstorm/:id/commit` (spawn Work Items + Mirror-Back)
+
+**Template (JSON)**
+
+```json
+{
+  "title": "OUAS A+ Concepts",
+  "goal": "Generate 10 A/B testable modules for PDP",
+  "roles": ["pro","adv","neutral","customer"],
+  "rubric": {"impact":0.5,"effort":-0.3,"confidence":0.2},
+  "timebox": {"diverge":10,"cluster":5,"score":7}
+}
+```
+
+**UI bits**
+
+* Timer bar per round, role chips, cluster drag-n-drop, scoring sliders, “Make Work Items” button.
+
+---
+
+# Audit Engine (cross-pod)
+
+**What it does**
+
+* Runs **checklists + evidence capture** across Pods (Security, IP, Brand, Finance, Product).
+* Produces an **audit-grade pack**: report PDF, INDEX.txt (sha256), zipped artifacts, and Mirror-Back + Decision entry.
+
+**Built-in audit types (v1)**
+
+* **Security/Compliance** (Sentinel/Coda): SOC2/ISO control spot-check, SBOM/license scan inputs, incident readiness.
+* **IP Readiness** (Aegis/Atlas): claims↔feature map, figure legibility @66%, IDS/ADS stubs.
+* **Brand-Lock** (Nova/Prism): palettes, typography, logo lockups, KDP/Shopify specs.
+* **Finance Ops** (Ledger): CAC/COGS snapshot, budget variance, approvals.
+
+**DB (add)**
+
+* `audits(id, title, type, facilitator_id, status, due_at, pods[])`
+* `audit_checks(id, audit_id, key, title, severity, owner_id, status, notes)`
+* `audit_findings(id, audit_id, check_id, summary, severity, recommendation)`
+* `audit_artifacts(id, audit_id, link, sha256, kind)`
+
+**API (add)**
+
+* `POST /audits` (create from template)
+* `POST /audits/:id/checks/:chk/status`
+* `POST /audits/:id/pack` (generate ZIP + INDEX.txt)
+* `POST /audits/:id/mirror` (post results to threads)
+
+**Checklist schema (YAML)**
+
+```yaml
+type: security_soc2_spot
+pods: [Security, Product]
+checks:
+  - key: sec.logging.imm_audit
+    title: Immutable audit log enabled
+    severity: high
+    evidence: link
+  - key: sec.sbom.present
+    title: SBOM uploaded for current release
+    severity: high
+    evidence: file
+  - key: sec.incident.playbook
+    title: Incident playbook updated this quarter
+    severity: medium
+    evidence: link
+```
+
+**Outputs**
+
+* **Audit Report.md/PDF**, **INDEX.txt (sha256)**, **/artifacts/** (linked Drive refs), **Mirror-Back** post, **Decision Log** record.
+
+---
+
+# Cross-Module glue
+
+* **Summon Macros**: pick Pods/members for a Brainstorm or Audit; app posts the summon block to each Pod’s Canonical thread.
+* **Mirror-Back**: one-click summary back to Canonicals + Control Tower, including outcomes, decisions, owners, due dates, and Drive links.
+* **Work Items**: top brainstorm picks and audit remediations become `work_items` (owner/due/milestone) automatically.
+
+---
+
+# Minimal additions to MVP scope
+
+* Frontend pages: **Brainstorm**, **Audit** (list + run view)
+* Backend routes listed above
+* Two seed templates (one Brainstorm, one Audit) for instant use
+* “Create Work Items from Selection” and “Generate Audit Pack” actions
+* Mirror-Back & Decision posting wired to stored thread IDs
+
+---
+
+# Definition of Done (for these features)
+
+* Can create/run a multi-pod **Brainstorm** with roles, clusters, scoring, and commit to Work Items.
+* Can create/run a multi-pod **Audit**, tick checks, attach evidence, and export an **audit pack** (ZIP + INDEX.txt).
+* Both modules **summon** participants and **mirror** outcomes to Canonicals + Decision Log.
+* All records are queryable in Control Tower; escalations auto-show if severity ≥ high.
+
+If you’re good with this, I can generate:
+
+* the DB migration SQL for these tables,
+* the REST route stubs,
+* and two starter templates (one brainstorm, one audit)
+  so you can paste them into the repo scaffold next.
