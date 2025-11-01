@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Dream Team Hub — UI Preview</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/branding.css">
+  <link rel="stylesheet" href="css/buttons.css">
+  <link rel="stylesheet" href="css/cards.css">
+</head>
+<body>
+  <header class="hero">
+    <h1 class="h1">Dream Team Hub — Dynamic Branding Grid</h1>
+    <p class="sub">Modern gradients, glass UI, and pod-coded identity. Filter by Pod tabs, expand cards for details.</p>
+    <div class="hero-actions">
+      <button class="btn btn--secondary" id="reloadBtn"><span class="icon">🔄</span>Reload from API</button>
+      <button class="btn" data-pod="marketing" id="demoBtn"><span class="icon">✨</span>Use Demo Data</button>
+    </div>
+  </header>
+
+  <nav class="tabs" id="tabs"></nav>
+
+  <main class="section">
+    <div class="grid" id="grid" aria-live="polite"></div>
+  </main>
+
+  <footer class="footer">
+    <div class="row">
+      <span>© i³ Collective — Dream Team Hub UI Pack</span>
+      <div class="btn-group">
+        <button class="btn btn--ghost" id="showAll">Show All</button>
+        <button class="btn btn--ghost" id="collapseAll">Collapse All</button>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    // Configure your backend API in one place:
+    window.API_BASE = window.API_BASE || "http://localhost:8000";
+  </script>
+  <script src="js/app.js"></script>
+</body>
+</html>

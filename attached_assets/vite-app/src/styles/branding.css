@@ -1,0 +1,45 @@
+:root{
+  --brand-dark:#0B0D12; --brand-light:#F7F8FB;
+  --brand-teal:#2EC5C2; --brand-violet:#7573F8; --brand-yellow:#FFD449;
+  --brand-magenta:#F48FBB; --brand-jade:#34AABB;
+  --glass: rgba(255,255,255,.08); --glass-border: rgba(255,255,255,.12);
+  --shadow: 0 8px 30px #0000004d;
+
+  --pod-control:#3D6BFF; --pod-intake:#5CE1CF; --pod-decision:#FFC24D; --pod-roster:#C95CAF;
+  --pod-ip:#6B1E9C; --pod-security:#3B4A5A; --pod-product:#1F9CFF; --pod-brand:#FF5BCD;
+  --pod-marketing:#FF7A45; --pod-finance:#2DBE7A; --pod-rhythm:#5A67FF;
+
+  --ring: 0 0 0 3px #2EC5C255;
+}
+*{box-sizing:border-box}
+html,body{min-height:100%}
+body{margin:0;background:#0B0D12;color:#fff;font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;}
+
+.hero{
+  position:relative; padding:40px 24px 14px;
+  background:
+    radial-gradient(1200px 600px at 10% -20%, #2EC5C233, transparent 60%),
+    radial-gradient(900px 500px at 90% -10%, #7573F833, transparent 60%),
+    linear-gradient(120deg, #0B0D12 0%, #0B0D12 60%, #0F1220 100%);
+}
+.h1{
+  font-size:clamp(28px,4.6vw,56px); font-weight:800; margin:0;
+  background:linear-gradient(135deg, var(--brand-teal), var(--brand-violet));
+  -webkit-background-clip:text; -webkit-text-fill-color:transparent;
+}
+.sub{color:#cdd3ff; opacity:.9; margin:8px 0 0; max-width:900px}
+.hero-actions{display:flex; gap:10px; margin-top:12px; flex-wrap:wrap}
+
+.tabs{display:flex; gap:10px; flex-wrap:wrap; margin:14px 24px 0}
+.tab{
+  padding:10px 14px; border-radius:999px; font-weight:600; font-size:14px;
+  background:#141726; border:1px solid #24283b; color:#dfe3ff; opacity:.95; cursor:pointer; user-select:none;
+}
+.tab:hover{transform:translateY(-1px)}
+.tab.active{color:#0B0D12; background:linear-gradient(135deg, var(--brand-teal), var(--brand-violet)); border:none}
+
+.section{padding:24px}
+.grid{display:grid; gap:18px; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));}
+
+.footer{padding:18px 24px; border-top:1px solid #1b2136; color:#aab0d8}
+.footer .row{display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap}

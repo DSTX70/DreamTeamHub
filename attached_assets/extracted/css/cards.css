@@ -1,0 +1,41 @@
+.card, .role-card {
+  background: var(--glass);
+  border:1px solid var(--glass-border);
+  border-radius:16px;
+  box-shadow: var(--shadow);
+  overflow:hidden;
+  transition: transform .15s ease, box-shadow .15s ease;
+  color:#fff;
+}
+.card:hover, .role-card:hover { transform: translateY(-3px); box-shadow: 0 10px 36px #00000066; }
+.rail { height:10px; }
+.inner { padding:16px; }
+.icon {
+  width:48px; height:48px; border-radius:999px; display:grid; place-items:center;
+  font-size:22px; margin-bottom:10px; color:#fff;
+  box-shadow: inset 0 0 20px #ffffff22, 0 2px 10px #00000055;
+}
+.title { font-weight:700; margin-bottom:6px; font-size:16px; }
+.chips { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:8px; }
+.chip { font-size:12px; padding:4px 10px; border-radius:999px; background:#ffffff14; border:1px solid #ffffff1f; }
+.oneliner { font-size:13px; line-height:1.4; color:#e7e9ff; }
+.expand { margin-top:10px; display:none; border-top:1px solid #ffffff1f; padding-top:12px; font-size:13px; color:#e7e9ff; }
+.expand h4 { margin:8px 0 6px; font-size:12px; letter-spacing:.02em; color:#cfd3ff; text-transform:uppercase; }
+.tags { display:flex; gap:6px; flex-wrap:wrap; }
+.tag { font-size:11px; padding:4px 8px; border-radius:999px; background:#ffffff12; border:1px solid #ffffff1f; color:#e7f7ff; }
+
+/* Pod rails/icons */
+.pod-marketing .rail { background: linear-gradient(135deg, var(--pod-marketing), var(--brand-yellow)); }
+.pod-marketing .icon { background: radial-gradient(circle at 30% 30%, #ffffff33, transparent 60%), linear-gradient(135deg, var(--pod-marketing), var(--brand-magenta)); }
+.pod-ip .rail { background: linear-gradient(135deg, var(--pod-ip), var(--brand-violet)); }
+.pod-ip .icon { background: radial-gradient(circle at 30% 30%, #ffffff33, transparent 60%), linear-gradient(135deg, var(--pod-ip), var(--brand-violet)); }
+.pod-product .rail { background: linear-gradient(135deg, var(--pod-product), var(--brand-teal)); }
+.pod-product .icon { background: radial-gradient(circle at 30% 30%, #ffffff33, transparent 60%), linear-gradient(135deg, var(--pod-product), var(--brand-teal)); }
+.pod-security .rail { background: linear-gradient(135deg, var(--pod-security), var(--brand-jade)); }
+.pod-security .icon { background: radial-gradient(circle at 30% 30%, #ffffff33, transparent 60%), linear-gradient(135deg, var(--pod-security), var(--brand-jade)); }
+.pod-brand .rail { background: linear-gradient(135deg, var(--pod-brand), var(--brand-magenta)); }
+.pod-brand .icon { background: radial-gradient(circle at 30% 30%, #ffffff33, transparent 60%), linear-gradient(135deg, var(--pod-brand), var(--brand-magenta)); }
+.pod-finance .rail { background: linear-gradient(135deg, var(--pod-finance), var(--brand-jade)); }
+.pod-finance .icon { background: radial-gradient(circle at 30% 30%, #ffffff33, transparent 60%), linear-gradient(135deg, var(--pod-finance), var(--brand-jade)); }
+.pod-control .rail { background: linear-gradient(135deg, var(--pod-control), var(--brand-violet)); }
+.pod-control .icon { background: radial-gradient(circle at 30% 30%, #ffffff33, transparent 60%), linear-gradient(135deg, var(--pod-control), var(--brand-violet)); }
