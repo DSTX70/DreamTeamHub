@@ -1,8 +1,7 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { BrandedCard, BrandedHero, BrandedSection, CardIcon, CardTitle, CardOneliner, StatCard, ListItem, PriorityBadge } from "@/components/branded";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/status-badge";
 import { EmptyState } from "@/components/empty-state";
 import { AlertCircle, CheckCircle2, Clock, Target, MessageSquare, Lightbulb, ClipboardCheck, Mic, History, MessageCircle } from "lucide-react";
@@ -72,24 +71,20 @@ export default function ControlTower() {
 
   if (isLoading) {
     return (
-      <div className="space-y-6">
-        <div>
-          <h1 className="text-2xl font-semibold mb-2">Control Tower</h1>
-          <p className="text-sm text-muted-foreground">Live priorities, assignments, and escalations</p>
-        </div>
+      <BrandedSection>
+        <BrandedHero
+          title="Control Tower"
+          subtitle="Live priorities, assignments, and escalations"
+        />
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
           {[...Array(4)].map((_, i) => (
-            <Card key={i}>
-              <CardHeader className="pb-2">
-                <Skeleton className="h-4 w-24" />
-              </CardHeader>
-              <CardContent>
-                <Skeleton className="h-8 w-16" />
-              </CardContent>
-            </Card>
+            <BrandedCard key={i}>
+              <Skeleton className="h-4 w-24 mb-2" />
+              <Skeleton className="h-8 w-16" />
+            </BrandedCard>
           ))}
         </div>
-      </div>
+      </BrandedSection>
     );
   }
 
@@ -101,35 +96,37 @@ export default function ControlTower() {
   };
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold mb-2" data-testid="page-title">Control Tower</h1>
-        <p className="text-sm text-muted-foreground">Live priorities, assignments, and escalations</p>
-      </div>
+    <BrandedSection>
+      <BrandedHero
+        title="Control Tower"
+        subtitle="Live priorities, assignments, and escalations"
+      />
 
       {/* Quick Start Section */}
-      <div>
-        <h2 className="text-lg font-semibold mb-4">Quick Start</h2>
+      <div className="mb-6">
+        <h2 className="text-lg font-semibold mb-4 text-foreground">Quick Start</h2>
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {quickStartActions.map((action) => {
             const Icon = action.icon;
             return (
-              <Card
+              <BrandedCard
                 key={action.id}
-                className="hover-elevate active-elevate-2 cursor-pointer"
+                className="cursor-pointer"
                 onClick={() => setSelectedAction(action.id)}
+                podVariant="control"
+                showRail
                 data-testid={`quick-start-${action.id}`}
               >
-                <CardContent className="flex items-start gap-4 p-4">
-                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10">
-                    <Icon className="h-5 w-5 text-primary" />
-                  </div>
+                <div className="flex items-start gap-4">
+                  <CardIcon>
+                    <Icon />
+                  </CardIcon>
                   <div className="flex-1 min-w-0">
-                    <div className="font-semibold text-sm mb-1">{action.title}</div>
-                    <div className="text-xs text-muted-foreground">{action.description}</div>
+                    <CardTitle>{action.title}</CardTitle>
+                    <CardOneliner>{action.description}</CardOneliner>
                   </div>
-                </CardContent>
-              </Card>
+                </div>
+              </BrandedCard>
             );
           })}
         </div>
@@ -142,69 +139,48 @@ export default function ControlTower() {
       />
 
       {/* Stats Grid */}
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Work Items</CardTitle>
-            <Target className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-semibold" data-testid="stat-total">{stats.totalWorkItems}</div>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">In Progress</CardTitle>
-            <Clock className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-semibold text-primary" data-testid="stat-in-progress">{stats.inProgress}</div>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Blocked</CardTitle>
-            <AlertCircle className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-semibold text-destructive" data-testid="stat-blocked">{stats.blocked}</div>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Due This Week</CardTitle>
-            <CheckCircle2 className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-semibold" data-testid="stat-due-week">{stats.dueThisWeek}</div>
-          </CardContent>
-        </Card>
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4 mb-6">
+        <StatCard
+          title="Total Work Items"
+          value={stats.totalWorkItems}
+          icon={Target}
+          data-testid="stat-total"
+        />
+        <StatCard
+          title="In Progress"
+          value={stats.inProgress}
+          icon={Clock}
+          variant="primary"
+          data-testid="stat-in-progress"
+        />
+        <StatCard
+          title="Blocked"
+          value={stats.blocked}
+          icon={AlertCircle}
+          variant="destructive"
+          data-testid="stat-blocked"
+        />
+        <StatCard
+          title="Due This Week"
+          value={stats.dueThisWeek}
+          icon={CheckCircle2}
+          data-testid="stat-due-week"
+        />
       </div>
 
       {/* Main Content Grid */}
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
         {/* Top 5 Priorities */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg">Top-5 Priorities</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {data?.top5 && data.top5.length > 0 ? (
-              <div className="space-y-3">
-                {data.top5.map((item, index) => (
-                  <div
-                    key={item.id}
-                    className="flex items-start gap-3 rounded-lg border p-3 hover-elevate"
-                    data-testid={`top5-item-${index}`}
-                  >
-                    <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-medium text-primary-foreground">
-                      {index + 1}
-                    </div>
+        <BrandedCard>
+          <CardTitle className="mb-4">Top-5 Priorities</CardTitle>
+          {data?.top5 && data.top5.length > 0 ? (
+            <div className="space-y-3">
+              {data.top5.map((item, index) => (
+                <ListItem key={item.id} data-testid={`top5-item-${index}`}>
+                  <div className="flex items-start gap-3">
+                    <PriorityBadge rank={index + 1} />
                     <div className="flex-1 min-w-0">
-                      <div className="font-medium text-sm truncate">{item.title}</div>
+                      <div className="font-medium text-sm truncate text-foreground">{item.title}</div>
                       {item.dueDate && (
                         <div className="text-xs text-muted-foreground mt-1">
                           Due {format(new Date(item.dueDate), 'MMM d')}
@@ -213,82 +189,66 @@ export default function ControlTower() {
                     </div>
                     <StatusBadge status={item.status} />
                   </div>
-                ))}
-              </div>
-            ) : (
-              <EmptyState
-                icon={Target}
-                title="No priorities yet"
-                description="Top priority work items will appear here"
-              />
-            )}
-          </CardContent>
-        </Card>
+                </ListItem>
+              ))}
+            </div>
+          ) : (
+            <EmptyState
+              icon={Target}
+              title="No priorities yet"
+              description="Top priority work items will appear here"
+            />
+          )}
+        </BrandedCard>
 
         {/* Recent Assignments */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg">Recent Assignments</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {data?.assignments && data.assignments.length > 0 ? (
-              <div className="space-y-3">
-                {data.assignments.map((item) => (
-                  <div
-                    key={item.id}
-                    className="rounded-lg border p-3 hover-elevate"
-                    data-testid={`assignment-${item.id}`}
-                  >
-                    <div className="font-medium text-sm mb-2">{item.title}</div>
-                    <div className="flex items-center gap-2">
-                      <StatusBadge status={item.priority || 'medium'} />
-                      <StatusBadge status={item.status} />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <EmptyState
-                icon={Clock}
-                title="No assignments"
-                description="Work item assignments will appear here"
-              />
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Escalations */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg">Escalations</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {data?.escalations && data.escalations.length > 0 ? (
-              <div className="space-y-3">
-                {data.escalations.map((item) => (
-                  <div
-                    key={item.id}
-                    className="rounded-lg border border-destructive/50 bg-destructive/5 p-3"
-                    data-testid={`escalation-${item.id}`}
-                  >
-                    <div className="flex items-start gap-2 mb-2">
-                      <AlertCircle className="h-4 w-4 text-destructive mt-0.5 shrink-0" />
-                      <div className="font-medium text-sm flex-1">{item.title}</div>
-                    </div>
+        <BrandedCard>
+          <CardTitle className="mb-4">Recent Assignments</CardTitle>
+          {data?.assignments && data.assignments.length > 0 ? (
+            <div className="space-y-3">
+              {data.assignments.map((item) => (
+                <ListItem key={item.id} data-testid={`assignment-${item.id}`}>
+                  <div className="font-medium text-sm mb-2 text-foreground">{item.title}</div>
+                  <div className="flex items-center gap-2">
+                    <StatusBadge status={item.priority || 'medium'} />
                     <StatusBadge status={item.status} />
                   </div>
-                ))}
-              </div>
-            ) : (
-              <EmptyState
-                icon={CheckCircle2}
-                title="All clear"
-                description="No escalated items at this time"
-              />
-            )}
-          </CardContent>
-        </Card>
+                </ListItem>
+              ))}
+            </div>
+          ) : (
+            <EmptyState
+              icon={Clock}
+              title="No assignments"
+              description="Work item assignments will appear here"
+            />
+          )}
+        </BrandedCard>
+
+        {/* Escalations */}
+        <BrandedCard>
+          <CardTitle className="mb-4">Escalations</CardTitle>
+          {data?.escalations && data.escalations.length > 0 ? (
+            <div className="space-y-3">
+              {data.escalations.map((item) => (
+                <ListItem key={item.id} variant="alert" data-testid={`escalation-${item.id}`}>
+                  <div className="flex items-start gap-2 mb-2">
+                    <AlertCircle className="h-4 w-4 text-destructive mt-0.5 shrink-0" />
+                    <div className="font-medium text-sm flex-1 text-foreground">{item.title}</div>
+                  </div>
+                  <StatusBadge status={item.status} />
+                </ListItem>
+              ))}
+            </div>
+          ) : (
+            <EmptyState
+              icon={CheckCircle2}
+              title="All clear"
+              description="No escalated items at this time"
+            />
+          )}
+        </BrandedCard>
       </div>
-    </div>
+    </BrandedSection>
   );
 }
