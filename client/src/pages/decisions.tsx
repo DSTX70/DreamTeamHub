@@ -69,8 +69,8 @@ export default function Decisions() {
               className="role-card"
               data-testid={`decision-${decision.id}`}
             >
-              {/* Blue rail at top */}
-              <div className="rail pod-rail control h-1.5" />
+              {/* Yellow rail at top (Decision Log pod color) */}
+              <div className="rail pod-rail decision h-1.5" />
               
               <div className="inner grid gap-3">
                 {/* Icon badge + Title + Status pill */}
@@ -128,7 +128,7 @@ export default function Decisions() {
         </div>
       ) : (
         <article className="role-card">
-          <div className="rail pod-rail control h-1.5" />
+          <div className="rail pod-rail decision h-1.5" />
           <div className="inner py-12 text-center">
             <EmptyState
               icon={FileText}

@@ -260,53 +260,73 @@ export default function Intake() {
       {isLoadingItems ? (
         <div className="space-y-4">
           {[...Array(3)].map((_, i) => (
-            <Card key={i}>
-              <CardHeader>
-                <Skeleton className="h-6 w-64" />
-                <Skeleton className="h-4 w-96 mt-2" />
-              </CardHeader>
-            </Card>
+            <article key={i} className="role-card">
+              <div className="rail pod-rail intake h-1.5" />
+              <div className="inner">
+                <Skeleton className="h-6 w-64 mb-3" />
+                <Skeleton className="h-4 w-96 mb-4" />
+              </div>
+            </article>
           ))}
         </div>
       ) : workItems && workItems.length > 0 ? (
         <div className="space-y-4">
           {workItems.map((item) => (
-            <Card key={item.id} className="hover-elevate" data-testid={`work-item-${item.id}`}>
-              <CardHeader>
-                <div className="flex items-start justify-between gap-4">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-3 mb-2">
-                      <CardTitle className="text-lg">{item.title}</CardTitle>
-                      <StatusBadge status={item.status} />
-                      {item.priority && <StatusBadge status={item.priority} />}
-                    </div>
-                    {item.description && (
-                      <CardDescription className="text-sm">{item.description}</CardDescription>
-                    )}
+            <article key={item.id} className="role-card" data-testid={`work-item-${item.id}`}>
+              {/* Teal rail at top (Intake & Routing pod color) */}
+              <div className="rail pod-rail intake h-1.5" />
+              
+              <div className="inner grid gap-3">
+                {/* Icon badge + Title + Status badges */}
+                <div className="flex items-start justify-between">
+                  <div className="flex items-center gap-3 flex-1">
+                    {/* Icon badge */}
+                    <span className="icon-badge">
+                      <Inbox className="h-4 w-4 text-brand-teal" />
+                    </span>
+                    
+                    {/* Title */}
+                    <h2 className="text-lg md:text-xl font-grotesk text-text-primary">
+                      {item.title}
+                    </h2>
+                  </div>
+                  
+                  {/* Status badges */}
+                  <div className="flex items-center gap-2">
+                    <StatusBadge status={item.status} />
+                    {item.priority && <StatusBadge status={item.priority} />}
                   </div>
                 </div>
-              </CardHeader>
-              <CardContent>
-                <div className="flex items-center gap-6 text-sm text-muted-foreground">
+
+                {/* Description */}
+                {item.description && (
+                  <p className="text-text-secondary text-sm leading-relaxed">
+                    {item.description}
+                  </p>
+                )}
+
+                {/* Meta row: Milestone + Due Date */}
+                <div className="flex flex-wrap gap-2">
                   {item.milestone && (
-                    <div>
-                      <span className="font-medium">Milestone:</span> {item.milestone}
-                    </div>
+                    <span className="chip">
+                      Milestone: {item.milestone}
+                    </span>
                   )}
                   {item.dueDate && (
-                    <div className="flex items-center gap-1">
-                      <Calendar className="h-4 w-4" />
+                    <span className="chip">
+                      <Calendar className="h-3 w-3 inline mr-1" />
                       Due {format(new Date(item.dueDate), 'MMM d, yyyy')}
-                    </div>
+                    </span>
                   )}
                 </div>
-              </CardContent>
-            </Card>
+              </div>
+            </article>
           ))}
         </div>
       ) : (
-        <Card>
-          <CardContent className="py-12">
+        <article className="role-card">
+          <div className="rail pod-rail intake h-1.5" />
+          <div className="inner py-12 text-center">
             <EmptyState
               icon={Inbox}
               title="No work items yet"
@@ -316,8 +336,8 @@ export default function Intake() {
                 onClick: () => setShowForm(true),
               }}
             />
-          </CardContent>
-        </Card>
+          </div>
+        </article>
       )}
     </div>
   );

@@ -110,7 +110,8 @@ export default function Roles() {
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           {filteredRoles.map((role) => (
             <div key={role.id} className="role-card" data-testid={`role-card-${role.handle}`}>
-              <div className={`rail pod-rail ${getPodRailClass(role.pod)}`}></div>
+              {/* Pink rail at top (Roster & Roles pod color) - all cards use roster color */}
+              <div className="rail pod-rail roster"></div>
               <div className="inner">
                 <p className="title" style={{ font: '800 22px/1 Inter' }}>{role.handle}</p>
                 <p className="subtitle">{role.title}</p>
