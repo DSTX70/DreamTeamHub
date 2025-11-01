@@ -2,74 +2,74 @@
 @tailwind components;
 @tailwind utilities;
 
-/* LIGHT MODE */
+/* DARK MODE (Default) */
 :root {
-  --button-outline: rgba(0,0,0, .10);
-  --badge-outline: rgba(0,0,0, .05);
+  --button-outline: rgba(255,255,255, .12);
+  --badge-outline: rgba(255,255,255, .10);
 
   /* Automatic computation of border around primary / danger buttons */
-  --opaque-button-border-intensity: -8; /* In terms of percentages */
+  --opaque-button-border-intensity: 8; /* In terms of percentages */
 
   /* Backgrounds applied on top of other backgrounds when hovered/active */
-  --elevate-1: rgba(0,0,0, .03);
-  --elevate-2: rgba(0,0,0, .08);
+  --elevate-1: rgba(255,255,255, .05);
+  --elevate-2: rgba(255,255,255, .12);
 
-  --background: 0 0% 100%;
+  --background: 222 20% 6%;
 
-  --foreground: 222 47% 11%;
+  --foreground: 210 40% 98%;
 
-  --border: 220 13% 91%;
+  --border: 220 13% 15%;
 
-  --card: 0 0% 98%;
+  --card: 222 15% 10%;
 
-  --card-foreground: 222 47% 11%;
+  --card-foreground: 210 40% 98%;
 
-  --card-border: 220 13% 94%;
+  --card-border: 220 13% 18%;
 
-  --sidebar: 220 9% 96%;
+  --sidebar: 222 18% 8%;
 
-  --sidebar-foreground: 222 47% 11%;
+  --sidebar-foreground: 210 40% 98%;
 
-  --sidebar-border: 220 13% 91%;
+  --sidebar-border: 220 13% 15%;
 
-  --sidebar-primary: 221 83% 53%;
+  --sidebar-primary: 180 65% 52%;
 
-  --sidebar-primary-foreground: 210 40% 98%;
+  --sidebar-primary-foreground: 222 20% 6%;
 
-  --sidebar-accent: 220 13% 91%;
+  --sidebar-accent: 220 13% 15%;
 
-  --sidebar-accent-foreground: 222 47% 11%;
+  --sidebar-accent-foreground: 210 40% 98%;
 
-  --sidebar-ring: 221 83% 53%;
+  --sidebar-ring: 180 65% 52%;
 
-  --popover: 0 0% 96%;
+  --popover: 222 15% 10%;
 
-  --popover-foreground: 222 47% 11%;
+  --popover-foreground: 210 40% 98%;
 
-  --popover-border: 220 13% 89%;
+  --popover-border: 220 13% 18%;
 
-  --primary: 221 83% 53%;
+  --primary: 180 65% 52%;
 
-  --primary-foreground: 210 40% 98%;
+  --primary-foreground: 222 20% 6%;
 
-  --secondary: 220 14% 88%;
+  --secondary: 220 14% 18%;
 
-  --secondary-foreground: 222 47% 11%;
+  --secondary-foreground: 210 40% 98%;
 
-  --muted: 220 13% 92%;
+  --muted: 220 13% 15%;
 
-  --muted-foreground: 215 16% 47%;
+  --muted-foreground: 215 16% 65%;
 
-  --accent: 220 13% 90%;
+  --accent: 220 13% 18%;
 
-  --accent-foreground: 222 47% 11%;
+  --accent-foreground: 210 40% 98%;
 
   --destructive: 0 84% 60%;
 
   --destructive-foreground: 0 0% 98%;
 
-  --input: 220 13% 85%;
-  --ring: 221 83% 53%;
+  --input: 220 13% 18%;
+  --ring: 180 65% 52%;
   --chart-1: 221 83% 53%;
   --chart-2: 142 76% 36%;
   --chart-3: 262 83% 58%;
