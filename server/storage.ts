@@ -1,9 +1,10 @@
 // Referenced from javascript_database integration blueprint
 import { 
-  pods, persons, roleCards, roleRaci, agentSpecs, workItems, decisions,
+  users, pods, persons, roleCards, roleRaci, agentSpecs, workItems, decisions,
   brainstormSessions, brainstormParticipants, brainstormIdeas, brainstormClusters, brainstormArtifacts,
   audits, auditChecks, auditFindings, auditArtifacts, events,
   conversations, messages, agentMemories, agentRuns,
+  type User, type UpsertUser,
   type Pod, type Person, type RoleCard, type RoleRaci, type AgentSpec, type WorkItem, type Decision,
   type BrainstormSession, type BrainstormParticipant, type BrainstormIdea, type BrainstormCluster, type BrainstormArtifact,
   type Audit, type AuditCheck, type AuditFinding, type AuditArtifact, type Event,
@@ -17,6 +18,10 @@ import { db } from "./db";
 import { eq, desc, and, or, sql, inArray } from "drizzle-orm";
 
 export interface IStorage {
+  // Users (Replit Auth - mandatory)
+  getUser(id: string): Promise<User | undefined>;
+  upsertUser(user: UpsertUser): Promise<User>;
+  
   // Pods
   getPods(): Promise<Pod[]>;
   getPod(id: number): Promise<Pod | undefined>;
@@ -116,6 +121,27 @@ export interface IStorage {
 }
 
 export class DatabaseStorage implements IStorage {
+  // ===== USERS (Replit Auth) =====
+  async getUser(id: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.id, id));
+    return user;
+  }
+
+  async upsertUser(userData: UpsertUser): Promise<User> {
+    const [user] = await db
+      .insert(users)
+      .values(userData)
+      .onConflictDoUpdate({
+        target: users.id,
+        set: {
+          ...userData,
+          updatedAt: new Date(),
+        },
+      })
+      .returning();
+    return user;
+  }
+
   // ===== PODS =====
   async getPods(): Promise<Pod[]> {
     return await db.select().from(pods).orderBy(pods.name);
