@@ -77,9 +77,9 @@ export default function Roles() {
                     onClick={() => setSelectedPod(pod)}
                     data-testid={`filter-pod-${pod.toLowerCase().replace(/\s+/g, '-')}`}
                     style={{
-                      borderColor: isSelected ? podColor : 'var(--glass-border)',
-                      backgroundColor: isSelected ? `${podColor}22` : 'transparent',
-                      color: isSelected ? podColor : 'var(--text-secondary)',
+                      borderColor: podColor,
+                      backgroundColor: isSelected ? `${podColor}33` : `${podColor}11`,
+                      color: podColor,
                       fontWeight: isSelected ? 600 : 400,
                     }}
                     className="hover-elevate active-elevate-2"
