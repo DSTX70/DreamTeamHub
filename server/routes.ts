@@ -741,10 +741,93 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // AGENT LEARNING & MEMORY
   // ===========================
 
+  // List all agents (role cards as agents)
+  app.get("/api/agents", async (req, res) => {
+    try {
+      const roleCards = await storage.getRoleCards({});
+      const agents = roleCards.map(role => ({
+        handle: role.handle,
+        title: role.title,
+        pod: role.pod,
+        purpose: role.purpose,
+        core_functions: role.coreFunctions,
+        definition_of_done: role.definitionOfDone,
+      }));
+      res.json({ agents });
+    } catch (error: any) {
+      console.error('Error fetching agents:', error);
+      res.status(500).json({ error: error.message || 'Failed to fetch agents' });
+    }
+  });
+
+  // Run an agent task
+  app.post("/api/agents/run", async (req, res) => {
+    try {
+      const { agent, task, links = [], post_to_thread = false } = req.body;
+      const startTime = Date.now();
+
+      if (!agent || !task) {
+        return res.status(400).json({ error: 'Agent handle and task are required' });
+      }
+
+      // Get role card for the agent
+      const roleCards = await storage.getRoleCards({ handle: agent });
+      const roleCard = roleCards[0];
+      if (!roleCard) {
+        return res.status(404).json({ error: 'Agent not found' });
+      }
+
+      // Build agent context with memory
+      const agentContext = await buildAgentContext(
+        roleCard.handle,
+        '',
+        { includeMemories: true, memoryLimit: 20 }
+      );
+
+      // Generate AI response for the task
+      const chatHistory = [{ role: 'user' as const, content: task }];
+      const output = await generatePersonaResponse(roleCard, chatHistory, agentContext.systemPrompt);
+
+      // Record agent run
+      const duration = Date.now() - startTime;
+      await recordAgentRun(
+        roleCard.handle,
+        task,
+        output,
+        { links, duration, status: 'completed' }
+      );
+
+      res.json({
+        agent: roleCard.handle,
+        task,
+        output,
+        duration,
+        status: 'completed',
+        post_to_thread,
+      });
+    } catch (error: any) {
+      console.error('Error running agent:', error);
+      res.status(500).json({ error: error.message || 'Failed to run agent' });
+    }
+  });
+
   // Record feedback about an agent
   app.post("/api/agents/feedback", async (req, res) => {
     try {
-      const validated = insertAgentMemorySchema.parse(req.body);
+      // Support both formats: { roleHandle, kind, textValue, ... } and { agent, feedback, score, kind }
+      let data = req.body;
+      if (data.agent && data.feedback) {
+        // Vite app format - convert to our format
+        data = {
+          roleHandle: data.agent,
+          kind: data.kind || 'feedback',
+          textValue: data.feedback,
+          score: data.score || 0,
+          metadata: data.metadata || {},
+        };
+      }
+      
+      const validated = insertAgentMemorySchema.parse(data);
       const memory = await storage.createAgentMemory(validated);
       res.status(201).json(memory);
     } catch (error: any) {
@@ -761,7 +844,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const minScore = req.query.minScore ? parseInt(req.query.minScore as string) : undefined;
 
       const memories = await storage.getAgentMemories(handle, { limit, minScore });
-      res.json(memories);
+      
+      // Return in Vite app format: { items: [...] } with content field
+      const items = memories.map(m => ({
+        ...m,
+        content: m.textValue, // Add content field for Vite app compatibility
+      }));
+      
+      res.json({ items });
     } catch (error: any) {
       console.error('Error fetching agent memories:', error);
       res.status(500).json({ error: error.message || 'Failed to fetch agent memories' });
