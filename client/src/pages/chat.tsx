@@ -1,17 +1,17 @@
 import { useState } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { apiRequest, queryClient } from '@/lib/queryClient';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Loader2, Send, MessageSquare, Plus } from 'lucide-react';
+import { Loader2, Send, MessageSquare, Plus, Upload } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import type { RoleCard, Conversation, Message } from '@shared/schema';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { getPodColor } from '@/lib/pod-utils';
 
 export default function ChatPage() {
   const [selectedConversationId, setSelectedConversationId] = useState<number | null>(null);
@@ -39,8 +39,10 @@ export default function ChatPage() {
 
   // Create new conversation
   const createConversationMutation = useMutation({
-    mutationFn: async (data: { title: string; roleHandle: string; userId?: number | null }) =>
-      apiRequest('POST', '/api/conversations', data) as Promise<Conversation>,
+    mutationFn: async (data: { title: string; roleHandle: string; userId?: number | null }) => {
+      const response = await apiRequest('POST', '/api/conversations', data);
+      return response as unknown as Conversation;
+    },
     onSuccess: (newConversation: Conversation) => {
       queryClient.invalidateQueries({ queryKey: ['/api/conversations'] });
       setSelectedConversationId(newConversation.id);
@@ -96,199 +98,295 @@ export default function ChatPage() {
   const selectedConversation = conversations.find(c => c.id === selectedConversationId);
   const selectedRoleCard = roleCards.find(r => r.handle === selectedConversation?.roleHandle);
 
-  return (
-    <div className="flex h-full gap-4 p-6">
-      {/* Conversations Sidebar */}
-      <Card className="w-80 flex flex-col">
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
-          <CardTitle className="text-xl font-semibold">Conversations</CardTitle>
-          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-            <DialogTrigger asChild>
-              <Button size="icon" variant="ghost" data-testid="button-new-conversation">
-                <Plus className="h-4 w-4" />
-              </Button>
-            </DialogTrigger>
-            <DialogContent data-testid="dialog-new-conversation">
-              <DialogHeader>
-                <DialogTitle>Start New Conversation</DialogTitle>
-              </DialogHeader>
-              <div className="space-y-4">
-                <div>
-                  <Label htmlFor="title">Conversation Title</Label>
-                  <Input
-                    id="title"
-                    data-testid="input-conversation-title"
-                    value={newConvTitle}
-                    onChange={(e) => setNewConvTitle(e.target.value)}
-                    placeholder="e.g., Q1 Strategy Discussion"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="persona">Dream Team Member</Label>
-                  <Select value={newConvRole} onValueChange={setNewConvRole}>
-                    <SelectTrigger id="persona" data-testid="select-persona">
-                      <SelectValue placeholder="Select a persona..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {roleCards.map(role => (
-                        <SelectItem key={role.id} value={role.handle} data-testid={`option-persona-${role.handle}`}>
-                          <div className="flex items-center gap-2">
-                            <span className="font-medium">{role.handle}</span>
-                            <span className="text-sm text-muted-foreground">- {role.title}</span>
-                          </div>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <Button
-                  onClick={handleCreateConversation}
-                  disabled={!newConvTitle.trim() || !newConvRole || createConversationMutation.isPending}
-                  className="w-full"
-                  data-testid="button-start-conversation"
-                >
-                  {createConversationMutation.isPending ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Creating...
-                    </>
-                  ) : (
-                    'Start Conversation'
-                  )}
-                </Button>
-              </div>
-            </DialogContent>
-          </Dialog>
-        </CardHeader>
-        <ScrollArea className="flex-1">
-          <CardContent className="space-y-2 p-4 pt-0">
-            {loadingConversations ? (
-              <div className="flex justify-center py-8">
-                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-              </div>
-            ) : conversations.length === 0 ? (
-              <div className="text-center py-8 text-sm text-muted-foreground">
-                <MessageSquare className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                No conversations yet
-              </div>
-            ) : (
-              conversations.map(conv => (
-                <button
-                  key={conv.id}
-                  onClick={() => setSelectedConversationId(conv.id)}
-                  data-testid={`conversation-${conv.id}`}
-                  className={`w-full text-left p-3 rounded-md transition-colors hover-elevate ${
-                    selectedConversationId === conv.id
-                      ? 'bg-accent'
-                      : 'bg-card'
-                  }`}
-                >
-                  <div className="font-medium text-sm truncate">{conv.title}</div>
-                  <div className="text-xs text-muted-foreground truncate">
-                    {conv.roleHandle}
-                  </div>
-                </button>
-              ))
-            )}
-          </CardContent>
-        </ScrollArea>
-      </Card>
+  // Get unique pods from conversations for the pod chip legend
+  const uniquePods = Array.from(new Set(
+    conversations
+      .map(c => roleCards.find(r => r.handle === c.roleHandle)?.pod)
+      .filter(Boolean)
+  )) as string[];
 
-      {/* Chat Area */}
-      <Card className="flex-1 flex flex-col">
-        {selectedConversation ? (
-          <>
-            <CardHeader className="border-b">
-              <div className="flex items-center gap-3">
-                <Avatar>
-                  <AvatarFallback className="bg-primary text-primary-foreground">
-                    {selectedConversation.roleHandle.slice(0, 2)}
-                  </AvatarFallback>
-                </Avatar>
-                <div>
-                  <CardTitle className="text-xl">{selectedConversation.roleHandle}</CardTitle>
-                  {selectedRoleCard && (
-                    <p className="text-sm text-muted-foreground">
-                      {selectedRoleCard.title} • {selectedRoleCard.pod}
-                    </p>
-                  )}
+  return (
+    <div className="flex flex-col h-screen">
+      {/* Header with Orchestra Gradient */}
+      <header className="bg-grad-orchestra px-6 py-4">
+        <h1 className="text-2xl font-grotesk text-white font-semibold">
+          Dream Team Chat
+        </h1>
+        <p className="text-sm text-white/80 font-inter">
+          Header uses Orchestra gradient (Teal→Indigo)
+        </p>
+      </header>
+
+      {/* Main Content Area */}
+      <div className="flex flex-1 overflow-hidden">
+        {/* Conversations Sidebar */}
+        <aside className="w-96 bg-brand-surface border-r border-brand-line flex flex-col">
+          {/* Pink rail at top */}
+          <div className="h-1.5 bg-pod-brand" />
+          
+          <div className="p-4 flex items-center justify-between border-b border-brand-line">
+            <h2 className="text-lg font-grotesk text-text-primary">Conversations</h2>
+            <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+              <DialogTrigger asChild>
+                <Button size="icon" variant="ghost" data-testid="button-new-conversation">
+                  <Plus className="h-4 w-4" />
+                </Button>
+              </DialogTrigger>
+              <DialogContent data-testid="dialog-new-conversation">
+                <DialogHeader>
+                  <DialogTitle>Start New Conversation</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4">
+                  <div>
+                    <Label htmlFor="title">Conversation Title</Label>
+                    <Input
+                      id="title"
+                      data-testid="input-conversation-title"
+                      value={newConvTitle}
+                      onChange={(e) => setNewConvTitle(e.target.value)}
+                      placeholder="e.g., Marketing Strategy Chat"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="persona">Dream Team Member</Label>
+                    <Select value={newConvRole} onValueChange={setNewConvRole}>
+                      <SelectTrigger id="persona" data-testid="select-persona">
+                        <SelectValue placeholder="Select a persona..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {roleCards.map(role => (
+                          <SelectItem key={role.id} value={role.handle} data-testid={`option-persona-${role.handle}`}>
+                            <div className="flex items-center gap-2">
+                              <span className="font-medium">{role.handle}</span>
+                              <span className="text-sm text-muted-foreground">- {role.title}</span>
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <Button
+                    onClick={handleCreateConversation}
+                    disabled={!newConvTitle.trim() || !newConvRole || createConversationMutation.isPending}
+                    className="w-full"
+                    data-testid="button-start-conversation"
+                  >
+                    {createConversationMutation.isPending ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Creating...
+                      </>
+                    ) : (
+                      'Start Conversation'
+                    )}
+                  </Button>
+                </div>
+              </DialogContent>
+            </Dialog>
+          </div>
+
+          <ScrollArea className="flex-1 p-4">
+            <div className="space-y-2">
+              {loadingConversations ? (
+                <div className="flex justify-center py-8">
+                  <Loader2 className="h-6 w-6 animate-spin text-text-muted" />
+                </div>
+              ) : conversations.length === 0 ? (
+                <div className="text-center py-8 text-sm text-text-muted">
+                  <MessageSquare className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                  No conversations yet
+                </div>
+              ) : (
+                conversations.map(conv => {
+                  const roleCard = roleCards.find(r => r.handle === conv.roleHandle);
+                  return (
+                    <button
+                      key={conv.id}
+                      onClick={() => setSelectedConversationId(conv.id)}
+                      data-testid={`conversation-${conv.id}`}
+                      className={`w-full text-left p-3 rounded-md transition-colors hover-elevate ${
+                        selectedConversationId === conv.id
+                          ? 'bg-glass border border-glass'
+                          : 'border border-transparent'
+                      }`}
+                    >
+                      <div className="font-medium text-sm text-text-primary truncate mb-1">
+                        {conv.title}
+                      </div>
+                      <div className="text-xs text-text-secondary truncate">
+                        {roleCard?.pod || conv.roleHandle}
+                      </div>
+                    </button>
+                  );
+                })
+              )}
+            </div>
+          </ScrollArea>
+
+          {/* Pod Chips at Bottom */}
+          {uniquePods.length > 0 && (
+            <div className="p-4 border-t border-brand-line">
+              <div className="flex flex-wrap gap-2">
+                {uniquePods.map(pod => {
+                  const podClass = pod.toLowerCase().replace(/\s+/g, '-').replace(/&/g, '');
+                  return (
+                    <span
+                      key={pod}
+                      className={`chip chip-pod-${podClass}`}
+                    >
+                      {pod} pod chip
+                    </span>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+        </aside>
+
+        {/* Chat Area */}
+        <main className="flex-1 flex flex-col bg-brand-dark">
+          {selectedConversation ? (
+            <>
+              {/* Chat Header */}
+              <div className="border-b border-brand-line p-4">
+                <div className="flex items-center gap-3">
+                  <Avatar className="h-10 w-10">
+                    <AvatarFallback className="bg-core-teal text-brand-dark font-semibold">
+                      {selectedConversation.roleHandle.slice(0, 2).toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div>
+                    <h3 className="text-lg font-grotesk text-text-primary">
+                      {selectedConversation.roleHandle}
+                    </h3>
+                    {selectedRoleCard && (
+                      <p className="text-sm text-text-secondary">
+                        {selectedRoleCard.title} • {selectedRoleCard.pod}
+                      </p>
+                    )}
+                  </div>
                 </div>
               </div>
-            </CardHeader>
-            <ScrollArea className="flex-1 p-6">
-              <div className="space-y-4">
-                {loadingMessages ? (
-                  <div className="flex justify-center py-8">
-                    <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-                  </div>
-                ) : messages.length === 0 ? (
-                  <div className="text-center py-8 text-sm text-muted-foreground">
-                    Start the conversation by sending a message below
-                  </div>
-                ) : (
-                  messages.map(msg => (
-                    <div
-                      key={msg.id}
-                      data-testid={`message-${msg.id}`}
-                      className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
-                    >
+
+              {/* Messages */}
+              <ScrollArea className="flex-1 p-6">
+                <div className="space-y-4">
+                  {loadingMessages ? (
+                    <div className="flex justify-center py-8">
+                      <Loader2 className="h-6 w-6 animate-spin text-text-muted" />
+                    </div>
+                  ) : messages.length === 0 ? (
+                    <div className="text-center py-8 text-sm text-text-secondary">
+                      Start the conversation by sending a message below
+                    </div>
+                  ) : (
+                    messages.map(msg => (
                       <div
-                        className={`max-w-[70%] rounded-lg p-3 ${
-                          msg.role === 'user'
-                            ? 'bg-primary text-primary-foreground'
-                            : 'bg-muted'
-                        }`}
+                        key={msg.id}
+                        data-testid={`message-${msg.id}`}
+                        className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
                       >
-                        <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
+                        <div
+                          className={`max-w-[70%] rounded-lg p-3 ${
+                            msg.role === 'user'
+                              ? 'bg-core-teal text-brand-dark'
+                              : 'bg-brand-surface border border-brand-line'
+                          }`}
+                        >
+                          <p className={`text-sm whitespace-pre-wrap ${
+                            msg.role === 'user' ? 'text-brand-dark' : 'text-text-primary'
+                          }`}>
+                            {msg.content}
+                          </p>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                  {sendMessageMutation.isPending && (
+                    <div className="flex justify-start">
+                      <div className="bg-brand-surface border border-brand-line rounded-lg p-3">
+                        <Loader2 className="h-4 w-4 animate-spin text-text-muted" />
                       </div>
                     </div>
-                  ))
-                )}
-                {sendMessageMutation.isPending && (
-                  <div className="flex justify-start">
-                    <div className="bg-muted rounded-lg p-3">
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    </div>
+                  )}
+                </div>
+              </ScrollArea>
+
+              {/* Message Input */}
+              <div className="border-t border-brand-line p-4">
+                <div className="flex gap-2">
+                  <Input
+                    data-testid="input-message"
+                    placeholder="Type your message..."
+                    value={messageInput}
+                    onChange={(e) => setMessageInput(e.target.value)}
+                    onKeyPress={(e) => {
+                      if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        handleSendMessage();
+                      }
+                    }}
+                    disabled={sendMessageMutation.isPending}
+                    className="bg-brand-surface border-brand-line"
+                  />
+                  <Button
+                    onClick={handleSendMessage}
+                    disabled={!messageInput.trim() || sendMessageMutation.isPending}
+                    size="icon"
+                    data-testid="button-send-message"
+                  >
+                    <Send className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            </>
+          ) : (
+            // Empty State
+            <div className="flex-1 flex items-center justify-center">
+              <div className="text-center max-w-md px-6">
+                <div className="mb-6 flex items-center justify-center">
+                  <div className="w-24 h-24 rounded-full border-2 border-brand-line flex items-center justify-center bg-brand-surface">
+                    <MessageSquare className="h-10 w-10 text-text-muted" />
                   </div>
-                )}
+                </div>
+                
+                <h2 className="text-2xl font-grotesk text-text-primary mb-2">
+                  Select a conversation
+                </h2>
+                <p className="text-text-secondary mb-6">
+                  or create a new one to start chatting
+                </p>
+
+                <div className="flex items-center justify-center gap-3 mb-8">
+                  <Button
+                    onClick={() => setIsDialogOpen(true)}
+                    data-testid="button-empty-new-conversation"
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    New conversation
+                  </Button>
+                  <Button variant="outline">
+                    <Upload className="h-4 w-4 mr-2" />
+                    Import transcript
+                  </Button>
+                </div>
+
+                <div className="space-y-3">
+                  <p className="text-xs text-text-muted uppercase tracking-wide">
+                    Token legend uses your CSS vars (no hard-coded colors):
+                  </p>
+                  <div className="flex items-center justify-center gap-2">
+                    <div className="w-8 h-8 rounded bg-brand-orange border border-brand-line" title="Orange" />
+                    <div className="w-8 h-8 rounded bg-brand-magenta border border-brand-line" title="Magenta" />
+                    <div className="w-8 h-8 rounded bg-core-teal border border-brand-line" title="Teal" />
+                    <div className="w-8 h-8 rounded bg-core-indigo border border-brand-line" title="Indigo" />
+                  </div>
+                </div>
               </div>
-            </ScrollArea>
-            <CardContent className="border-t p-4">
-              <div className="flex gap-2">
-                <Input
-                  data-testid="input-message"
-                  placeholder="Type your message..."
-                  value={messageInput}
-                  onChange={(e) => setMessageInput(e.target.value)}
-                  onKeyPress={(e) => {
-                    if (e.key === 'Enter' && !e.shiftKey) {
-                      e.preventDefault();
-                      handleSendMessage();
-                    }
-                  }}
-                  disabled={sendMessageMutation.isPending}
-                />
-                <Button
-                  onClick={handleSendMessage}
-                  disabled={!messageInput.trim() || sendMessageMutation.isPending}
-                  size="icon"
-                  data-testid="button-send-message"
-                >
-                  <Send className="h-4 w-4" />
-                </Button>
-              </div>
-            </CardContent>
-          </>
-        ) : (
-          <div className="flex-1 flex items-center justify-center">
-            <div className="text-center text-muted-foreground">
-              <MessageSquare className="h-12 w-12 mx-auto mb-3 opacity-30" />
-              <p className="text-lg font-medium">Select a conversation</p>
-              <p className="text-sm">or create a new one to start chatting</p>
             </div>
-          </div>
-        )}
-      </Card>
+          )}
+        </main>
+      </div>
     </div>
   );
 }

@@ -4,6 +4,12 @@
 
 Dream Team Hub is a sophisticated multi-pod orchestration platform designed to provide a "single pane of glass" for managing complex organizational workflows across distributed teams. It aims to reduce redundant tasks, synchronize key actions, and facilitate evidence-grade collaboration across multiple organizational units. The platform features modules for managing priorities, assignments, escalations, brainstorming, audits, decisions, and an AI-powered chat system with role-based personas.
 
+## Documentation
+
+- **User Manual**: Comprehensive guide covering all features, functions, tips, and best practices → `USER_MANUAL.md`
+- **Brand Specification**: Design system and visual guidelines → `client/BRANDING_SPEC.md`
+- **Brand Guide PDF**: Print-ready brand guide → `DreamTeamHub_BrandGuide_v1.pdf`
+
 ## User Preferences
 
 I prefer detailed explanations of new features and significant changes. Please ask for my approval before making any major architectural changes or introducing new external dependencies. I value iterative development with clear communication at each step.
