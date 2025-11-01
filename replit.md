@@ -77,7 +77,16 @@ Dream Team Hub is a sophisticated control platform designed to provide a "single
 - **Run Tracking**: Complete audit trail of all agent interactions with performance metrics
 - **Feedback System**: Users can provide scored feedback (rules, notes, learnings) to teach agents preferred patterns
 
-### 8. Pods & Persons
+### 8. Roles ⇄ Agent Specs Sync
+- **Bulk Generation**: Generate Agent Specs for all Role Cards that don't have specs
+- **Two-Way Diff View**: Compare Roles and Agent Specs side-by-side
+- **Smart Suggestions**: Automatically detect differences in title, pod, instruction blocks, and tools
+- **One-Click Sync**: Apply suggestions to synchronize Role Cards with Agent Specs
+- **Auto-Mapping**: Uses Role's Definition of Done as instruction blocks
+- **Baseline Tools**: Automatically assigns default tools (threads.post, drive.search, zip.kit, hash.index)
+- **Visual Indicators**: Shows sync status with clear "in sync ✅" badges
+
+### 9. Pods & Persons
 - **Pod Management**: Organizational units with charters and owners
 - **Person Management**: Team members with handles, roles, and contact info
 - **Hierarchical Structure**: Link persons to pods

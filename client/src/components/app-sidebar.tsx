@@ -1,4 +1,4 @@
-import { Home, Users, Lightbulb, Shield, FileText, Inbox, Sparkles, Layers, MessageSquare, Bot, Radio, Settings } from "lucide-react";
+import { Home, Users, Lightbulb, Shield, FileText, Inbox, Sparkles, Layers, MessageSquare, Bot, Radio, Settings, RefreshCw } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import {
   Sidebar,
@@ -42,6 +42,7 @@ const navigation = [
       { title: "Pods & Persons", url: "/pods", icon: Layers },
       { title: "Role Cards", url: "/roles", icon: Users },
       { title: "Roster Admin", url: "/roster-admin", icon: Settings },
+      { title: "Roles ⇄ Specs Sync", url: "/role-agent-sync", icon: RefreshCw },
     ],
   },
 ];
