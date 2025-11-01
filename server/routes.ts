@@ -10,6 +10,8 @@ import {
 } from "@shared/schema";
 import { generatePersonaResponse } from "./openai-service";
 import { buildAgentContext, recordAgentRun, recordFeedback } from "./agent-context";
+import { postSummon, postMirrorBack } from "./comms-service";
+import type { SummonPayload, MirrorBackPayload } from "./comms-service";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // ===========================
@@ -869,6 +871,74 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error('Error fetching agent runs:', error);
       res.status(500).json({ error: error.message || 'Failed to fetch agent runs' });
+    }
+  });
+
+  // ===========================
+  // COMMS - SUMMON & MIRROR-BACK
+  // ===========================
+
+  // Post Summon message to Pod's thread
+  app.post("/api/comms/summon", async (req, res) => {
+    try {
+      const payload: SummonPayload = req.body;
+      
+      // Get pod to retrieve thread_id
+      const pods = await storage.getPods();
+      const pod = pods.find(p => p.id === payload.podId);
+      
+      if (!pod) {
+        return res.status(404).json({ error: 'Pod not found' });
+      }
+
+      const result = await postSummon(payload, pod.threadId || null);
+      
+      if (!result.success) {
+        return res.status(500).json({ error: result.error || 'Failed to post Summon' });
+      }
+
+      res.json({
+        success: true,
+        messageId: result.messageId,
+        podName: pod.name,
+        threadId: pod.threadId,
+        mode: pod.threadId && process.env.USE_OPENAI === '1' ? 'openai' : 'fallback',
+      });
+    } catch (error: any) {
+      console.error('Error posting Summon:', error);
+      res.status(500).json({ error: error.message || 'Failed to post Summon' });
+    }
+  });
+
+  // Post Mirror-Back message to Pod's thread
+  app.post("/api/comms/mirror", async (req, res) => {
+    try {
+      const payload: MirrorBackPayload = req.body;
+      
+      // Get pod to retrieve thread_id
+      const pods = await storage.getPods();
+      const pod = pods.find(p => p.id === payload.podId);
+      
+      if (!pod) {
+        return res.status(404).json({ error: 'Pod not found' });
+      }
+
+      const result = await postMirrorBack(payload, pod.threadId || null);
+      
+      if (!result.success) {
+        return res.status(500).json({ error: result.error || 'Failed to post Mirror-Back' });
+      }
+
+      res.json({
+        success: true,
+        messageId: result.messageId,
+        podName: pod.name,
+        threadId: pod.threadId,
+        mode: pod.threadId && process.env.USE_OPENAI === '1' ? 'openai' : 'fallback',
+      });
+    } catch (error: any) {
+      console.error('Error posting Mirror-Back:', error);
+      res.status(500).json({ error: error.message || 'Failed to post Mirror-Back' });
     }
   });
 
