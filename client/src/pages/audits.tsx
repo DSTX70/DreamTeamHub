@@ -55,20 +55,21 @@ export default function Audits() {
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         {Object.entries(auditTypeConfig).map(([type, config]) => {
           const Icon = config.icon;
+          // Map audit types to pod colors
+          const podClass = type === 'security_soc2' ? 'security' 
+            : type === 'ip_readiness' ? 'ip'
+            : type === 'brand_lock' ? 'brand'
+            : 'finance';
+          
           return (
-            <Card key={type} className="hover-elevate cursor-pointer">
-              <CardHeader className="pb-3">
-                <div className="flex items-center gap-2 mb-2">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10">
-                    <Icon className="h-4 w-4 text-primary" />
-                  </div>
-                  <CardTitle className="text-sm">{config.label}</CardTitle>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <p className="text-xs text-muted-foreground">{config.description}</p>
-              </CardContent>
-            </Card>
+            <article key={type} className="role-card cursor-pointer hover-elevate">
+              {/* Pod-specific colored rail */}
+              <div className={`rail pod-rail ${podClass} h-1.5`} />
+              <div className="inner">
+                <h3 className="text-sm font-grotesk text-text-primary mb-2">{config.label}</h3>
+                <p className="text-xs text-text-secondary">{config.description}</p>
+              </div>
+            </article>
           );
         })}
       </div>

@@ -158,14 +158,12 @@ export default function AgentConsole() {
         {/* Main Panel */}
         <div className="lg:col-span-2 space-y-6">
           {/* Agent Selection */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Play className="w-5 h-5" />
-                Run Agent Task
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
+          <article className="role-card">
+            {/* Cyan rail at top (Product pod color - Agent Console) */}
+            <div className="rail pod-rail product h-1.5" />
+            <div className="inner">
+              <h2 className="text-lg font-grotesk text-text-primary mb-4">Run Agent Task</h2>
+              <div className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="agent-select">Select Agent</Label>
                 <Select value={selectedAgent} onValueChange={setSelectedAgent}>
@@ -212,8 +210,9 @@ export default function AgentConsole() {
                   </>
                 )}
               </Button>
-            </CardContent>
-          </Card>
+              </div>
+            </div>
+          </article>
 
           {/* Output */}
           {output && (

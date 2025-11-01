@@ -30,47 +30,32 @@ export default function Brainstorm() {
 
       {/* Info Cards */}
       <div className="grid gap-4 md:grid-cols-3">
-        <Card>
-          <CardHeader className="pb-3">
-            <div className="flex items-center gap-2">
-              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10">
-                <Lightbulb className="h-4 w-4 text-primary" />
-              </div>
-              <CardTitle className="text-sm">Diverge</CardTitle>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <p className="text-xs text-muted-foreground">Timed idea dump with assigned roles (Pro, Devil's Advocate, Neutral, Customer Voice)</p>
-          </CardContent>
-        </Card>
+        <article className="role-card">
+          {/* Pink rail at top (Brand pod color - Diverge) */}
+          <div className="rail pod-rail brand h-1.5" />
+          <div className="inner">
+            <h3 className="text-sm font-grotesk text-text-primary mb-2">Diverge</h3>
+            <p className="text-xs text-text-secondary">Timed idea dump with assigned roles (Pro, Devil's Advocate, Neutral, Customer Voice)</p>
+          </div>
+        </article>
 
-        <Card>
-          <CardHeader className="pb-3">
-            <div className="flex items-center gap-2">
-              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10">
-                <Users className="h-4 w-4 text-primary" />
-              </div>
-              <CardTitle className="text-sm">Cluster</CardTitle>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <p className="text-xs text-muted-foreground">Group similar ideas into themes with LLM assistance and manual refinement</p>
-          </CardContent>
-        </Card>
+        <article className="role-card">
+          {/* Cyan rail at top (Product pod color - Cluster) */}
+          <div className="rail pod-rail product h-1.5" />
+          <div className="inner">
+            <h3 className="text-sm font-grotesk text-text-primary mb-2">Cluster</h3>
+            <p className="text-xs text-text-secondary">Group similar ideas into themes with LLM assistance and manual refinement</p>
+          </div>
+        </article>
 
-        <Card>
-          <CardHeader className="pb-3">
-            <div className="flex items-center gap-2">
-              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10">
-                <TrendingUp className="h-4 w-4 text-primary" />
-              </div>
-              <CardTitle className="text-sm">Score & Commit</CardTitle>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <p className="text-xs text-muted-foreground">Rate with ICE/RICE rubric and convert top picks to work items</p>
-          </CardContent>
-        </Card>
+        <article className="role-card">
+          {/* Yellow rail at top (Decision pod color - Score & Commit) */}
+          <div className="rail pod-rail decision h-1.5" />
+          <div className="inner">
+            <h3 className="text-sm font-grotesk text-text-primary mb-2">Score & Commit</h3>
+            <p className="text-xs text-text-secondary">Rate with ICE/RICE rubric and convert top picks to work items</p>
+          </div>
+        </article>
       </div>
 
       {/* Sessions List */}

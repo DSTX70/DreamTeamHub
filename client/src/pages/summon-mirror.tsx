@@ -183,17 +183,15 @@ export default function SummonMirrorPage() {
 
       <div className="grid gap-6 lg:grid-cols-2">
         {/* Summon Card */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Bell className="w-5 h-5" />
-              Post Summon
-            </CardTitle>
-            <CardDescription>
+        <article className="role-card">
+          {/* Teal rail at top (Intake pod color - Summon) */}
+          <div className="rail pod-rail intake h-1.5" />
+          <div className="inner">
+            <h2 className="text-lg font-grotesk text-text-primary mb-2">Post Summon</h2>
+            <p className="text-sm text-text-secondary mb-4">
               Summon a Pod with a specific ask and deliverables
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
+            </p>
+            <div className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="summon-pod">Pod *</Label>
               <Select value={summonPodId?.toString()} onValueChange={(val) => setSummonPodId(parseInt(val))}>
@@ -285,21 +283,20 @@ export default function SummonMirrorPage() {
                 </>
               )}
             </Button>
-          </CardContent>
-        </Card>
+            </div>
+          </div>
+        </article>
 
         {/* Mirror-Back Card */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <ArrowUpCircle className="w-5 h-5" />
-              Post Mirror-Back
-            </CardTitle>
-            <CardDescription>
+        <article className="role-card">
+          {/* Blue rail at top (Control pod color - Mirror-Back) */}
+          <div className="rail pod-rail control h-1.5" />
+          <div className="inner">
+            <h2 className="text-lg font-grotesk text-text-primary mb-2">Post Mirror-Back</h2>
+            <p className="text-sm text-text-secondary mb-4">
               Report back on outcomes and next steps
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
+            </p>
+            <div className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="mirror-pod">Pod *</Label>
               <Select value={mirrorPodId?.toString()} onValueChange={(val) => setMirrorPodId(parseInt(val))}>
@@ -416,8 +413,9 @@ export default function SummonMirrorPage() {
                 </>
               )}
             </Button>
-          </CardContent>
-        </Card>
+            </div>
+          </div>
+        </article>
       </div>
 
       {/* Info Card */}
