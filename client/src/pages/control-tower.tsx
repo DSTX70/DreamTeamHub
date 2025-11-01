@@ -73,7 +73,7 @@ export default function ControlTower() {
     return (
       <BrandedSection>
         <BrandedHero
-          title="Control Tower"
+          title="Dream Team Hub by i³ collective"
           subtitle="Live priorities, assignments, and escalations"
         />
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
@@ -98,7 +98,7 @@ export default function ControlTower() {
   return (
     <BrandedSection>
       <BrandedHero
-        title="Control Tower"
+        title="Dream Team Hub by i³ collective"
         subtitle="Live priorities, assignments, and escalations"
       />
 

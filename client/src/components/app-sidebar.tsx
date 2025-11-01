@@ -14,7 +14,7 @@ import {
 
 const navigation = [
   {
-    title: "Control Tower",
+    title: "Dream Team Hub by i³ collective",
     items: [
       { title: "Dashboard", url: "/", icon: Home },
     ],

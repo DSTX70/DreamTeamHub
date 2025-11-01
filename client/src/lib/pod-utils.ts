@@ -5,7 +5,8 @@
 export const getPodRailClass = (podName: string): string => {
   const podMap: Record<string, string> = {
     // Full names
-    "Control Tower": "control",
+    "Dream Team Hub by i³ collective": "control",
+    "Control Tower": "control", // Legacy support
     "Intake & Routing": "intake",
     "Decision Log": "decision",
     "Roster & Roles": "roster",
@@ -29,7 +30,8 @@ export const getPodRailClass = (podName: string): string => {
  */
 export const getPodColor = (podName: string): string => {
   const colorMap: Record<string, string> = {
-    "Control Tower": "#3D6BFF",
+    "Dream Team Hub by i³ collective": "#3D6BFF",
+    "Control Tower": "#3D6BFF", // Legacy support
     "Intake & Routing": "#5CE1CF",
     "Decision Log": "#FFC24D",
     "Roster & Roles": "#C95CAF",
