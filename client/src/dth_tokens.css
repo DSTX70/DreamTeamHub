@@ -1,0 +1,107 @@
+:root{
+  /* Core brand */
+  --brand-dark:#0B0D12;
+  --brand-surface:#0F1422;
+  --brand-line:#1B2136;
+  --brand-light:#F7F8FB;
+
+  /* Primary spectrum */
+  --brand-teal:#1CE6D3;
+  --brand-indigo:#6B8CFF;
+  --brand-yellow:#FFD449;
+  --brand-magenta:#F48FBB;
+  --brand-jade:#34AABB;
+  --brand-orange:#FF965A;
+
+  /* Text */
+  --text-primary:#E8EBFF;
+  --text-secondary:#C8CEEF;
+  --text-muted:#AAB0D8;
+
+  /* Glass */
+  --glass-bg: rgba(255,255,255,0.08);
+  --glass-border: rgba(255,255,255,0.14);
+  --glass-shadow: 0 18px 48px rgba(0,0,0,0.35);
+  --ring: 0 0 0 3px rgba(28,230,211,0.35);
+
+  /* Gradients */
+  --grad-orchestra: linear-gradient(135deg, var(--brand-teal) 0%, var(--brand-indigo) 100%);
+  --grad-synapse: linear-gradient(135deg, var(--brand-yellow) 0%, var(--brand-teal) 60%, var(--brand-indigo) 100%);
+
+  /* Pod hues (locked) */
+  --pod-control:#3D6BFF;    /* Control Tower */
+  --pod-intake:#5CE1CF;     /* Intake & Routing */
+  --pod-decision:#FFC24D;   /* Decision Log */
+  --pod-roster:#C95CAF;     /* Roster & Roles */
+  --pod-ip:#6B1E9C;         /* IP & Patent Program */
+  --pod-security:#3B4A5A;   /* Security & Compliance */
+  --pod-product:#1F9CFF;    /* Product & Engineering */
+  --pod-brand:#FF5BCD;      /* Brand & Assets */
+  --pod-marketing:#FF7A45;  /* Marketing & Comms */
+  --pod-finance:#2DBE7A;    /* Finance & BizOps */
+  --pod-rhythm:#5A67FF;     /* Operating Rhythm */
+
+  /* Spacing scale (px) */
+  --space-1:4px; --space-2:8px; --space-3:12px; --space-4:16px;
+  --space-5:20px; --space-6:24px; --space-7:28px; --space-8:32px;
+
+  /* Radius */
+  --radius-sm:10px; --radius-md:12px; --radius-lg:16px; --radius-xl:20px;
+
+  /* Elevation */
+  --elev-1: 0 10px 24px rgba(0,0,0,.28);
+  --elev-2: 0 18px 48px rgba(0,0,0,.35);
+}
+
+/* Pod accent utilities for rails/icons */
+.pod-rail.control { background: linear-gradient(135deg, var(--pod-control), var(--brand-indigo)); }
+.pod-rail.intake  { background: linear-gradient(135deg, var(--pod-intake), var(--brand-teal)); }
+.pod-rail.decision{ background: linear-gradient(135deg, var(--pod-decision), var(--brand-yellow)); }
+.pod-rail.roster  { background: linear-gradient(135deg, var(--pod-roster), var(--brand-magenta)); }
+.pod-rail.ip      { background: linear-gradient(135deg, var(--pod-ip), var(--brand-indigo)); }
+.pod-rail.security{ background: linear-gradient(135deg, var(--pod-security), var(--brand-jade)); }
+.pod-rail.product { background: linear-gradient(135deg, var(--pod-product), var(--brand-teal)); }
+.pod-rail.brand   { background: linear-gradient(135deg, var(--pod-brand), var(--brand-magenta)); }
+.pod-rail.marketing{background: linear-gradient(135deg, var(--pod-marketing), var(--brand-yellow)); }
+.pod-rail.finance { background: linear-gradient(135deg, var(--pod-finance), var(--brand-jade)); }
+.pod-rail.rhythm  { background: linear-gradient(135deg, var(--pod-rhythm), var(--brand-indigo)); }
+
+/* Role Card shell */
+.role-card{
+  background: var(--glass-bg);
+  border:1px solid var(--glass-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--elev-2);
+  color: var(--text-primary);
+  overflow:hidden;
+}
+.role-card .rail{height:10px;}
+.role-card .inner{padding: var(--space-6);}
+.role-card .title{font-weight:800; letter-spacing:.01em; margin: 0 0 var(--space-2);}
+.role-card .subtitle{color:var(--text-secondary); margin:0 0 var(--space-3);}
+.role-card .chips{display:flex; gap:8px; flex-wrap:wrap; margin-bottom: var(--space-3);}
+.chip{font:600 12px/1 Inter, system-ui; padding:6px 10px; border-radius:999px; background:#ffffff14; border:1px solid #ffffff1f; color:var(--text-secondary)}
+
+/* Buttons */
+.btn{--fg:#fff; --bg:var(--grad-orchestra); --bd:transparent;
+  display:inline-flex; gap:8px; align-items:center; padding:10px 14px; border-radius:12px;
+  color:var(--fg); background:var(--bg); border:1px solid var(--bd); box-shadow: var(--elev-1); font:600 14px/1.1 Inter, system-ui;
+}
+.btn:hover{filter:brightness(1.05)}
+.btn:active{transform: translateY(1px)}
+.btn:focus-visible{outline:none; box-shadow: var(--elev-1), var(--ring)}
+.btn.secondary{--fg:#E8EBFF; --bg:transparent; --bd:var(--glass-border); backdrop-filter: blur(8px)}
+.btn.ghost{--fg:#C8CEEF; --bg:transparent; --bd:transparent; box-shadow:none}
+.btn.sm{padding:6px 10px; border-radius:10px; font-size:12px}
+
+/* Layout helpers */
+.guide-body{background: var(--brand-dark); color: var(--text-primary); font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; margin:0}
+.container{max-width:1100px; margin:0 auto; padding:24px}
+.grid{display:grid; gap:20px}
+.grid.cols-3{grid-template-columns: repeat(3, minmax(0,1fr));}
+.card{background: var(--brand-surface); border:1px solid var(--brand-line); border-radius:16px; padding:16px; box-shadow: var(--elev-1)}
+
+.swatch{height:56px; border-radius:10px; border:1px solid var(--brand-line)}
+.token-row{display:flex; align-items:center; justify-content:space-between; padding:6px 0; border-bottom:1px dashed var(--brand-line)}
+.token-row code{color:var(--text-secondary)}
+.kbd{padding:2px 6px; border-radius:6px; background:#ffffff12; border:1px solid #ffffff1f; font-size:12px}
