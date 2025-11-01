@@ -1,0 +1,422 @@
+
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Dream Team Hub — Brand Guide v1</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+  <style>
+:root{
+  /* Core brand */
+  --brand-dark:#0B0D12;
+  --brand-surface:#0F1422;
+  --brand-line:#1B2136;
+  --brand-light:#F7F8FB;
+
+  /* Primary spectrum */
+  --brand-teal:#1CE6D3;
+  --brand-indigo:#6B8CFF;
+  --brand-yellow:#FFD449;
+  --brand-magenta:#F48FBB;
+  --brand-jade:#34AABB;
+  --brand-orange:#FF965A;
+
+  /* Text */
+  --text-primary:#E8EBFF;
+  --text-secondary:#C8CEEF;
+  --text-muted:#AAB0D8;
+
+  /* Glass */
+  --glass-bg: rgba(255,255,255,0.08);
+  --glass-border: rgba(255,255,255,0.14);
+  --glass-shadow: 0 18px 48px rgba(0,0,0,0.35);
+  --ring: 0 0 0 3px rgba(28,230,211,0.35);
+
+  /* Gradients */
+  --grad-orchestra: linear-gradient(135deg, var(--brand-teal) 0%, var(--brand-indigo) 100%);
+  --grad-synapse: linear-gradient(135deg, var(--brand-yellow) 0%, var(--brand-teal) 60%, var(--brand-indigo) 100%);
+
+  /* Pod hues (locked) */
+  --pod-control:#3D6BFF;    /* Control Tower */
+  --pod-intake:#5CE1CF;     /* Intake & Routing */
+  --pod-decision:#FFC24D;   /* Decision Log */
+  --pod-roster:#C95CAF;     /* Roster & Roles */
+  --pod-ip:#6B1E9C;         /* IP & Patent Program */
+  --pod-security:#3B4A5A;   /* Security & Compliance */
+  --pod-product:#1F9CFF;    /* Product & Engineering */
+  --pod-brand:#FF5BCD;      /* Brand & Assets */
+  --pod-marketing:#FF7A45;  /* Marketing & Comms */
+  --pod-finance:#2DBE7A;    /* Finance & BizOps */
+  --pod-rhythm:#5A67FF;     /* Operating Rhythm */
+
+  /* Spacing scale (px) */
+  --space-1:4px; --space-2:8px; --space-3:12px; --space-4:16px;
+  --space-5:20px; --space-6:24px; --space-7:28px; --space-8:32px;
+
+  /* Radius */
+  --radius-sm:10px; --radius-md:12px; --radius-lg:16px; --radius-xl:20px;
+
+  /* Elevation */
+  --elev-1: 0 10px 24px rgba(0,0,0,.28);
+  --elev-2: 0 18px 48px rgba(0,0,0,.35);
+}
+
+/* Pod accent utilities for rails/icons */
+.pod-rail.control { background: linear-gradient(135deg, var(--pod-control), var(--brand-indigo)); }
+.pod-rail.intake  { background: linear-gradient(135deg, var(--pod-intake), var(--brand-teal)); }
+.pod-rail.decision{ background: linear-gradient(135deg, var(--pod-decision), var(--brand-yellow)); }
+.pod-rail.roster  { background: linear-gradient(135deg, var(--pod-roster), var(--brand-magenta)); }
+.pod-rail.ip      { background: linear-gradient(135deg, var(--pod-ip), var(--brand-indigo)); }
+.pod-rail.security{ background: linear-gradient(135deg, var(--pod-security), var(--brand-jade)); }
+.pod-rail.product { background: linear-gradient(135deg, var(--pod-product), var(--brand-teal)); }
+.pod-rail.brand   { background: linear-gradient(135deg, var(--pod-brand), var(--brand-magenta)); }
+.pod-rail.marketing{background: linear-gradient(135deg, var(--pod-marketing), var(--brand-yellow)); }
+.pod-rail.finance { background: linear-gradient(135deg, var(--pod-finance), var(--brand-jade)); }
+.pod-rail.rhythm  { background: linear-gradient(135deg, var(--pod-rhythm), var(--brand-indigo)); }
+
+/* Role Card shell */
+.role-card{
+  background: var(--glass-bg);
+  border:1px solid var(--glass-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--elev-2);
+  color: var(--text-primary);
+  overflow:hidden;
+}
+.role-card .rail{height:10px;}
+.role-card .inner{padding: var(--space-6);}
+.role-card .title{font-weight:800; letter-spacing:.01em; margin: 0 0 var(--space-2);}
+.role-card .subtitle{color:var(--text-secondary); margin:0 0 var(--space-3);}
+.role-card .chips{display:flex; gap:8px; flex-wrap:wrap; margin-bottom: var(--space-3);}
+.chip{font:600 12px/1 Inter, system-ui; padding:6px 10px; border-radius:999px; background:#ffffff14; border:1px solid #ffffff1f; color:var(--text-secondary)}
+
+/* Buttons */
+.btn{--fg:#fff; --bg:var(--grad-orchestra); --bd:transparent;
+  display:inline-flex; gap:8px; align-items:center; padding:10px 14px; border-radius:12px;
+  color:var(--fg); background:var(--bg); border:1px solid var(--bd); box-shadow: var(--elev-1); font:600 14px/1.1 Inter, system-ui;
+}
+.btn:hover{filter:brightness(1.05)}
+.btn:active{transform: translateY(1px)}
+.btn:focus-visible{outline:none; box-shadow: var(--elev-1), var(--ring)}
+.btn.secondary{--fg:#E8EBFF; --bg:transparent; --bd:var(--glass-border); backdrop-filter: blur(8px)}
+.btn.ghost{--fg:#C8CEEF; --bg:transparent; --bd:transparent; box-shadow:none}
+.btn.sm{padding:6px 10px; border-radius:10px; font-size:12px}
+
+/* Layout helpers for the guide */
+.guide-body{background: var(--brand-dark); color: var(--text-primary); font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; margin:0}
+.container{max-width:1100px; margin:0 auto; padding:24px}
+.grid{display:grid; gap:20px}
+.grid.cols-3{grid-template-columns: repeat(3, minmax(0,1fr));}
+.card{background: var(--brand-surface); border:1px solid var(--brand-line); border-radius:16px; padding:16px; box-shadow: var(--elev-1)}
+
+.swatch{height:56px; border-radius:10px; border:1px solid var(--brand-line)}
+.token-row{display:flex; align-items:center; justify-content:space-between; padding:6px 0; border-bottom:1px dashed var(--brand-line)}
+.token-row code{color:var(--text-secondary)}
+.kbd{padding:2px 6px; border-radius:6px; background:#ffffff12; border:1px solid #ffffff1f; font-size:12px}
+</style>
+<style>
+@media print {
+  :root {
+    /* ensure dark backgrounds/hex fidelity */
+    color-scheme: dark;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  html, body {
+    background: var(--brand-dark);
+    margin: 0;
+  }
+
+  /* Lock container width and spacing */
+  .container { max-width: 1100px !important; padding: 24px !important; break-inside: avoid; }
+
+  /* Prevent element collisions */
+  .card, .role-card { break-inside: avoid; page-break-inside: avoid; }
+  .grid { gap: 20px !important; }
+  h1, h2, h3 { page-break-after: avoid; }
+
+  /* Remove any non-print artifacts */
+  * { box-shadow: none !important; filter: none !important; }
+
+  /* Buttons look consistent on paper */
+  .btn { box-shadow: none !important; }
+
+  /* Swatches keep radius and borders in print */
+  .swatch { border: 1px solid var(--brand-line) !important; }
+}
+</style>
+
+</head>
+<body class="guide-body">
+  <section class="container">
+    <h1 style="font:800 48px/1 Space Grotesk, Inter; margin:0; background:var(--grad-orchestra); -webkit-background-clip:text; color:transparent;">
+      Dream Team Hub — Branding Style Guide (v1)
+    </h1>
+    <p class="subtitle" style="margin-top:10px; color:var(--text-secondary)">
+      Prism (Brand/Copy) + Lume (UX/Systems). This guide locks the look & feel — colors, gradients, typography, glass surfaces, buttons, and Role Card patterns — so we nail the overall brand before returning to iconography.
+    </p>
+  </section>
+
+  <section class="container grid cols-3">
+    <div class="card">
+      <h3>Typography</h3>
+      <p style="font:800 28px/1.15 Space Grotesk, Inter">Heading / Space Grotesk 800</p>
+      <p style="font:700 20px/1.2 Inter">Subheading / Inter 700</p>
+      <p style="font:400 15px/1.7 Inter; color:var(--text-secondary)">Body / Inter 400 — clean, modern, highly legible. Use 1.6–1.8 leading for paragraphs on dark surfaces.</p>
+      <div class="token-row"><span>H1</span><code>48 / 56 / 800</code></div>
+      <div class="token-row"><span>H2</span><code>32 / 40 / 700</code></div>
+      <div class="token-row"><span>Body</span><code>15 / 26 / 400</code></div>
+    </div>
+
+    <div class="card">
+      <h3>Core Palette</h3>
+      <div class="grid" style="grid-template-columns:repeat(3,1fr)">
+        <div class="swatch" style="background:#1CE6D3"></div><code>#1CE6D3</code><span>Teal</span>
+        <div class="swatch" style="background:#6B8CFF"></div><code>#6B8CFF</code><span>Indigo</span>
+        <div class="swatch" style="background:#FFD449"></div><code>#FFD449</code><span>Yellow</span>
+        <div class="swatch" style="background:#F48FBB"></div><code>#F48FBB</code><span>Magenta</span>
+        <div class="swatch" style="background:#34AABB"></div><code>#34AABB</code><span>Jade</span>
+        <div class="swatch" style="background:#FF965A"></div><code>#FF965A</code><span>Orange (accent)</span>
+      </div>
+      <div class="token-row"><span>Dark BG</span><code>#0B0D12</code></div>
+      <div class="token-row"><span>Surface</span><code>#0F1422</code></div>
+      <div class="token-row"><span>Line</span><code>#1B2136</code></div>
+    </div>
+
+    <div class="card">
+      <h3>Glassmorphism</h3>
+      <p class="subtitle">Use for cards, toolbars, and role tiles.</p>
+      <div class="role-card" style="max-width:360px;">
+        <div class="rail" style="background:var(--grad-orchestra)"></div>
+        <div class="inner">
+          <p class="title">Glass Card</p>
+          <p style="color:var(--text-secondary)">bg: <code>--glass-bg</code>, border: <code>--glass-border</code>, shadow: <code>--elev-2</code>. Avoid heavy blurs; prefer contrast + subtle ring on focus.</p>
+          <button class="btn sm">Primary</button>
+          <button class="btn secondary sm">Secondary</button>
+          <button class="btn ghost sm">Ghost</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="container">
+    <div class="card">
+      <h3>Pod Palette (locked)</h3>
+      <p class="subtitle">Each Pod owns a hue. Use as accent rails, icon strokes, or micro-highlights on that Pod's Role Cards.</p>
+      <div class="grid" style="grid-template-columns: repeat(5, minmax(0,1fr)); gap:16px">
+        <div><div class="swatch pod-rail control"></div><small>Control Tower</small></div>
+        <div><div class="swatch pod-rail intake"></div><small>Intake & Routing</small></div>
+        <div><div class="swatch pod-rail decision"></div><small>Decision Log</small></div>
+        <div><div class="swatch pod-rail roster"></div><small>Roster & Roles</small></div>
+        <div><div class="swatch pod-rail ip"></div><small>IP & Patent</small></div>
+        <div><div class="swatch pod-rail security"></div><small>Security</small></div>
+        <div><div class="swatch pod-rail product"></div><small>Product</small></div>
+        <div><div class="swatch pod-rail brand"></div><small>Brand</small></div>
+        <div><div class="swatch pod-rail marketing"></div><small>Marketing</small></div>
+        <div><div class="swatch pod-rail finance"></div><small>Finance</small></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="container">
+    <div class="card">
+      <h3>Role Card Pattern</h3>
+      <p class="subtitle">Apply Pod hue to the rail + icon capsule; keep body text in brand neutrals. Icons may add a small orange accent.</p>
+      <div class="grid cols-3">
+        <div class="role-card">
+          <div class="rail pod-rail marketing"></div>
+          <div class="inner">
+            <p class="title" style="font:800 22px/1 Inter">Prism</p>
+            <p class="subtitle">Chief Story Architect · Creative</p>
+            <div class="chips"><span class="chip">Marketing & Comms</span><span class="chip">CREATIVE</span></div>
+            <p style="color:var(--text-secondary)">Shapes messaging and narrative frameworks across GTM strategies.</p>
+          </div>
+        </div>
+        <div class="role-card">
+          <div class="rail pod-rail ip"></div>
+          <div class="inner">
+            <p class="title" style="font:800 22px/1 Inter">Aegis</p>
+            <p class="subtitle">IP & Patent Counsel · Governance</p>
+            <div class="chips"><span class="chip">IP & Patent</span><span class="chip">GOVERNANCE</span></div>
+            <p style="color:var(--text-secondary)">Owns claims/spec/figures, filings, and patentability/FTO strategy.</p>
+          </div>
+        </div>
+        <div class="role-card">
+          <div class="rail pod-rail security"></div>
+          <div class="inner">
+            <p class="title" style="font:800 22px/1 Inter">Spectra</p>
+            <p class="subtitle">Chief Trust & Protection · Governance</p>
+            <div class="chips"><span class="chip">Security</span><span class="chip">GOVERNANCE</span></div>
+            <p style="color:var(--text-secondary)">Fosters trust with robust security systems and compliant practice.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="container grid cols-3">
+    <div class="card">
+      <h3>Buttons</h3>
+      <div style="display:flex; gap:10px; flex-wrap:wrap">
+        <button class="btn"><span>Primary</span></button>
+        <button class="btn secondary"><span>Secondary</span></button>
+        <button class="btn ghost"><span>Ghost</span></button>
+        <button class="btn sm" style="--bg:linear-gradient(135deg,var(--pod-marketing),var(--brand-yellow))">Marketing</button>
+        <button class="btn sm" style="--bg:linear-gradient(135deg,var(--pod-ip),var(--brand-indigo))">IP</button>
+        <button class="btn sm" style="--bg:linear-gradient(135deg,var(--pod-security),var(--brand-jade))">Security</button>
+      </div>
+    </div>
+    <div class="card">
+      <h3>Elevation & Focus</h3>
+      <p class="subtitle">Keep shadows soft; use teal ring for keyboard focus.</p>
+      <div style="display:flex; gap:16px; align-items:center">
+        <div style="width:160px;height:100px;border-radius:16px;background:var(--brand-surface);box-shadow:var(--elev-1)"></div>
+        <div style="width:160px;height:100px;border-radius:16px;background:var(--brand-surface);box-shadow:var(--elev-2)"></div>
+      </div>
+      <p style="margin-top:10px;color:var(--text-muted)"><span class="kbd">--elev-1</span> & <span class="kbd">--elev-2</span></p>
+    </div>
+    <div class="card">
+      <h3>Gradients</h3>
+      <div class="swatch" style="height:60px;background:var(--grad-orchestra);margin-bottom:10px"></div>
+      <div class="swatch" style="height:60px;background:var(--grad-synapse)"></div>
+      <p style="margin-top:10px;color:var(--text-secondary)">Use Orchestra for hero rails & CTAs. Use Synapse sparingly for special banners.</p>
+    </div>
+  </section>
+
+  <section class="container">
+    <div class="card">
+      <h3>Implementation Tokens</h3>
+      <p class="subtitle">Drop these tokens into your CSS. If you’re using Tailwind, mirror as CSS variables with a theme plugin.</p>
+      <pre style="white-space:pre-wrap;background:#0B0F1B;padding:16px;border-radius:12px;border:1px solid var(--brand-line);color:#CFE2FF">
+/* tokens.css */
+
+:root{
+  /* Core brand */
+  --brand-dark:#0B0D12;
+  --brand-surface:#0F1422;
+  --brand-line:#1B2136;
+  --brand-light:#F7F8FB;
+
+  /* Primary spectrum */
+  --brand-teal:#1CE6D3;
+  --brand-indigo:#6B8CFF;
+  --brand-yellow:#FFD449;
+  --brand-magenta:#F48FBB;
+  --brand-jade:#34AABB;
+  --brand-orange:#FF965A;
+
+  /* Text */
+  --text-primary:#E8EBFF;
+  --text-secondary:#C8CEEF;
+  --text-muted:#AAB0D8;
+
+  /* Glass */
+  --glass-bg: rgba(255,255,255,0.08);
+  --glass-border: rgba(255,255,255,0.14);
+  --glass-shadow: 0 18px 48px rgba(0,0,0,0.35);
+  --ring: 0 0 0 3px rgba(28,230,211,0.35);
+
+  /* Gradients */
+  --grad-orchestra: linear-gradient(135deg, var(--brand-teal) 0%, var(--brand-indigo) 100%);
+  --grad-synapse: linear-gradient(135deg, var(--brand-yellow) 0%, var(--brand-teal) 60%, var(--brand-indigo) 100%);
+
+  /* Pod hues (locked) */
+  --pod-control:#3D6BFF;    /* Control Tower */
+  --pod-intake:#5CE1CF;     /* Intake & Routing */
+  --pod-decision:#FFC24D;   /* Decision Log */
+  --pod-roster:#C95CAF;     /* Roster & Roles */
+  --pod-ip:#6B1E9C;         /* IP & Patent Program */
+  --pod-security:#3B4A5A;   /* Security & Compliance */
+  --pod-product:#1F9CFF;    /* Product & Engineering */
+  --pod-brand:#FF5BCD;      /* Brand & Assets */
+  --pod-marketing:#FF7A45;  /* Marketing & Comms */
+  --pod-finance:#2DBE7A;    /* Finance & BizOps */
+  --pod-rhythm:#5A67FF;     /* Operating Rhythm */
+
+  /* Spacing scale (px) */
+  --space-1:4px; --space-2:8px; --space-3:12px; --space-4:16px;
+  --space-5:20px; --space-6:24px; --space-7:28px; --space-8:32px;
+
+  /* Radius */
+  --radius-sm:10px; --radius-md:12px; --radius-lg:16px; --radius-xl:20px;
+
+  /* Elevation */
+  --elev-1: 0 10px 24px rgba(0,0,0,.28);
+  --elev-2: 0 18px 48px rgba(0,0,0,.35);
+}
+
+/* Pod accent utilities for rails/icons */
+.pod-rail.control { background: linear-gradient(135deg, var(--pod-control), var(--brand-indigo)); }
+.pod-rail.intake  { background: linear-gradient(135deg, var(--pod-intake), var(--brand-teal)); }
+.pod-rail.decision{ background: linear-gradient(135deg, var(--pod-decision), var(--brand-yellow)); }
+.pod-rail.roster  { background: linear-gradient(135deg, var(--pod-roster), var(--brand-magenta)); }
+.pod-rail.ip      { background: linear-gradient(135deg, var(--pod-ip), var(--brand-indigo)); }
+.pod-rail.security{ background: linear-gradient(135deg, var(--pod-security), var(--brand-jade)); }
+.pod-rail.product { background: linear-gradient(135deg, var(--pod-product), var(--brand-teal)); }
+.pod-rail.brand   { background: linear-gradient(135deg, var(--pod-brand), var(--brand-magenta)); }
+.pod-rail.marketing{background: linear-gradient(135deg, var(--pod-marketing), var(--brand-yellow)); }
+.pod-rail.finance { background: linear-gradient(135deg, var(--pod-finance), var(--brand-jade)); }
+.pod-rail.rhythm  { background: linear-gradient(135deg, var(--pod-rhythm), var(--brand-indigo)); }
+
+/* Role Card shell */
+.role-card{
+  background: var(--glass-bg);
+  border:1px solid var(--glass-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--elev-2);
+  color: var(--text-primary);
+  overflow:hidden;
+}
+.role-card .rail{height:10px;}
+.role-card .inner{padding: var(--space-6);}
+.role-card .title{font-weight:800; letter-spacing:.01em; margin: 0 0 var(--space-2);}
+.role-card .subtitle{color:var(--text-secondary); margin:0 0 var(--space-3);}
+.role-card .chips{display:flex; gap:8px; flex-wrap:wrap; margin-bottom: var(--space-3);}
+.chip{font:600 12px/1 Inter, system-ui; padding:6px 10px; border-radius:999px; background:#ffffff14; border:1px solid #ffffff1f; color:var(--text-secondary)}
+
+/* Buttons */
+.btn{--fg:#fff; --bg:var(--grad-orchestra); --bd:transparent;
+  display:inline-flex; gap:8px; align-items:center; padding:10px 14px; border-radius:12px;
+  color:var(--fg); background:var(--bg); border:1px solid var(--bd); box-shadow: var(--elev-1); font:600 14px/1.1 Inter, system-ui;
+}
+.btn:hover{filter:brightness(1.05)}
+.btn:active{transform: translateY(1px)}
+.btn:focus-visible{outline:none; box-shadow: var(--elev-1), var(--ring)}
+.btn.secondary{--fg:#E8EBFF; --bg:transparent; --bd:var(--glass-border); backdrop-filter: blur(8px)}
+.btn.ghost{--fg:#C8CEEF; --bg:transparent; --bd:transparent; box-shadow:none}
+.btn.sm{padding:6px 10px; border-radius:10px; font-size:12px}
+
+/* Layout helpers for the guide */
+.guide-body{background: var(--brand-dark); color: var(--text-primary); font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; margin:0}
+.container{max-width:1100px; margin:0 auto; padding:24px}
+.grid{display:grid; gap:20px}
+.grid.cols-3{grid-template-columns: repeat(3, minmax(0,1fr));}
+.card{background: var(--brand-surface); border:1px solid var(--brand-line); border-radius:16px; padding:16px; box-shadow: var(--elev-1)}
+
+.swatch{height:56px; border-radius:10px; border:1px solid var(--brand-line)}
+.token-row{display:flex; align-items:center; justify-content:space-between; padding:6px 0; border-bottom:1px dashed var(--brand-line)}
+.token-row code{color:var(--text-secondary)}
+.kbd{padding:2px 6px; border-radius:6px; background:#ffffff12; border:1px solid #ffffff1f; font-size:12px}
+
+      </pre>
+    </div>
+  </section>
+
+  <section class="container" style="padding-bottom:40px">
+    <div class="card">
+      <h3>Definition of Done (Brand)</h3>
+      <ul>
+        <li>Pod colors are used only as accents (rails, icon strokes, chips, small highlights).</li>
+        <li>Primary gradients drive CTAs and hero rails; limit loud gradients to small areas.</li>
+        <li>Glass cards: <code>--glass-bg</code> + <code>--glass-border</code> + <code>--elev-2</code>. Avoid heavy blur.</li>
+        <li>Typography: Space Grotesk for large headings only; Inter for everything else.</li>
+        <li>Icons: minimal, rounded-line, subtle accent highlight — revisit after this guide is approved.</li>
+      </ul>
+    </div>
+  </section>
+</body>
+</html>
