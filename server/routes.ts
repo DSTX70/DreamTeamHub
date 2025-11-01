@@ -101,6 +101,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.put("/api/pods/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const data = insertPodSchema.parse(req.body);
+      const pod = await storage.updatePod(id, data);
+      if (!pod) {
+        return res.status(404).json({ error: 'Pod not found' });
+      }
+      res.json(pod);
+    } catch (error: any) {
+      console.error('Error updating pod:', error);
+      res.status(400).json({ error: error.message || 'Failed to update pod' });
+    }
+  });
+
+  app.delete("/api/pods/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      await storage.deletePod(id);
+      res.status(204).send();
+    } catch (error: any) {
+      console.error('Error deleting pod:', error);
+      res.status(500).json({ error: error.message || 'Failed to delete pod' });
+    }
+  });
+
   // ===========================
   // PERSONS
   // ===========================

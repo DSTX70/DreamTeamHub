@@ -1,0 +1,78 @@
+Shipped a clean backend patch for both asks:
+
+**[Download: Backend Patch — Pods PUT/DELETE + Agent Spec Persistence](sandbox:/mnt/data/dream-team-hub-backend-patch-pods-agentspec.zip)**
+
+### What this patch adds
+
+#### 1) Pods full CRUD
+
+* **New endpoints** in `backend/app/routers/pods.py`:
+
+  * `PUT /pods/{id}` — update name, charter, owners, `thread_id` (with unique-name check)
+  * `DELETE /pods/{id}` — remove a pod
+* Keeps `GET /pods` and `POST /pods` as-is.
+
+#### 2) Agent Spec persistence (DB)
+
+* **New DB model** `AgentSpecModel` (file: `backend/app/db/models_agent_spec.py`)
+
+  * Fields: `handle` (unique), `title`, `pod`, `thread_id`, `system_prompt`, `instruction_blocks[]`, `tools[]`, `policies{}`
+* **New router** `backend/app/routers/agent_specs.py`
+
+  * `GET /agent-specs` (list), `GET /agent-specs/{handle}`, `POST /agent-specs` (upsert by handle), `DELETE /agent-specs/{handle}`
+* **Startup loader** `backend/app/agents/loader_db.py`
+
+  * `load_agent_specs_from_db()` loads DB specs into the in-memory `AGENTS` registry on boot.
+* **Optional snippet** (`backend/app/agents/persist_snippet.txt`)
+
+  * A 15-line helper to persist **/agents** upserts directly to DB so Agent Console changes survive restarts.
+
+---
+
+### How to apply (copy-paste quick)
+
+1. **Unzip into your repo** (merge into `backend/app/...`).
+
+2. **Create the AgentSpec table**:
+
+   * Easiest (dev): ensure the model imports before tables are created.
+
+     * Add this near your other imports (e.g., in `backend/app/main.py` before `init_db()` or in `backend/app/db/create_db.py`):
+
+       ```python
+       from app.db import models_agent_spec  # ensures AgentSpecModel is registered
+       ```
+     * Then run your usual `init_db()`/seed flow.
+   * Or generate an Alembic migration to add `agent_specs`.
+
+3. **Mount routes & loader in `app/main.py`** (add the following):
+
+   ```python
+   from app.routers import agent_specs
+   app.include_router(agent_specs.router, prefix="/agent-specs", tags=["agent-specs"])
+
+   from app.agents.loader_db import load_agent_specs_from_db
+   @app.on_event("startup")
+   def load_agent_specs_registry():
+       try:
+           print("[boot] agent specs:", load_agent_specs_from_db())
+       except Exception as e:
+           print("[boot] agent specs load failed:", e)
+   ```
+
+4. **(Optional) Persist /agents upserts to DB**
+   In `backend/app/routers/agents.py`:
+
+   * Paste the helper from `app/agents/persist_snippet.txt` near the imports.
+   * Inside your `upsert_agent(spec)` handler, after `AGENTS[spec.handle] = spec`, call:
+
+     ```python
+     _persist_spec_to_db(spec)
+     ```
+
+That’s it—now you can:
+
+* **Edit Pods** (name/owners/charter/thread) and **delete** them from your Hub (Roster Admin UI is already prepared for `PUT/DELETE` if you want to wire it).
+* **Onboard/update Agents** and **persist** their specs so they survive restarts. The Agent Console will show DB-backed agents on boot via the loader.
+
+Want me to wire the **Roster Admin** UI to use the new Pods `PUT/DELETE` and add an **Agent Specs** admin grid (CRUD on `/agent-specs`) in the frontend? I can ship that as a small UI patch next.

@@ -1,0 +1,66 @@
+Shipped the UI upgrade you asked for ✅
+
+**Download:**
+
+* **Frontend Admin Enhancements (validation + import/export + clone)**
+  [dream-team-hub-frontend-admin-enhancements.zip](sandbox:/mnt/data/dream-team-hub-frontend-admin-enhancements.zip)
+
+### What you get
+
+* **Inline validation**
+
+  * Required fields highlighted with red borders
+  * Clear error text under fields (Pods name, Role handle/title/pod, Agent Spec handle/title/pod)
+  * **Policies** JSON in Agent Specs validated; shows an inline “JSON is invalid” error if it doesn’t parse
+
+* **Bulk import/export (CSV & JSON)**
+
+  * **Roles**: Import from JSON/CSV; Export to JSON/CSV
+    CSV headers: `handle,title,pod,purpose,core_functions,definition_of_done,tags`
+  * **Agent Specs**: Import from JSON/CSV; Export to JSON/CSV
+    CSV headers: `handle,title,pod,thread_id,system_prompt,instruction_blocks,tools,policies`
+    (lists use `|` separator; newlines in prompts are flattened)
+  * Client-side upsert logic calls your existing endpoints (`/roles`, `/agent-specs`)
+
+* **Clone Role → Agent Spec**
+
+  * In the Roles list, each row has a **“Clone → Agent”** button
+  * Prefills the Agent Spec form with role info (handle, title, pod), a sensible default prompt, and DoD as instruction blocks
+  * You can tweak and save with a single click
+
+### Files in the patch
+
+```
+src/
+  lib/
+    csv.ts                 # tiny CSV parse/stringify helper
+    download.ts            # browser download helper
+    admin_ex.ts            # extended API helpers (Pods PUT/DELETE, Roles & Agent Specs)
+  components/
+    RosterAdmin.patch.tsx  # drop-in replacement component
+README_ROSTER_ADMIN_UI_PATCH.md
+```
+
+### How to apply
+
+1. Unzip into your **Vite app** (the all-in frontend).
+2. Replace `src/components/RosterAdmin.tsx` with `src/components/RosterAdmin.patch.tsx` (or rename the new file to overwrite).
+3. Make sure your backend has:
+
+   * **Pods** CRUD: `PUT /pods/{id}`, `DELETE /pods/{id}`
+   * **Agent Specs** CRUD: `/agent-specs` (list, get, upsert, delete) + loader on startup
+4. Run:
+
+```bash
+npm install
+npm run dev -- --host
+```
+
+### Optional next tweaks (say the word)
+
+* Bulk **export/import templates** pre-filled with your current Pod names and spec skeletons
+* **CSV error reporting** (line-by-line errors with a review modal)
+* **Role↔Agent link** display (show which roles already have a corresponding agent spec)
+* **Controlled vocab** pickers for Pod names & common instruction blocks
+
+If you want these wired in, I’ll ship another small patch.

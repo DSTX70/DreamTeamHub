@@ -15,6 +15,7 @@ import Intake from "@/pages/intake";
 import Pods from "@/pages/pods";
 import ChatPage from "@/pages/chat";
 import AgentConsole from "@/pages/agent-console";
+import SummonMirrorPage from "@/pages/summon-mirror";
 
 function Router() {
   return (
@@ -28,6 +29,7 @@ function Router() {
       <Route path="/pods" component={Pods} />
       <Route path="/chat" component={ChatPage} />
       <Route path="/agent-console" component={AgentConsole} />
+      <Route path="/summon-mirror" component={SummonMirrorPage} />
       <Route component={NotFound} />
     </Switch>
   );

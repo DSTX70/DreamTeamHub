@@ -21,6 +21,8 @@ export interface IStorage {
   getPods(): Promise<Pod[]>;
   getPod(id: number): Promise<Pod | undefined>;
   createPod(pod: InsertPod): Promise<Pod>;
+  updatePod(id: number, pod: Partial<InsertPod>): Promise<Pod | undefined>;
+  deletePod(id: number): Promise<boolean>;
   
   // Persons
   getPersons(): Promise<Person[]>;
@@ -121,6 +123,16 @@ export class DatabaseStorage implements IStorage {
   async createPod(pod: InsertPod): Promise<Pod> {
     const [created] = await db.insert(pods).values(pod).returning();
     return created;
+  }
+
+  async updatePod(id: number, pod: Partial<InsertPod>): Promise<Pod | undefined> {
+    const [updated] = await db.update(pods).set(pod).where(eq(pods.id, id)).returning();
+    return updated || undefined;
+  }
+
+  async deletePod(id: number): Promise<boolean> {
+    const result = await db.delete(pods).where(eq(pods.id, id));
+    return true;
   }
 
   // ===== PERSONS =====
