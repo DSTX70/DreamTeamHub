@@ -19,6 +19,10 @@ export default {
         'brand-jade': 'var(--brand-jade)',
         'brand-orange': 'var(--brand-orange)',
         
+        // Core aliases (for duotone icons)
+        'core-teal': 'var(--core-teal)',
+        'core-indigo': 'var(--core-indigo)',
+        
         // Text hierarchy
         'text-primary': 'var(--text-primary)',
         'text-secondary': 'var(--text-secondary)',
@@ -115,6 +119,7 @@ export default {
       boxShadow: {
         'elev-1': 'var(--elev-1)',
         'elev-2': 'var(--elev-2)',
+        'elev-3': 'var(--elev-3)',
         'focus-ring': 'var(--ring)',
       },
       borderRadius: {

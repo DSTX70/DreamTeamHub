@@ -1,0 +1,155 @@
+1) Decision Log (detail card)
+
+Tone: calm, audit-grade, “evidence first.”
+
+Layout
+
+Dark canvas bg-[var(--brand-dark)] text-[var(--text-primary)].
+
+Page header row: left = title/desc; right = “+ Log Decision” primary.
+
+Feed of Decision Cards (glass shells), each with a thin rail and tight content stack.
+
+Card anatomy
+
+Rail: pod-rail control (or match decision’s owning pod).
+
+Icon badge (duotone teal/indigo) at left; title on first line; Status pill at right.
+
+Meta row: “Approved by” chip(s) + date chip (calendar icon).
+
+Body: one-line rationale; “Artifacts” list (inline links) if present.
+
+Footer: Related Pods → chips tinted per pod (stroke/fill 10–14% only).
+
+Key tokens
+
+Glass shell: bg-[var(--glass-bg)] border border-[var(--glass-border)] shadow-[var(--elev-2)] rounded-2xl p-5 md:p-6
+
+Title: font-[Space_Grotesk] text-lg md:text-xl
+
+Status pill: bg-[color-mix(in oklab,var(--core-teal) 15%,transparent)] text-[var(--text-primary)] border border-[var(--core-teal)]/30 rounded-full px-2.5 py-1
+
+Chips: text-sm rounded-full px-2 py-0.5 border border-[var(--brand-line)]/60 + text-pod-* border-pod-* for pod-tint.
+
+Tailwind sketch
+
+<section class="container mx-auto px-6 py-8">
+  <header class="flex items-center justify-between mb-6">
+    <h1 class="text-2xl font-[Space_Grotesk]">Decision Log</h1>
+    <button class="btn ring-brand">+ Log Decision</button>
+  </header>
+
+  <article class="role-card">
+    <div class="rail pod-rail-control h-1.5"></div>
+    <div class="inner grid gap-3">
+      <div class="flex items-start justify-between">
+        <div class="flex items-center gap-3">
+          <span class="inline-grid place-content-center w-9 h-9 rounded-full
+                       bg-[var(--core-teal)]/15 border border-[var(--core-teal)]/30">
+            <!-- svg duotone -->
+          </span>
+          <h2 class="text-lg md:text-xl font-[Space_Grotesk]">
+            Adopt Evidence-Grade Documentation Standard
+          </h2>
+        </div>
+        <span class="px-2.5 py-1 rounded-full border border-[var(--core-teal)]/30
+                     bg-[var(--core-teal)]/15">Active</span>
+      </div>
+
+      <p class="text-[var(--text-secondary)]">
+        All critical deliverables must include SHA256, timestamps, and INDEX.txt.
+      </p>
+
+      <div class="flex flex-wrap gap-2">
+        <span class="chip">Approved by: OS (Orchestrator)</span>
+        <span class="chip">Dec 31, 2024</span>
+      </div>
+
+      <div class="flex flex-wrap gap-2 pt-1">
+        <span class="chip text-pod-product border-pod-product">Pod #1</span>
+        <span class="chip text-pod-brand border-pod-brand">Pod #2</span>
+        <!-- … -->
+      </div>
+    </div>
+  </article>
+</section>
+
+
+A11y & motion
+
+All interactive pills/chips: focus-visible:outline-none ring-brand.
+
+Reduce motion: disable hover glows; keep subtle 120ms translate-y/opacity on card hover.
+
+2) “Couldn’t reach this app” (error/empty state)
+
+Tone: reassuring, actionable.
+
+Layout
+
+Full-bleed Synapse gradient background (bg-[var(--grad-synapse)]).
+
+Centered glass panel with friendly illustration (ASCII mountain ok), concise copy, and primary/secondary actions.
+
+Panel anatomy
+
+Title: “Hmm… we couldn’t reach this app.”
+
+Body: 1–2 lines explaining common causes.
+
+Primary: Retry connection (solid); Secondary: Open in Replit (ghost) + Status/Docs links.
+
+Optional: tiny diagnostic row (port, env, last ping) set in text-[var(--text-muted)].
+
+Tailwind sketch
+
+<main class="min-h-dvh grid place-items-center bg-[var(--grad-synapse)] px-6">
+  <section class="w-full max-w-xl rounded-2xl bg-[var(--glass-bg)]
+                  border border-[var(--glass-border)] shadow-[var(--elev-3)]
+                  p-6 md:p-8 text-center text-[var(--text-primary)]">
+    <div class="mx-auto mb-4 w-16 h-16 rounded-full
+                border border-white/20 grid place-items-center
+                bg-[var(--core-indigo)]/15">
+      <!-- svg line icon (cloud/off) duotone teal/indigo -->
+    </div>
+
+    <h1 class="font-[Space_Grotesk] text-2xl mb-2">We couldn’t reach this app</h1>
+    <p class="text-[var(--text-secondary)] mb-6">
+      Make sure your service is listening and the port is exposed.
+    </p>
+
+    <div class="flex flex-wrap items-center justify-center gap-3">
+      <button class="btn ring-brand">Retry connection</button>
+      <a class="btn ghost focus-visible:ring-0 ring-brand" href="#">Open in Replit</a>
+      <a class="underline text-[var(--text-secondary)]" href="#">Hosting help</a>
+    </div>
+
+    <div class="mt-6 text-sm text-[var(--text-muted)]">
+      <span>Expected port: 5000</span> · <span>Last ping: just now</span>
+    </div>
+  </section>
+</main>
+
+
+Microcopy (on-brand)
+
+Primary CTA: “Retry connection”
+
+Secondary: “Open in Replit”
+
+Helper: “View hosting guide” / “Check status”
+
+A11y
+
+Buttons use .ring-brand; color contrast on gradient meets ≥4.5:1 by keeping panel glass.
+
+Global polish
+
+Fonts: titles in Space Grotesk; body in Inter.
+
+Icon style: minimal rounded-line, duotone teal→indigo, tiny orange micro-accent (2–3px dot) when appropriate.
+
+Pod color usage: rail, icon stroke, and chips only—never full body fills.
+
+If you want, I can drop both screens as ready-to-run React + Tailwind snippets (plugging your tailwind.podglass.plugin.js + tokens).

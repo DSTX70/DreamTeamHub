@@ -12,6 +12,10 @@
   --brand-magenta:#F48FBB;
   --brand-jade:#34AABB;
   --brand-orange:#FF965A;
+  
+  /* Core aliases (for duotone icons) */
+  --core-teal: var(--brand-teal);
+  --core-indigo: var(--brand-indigo);
 
   /* Text */
   --text-primary:#E8EBFF;
@@ -51,6 +55,7 @@
   /* Elevation */
   --elev-1: 0 10px 24px rgba(0,0,0,.28);
   --elev-2: 0 18px 48px rgba(0,0,0,.35);
+  --elev-3: 0 24px 64px rgba(0,0,0,.45);
 }
 
 /* Pod accent utilities for rails/icons */
@@ -81,6 +86,62 @@
 .role-card .subtitle{color:var(--text-secondary); margin:0 0 var(--space-3);}
 .role-card .chips{display:flex; gap:8px; flex-wrap:wrap; margin-bottom: var(--space-3);}
 .chip{font:600 12px/1 Inter, system-ui; padding:6px 10px; border-radius:999px; background:#ffffff14; border:1px solid #ffffff1f; color:var(--text-secondary)}
+
+/* Status Pills */
+.status-pill{
+  display:inline-flex; align-items:center; gap:6px;
+  padding:4px 10px; border-radius:999px;
+  font:600 13px/1.2 Inter, system-ui;
+  background:color-mix(in oklab, var(--core-teal) 15%, transparent);
+  border:1px solid color-mix(in oklab, var(--core-teal) 30%, transparent);
+  color:var(--text-primary);
+}
+.status-pill.active{
+  background:color-mix(in oklab, var(--core-teal) 15%, transparent);
+  border-color:color-mix(in oklab, var(--core-teal) 30%, transparent);
+}
+.status-pill.pending{
+  background:color-mix(in oklab, var(--brand-yellow) 15%, transparent);
+  border-color:color-mix(in oklab, var(--brand-yellow) 30%, transparent);
+}
+.status-pill.archived{
+  background:color-mix(in oklab, var(--text-muted) 10%, transparent);
+  border-color:color-mix(in oklab, var(--text-muted) 20%, transparent);
+}
+
+/* Pod-tinted chips */
+.chip-pod-control{color:var(--pod-control); border-color:color-mix(in oklab, var(--pod-control) 40%, transparent);}
+.chip-pod-intake{color:var(--pod-intake); border-color:color-mix(in oklab, var(--pod-intake) 40%, transparent);}
+.chip-pod-decision{color:var(--pod-decision); border-color:color-mix(in oklab, var(--pod-decision) 40%, transparent);}
+.chip-pod-roster{color:var(--pod-roster); border-color:color-mix(in oklab, var(--pod-roster) 40%, transparent);}
+.chip-pod-ip{color:var(--pod-ip); border-color:color-mix(in oklab, var(--pod-ip) 40%, transparent);}
+.chip-pod-security{color:var(--pod-security); border-color:color-mix(in oklab, var(--pod-security) 40%, transparent);}
+.chip-pod-product{color:var(--pod-product); border-color:color-mix(in oklab, var(--pod-product) 40%, transparent);}
+.chip-pod-brand{color:var(--pod-brand); border-color:color-mix(in oklab, var(--pod-brand) 40%, transparent);}
+.chip-pod-marketing{color:var(--pod-marketing); border-color:color-mix(in oklab, var(--pod-marketing) 40%, transparent);}
+.chip-pod-finance{color:var(--pod-finance); border-color:color-mix(in oklab, var(--pod-finance) 40%, transparent);}
+.chip-pod-rhythm{color:var(--pod-rhythm); border-color:color-mix(in oklab, var(--pod-rhythm) 40%, transparent);}
+
+/* Icon badges (duotone teal/indigo) */
+.icon-badge{
+  display:inline-grid; place-content:center;
+  width:36px; height:36px;
+  border-radius:50%;
+  background:color-mix(in oklab, var(--core-teal) 15%, transparent);
+  border:1px solid color-mix(in oklab, var(--core-teal) 30%, transparent);
+}
+
+/* Glass panel (for error states, modals) */
+.glass-panel{
+  background:var(--glass-bg);
+  border:1px solid var(--glass-border);
+  border-radius:var(--radius-xl);
+  box-shadow:var(--elev-3);
+  padding:var(--space-6);
+}
+@media (min-width: 768px) {
+  .glass-panel{padding:var(--space-8);}
+}
 
 /* Buttons */
 .btn{--fg:#fff; --bg:var(--grad-orchestra); --bd:transparent;
