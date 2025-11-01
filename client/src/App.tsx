@@ -25,20 +25,7 @@ import { Button } from "@/components/ui/button";
 import { LogOut, User as UserIcon } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
-function Router() {
-  const { isAuthenticated, isLoading } = useAuth();
-
-  // Show landing page while loading or if not authenticated
-  if (isLoading || !isAuthenticated) {
-    return (
-      <Switch>
-        <Route path="/" component={Landing} />
-        <Route component={Landing} />
-      </Switch>
-    );
-  }
-
-  // Show authenticated routes
+function AuthenticatedRoutes() {
   return (
     <Switch>
       <Route path="/" component={ControlTower} />
@@ -59,7 +46,16 @@ function Router() {
   );
 }
 
-export default function App() {
+function UnauthenticatedRoutes() {
+  return (
+    <Switch>
+      <Route path="/" component={Landing} />
+      <Route component={Landing} />
+    </Switch>
+  );
+}
+
+function AppContent() {
   const { user, isAuthenticated, isLoading } = useAuth();
   const style = {
     "--sidebar-width": "16rem",
@@ -68,57 +64,56 @@ export default function App() {
 
   // Show landing page without sidebar for unauthenticated users
   if (isLoading || !isAuthenticated) {
-    return (
-      <QueryClientProvider client={queryClient}>
-        <TooltipProvider>
-          <Router />
-          <Toaster />
-        </TooltipProvider>
-      </QueryClientProvider>
-    );
+    return <UnauthenticatedRoutes />;
   }
 
   // Show full app with sidebar for authenticated users
   return (
+    <SidebarProvider style={style as React.CSSProperties}>
+      <div className="flex h-screen w-full">
+        <AppSidebar />
+        <div className="flex flex-col flex-1 overflow-hidden">
+          <header className="flex items-center justify-between p-4 border-b bg-background">
+            <SidebarTrigger data-testid="button-sidebar-toggle" />
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2">
+                <Avatar className="h-8 w-8">
+                  <AvatarImage src={user?.profileImageUrl || undefined} alt={user?.firstName || "User"} />
+                  <AvatarFallback>
+                    {user?.firstName?.[0] || user?.email?.[0] || <UserIcon className="h-4 w-4" />}
+                  </AvatarFallback>
+                </Avatar>
+                <span className="text-sm text-muted-foreground">
+                  {user?.firstName} {user?.lastName || user?.email}
+                </span>
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => window.location.href = "/api/logout"}
+                data-testid="button-logout"
+              >
+                <LogOut className="h-4 w-4 mr-2" />
+                Sign Out
+              </Button>
+            </div>
+          </header>
+          <main className="flex-1 overflow-y-auto p-8">
+            <div className="mx-auto max-w-screen-2xl">
+              <AuthenticatedRoutes />
+            </div>
+          </main>
+        </div>
+      </div>
+    </SidebarProvider>
+  );
+}
+
+export default function App() {
+  return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
-        <SidebarProvider style={style as React.CSSProperties}>
-          <div className="flex h-screen w-full">
-            <AppSidebar />
-            <div className="flex flex-col flex-1 overflow-hidden">
-              <header className="flex items-center justify-between p-4 border-b bg-background">
-                <SidebarTrigger data-testid="button-sidebar-toggle" />
-                <div className="flex items-center gap-3">
-                  <div className="flex items-center gap-2">
-                    <Avatar className="h-8 w-8">
-                      <AvatarImage src={user?.profileImageUrl || undefined} alt={user?.firstName || "User"} />
-                      <AvatarFallback>
-                        {user?.firstName?.[0] || user?.email?.[0] || <UserIcon className="h-4 w-4" />}
-                      </AvatarFallback>
-                    </Avatar>
-                    <span className="text-sm text-muted-foreground">
-                      {user?.firstName} {user?.lastName || user?.email}
-                    </span>
-                  </div>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => window.location.href = "/api/logout"}
-                    data-testid="button-logout"
-                  >
-                    <LogOut className="h-4 w-4 mr-2" />
-                    Sign Out
-                  </Button>
-                </div>
-              </header>
-              <main className="flex-1 overflow-y-auto p-8">
-                <div className="mx-auto max-w-screen-2xl">
-                  <Router />
-                </div>
-              </main>
-            </div>
-          </div>
-        </SidebarProvider>
+        <AppContent />
         <Toaster />
       </TooltipProvider>
     </QueryClientProvider>
