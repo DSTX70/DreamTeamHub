@@ -18,6 +18,7 @@ import AgentConsole from "@/pages/agent-console";
 import SummonMirrorPage from "@/pages/summon-mirror";
 import RosterAdminPage from "@/pages/roster-admin";
 import RoleAgentSyncPage from "@/pages/role-agent-sync";
+import BrandGuidePage from "@/pages/brand-guide";
 
 function Router() {
   return (
@@ -34,6 +35,7 @@ function Router() {
       <Route path="/summon-mirror" component={SummonMirrorPage} />
       <Route path="/roster-admin" component={RosterAdminPage} />
       <Route path="/role-agent-sync" component={RoleAgentSyncPage} />
+      <Route path="/brand-guide" component={BrandGuidePage} />
       <Route component={NotFound} />
     </Switch>
   );
