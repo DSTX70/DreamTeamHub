@@ -6,9 +6,10 @@ import {
   insertWorkItemSchema, insertDecisionSchema, insertBrainstormSessionSchema,
   insertBrainstormParticipantSchema, insertBrainstormIdeaSchema, insertBrainstormClusterSchema,
   insertAuditSchema, insertAuditCheckSchema, insertAuditFindingSchema,
-  insertConversationSchema, insertMessageSchema,
+  insertConversationSchema, insertMessageSchema, insertAgentMemorySchema,
 } from "@shared/schema";
 import { generatePersonaResponse } from "./openai-service";
+import { buildAgentContext, recordAgentRun, recordFeedback } from "./agent-context";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // ===========================
@@ -664,6 +665,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const conversationId = parseInt(req.params.id);
       const { content } = req.body;
+      const startTime = Date.now();
 
       if (!content) {
         return res.status(400).json({ error: 'Message content is required' });
@@ -696,8 +698,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         content: m.content,
       }));
 
-      // Generate AI response
-      const aiResponse = await generatePersonaResponse(roleCard, chatHistory);
+      // Build agent context with memory
+      const agentContext = await buildAgentContext(
+        roleCard.handle,
+        '', // We'll build the full system prompt in generatePersonaResponse
+        { includeMemories: true, memoryLimit: 20 }
+      );
+
+      // Generate AI response with enhanced context
+      const aiResponse = await generatePersonaResponse(roleCard, chatHistory, agentContext.systemPrompt);
 
       // Save assistant message
       const assistantMessage = await storage.createMessage({
@@ -705,6 +714,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         role: 'assistant',
         content: aiResponse,
       });
+
+      // Record agent run
+      const duration = Date.now() - startTime;
+      await recordAgentRun(
+        roleCard.handle,
+        content,
+        aiResponse,
+        { conversationId, duration, status: 'completed' }
+      );
 
       // Update conversation timestamp
       await storage.updateConversation(conversationId, {});
@@ -716,6 +734,51 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error('Error sending message:', error);
       res.status(500).json({ error: error.message || 'Failed to send message' });
+    }
+  });
+
+  // ===========================
+  // AGENT LEARNING & MEMORY
+  // ===========================
+
+  // Record feedback about an agent
+  app.post("/api/agents/feedback", async (req, res) => {
+    try {
+      const validated = insertAgentMemorySchema.parse(req.body);
+      const memory = await storage.createAgentMemory(validated);
+      res.status(201).json(memory);
+    } catch (error: any) {
+      console.error('Error recording feedback:', error);
+      res.status(400).json({ error: error.message || 'Failed to record feedback' });
+    }
+  });
+
+  // Get agent memories
+  app.get("/api/agents/:handle/memory", async (req, res) => {
+    try {
+      const { handle } = req.params;
+      const limit = req.query.limit ? parseInt(req.query.limit as string) : 20;
+      const minScore = req.query.minScore ? parseInt(req.query.minScore as string) : undefined;
+
+      const memories = await storage.getAgentMemories(handle, { limit, minScore });
+      res.json(memories);
+    } catch (error: any) {
+      console.error('Error fetching agent memories:', error);
+      res.status(500).json({ error: error.message || 'Failed to fetch agent memories' });
+    }
+  });
+
+  // Get agent run history
+  app.get("/api/agents/:handle/runs", async (req, res) => {
+    try {
+      const { handle } = req.params;
+      const limit = req.query.limit ? parseInt(req.query.limit as string) : 20;
+
+      const runs = await storage.getAgentRuns(handle, { limit });
+      res.json(runs);
+    } catch (error: any) {
+      console.error('Error fetching agent runs:', error);
+      res.status(500).json({ error: error.message || 'Failed to fetch agent runs' });
     }
   });
 

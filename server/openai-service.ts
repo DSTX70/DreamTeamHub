@@ -12,10 +12,16 @@ export interface ChatMessage {
 
 export async function generatePersonaResponse(
   roleCard: RoleCard,
-  messages: ChatMessage[]
+  messages: ChatMessage[],
+  enhancedMemoryContext?: string
 ): Promise<string> {
   // Build system prompt from role card characteristics
-  const systemPrompt = buildSystemPrompt(roleCard);
+  const basePrompt = buildSystemPrompt(roleCard);
+  
+  // Append agent memory context if provided
+  const systemPrompt = enhancedMemoryContext 
+    ? `${basePrompt}\n\n${enhancedMemoryContext}`
+    : basePrompt;
 
   try {
     const completion = await openai.chat.completions.create({
