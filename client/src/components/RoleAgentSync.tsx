@@ -56,26 +56,70 @@ export default function RoleAgentSync() {
     }
   };
 
-  const diffs = useMemo(
+  const rows = useMemo(
     () =>
       roles.map((r) => ({
-        handle: r.handle,
-        title: r.title,
+        role: r,
+        spec: specsByHandle[r.handle],
         diffs: diffRoleAgent(r, specsByHandle[r.handle]),
       })),
     [roles, specsByHandle]
   );
 
+  const hasSuggestions = (diffs: any[]) => diffs.some((d) => typeof d.suggestion !== 'undefined');
+
   const applySuggestion = async (handle: string, field: string, suggestion: any) => {
+    const base =
+      specsByHandle[handle] || roleToSuggestedAgent(roles.find((r: any) => r.handle === handle)!);
+    const updated: any = { ...base, [field]: suggestion };
+    await upsertAgentSpec(updated);
+  };
+
+  const applyAllForHandle = async (handle: string, diffs: any[]) => {
+    setLoading(true);
     try {
-      const spec =
+      const base =
         specsByHandle[handle] || roleToSuggestedAgent(roles.find((r: any) => r.handle === handle)!);
-      const updated = { ...spec } as any;
-      updated[field] = suggestion;
+      const updated: any = { ...base };
+      for (const d of diffs) {
+        if (typeof d.suggestion !== 'undefined') {
+          updated[d.field] = d.suggestion;
+        }
+      }
       await upsertAgentSpec(updated);
       await refresh();
     } catch (e: any) {
-      alert('Apply failed: ' + (e?.message || String(e)));
+      alert('Apply all failed: ' + (e?.message || String(e)));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fixAllDiffs = async () => {
+    const allWithSuggestions = rows.filter((row) => hasSuggestions(row.diffs));
+    if (!allWithSuggestions.length) {
+      alert('No suggestions to apply.');
+      return;
+    }
+    setLoading(true);
+    setStatus('Applying all suggestions...');
+    try {
+      for (const row of allWithSuggestions) {
+        const base = specsByHandle[row.role.handle] || roleToSuggestedAgent(row.role);
+        const updated: any = { ...base };
+        for (const d of row.diffs) {
+          if (typeof d.suggestion !== 'undefined') {
+            updated[d.field] = d.suggestion;
+          }
+        }
+        await upsertAgentSpec(updated);
+      }
+      setStatus('Applied suggestions for ' + allWithSuggestions.length + ' items.');
+      await refresh();
+    } catch (e: any) {
+      alert('Fix all failed: ' + (e?.message || String(e)));
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -94,42 +138,67 @@ export default function RoleAgentSync() {
         </button>
         <button
           className="btn btn--secondary"
+          onClick={fixAllDiffs}
+          disabled={loading}
+          data-testid="button-fix-all-diffs"
+        >
+          Fix all diffs
+        </button>
+        <button
+          className="btn btn--secondary"
           onClick={refresh}
           disabled={loading}
           data-testid="button-refresh-sync"
         >
           Refresh
         </button>
-        {status ? <span className="chip">{status}</span> : null}
+        {status ? <span className="chip" data-testid="text-status">{status}</span> : null}
       </div>
+
       <h3 style={{ marginTop: 16 }}>Diffs (by handle)</h3>
       <div style={{ display: 'grid', gap: 10 }}>
-        {diffs.map((row: any, i: number) => (
-          <div key={row.handle + i} className="card" data-testid={`card-diff-${row.handle}`}>
+        {rows.map(({ role, spec, diffs }, i) => (
+          <div key={role.handle + i} className="card" data-testid={`card-diff-${role.handle}`}>
             <div className="rail" />
             <div className="inner">
-              <div className="title">{row.handle} — {row.title}</div>
-              {row.diffs.length === 0 ? (
-                <p className="oneliner">No diffs — in sync ✅</p>
+              <div className="title">{role.handle} — {role.title}</div>
+              {diffs.length === 0 ? (
+                <p className="oneliner" data-testid={`text-sync-status-${role.handle}`}>
+                  No diffs — in sync ✅
+                </p>
               ) : (
-                <ul style={{ margin: '8px 0 0 18px' }}>
-                  {row.diffs.map((d: any, idx: number) => (
-                    <li key={idx}>
-                      <b>{d.field}</b>: role=<code>{formatValue(d.roleValue)}</code> vs agent=
-                      <code>{formatValue(d.agentValue)}</code>
-                      {typeof d.suggestion !== 'undefined' ? (
-                        <button
-                          className="btn btn--secondary btn--sm"
-                          style={{ marginLeft: 8 }}
-                          onClick={() => applySuggestion(row.handle, d.field, d.suggestion)}
-                          data-testid={`button-apply-${row.handle}-${d.field}`}
-                        >
-                          Apply suggestion
-                        </button>
-                      ) : null}
-                    </li>
-                  ))}
-                </ul>
+                <>
+                  <ul style={{ margin: '8px 0 0 18px' }}>
+                    {diffs.map((d: any, idx: number) => (
+                      <li key={idx} style={{ marginBottom: 6 }}>
+                        <b>{d.field}</b>: role=<code>{formatValue(d.roleValue)}</code> vs agent=
+                        <code>{formatValue(d.agentValue)}</code>
+                        {typeof d.suggestion !== 'undefined' ? (
+                          <button
+                            className="btn btn--secondary btn--sm"
+                            style={{ marginLeft: 8 }}
+                            onClick={() => applySuggestion(role.handle, d.field, d.suggestion)}
+                            data-testid={`button-apply-${role.handle}-${d.field}`}
+                          >
+                            Apply suggestion
+                          </button>
+                        ) : null}
+                      </li>
+                    ))}
+                  </ul>
+                  {hasSuggestions(diffs) ? (
+                    <div style={{ marginTop: 10 }}>
+                      <button
+                        className="btn btn--sm"
+                        data-pod="brand"
+                        onClick={() => applyAllForHandle(role.handle, diffs)}
+                        data-testid={`button-apply-all-${role.handle}`}
+                      >
+                        Apply all suggestions for {role.handle}
+                      </button>
+                    </div>
+                  ) : null}
+                </>
               )}
             </div>
           </div>

@@ -79,11 +79,18 @@ Dream Team Hub is a sophisticated control platform designed to provide a "single
 
 ### 8. Roles ⇄ Agent Specs Sync
 - **Bulk Generation**: Generate Agent Specs for all Role Cards that don't have specs
-- **Two-Way Diff View**: Compare Roles and Agent Specs side-by-side
-- **Smart Suggestions**: Automatically detect differences in title, pod, instruction blocks, and tools
-- **One-Click Sync**: Apply suggestions to synchronize Role Cards with Agent Specs
-- **Auto-Mapping**: Uses Role's Definition of Done as instruction blocks
-- **Baseline Tools**: Automatically assigns default tools (threads.post, drive.search, zip.kit, hash.index)
+- **Two-Way Diff View**: Compare Roles and Agent Specs side-by-side with comprehensive field comparison
+- **Enhanced Diffs**: Detects differences in title, pod, instruction_blocks, tools, system_prompt, and policies
+- **Smart Suggestions**: 
+  - Title/Pod: Suggests Role values when different
+  - Instruction Blocks: Maps from Role's Definition of Done when Agent Spec lacks them
+  - Tools: Suggests baseline tools (threads.post, drive.search, zip.kit, hash.index) when empty
+  - System Prompt: Suggests baseline with Brand-Lock/DoD/artifact guidance when missing or incomplete
+  - Policies: Suggests merged baseline preserving custom keys
+- **Batch Actions**:
+  - **Apply suggestion**: One-click fix for individual field diffs
+  - **Apply all suggestions for handle**: Fix all diffs for a single Role/Spec pair
+  - **Fix all diffs**: Global batch apply across all rows with suggestions
 - **Visual Indicators**: Shows sync status with clear "in sync ✅" badges
 
 ### 9. Pods & Persons
