@@ -16,6 +16,7 @@ import Pods from "@/pages/pods";
 import ChatPage from "@/pages/chat";
 import AgentConsole from "@/pages/agent-console";
 import SummonMirrorPage from "@/pages/summon-mirror";
+import RosterAdminPage from "@/pages/roster-admin";
 
 function Router() {
   return (
@@ -30,6 +31,7 @@ function Router() {
       <Route path="/chat" component={ChatPage} />
       <Route path="/agent-console" component={AgentConsole} />
       <Route path="/summon-mirror" component={SummonMirrorPage} />
+      <Route path="/roster-admin" component={RosterAdminPage} />
       <Route component={NotFound} />
     </Switch>
   );

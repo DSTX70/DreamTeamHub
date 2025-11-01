@@ -58,6 +58,23 @@ export const roleRaci = pgTable("role_raci", {
 });
 
 // ===========================
+// AGENT SPECS
+// ===========================
+
+export const agentSpecs = pgTable("agent_specs", {
+  handle: text("handle").primaryKey(),
+  title: text("title").notNull(),
+  pod: text("pod").notNull(),
+  threadId: text("thread_id"),
+  systemPrompt: text("system_prompt").notNull(),
+  instructionBlocks: jsonb("instruction_blocks").$type<string[]>().notNull().default(sql`'[]'`),
+  tools: jsonb("tools").$type<string[]>().notNull().default(sql`'[]'`),
+  policies: jsonb("policies").$type<Record<string, any>>().notNull().default(sql`'{}'`),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// ===========================
 // WORK ITEMS
 // ===========================
 
@@ -500,3 +517,8 @@ export type AgentMemory = typeof agentMemories.$inferSelect;
 export const insertAgentRunSchema = createInsertSchema(agentRuns).omit({ id: true, createdAt: true });
 export type InsertAgentRun = z.infer<typeof insertAgentRunSchema>;
 export type AgentRun = typeof agentRuns.$inferSelect;
+
+// Agent Specs
+export const insertAgentSpecSchema = createInsertSchema(agentSpecs).omit({ createdAt: true, updatedAt: true });
+export type InsertAgentSpec = z.infer<typeof insertAgentSpecSchema>;
+export type AgentSpec = typeof agentSpecs.$inferSelect;

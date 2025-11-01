@@ -2,7 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { 
-  insertPodSchema, insertPersonSchema, insertRoleCardSchema, insertRoleRaciSchema,
+  insertPodSchema, insertPersonSchema, insertRoleCardSchema, insertRoleRaciSchema, insertAgentSpecSchema,
   insertWorkItemSchema, insertDecisionSchema, insertBrainstormSessionSchema,
   insertBrainstormParticipantSchema, insertBrainstormIdeaSchema, insertBrainstormClusterSchema,
   insertAuditSchema, insertAuditCheckSchema, insertAuditFindingSchema,
@@ -277,6 +277,57 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error('Error creating RACI:', error);
       res.status(400).json({ error: error.message || 'Failed to create RACI' });
+    }
+  });
+
+  // ===========================
+  // AGENT SPECS
+  // ===========================
+
+  app.get("/api/agent-specs", async (req, res) => {
+    try {
+      const specs = await storage.getAgentSpecs();
+      res.json(specs);
+    } catch (error) {
+      console.error('Error fetching agent specs:', error);
+      res.status(500).json({ error: 'Failed to fetch agent specs' });
+    }
+  });
+
+  app.get("/api/agent-specs/:handle", async (req, res) => {
+    try {
+      const spec = await storage.getAgentSpec(req.params.handle);
+      if (!spec) {
+        return res.status(404).json({ error: 'Agent spec not found' });
+      }
+      res.json(spec);
+    } catch (error) {
+      console.error('Error fetching agent spec:', error);
+      res.status(500).json({ error: 'Failed to fetch agent spec' });
+    }
+  });
+
+  app.post("/api/agent-specs", async (req, res) => {
+    try {
+      const data = insertAgentSpecSchema.parse(req.body);
+      const spec = await storage.upsertAgentSpec(data);
+      res.status(201).json(spec);
+    } catch (error: any) {
+      console.error('Error upserting agent spec:', error);
+      res.status(400).json({ error: error.message || 'Failed to upsert agent spec' });
+    }
+  });
+
+  app.delete("/api/agent-specs/:handle", async (req, res) => {
+    try {
+      const success = await storage.deleteAgentSpec(req.params.handle);
+      if (!success) {
+        return res.status(404).json({ error: 'Agent spec not found' });
+      }
+      res.status(204).send();
+    } catch (error) {
+      console.error('Error deleting agent spec:', error);
+      res.status(500).json({ error: 'Failed to delete agent spec' });
     }
   });
 

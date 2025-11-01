@@ -1,14 +1,14 @@
 // Referenced from javascript_database integration blueprint
 import { 
-  pods, persons, roleCards, roleRaci, workItems, decisions,
+  pods, persons, roleCards, roleRaci, agentSpecs, workItems, decisions,
   brainstormSessions, brainstormParticipants, brainstormIdeas, brainstormClusters, brainstormArtifacts,
   audits, auditChecks, auditFindings, auditArtifacts, events,
   conversations, messages, agentMemories, agentRuns,
-  type Pod, type Person, type RoleCard, type RoleRaci, type WorkItem, type Decision,
+  type Pod, type Person, type RoleCard, type RoleRaci, type AgentSpec, type WorkItem, type Decision,
   type BrainstormSession, type BrainstormParticipant, type BrainstormIdea, type BrainstormCluster, type BrainstormArtifact,
   type Audit, type AuditCheck, type AuditFinding, type AuditArtifact, type Event,
   type Conversation, type Message, type AgentMemory, type AgentRun,
-  type InsertPod, type InsertPerson, type InsertRoleCard, type InsertRoleRaci, type InsertWorkItem, type InsertDecision,
+  type InsertPod, type InsertPerson, type InsertRoleCard, type InsertRoleRaci, type InsertAgentSpec, type InsertWorkItem, type InsertDecision,
   type InsertBrainstormSession, type InsertBrainstormParticipant, type InsertBrainstormIdea, type InsertBrainstormCluster, type InsertBrainstormArtifact,
   type InsertAudit, type InsertAuditCheck, type InsertAuditFinding, type InsertAuditArtifact, type InsertEvent,
   type InsertConversation, type InsertMessage, type InsertAgentMemory, type InsertAgentRun,
@@ -40,6 +40,12 @@ export interface IStorage {
   // Role RACI
   getRoleRacis(filters?: { workstream?: string; roleHandle?: string }): Promise<RoleRaci[]>;
   createRoleRaci(raci: InsertRoleRaci): Promise<RoleRaci>;
+  
+  // Agent Specs
+  getAgentSpecs(): Promise<AgentSpec[]>;
+  getAgentSpec(handle: string): Promise<AgentSpec | undefined>;
+  upsertAgentSpec(spec: InsertAgentSpec): Promise<AgentSpec>;
+  deleteAgentSpec(handle: string): Promise<boolean>;
   
   // Work Items
   getWorkItems(): Promise<WorkItem[]>;
@@ -217,6 +223,41 @@ export class DatabaseStorage implements IStorage {
   async createRoleRaci(raci: InsertRoleRaci): Promise<RoleRaci> {
     const [created] = await db.insert(roleRaci).values(raci).returning();
     return created;
+  }
+
+  // ===== AGENT SPECS =====
+  async getAgentSpecs(): Promise<AgentSpec[]> {
+    return await db.select().from(agentSpecs).orderBy(agentSpecs.handle);
+  }
+
+  async getAgentSpec(handle: string): Promise<AgentSpec | undefined> {
+    const [spec] = await db.select().from(agentSpecs).where(eq(agentSpecs.handle, handle));
+    return spec || undefined;
+  }
+
+  async upsertAgentSpec(spec: InsertAgentSpec): Promise<AgentSpec> {
+    const [upserted] = await db.insert(agentSpecs)
+      .values(spec)
+      .onConflictDoUpdate({
+        target: agentSpecs.handle,
+        set: {
+          title: spec.title,
+          pod: spec.pod,
+          threadId: spec.threadId,
+          systemPrompt: spec.systemPrompt,
+          instructionBlocks: spec.instructionBlocks,
+          tools: spec.tools,
+          policies: spec.policies,
+          updatedAt: new Date(),
+        }
+      })
+      .returning();
+    return upserted;
+  }
+
+  async deleteAgentSpec(handle: string): Promise<boolean> {
+    const result = await db.delete(agentSpecs).where(eq(agentSpecs.handle, handle));
+    return (result.rowCount ?? 0) > 0;
   }
 
   // ===== WORK ITEMS =====
