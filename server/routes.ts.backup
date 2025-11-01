@@ -86,7 +86,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // PODS
   // ===========================
   
-  app.get("/api/pods", isAuthenticated, async (req, res) => {
+  app.get("/api/pods", async (req, res) => {
     try {
       const pods = await storage.getPods();
       res.json(pods);
@@ -96,7 +96,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/pods/:id", isAuthenticated, async (req, res) => {
+  app.get("/api/pods/:id", async (req, res) => {
     try {
       const pod = await storage.getPod(parseInt(req.params.id));
       if (!pod) {
@@ -109,7 +109,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/pods", isAuthenticated, async (req, res) => {
+  app.post("/api/pods", async (req, res) => {
     try {
       const data = insertPodSchema.parse(req.body);
       const pod = await storage.createPod(data);
@@ -120,7 +120,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put("/api/pods/:id", isAuthenticated, async (req, res) => {
+  app.put("/api/pods/:id", async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       const data = insertPodSchema.parse(req.body);
@@ -135,7 +135,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/pods/:id", isAuthenticated, async (req, res) => {
+  app.delete("/api/pods/:id", async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       await storage.deletePod(id);
@@ -150,7 +150,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // PERSONS
   // ===========================
   
-  app.get("/api/persons", isAuthenticated, async (req, res) => {
+  app.get("/api/persons", async (req, res) => {
     try {
       const persons = await storage.getPersons();
       res.json(persons);
@@ -160,7 +160,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/persons/:id", isAuthenticated, async (req, res) => {
+  app.get("/api/persons/:id", async (req, res) => {
     try {
       const person = await storage.getPerson(parseInt(req.params.id));
       if (!person) {
@@ -173,7 +173,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/persons", isAuthenticated, async (req, res) => {
+  app.post("/api/persons", async (req, res) => {
     try {
       const data = insertPersonSchema.parse(req.body);
       const person = await storage.createPerson(data);
@@ -188,7 +188,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // ROLE CARDS
   // ===========================
   
-  app.get("/api/roles", isAuthenticated, async (req, res) => {
+  app.get("/api/roles", async (req, res) => {
     try {
       const { pod, handle } = req.query;
       const filters: any = {};
@@ -203,7 +203,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/roles/:id", isAuthenticated, async (req, res) => {
+  app.get("/api/roles/:id", async (req, res) => {
     try {
       const role = await storage.getRoleCard(parseInt(req.params.id));
       if (!role) {
@@ -216,7 +216,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/roles", isAuthenticated, async (req, res) => {
+  app.post("/api/roles", async (req, res) => {
     try {
       const data = insertRoleCardSchema.parse(req.body);
       const role = await storage.createRoleCard(data);
@@ -227,7 +227,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/roles/import", isAuthenticated, async (req, res) => {
+  app.post("/api/roles/import", async (req, res) => {
     try {
       if (!Array.isArray(req.body)) {
         return res.status(400).json({ error: 'Request body must be an array of role cards' });
@@ -242,7 +242,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put("/api/roles/:id", isAuthenticated, async (req, res) => {
+  app.put("/api/roles/:id", async (req, res) => {
     try {
       const data = insertRoleCardSchema.partial().parse(req.body);
       const role = await storage.updateRoleCard(parseInt(req.params.id), data);
@@ -256,7 +256,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/roles/:id", isAuthenticated, async (req, res) => {
+  app.delete("/api/roles/:id", async (req, res) => {
     try {
       const success = await storage.deleteRoleCard(parseInt(req.params.id));
       if (!success) {
@@ -273,7 +273,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // ROLE RACI
   // ===========================
   
-  app.get("/api/roles/raci", isAuthenticated, async (req, res) => {
+  app.get("/api/roles/raci", async (req, res) => {
     try {
       const { workstream, roleHandle } = req.query;
       const filters: any = {};
@@ -288,7 +288,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/roles/raci", isAuthenticated, async (req, res) => {
+  app.post("/api/roles/raci", async (req, res) => {
     try {
       const data = insertRoleRaciSchema.parse(req.body);
       const raci = await storage.createRoleRaci(data);
@@ -303,7 +303,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // AGENT SPECS
   // ===========================
 
-  app.get("/api/agent-specs", isAuthenticated, async (req, res) => {
+  app.get("/api/agent-specs", async (req, res) => {
     try {
       const specs = await storage.getAgentSpecs();
       res.json(specs);
@@ -313,7 +313,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/agent-specs/:handle", isAuthenticated, async (req, res) => {
+  app.get("/api/agent-specs/:handle", async (req, res) => {
     try {
       const spec = await storage.getAgentSpec(req.params.handle);
       if (!spec) {
@@ -326,7 +326,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/agent-specs", isAuthenticated, async (req, res) => {
+  app.post("/api/agent-specs", async (req, res) => {
     try {
       const data = insertAgentSpecSchema.parse(req.body);
       const spec = await storage.upsertAgentSpec(data);
@@ -337,7 +337,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/agent-specs/:handle", isAuthenticated, async (req, res) => {
+  app.delete("/api/agent-specs/:handle", async (req, res) => {
     try {
       const success = await storage.deleteAgentSpec(req.params.handle);
       if (!success) {
@@ -354,7 +354,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // WORK ITEMS
   // ===========================
   
-  app.get("/api/work-items", isAuthenticated, async (req, res) => {
+  app.get("/api/work-items", async (req, res) => {
     try {
       const items = await storage.getWorkItems();
       res.json(items);
@@ -364,7 +364,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/work-items/:id", isAuthenticated, async (req, res) => {
+  app.get("/api/work-items/:id", async (req, res) => {
     try {
       const item = await storage.getWorkItem(parseInt(req.params.id));
       if (!item) {
@@ -377,7 +377,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/work-items", isAuthenticated, async (req, res) => {
+  app.post("/api/work-items", async (req, res) => {
     try {
       const data = insertWorkItemSchema.parse(req.body);
       const item = await storage.createWorkItem(data);
@@ -388,7 +388,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put("/api/work-items/:id", isAuthenticated, async (req, res) => {
+  app.put("/api/work-items/:id", async (req, res) => {
     try {
       const data = insertWorkItemSchema.partial().parse(req.body);
       const item = await storage.updateWorkItem(parseInt(req.params.id), data);
@@ -402,7 +402,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/work-items/:id", isAuthenticated, async (req, res) => {
+  app.delete("/api/work-items/:id", async (req, res) => {
     try {
       const success = await storage.deleteWorkItem(parseInt(req.params.id));
       if (!success) {
@@ -419,7 +419,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // DECISIONS
   // ===========================
   
-  app.get("/api/decisions", isAuthenticated, async (req, res) => {
+  app.get("/api/decisions", async (req, res) => {
     try {
       const decisions = await storage.getDecisions();
       res.json(decisions);
@@ -429,7 +429,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/decisions/:id", isAuthenticated, async (req, res) => {
+  app.get("/api/decisions/:id", async (req, res) => {
     try {
       const decision = await storage.getDecision(parseInt(req.params.id));
       if (!decision) {
@@ -442,7 +442,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/decisions", isAuthenticated, async (req, res) => {
+  app.post("/api/decisions", async (req, res) => {
     try {
       const data = insertDecisionSchema.parse(req.body);
       const decision = await storage.createDecision(data);
@@ -457,7 +457,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // BRAINSTORM SESSIONS
   // ===========================
   
-  app.get("/api/brainstorm/sessions", isAuthenticated, async (req, res) => {
+  app.get("/api/brainstorm/sessions", async (req, res) => {
     try {
       const sessions = await storage.getBrainstormSessions();
       res.json(sessions);
@@ -467,7 +467,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/brainstorm/sessions/:id", isAuthenticated, async (req, res) => {
+  app.get("/api/brainstorm/sessions/:id", async (req, res) => {
     try {
       const session = await storage.getBrainstormSession(parseInt(req.params.id));
       if (!session) {
@@ -480,7 +480,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/brainstorm/sessions", isAuthenticated, async (req, res) => {
+  app.post("/api/brainstorm/sessions", async (req, res) => {
     try {
       const data = insertBrainstormSessionSchema.parse(req.body);
       const session = await storage.createBrainstormSession(data);
@@ -491,7 +491,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put("/api/brainstorm/sessions/:id", isAuthenticated, async (req, res) => {
+  app.put("/api/brainstorm/sessions/:id", async (req, res) => {
     try {
       const data = insertBrainstormSessionSchema.partial().parse(req.body);
       const session = await storage.updateBrainstormSession(parseInt(req.params.id), data);
@@ -506,7 +506,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Brainstorm Participants
-  app.get("/api/brainstorm/sessions/:id/participants", isAuthenticated, async (req, res) => {
+  app.get("/api/brainstorm/sessions/:id/participants", async (req, res) => {
     try {
       const participants = await storage.getBrainstormParticipants(parseInt(req.params.id));
       res.json(participants);
@@ -516,7 +516,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/brainstorm/sessions/:id/participants", isAuthenticated, async (req, res) => {
+  app.post("/api/brainstorm/sessions/:id/participants", async (req, res) => {
     try {
       const data = insertBrainstormParticipantSchema.parse({
         ...req.body,
@@ -531,7 +531,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Brainstorm Ideas
-  app.get("/api/brainstorm/sessions/:id/ideas", isAuthenticated, async (req, res) => {
+  app.get("/api/brainstorm/sessions/:id/ideas", async (req, res) => {
     try {
       const ideas = await storage.getBrainstormIdeas(parseInt(req.params.id));
       res.json(ideas);
@@ -541,7 +541,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/brainstorm/sessions/:id/ideas", isAuthenticated, async (req, res) => {
+  app.post("/api/brainstorm/sessions/:id/ideas", async (req, res) => {
     try {
       const data = insertBrainstormIdeaSchema.parse({
         ...req.body,
@@ -555,7 +555,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put("/api/brainstorm/ideas/:id", isAuthenticated, async (req, res) => {
+  app.put("/api/brainstorm/ideas/:id", async (req, res) => {
     try {
       const data = insertBrainstormIdeaSchema.partial().parse(req.body);
       const idea = await storage.updateBrainstormIdea(parseInt(req.params.id), data);
@@ -570,7 +570,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Brainstorm Clusters
-  app.get("/api/brainstorm/sessions/:id/clusters", isAuthenticated, async (req, res) => {
+  app.get("/api/brainstorm/sessions/:id/clusters", async (req, res) => {
     try {
       const clusters = await storage.getBrainstormClusters(parseInt(req.params.id));
       res.json(clusters);
@@ -580,7 +580,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/brainstorm/sessions/:id/clusters", isAuthenticated, async (req, res) => {
+  app.post("/api/brainstorm/sessions/:id/clusters", async (req, res) => {
     try {
       const data = insertBrainstormClusterSchema.parse({
         ...req.body,
@@ -598,7 +598,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // AUDITS
   // ===========================
   
-  app.get("/api/audits", isAuthenticated, async (req, res) => {
+  app.get("/api/audits", async (req, res) => {
     try {
       const audits = await storage.getAudits();
       res.json(audits);
@@ -608,7 +608,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/audits/:id", isAuthenticated, async (req, res) => {
+  app.get("/api/audits/:id", async (req, res) => {
     try {
       const audit = await storage.getAudit(parseInt(req.params.id));
       if (!audit) {
@@ -621,7 +621,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/audits", isAuthenticated, async (req, res) => {
+  app.post("/api/audits", async (req, res) => {
     try {
       const data = insertAuditSchema.parse(req.body);
       const audit = await storage.createAudit(data);
@@ -632,7 +632,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put("/api/audits/:id", isAuthenticated, async (req, res) => {
+  app.put("/api/audits/:id", async (req, res) => {
     try {
       const data = insertAuditSchema.partial().parse(req.body);
       const audit = await storage.updateAudit(parseInt(req.params.id), data);
@@ -647,7 +647,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Audit Checks
-  app.get("/api/audits/:id/checks", isAuthenticated, async (req, res) => {
+  app.get("/api/audits/:id/checks", async (req, res) => {
     try {
       const checks = await storage.getAuditChecks(parseInt(req.params.id));
       res.json(checks);
@@ -657,7 +657,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/audits/:id/checks", isAuthenticated, async (req, res) => {
+  app.post("/api/audits/:id/checks", async (req, res) => {
     try {
       const data = insertAuditCheckSchema.parse({
         ...req.body,
@@ -671,7 +671,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put("/api/audits/checks/:id", isAuthenticated, async (req, res) => {
+  app.put("/api/audits/checks/:id", async (req, res) => {
     try {
       const data = insertAuditCheckSchema.partial().parse(req.body);
       const check = await storage.updateAuditCheck(parseInt(req.params.id), data);
@@ -686,7 +686,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Audit Findings
-  app.get("/api/audits/:id/findings", isAuthenticated, async (req, res) => {
+  app.get("/api/audits/:id/findings", async (req, res) => {
     try {
       const findings = await storage.getAuditFindings(parseInt(req.params.id));
       res.json(findings);
@@ -696,7 +696,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/audits/:id/findings", isAuthenticated, async (req, res) => {
+  app.post("/api/audits/:id/findings", async (req, res) => {
     try {
       const data = insertAuditFindingSchema.parse({
         ...req.body,
@@ -714,7 +714,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // CHAT CONVERSATIONS
   // ===========================
 
-  app.get("/api/conversations", isAuthenticated, async (req, res) => {
+  app.get("/api/conversations", async (req, res) => {
     try {
       const userId = req.query.userId ? parseInt(req.query.userId as string) : undefined;
       const conversations = await storage.getConversations(userId);
@@ -725,7 +725,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/conversations/:id", isAuthenticated, async (req, res) => {
+  app.get("/api/conversations/:id", async (req, res) => {
     try {
       const conversation = await storage.getConversation(parseInt(req.params.id));
       if (!conversation) {
@@ -738,7 +738,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/conversations", isAuthenticated, async (req, res) => {
+  app.post("/api/conversations", async (req, res) => {
     try {
       const data = insertConversationSchema.parse(req.body);
       const conversation = await storage.createConversation(data);
@@ -749,7 +749,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/conversations/:id/messages", isAuthenticated, async (req, res) => {
+  app.get("/api/conversations/:id/messages", async (req, res) => {
     try {
       const messages = await storage.getMessages(parseInt(req.params.id));
       res.json(messages);
@@ -759,7 +759,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/conversations/:id/messages", isAuthenticated, async (req, res) => {
+  app.post("/api/conversations/:id/messages", async (req, res) => {
     try {
       const conversationId = parseInt(req.params.id);
       const { content } = req.body;
@@ -840,7 +840,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // ===========================
 
   // List all agents (role cards as agents)
-  app.get("/api/agents", isAuthenticated, async (req, res) => {
+  app.get("/api/agents", async (req, res) => {
     try {
       const roleCards = await storage.getRoleCards({});
       const agents = roleCards.map(role => ({
@@ -859,7 +859,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Run an agent task
-  app.post("/api/agents/run", isAuthenticated, async (req, res) => {
+  app.post("/api/agents/run", async (req, res) => {
     try {
       const { agent, task, links = [], post_to_thread = false } = req.body;
       const startTime = Date.now();
@@ -910,7 +910,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Record feedback about an agent
-  app.post("/api/agents/feedback", isAuthenticated, async (req, res) => {
+  app.post("/api/agents/feedback", async (req, res) => {
     try {
       // Support both formats: { roleHandle, kind, textValue, ... } and { agent, feedback, score, kind }
       let data = req.body;
@@ -935,7 +935,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get agent memories
-  app.get("/api/agents/:handle/memory", isAuthenticated, async (req, res) => {
+  app.get("/api/agents/:handle/memory", async (req, res) => {
     try {
       const { handle } = req.params;
       const limit = req.query.limit ? parseInt(req.query.limit as string) : 20;
@@ -957,7 +957,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get agent run history
-  app.get("/api/agents/:handle/runs", isAuthenticated, async (req, res) => {
+  app.get("/api/agents/:handle/runs", async (req, res) => {
     try {
       const { handle } = req.params;
       const limit = req.query.limit ? parseInt(req.query.limit as string) : 20;
@@ -975,7 +975,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // ===========================
 
   // Post Summon message to Pod's thread
-  app.post("/api/comms/summon", isAuthenticated, async (req, res) => {
+  app.post("/api/comms/summon", async (req, res) => {
     try {
       const payload: SummonPayload = req.body;
       
@@ -1007,7 +1007,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Post Mirror-Back message to Pod's thread
-  app.post("/api/comms/mirror", isAuthenticated, async (req, res) => {
+  app.post("/api/comms/mirror", async (req, res) => {
     try {
       const payload: MirrorBackPayload = req.body;
       
