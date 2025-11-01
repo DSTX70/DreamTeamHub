@@ -228,6 +228,32 @@ export const messages = pgTable("messages", {
 });
 
 // ===========================
+// AGENT MEMORY & LEARNING
+// ===========================
+
+export const agentMemories = pgTable("agent_memories", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  roleHandle: text("role_handle").notNull(),
+  kind: text("kind").notNull(), // note, rule, feedback, learning
+  textValue: text("text_value").notNull(),
+  score: integer("score").default(0), // User rating or importance score
+  metadata: jsonb("metadata").$type<Record<string, any>>().default(sql`'{}'`),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const agentRuns = pgTable("agent_runs", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  roleHandle: text("role_handle").notNull(),
+  task: text("task").notNull(),
+  output: text("output"),
+  links: jsonb("links").$type<string[]>().notNull().default(sql`'[]'`),
+  conversationId: integer("conversation_id").references(() => conversations.id),
+  duration: integer("duration"), // milliseconds
+  status: text("status").notNull().default('completed'), // completed, failed
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+// ===========================
 // RELATIONS
 // ===========================
 
@@ -364,6 +390,13 @@ export const messagesRelations = relations(messages, ({ one }) => ({
   }),
 }));
 
+export const agentRunsRelations = relations(agentRuns, ({ one }) => ({
+  conversation: one(conversations, {
+    fields: [agentRuns.conversationId],
+    references: [conversations.id],
+  }),
+}));
+
 // ===========================
 // INSERT SCHEMAS & TYPES
 // ===========================
@@ -457,3 +490,13 @@ export type Conversation = typeof conversations.$inferSelect;
 export const insertMessageSchema = createInsertSchema(messages).omit({ id: true, createdAt: true });
 export type InsertMessage = z.infer<typeof insertMessageSchema>;
 export type Message = typeof messages.$inferSelect;
+
+// Agent Memories
+export const insertAgentMemorySchema = createInsertSchema(agentMemories).omit({ id: true, createdAt: true });
+export type InsertAgentMemory = z.infer<typeof insertAgentMemorySchema>;
+export type AgentMemory = typeof agentMemories.$inferSelect;
+
+// Agent Runs
+export const insertAgentRunSchema = createInsertSchema(agentRuns).omit({ id: true, createdAt: true });
+export type InsertAgentRun = z.infer<typeof insertAgentRunSchema>;
+export type AgentRun = typeof agentRuns.$inferSelect;

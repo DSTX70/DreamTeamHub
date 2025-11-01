@@ -3,15 +3,15 @@ import {
   pods, persons, roleCards, roleRaci, workItems, decisions,
   brainstormSessions, brainstormParticipants, brainstormIdeas, brainstormClusters, brainstormArtifacts,
   audits, auditChecks, auditFindings, auditArtifacts, events,
-  conversations, messages,
+  conversations, messages, agentMemories, agentRuns,
   type Pod, type Person, type RoleCard, type RoleRaci, type WorkItem, type Decision,
   type BrainstormSession, type BrainstormParticipant, type BrainstormIdea, type BrainstormCluster, type BrainstormArtifact,
   type Audit, type AuditCheck, type AuditFinding, type AuditArtifact, type Event,
-  type Conversation, type Message,
+  type Conversation, type Message, type AgentMemory, type AgentRun,
   type InsertPod, type InsertPerson, type InsertRoleCard, type InsertRoleRaci, type InsertWorkItem, type InsertDecision,
   type InsertBrainstormSession, type InsertBrainstormParticipant, type InsertBrainstormIdea, type InsertBrainstormCluster, type InsertBrainstormArtifact,
   type InsertAudit, type InsertAuditCheck, type InsertAuditFinding, type InsertAuditArtifact, type InsertEvent,
-  type InsertConversation, type InsertMessage,
+  type InsertConversation, type InsertMessage, type InsertAgentMemory, type InsertAgentRun,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, or, sql, inArray } from "drizzle-orm";
@@ -97,6 +97,14 @@ export interface IStorage {
   // Messages
   getMessages(conversationId: number): Promise<Message[]>;
   createMessage(message: InsertMessage): Promise<Message>;
+  
+  // Agent Memories
+  getAgentMemories(roleHandle: string, options?: { limit?: number; minScore?: number }): Promise<AgentMemory[]>;
+  createAgentMemory(memory: InsertAgentMemory): Promise<AgentMemory>;
+  
+  // Agent Runs
+  getAgentRuns(roleHandle: string, options?: { limit?: number }): Promise<AgentRun[]>;
+  createAgentRun(run: InsertAgentRun): Promise<AgentRun>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -406,6 +414,49 @@ export class DatabaseStorage implements IStorage {
 
   async createMessage(message: InsertMessage): Promise<Message> {
     const [created] = await db.insert(messages).values(message).returning();
+    return created;
+  }
+
+  // ===== AGENT MEMORIES =====
+  async getAgentMemories(roleHandle: string, options?: { limit?: number; minScore?: number }): Promise<AgentMemory[]> {
+    let query = db.select().from(agentMemories)
+      .where(eq(agentMemories.roleHandle, roleHandle))
+      .orderBy(desc(agentMemories.score), desc(agentMemories.createdAt));
+    
+    if (options?.minScore !== undefined) {
+      query = query.where(and(
+        eq(agentMemories.roleHandle, roleHandle),
+        sql`${agentMemories.score} >= ${options.minScore}`
+      ));
+    }
+    
+    if (options?.limit) {
+      query = query.limit(options.limit);
+    }
+    
+    return await query;
+  }
+
+  async createAgentMemory(memory: InsertAgentMemory): Promise<AgentMemory> {
+    const [created] = await db.insert(agentMemories).values(memory).returning();
+    return created;
+  }
+
+  // ===== AGENT RUNS =====
+  async getAgentRuns(roleHandle: string, options?: { limit?: number }): Promise<AgentRun[]> {
+    let query = db.select().from(agentRuns)
+      .where(eq(agentRuns.roleHandle, roleHandle))
+      .orderBy(desc(agentRuns.createdAt));
+    
+    if (options?.limit) {
+      query = query.limit(options.limit);
+    }
+    
+    return await query;
+  }
+
+  async createAgentRun(run: InsertAgentRun): Promise<AgentRun> {
+    const [created] = await db.insert(agentRuns).values(run).returning();
     return created;
   }
 }
