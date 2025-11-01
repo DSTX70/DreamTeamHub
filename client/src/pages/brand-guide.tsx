@@ -276,6 +276,7 @@ export default function BrandGuidePage() {
   /* Glass */
   --glass-bg: rgba(255,255,255,0.08);
   --glass-border: rgba(255,255,255,0.14);
+  --ring: 0 0 0 3px rgba(28,230,211,0.35);
 
   /* Gradients */
   --grad-orchestra: linear-gradient(135deg, var(--brand-teal) 0%, var(--brand-indigo) 100%);
