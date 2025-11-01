@@ -7,7 +7,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/empty-state";
 import { Search, Users, Plus, CheckCircle2 } from "lucide-react";
 import type { RoleCard } from "@shared/schema";
-import { getPodRailClass } from "@/lib/pod-utils";
+import { getPodRailClass, getPodColor } from "@/lib/pod-utils";
 
 export default function Roles() {
   const [searchQuery, setSearchQuery] = useState("");
@@ -66,17 +66,28 @@ export default function Roles() {
               >
                 All Pods
               </Button>
-              {pods.slice(0, 5).map(pod => (
-                <Button
-                  key={pod}
-                  variant={selectedPod === pod ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => setSelectedPod(pod)}
-                  data-testid={`filter-pod-${pod.toLowerCase().replace(/\s+/g, '-')}`}
-                >
-                  {pod}
-                </Button>
-              ))}
+              {pods.map(pod => {
+                const podColor = getPodColor(pod);
+                const isSelected = selectedPod === pod;
+                return (
+                  <Button
+                    key={pod}
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setSelectedPod(pod)}
+                    data-testid={`filter-pod-${pod.toLowerCase().replace(/\s+/g, '-')}`}
+                    style={{
+                      borderColor: isSelected ? podColor : 'var(--glass-border)',
+                      backgroundColor: isSelected ? `${podColor}22` : 'transparent',
+                      color: isSelected ? podColor : 'var(--text-secondary)',
+                      fontWeight: isSelected ? 600 : 400,
+                    }}
+                    className="hover-elevate active-elevate-2"
+                  >
+                    {pod}
+                  </Button>
+                );
+              })}
             </div>
           </div>
         </CardContent>

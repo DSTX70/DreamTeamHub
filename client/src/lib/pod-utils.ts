@@ -23,3 +23,27 @@ export const getPodRailClass = (podName: string): string => {
   };
   return podMap[podName] || "control";
 };
+
+/**
+ * Get the pod color CSS variable value
+ */
+export const getPodColor = (podName: string): string => {
+  const colorMap: Record<string, string> = {
+    "Control Tower": "#3D6BFF",
+    "Intake & Routing": "#5CE1CF",
+    "Decision Log": "#FFC24D",
+    "Roster & Roles": "#C95CAF",
+    "IP & Patent Program": "#6B1E9C",
+    "Security & Compliance": "#3B4A5A",
+    "Product & Engineering": "#1F9CFF",
+    "Brand & Assets": "#FF5BCD",
+    "Marketing & Comms": "#FF7A45",
+    "Finance & BizOps": "#2DBE7A",
+    "Operating Rhythm": "#5A67FF",
+    // Shortened names
+    "Finance": "#2DBE7A",
+    "Marketing": "#FF7A45",
+    "Security": "#3B4A5A",
+  };
+  return colorMap[podName] || "#3D6BFF";
+};
