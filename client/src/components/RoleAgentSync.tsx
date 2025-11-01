@@ -31,31 +31,6 @@ export default function RoleAgentSync() {
     return m;
   }, [specs]);
 
-  const unmapped = useMemo(
-    () => roles.filter((r: any) => !specsByHandle[r.handle]),
-    [roles, specsByHandle]
-  );
-
-  const bulkGenerate = async () => {
-    if (!unmapped.length) {
-      alert('No missing Agent Specs.');
-      return;
-    }
-    setLoading(true);
-    setStatus('Generating specs...');
-    try {
-      for (const r of unmapped) {
-        await upsertAgentSpec(roleToSuggestedAgent(r));
-      }
-      setStatus('Generated ' + unmapped.length + ' specs.');
-      await refresh();
-    } catch (e: any) {
-      alert('Error generating specs: ' + (e?.message || e));
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const rows = useMemo(
     () =>
       roles.map((r) => ({
@@ -75,6 +50,13 @@ export default function RoleAgentSync() {
     await upsertAgentSpec(updated);
   };
 
+  const applyPolicyKey = async (handle: string, key: string, suggestion: any) => {
+    const base =
+      specsByHandle[handle] || roleToSuggestedAgent(roles.find((r: any) => r.handle === handle)!);
+    const updated: any = { ...base, policies: { ...(base.policies || {}), [key]: suggestion } };
+    await upsertAgentSpec(updated);
+  };
+
   const applyAllForHandle = async (handle: string, diffs: any[]) => {
     setLoading(true);
     try {
@@ -82,42 +64,48 @@ export default function RoleAgentSync() {
         specsByHandle[handle] || roleToSuggestedAgent(roles.find((r: any) => r.handle === handle)!);
       const updated: any = { ...base };
       for (const d of diffs) {
-        if (typeof d.suggestion !== 'undefined') {
+        if (d.field === 'policies' && d.policyKeyDiffs?.length) {
+          updated.policies = { ...(base.policies || {}) };
+          for (const pk of d.policyKeyDiffs) {
+            updated.policies[pk.key] = pk.suggestion;
+          }
+        } else if (typeof d.suggestion !== 'undefined') {
           updated[d.field] = d.suggestion;
         }
       }
       await upsertAgentSpec(updated);
       await refresh();
-    } catch (e: any) {
-      alert('Apply all failed: ' + (e?.message || String(e)));
     } finally {
       setLoading(false);
     }
   };
 
   const fixAllDiffs = async () => {
-    const allWithSuggestions = rows.filter((row) => hasSuggestions(row.diffs));
-    if (!allWithSuggestions.length) {
+    const targets = rows.filter((r) => hasSuggestions(r.diffs));
+    if (!targets.length) {
       alert('No suggestions to apply.');
       return;
     }
     setLoading(true);
     setStatus('Applying all suggestions...');
     try {
-      for (const row of allWithSuggestions) {
+      for (const row of targets) {
         const base = specsByHandle[row.role.handle] || roleToSuggestedAgent(row.role);
         const updated: any = { ...base };
         for (const d of row.diffs) {
-          if (typeof d.suggestion !== 'undefined') {
+          if (d.field === 'policies' && d.policyKeyDiffs?.length) {
+            updated.policies = { ...(base.policies || {}) };
+            for (const pk of d.policyKeyDiffs) {
+              updated.policies[pk.key] = pk.suggestion;
+            }
+          } else if (typeof d.suggestion !== 'undefined') {
             updated[d.field] = d.suggestion;
           }
         }
         await upsertAgentSpec(updated);
       }
-      setStatus('Applied suggestions for ' + allWithSuggestions.length + ' items.');
+      setStatus('Applied suggestions for ' + targets.length + ' items.');
       await refresh();
-    } catch (e: any) {
-      alert('Fix all failed: ' + (e?.message || String(e)));
     } finally {
       setLoading(false);
     }
@@ -125,17 +113,8 @@ export default function RoleAgentSync() {
 
   return (
     <section className="section">
-      <h2>Roles ↔ Agent Specs — Bulk Map & Sync</h2>
+      <h2>Roles ↔ Agent Specs — Sync + Policy Key Diffs</h2>
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
-        <button
-          className="btn"
-          data-pod="product"
-          onClick={bulkGenerate}
-          disabled={loading}
-          data-testid="button-generate-missing-specs"
-        >
-          {loading ? 'Working…' : `Generate Missing Specs (${unmapped.length})`}
-        </button>
         <button
           className="btn btn--secondary"
           onClick={fixAllDiffs}
@@ -173,7 +152,25 @@ export default function RoleAgentSync() {
                       <li key={idx} style={{ marginBottom: 6 }}>
                         <b>{d.field}</b>: role=<code>{formatValue(d.roleValue)}</code> vs agent=
                         <code>{formatValue(d.agentValue)}</code>
-                        {typeof d.suggestion !== 'undefined' ? (
+                        {d.field === 'policies' && d.policyKeyDiffs?.length ? (
+                          <ul style={{ marginTop: 6 }}>
+                            {d.policyKeyDiffs.map((pk: any, pidx: number) => (
+                              <li key={pidx}>
+                                <code>{pk.key}</code>: baseline=<code>{formatValue(pk.roleValue)}</code> vs
+                                agent=<code>{formatValue(pk.agentValue)}</code>
+                                <button
+                                  className="btn btn--secondary btn--sm"
+                                  style={{ marginLeft: 8 }}
+                                  onClick={() => applyPolicyKey(role.handle, pk.key, pk.suggestion)}
+                                  data-testid={`button-apply-policy-${role.handle}-${pk.key}`}
+                                >
+                                  Apply key
+                                </button>
+                              </li>
+                            ))}
+                          </ul>
+                        ) : null}
+                        {typeof d.suggestion !== 'undefined' && d.field !== 'policies' ? (
                           <button
                             className="btn btn--secondary btn--sm"
                             style={{ marginLeft: 8 }}
@@ -186,18 +183,16 @@ export default function RoleAgentSync() {
                       </li>
                     ))}
                   </ul>
-                  {hasSuggestions(diffs) ? (
-                    <div style={{ marginTop: 10 }}>
-                      <button
-                        className="btn btn--sm"
-                        data-pod="brand"
-                        onClick={() => applyAllForHandle(role.handle, diffs)}
-                        data-testid={`button-apply-all-${role.handle}`}
-                      >
-                        Apply all suggestions for {role.handle}
-                      </button>
-                    </div>
-                  ) : null}
+                  <div style={{ marginTop: 10, display: 'flex', gap: 8 }}>
+                    <button
+                      className="btn btn--sm"
+                      data-pod="brand"
+                      onClick={() => applyAllForHandle(role.handle, diffs)}
+                      data-testid={`button-apply-all-${role.handle}`}
+                    >
+                      Apply all suggestions for {role.handle}
+                    </button>
+                  </div>
                 </>
               )}
             </div>

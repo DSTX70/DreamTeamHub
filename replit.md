@@ -81,15 +81,25 @@ Dream Team Hub is a sophisticated control platform designed to provide a "single
 - **Bulk Generation**: Generate Agent Specs for all Role Cards that don't have specs
 - **Two-Way Diff View**: Compare Roles and Agent Specs side-by-side with comprehensive field comparison
 - **Enhanced Diffs**: Detects differences in title, pod, instruction_blocks, tools, system_prompt, and policies
+- **Pod-Specific Baseline Prompts**: Custom system prompt templates tailored for each pod:
+  - **Marketing & Comms**: "Produce offer→audience→channels→budget→KPIs. Respect Brand-Lock and link assets."
+  - **IP & Patent**: "Draft clear claims/spec notes; ensure figure legibility @66%; never disclose confidential details."
+  - **Security & Compliance**: "Prevent first, respond fast. Provide controls, playbooks, and risks with owners."
+  - **Brand & Assets**: "Enforce Brand-Lock (color/typography/logo); deliver production-ready specs."
+  - **Product & Engineering**: "Provide AC, SLOs, and evidence artifacts; keep outputs concise."
+  - **Finance & BizOps**: "Provide decision-grade views with assumptions and links to source sheets."
+  - **Control Tower**: "Summarize priorities, owners, due, milestone, next step; link artifacts."
+- **Policy Key-Level Diffs**: Expands policy differences to show each key (may_post_threads, may_modify_drive, custom keys) with individual "Apply key" buttons
 - **Smart Suggestions**: 
   - Title/Pod: Suggests Role values when different
   - Instruction Blocks: Maps from Role's Definition of Done when Agent Spec lacks them
   - Tools: Suggests baseline tools (threads.post, drive.search, zip.kit, hash.index) when empty
-  - System Prompt: Suggests baseline with Brand-Lock/DoD/artifact guidance when missing or incomplete
-  - Policies: Suggests merged baseline preserving custom keys
+  - System Prompt: Suggests pod-tailored baseline when missing or lacking key guidance
+  - Policies: Suggests merged baseline `{...BASE_POLICIES, ...existing}` preserving custom keys
 - **Batch Actions**:
   - **Apply suggestion**: One-click fix for individual field diffs
-  - **Apply all suggestions for handle**: Fix all diffs for a single Role/Spec pair
+  - **Apply key**: Apply individual policy key without clobbering other policy fields
+  - **Apply all suggestions for handle**: Fix all diffs for a single Role/Spec pair (including policy key merges)
   - **Fix all diffs**: Global batch apply across all rows with suggestions
 - **Visual Indicators**: Shows sync status with clear "in sync ✅" badges
 
