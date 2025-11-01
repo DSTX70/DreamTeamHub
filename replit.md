@@ -73,6 +73,9 @@ Dream Team Hub is a sophisticated control platform designed to provide a "single
 - **Conversation Management**: Create, track, and manage multiple ongoing conversations
 - **Message History**: Full conversation persistence with timestamp tracking
 - **Role-Based Intelligence**: Personas provide guidance aligned with their core functions and definition of done
+- **Agent Memory & Learning**: Agents remember user feedback, preferences, and learnings to improve responses over time
+- **Run Tracking**: Complete audit trail of all agent interactions with performance metrics
+- **Feedback System**: Users can provide scored feedback (rules, notes, learnings) to teach agents preferred patterns
 
 ### 8. Pods & Persons
 - **Pod Management**: Organizational units with charters and owners
@@ -100,7 +103,7 @@ Dream Team Hub is a sophisticated control platform designed to provide a "single
 - **RESTful API** design
 
 ### Database Schema
-Comprehensive relational model with 17+ tables:
+Comprehensive relational model with 19+ tables:
 - Pods & Persons
 - Role Cards & RACI
 - Work Items
@@ -108,6 +111,7 @@ Comprehensive relational model with 17+ tables:
 - Brainstorm Sessions, Participants, Ideas, Clusters, Artifacts
 - Audits, Checks, Findings, Artifacts
 - Conversations & Messages
+- Agent Memories & Agent Runs (learning system)
 - Events (audit trail)
 
 ## Design System
@@ -178,7 +182,12 @@ All routes prefixed with `/api`:
 - `POST /api/conversations` - Create new conversation
 - `GET /api/conversations/:id` - Get conversation details
 - `GET /api/conversations/:id/messages` - Get all messages in conversation
-- `POST /api/conversations/:id/messages` - Send message and receive AI response
+- `POST /api/conversations/:id/messages` - Send message and receive AI response (with memory context)
+
+### Agent Learning & Memory
+- `POST /api/agents/feedback` - Record feedback/rule/learning for an agent
+- `GET /api/agents/:handle/memory` - Get agent memories (filterable by score/limit)
+- `GET /api/agents/:handle/runs` - Get agent run history with performance metrics
 
 ## Seed Data
 
@@ -225,6 +234,10 @@ All routes prefixed with `/api`:
 - ✅ Dream Team Chat with OpenAI GPT-4 integration
 - ✅ Live conversations with 32 role-based AI personas
 - ✅ Context-aware responses based on role card characteristics
+- ✅ Agent memory & learning system for continuous improvement
+- ✅ Feedback API for teaching agents user preferences and rules
+- ✅ Run tracking with performance metrics and audit trail
+- ✅ Enhanced AI prompts with memory context for personalized responses
 
 **Phase 3 Planned**: Advanced features
 - 🔄 OpenAI auto-clustering for Brainstorm Studio
