@@ -1,13 +1,13 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/empty-state";
 import { Search, Users, Plus, CheckCircle2 } from "lucide-react";
 import type { RoleCard } from "@shared/schema";
+import { getPodRailClass } from "@/lib/pod-utils";
 
 export default function Roles() {
   const [searchQuery, setSearchQuery] = useState("");
@@ -82,16 +82,14 @@ export default function Roles() {
         </CardContent>
       </Card>
 
-      {/* Role Cards Grid */}
+      {/* Role Cards Grid - Using Brand Guide Styling */}
       {isLoading ? (
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           {[...Array(6)].map((_, i) => (
             <Card key={i}>
-              <CardHeader>
+              <CardContent className="p-6">
                 <Skeleton className="h-6 w-32 mb-2" />
-                <Skeleton className="h-4 w-48" />
-              </CardHeader>
-              <CardContent>
+                <Skeleton className="h-4 w-48 mb-4" />
                 <Skeleton className="h-20 w-full" />
               </CardContent>
             </Card>
@@ -100,49 +98,40 @@ export default function Roles() {
       ) : filteredRoles && filteredRoles.length > 0 ? (
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           {filteredRoles.map((role) => (
-            <Card key={role.id} className="hover-elevate" data-testid={`role-card-${role.handle}`}>
-              <CardHeader>
-                <div className="flex items-start justify-between gap-2 mb-2">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-primary font-mono font-semibold">
-                    {role.handle.slice(0, 2).toUpperCase()}
-                  </div>
-                  <Badge variant="secondary" className="text-xs">{role.pod}</Badge>
+            <div key={role.id} className="role-card" data-testid={`role-card-${role.handle}`}>
+              <div className={`rail pod-rail ${getPodRailClass(role.pod)}`}></div>
+              <div className="inner">
+                <p className="title" style={{ font: '800 22px/1 Inter' }}>{role.handle}</p>
+                <p className="subtitle">{role.title}</p>
+                <div className="chips">
+                  <span className="chip">{role.pod}</span>
                 </div>
-                <CardTitle className="text-lg">{role.handle}</CardTitle>
-                <CardDescription className="text-sm">{role.title}</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div>
-                  <div className="text-xs font-medium text-muted-foreground mb-2">Purpose</div>
-                  <p className="text-sm line-clamp-2">{role.purpose}</p>
-                </div>
+                <p style={{ color: 'var(--text-secondary)', marginBottom: 'var(--space-4)' }}>
+                  {role.purpose}
+                </p>
                 
                 {role.coreFunctions && role.coreFunctions.length > 0 && (
-                  <div>
-                    <div className="text-xs font-medium text-muted-foreground mb-2">Core Functions</div>
-                    <div className="flex flex-wrap gap-1">
+                  <div style={{ marginBottom: 'var(--space-3)' }}>
+                    <div style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', marginBottom: 'var(--space-2)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Core Functions</div>
+                    <div className="chips">
                       {role.coreFunctions.slice(0, 3).map((func, idx) => (
-                        <Badge key={idx} variant="outline" className="text-xs">
-                          {func}
-                        </Badge>
+                        <span key={idx} className="chip">{func}</span>
                       ))}
                       {role.coreFunctions.length > 3 && (
-                        <Badge variant="outline" className="text-xs">
-                          +{role.coreFunctions.length - 3} more
-                        </Badge>
+                        <span className="chip">+{role.coreFunctions.length - 3}</span>
                       )}
                     </div>
                   </div>
                 )}
 
                 {role.definitionOfDone && role.definitionOfDone.length > 0 && (
-                  <div>
-                    <div className="text-xs font-medium text-muted-foreground mb-2">Definition of Done</div>
-                    <div className="space-y-1">
+                  <div style={{ marginBottom: 'var(--space-3)' }}>
+                    <div style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', marginBottom: 'var(--space-2)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Definition of Done</div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                       {role.definitionOfDone.slice(0, 2).map((item, idx) => (
-                        <div key={idx} className="flex items-start gap-2 text-xs">
-                          <CheckCircle2 className="h-3 w-3 text-muted-foreground mt-0.5 shrink-0" />
-                          <span className="line-clamp-1">{item}</span>
+                        <div key={idx} style={{ display: 'flex', alignItems: 'start', gap: '6px', fontSize: '13px', color: 'var(--text-secondary)' }}>
+                          <CheckCircle2 className="h-3 w-3 text-muted-foreground mt-0.5 shrink-0" style={{ color: 'var(--text-muted)' }} />
+                          <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', display: '-webkit-box', WebkitLineClamp: 1, WebkitBoxOrient: 'vertical' }}>{item}</span>
                         </div>
                       ))}
                     </div>
@@ -150,16 +139,16 @@ export default function Roles() {
                 )}
 
                 {role.tags && role.tags.length > 0 && (
-                  <div className="flex flex-wrap gap-1 pt-2 border-t">
-                    {role.tags.map((tag, idx) => (
-                      <Badge key={idx} variant="secondary" className="text-xs">
-                        #{tag}
-                      </Badge>
-                    ))}
+                  <div style={{ paddingTop: 'var(--space-3)', borderTop: '1px dashed var(--brand-line)' }}>
+                    <div className="chips">
+                      {role.tags.map((tag, idx) => (
+                        <span key={idx} className="chip">#{tag}</span>
+                      ))}
+                    </div>
                   </div>
                 )}
-              </CardContent>
-            </Card>
+              </div>
+            </div>
           ))}
         </div>
       ) : (

@@ -1,11 +1,11 @@
 import { useQuery } from "@tanstack/react-query";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/empty-state";
-import { Plus, Layers, Users } from "lucide-react";
+import { Plus, Layers } from "lucide-react";
 import type { Pod, Person } from "@shared/schema";
+import { getPodRailClass } from "@/lib/pod-utils";
 
 export default function Pods() {
   const { data: pods, isLoading: isLoadingPods } = useQuery<Pod[]>({
@@ -41,16 +41,14 @@ export default function Pods() {
         </div>
       </div>
 
-      {/* Pods Grid */}
+      {/* Pods Grid - Using Brand Guide Styling */}
       {isLoading ? (
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           {[...Array(6)].map((_, i) => (
             <Card key={i}>
-              <CardHeader>
+              <CardContent className="p-6">
                 <Skeleton className="h-6 w-32 mb-2" />
-                <Skeleton className="h-4 w-48" />
-              </CardHeader>
-              <CardContent>
+                <Skeleton className="h-4 w-48 mb-4" />
                 <Skeleton className="h-20 w-full" />
               </CardContent>
             </Card>
@@ -62,30 +60,30 @@ export default function Pods() {
             const podPersons = getPersonsForPod(pod.id);
             
             return (
-              <Card key={pod.id} className="hover-elevate" data-testid={`pod-${pod.id}`}>
-                <CardHeader>
-                  <div className="flex items-start justify-between gap-2 mb-2">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
-                      <Layers className="h-5 w-5 text-primary" />
+              <div key={pod.id} className="role-card" data-testid={`pod-${pod.id}`}>
+                <div className={`rail pod-rail ${getPodRailClass(pod.name)}`}></div>
+                <div className="inner">
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 'var(--space-2)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '40px', height: '40px', borderRadius: '8px', background: 'rgba(255,255,255,0.06)' }}>
+                      <Layers style={{ width: '20px', height: '20px', color: 'var(--text-primary)' }} />
                     </div>
-                    <Badge variant="secondary" className="text-xs">
+                    <span className="chip">
                       {podPersons.length} {podPersons.length === 1 ? 'member' : 'members'}
-                    </Badge>
+                    </span>
                   </div>
-                  <CardTitle className="text-lg">{pod.name}</CardTitle>
+                  <p className="title" style={{ font: '800 22px/1 Inter' }}>{pod.name}</p>
                   {pod.charter && (
-                    <CardDescription className="text-sm line-clamp-2">{pod.charter}</CardDescription>
+                    <p className="subtitle" style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                      {pod.charter}
+                    </p>
                   )}
-                </CardHeader>
-                <CardContent className="space-y-4">
+
                   {pod.owners && pod.owners.length > 0 && (
-                    <div>
-                      <div className="text-xs font-medium text-muted-foreground mb-2">Owners</div>
-                      <div className="flex flex-wrap gap-1">
+                    <div style={{ marginBottom: 'var(--space-3)' }}>
+                      <div style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', marginBottom: 'var(--space-2)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Owners</div>
+                      <div className="chips">
                         {pod.owners.map((owner, idx) => (
-                          <Badge key={idx} variant="outline" className="text-xs">
-                            {owner}
-                          </Badge>
+                          <span key={idx} className="chip">{owner}</span>
                         ))}
                       </div>
                     </div>
@@ -93,26 +91,26 @@ export default function Pods() {
 
                   {podPersons.length > 0 && (
                     <div>
-                      <div className="text-xs font-medium text-muted-foreground mb-2">Members</div>
-                      <div className="space-y-1">
+                      <div style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', marginBottom: 'var(--space-2)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Members</div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                         {podPersons.slice(0, 3).map((person) => (
-                          <div key={person.id} className="flex items-center gap-2 text-sm">
-                            <div className="flex h-6 w-6 items-center justify-center rounded-full bg-muted text-xs font-medium">
+                          <div key={person.id} style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14px', color: 'var(--text-secondary)' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '24px', height: '24px', borderRadius: '50%', background: 'rgba(255,255,255,0.08)', fontSize: '11px', fontWeight: 600, fontFamily: 'JetBrains Mono, monospace' }}>
                               {person.handle.slice(0, 2).toUpperCase()}
                             </div>
-                            <span className="flex-1 truncate">{person.name}</span>
+                            <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{person.name}</span>
                           </div>
                         ))}
                         {podPersons.length > 3 && (
-                          <div className="text-xs text-muted-foreground pl-8">
+                          <div style={{ fontSize: '12px', color: 'var(--text-muted)', paddingLeft: '32px' }}>
                             +{podPersons.length - 3} more
                           </div>
                         )}
                       </div>
                     </div>
                   )}
-                </CardContent>
-              </Card>
+                </div>
+              </div>
             );
           })}
         </div>
