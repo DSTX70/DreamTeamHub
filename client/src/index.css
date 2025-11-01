@@ -457,6 +457,11 @@ body{margin:0;background:#0B0D12;color:#fff;font-family:Inter,system-ui,-apple-s
 .title { font-weight:700; margin-bottom:6px; font-size:16px; }
 .chips { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:8px; }
 .chip { font-size:12px; padding:4px 10px; border-radius:999px; background:#ffffff14; border:1px solid #ffffff1f; }
+.chip--primary { background: linear-gradient(135deg, var(--brand-teal), var(--brand-violet)); border-color: transparent; color: #fff; }
+.chip--success { background: #27d69b22; border-color: #27d69b44; color: #27d69b; }
+.chip--warning { background: #ffcc5522; border-color: #ffcc5544; color: #ffcc55; }
+.chip--danger { background: #ff5f6d22; border-color: #ff5f6d44; color: #ff5f6d; }
+.chip--muted { background: #ffffff0a; border-color: #ffffff14; color: #aab0d8; }
 .oneliner { font-size:13px; line-height:1.4; color:#e7e9ff; }
 .expand { margin-top:10px; display:none; border-top:1px solid #ffffff1f; padding-top:12px; font-size:13px; color:#e7e9ff; }
 .expand h4 { margin:8px 0 6px; font-size:12px; letter-spacing:.02em; color:#cfd3ff; text-transform:uppercase; }

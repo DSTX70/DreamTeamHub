@@ -1,57 +1,58 @@
-import { Badge } from "@/components/ui/badge";
-import { cn } from "@/lib/utils";
+import { BrandedBadge } from "@/components/branded";
 
 interface StatusBadgeProps {
   status: string;
   className?: string;
 }
 
-const statusConfig: Record<string, { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' }> = {
+type BrandedBadgeVariant = 'default' | 'primary' | 'success' | 'warning' | 'danger' | 'muted';
+
+const statusConfig: Record<string, { label: string; variant: BrandedBadgeVariant }> = {
   // Work Item Status
-  todo: { label: 'To Do', variant: 'secondary' },
-  in_progress: { label: 'In Progress', variant: 'default' },
-  blocked: { label: 'Blocked', variant: 'destructive' },
-  done: { label: 'Done', variant: 'outline' },
+  todo: { label: 'To Do', variant: 'muted' },
+  in_progress: { label: 'In Progress', variant: 'primary' },
+  blocked: { label: 'Blocked', variant: 'danger' },
+  done: { label: 'Done', variant: 'success' },
   
   // Priority
-  low: { label: 'Low', variant: 'secondary' },
+  low: { label: 'Low', variant: 'muted' },
   medium: { label: 'Medium', variant: 'default' },
-  high: { label: 'High', variant: 'destructive' },
-  critical: { label: 'Critical', variant: 'destructive' },
+  high: { label: 'High', variant: 'warning' },
+  critical: { label: 'Critical', variant: 'danger' },
   
   // Brainstorm Session
-  planning: { label: 'Planning', variant: 'secondary' },
-  diverging: { label: 'Diverging', variant: 'default' },
-  clustering: { label: 'Clustering', variant: 'default' },
-  scoring: { label: 'Scoring', variant: 'default' },
-  committed: { label: 'Committed', variant: 'outline' },
+  planning: { label: 'Planning', variant: 'muted' },
+  diverging: { label: 'Diverging', variant: 'primary' },
+  clustering: { label: 'Clustering', variant: 'primary' },
+  scoring: { label: 'Scoring', variant: 'primary' },
+  committed: { label: 'Committed', variant: 'success' },
   
   // Brainstorm Ideas
-  active: { label: 'Active', variant: 'default' },
-  merged: { label: 'Merged', variant: 'secondary' },
-  discarded: { label: 'Discarded', variant: 'outline' },
+  active: { label: 'Active', variant: 'primary' },
+  merged: { label: 'Merged', variant: 'muted' },
+  discarded: { label: 'Discarded', variant: 'muted' },
   
   // Audit Status
-  review: { label: 'Review', variant: 'default' },
-  completed: { label: 'Completed', variant: 'outline' },
+  review: { label: 'Review', variant: 'primary' },
+  completed: { label: 'Completed', variant: 'success' },
   
   // Audit Check Status
-  pending: { label: 'Pending', variant: 'secondary' },
-  passed: { label: 'Passed', variant: 'outline' },
-  failed: { label: 'Failed', variant: 'destructive' },
-  na: { label: 'N/A', variant: 'secondary' },
+  pending: { label: 'Pending', variant: 'muted' },
+  passed: { label: 'Passed', variant: 'success' },
+  failed: { label: 'Failed', variant: 'danger' },
+  na: { label: 'N/A', variant: 'muted' },
   
   // Decision Status
-  superseded: { label: 'Superseded', variant: 'secondary' },
-  archived: { label: 'Archived', variant: 'outline' },
+  superseded: { label: 'Superseded', variant: 'muted' },
+  archived: { label: 'Archived', variant: 'muted' },
 };
 
 export function StatusBadge({ status, className }: StatusBadgeProps) {
-  const config = statusConfig[status] || { label: status, variant: 'secondary' as const };
+  const config = statusConfig[status] || { label: status, variant: 'muted' as const };
   
   return (
-    <Badge variant={config.variant} className={cn("text-xs font-medium", className)} data-testid={`badge-${status}`}>
+    <BrandedBadge variant={config.variant} className={className} data-testid={`badge-${status}`}>
       {config.label}
-    </Badge>
+    </BrandedBadge>
   );
 }
