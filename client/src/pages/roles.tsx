@@ -7,7 +7,6 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/empty-state";
 import { Search, Users, Plus, CheckCircle2 } from "lucide-react";
 import type { RoleCard } from "@shared/schema";
-import { getPodRailClass, getPodColor } from "@/lib/pod-utils";
 
 export default function Roles() {
   const [searchQuery, setSearchQuery] = useState("");
@@ -28,6 +27,14 @@ export default function Roles() {
     return matchesSearch && matchesPod;
   });
 
+  // Create a map of pod names to their colors from the actual data
+  const podColorMap = new Map<string, string>();
+  roleCards?.forEach(role => {
+    if (role.pod && role.podColor) {
+      podColorMap.set(role.pod, role.podColor);
+    }
+  });
+  
   const pods = Array.from(new Set(roleCards?.map(r => r.pod) || [])).sort();
 
   return (
@@ -67,7 +74,7 @@ export default function Roles() {
                 All Pods
               </Button>
               {pods.map(pod => {
-                const podColor = getPodColor(pod);
+                const podColor = podColorMap.get(pod) || '#3D6BFF';
                 const isSelected = selectedPod === pod;
                 return (
                   <Button
