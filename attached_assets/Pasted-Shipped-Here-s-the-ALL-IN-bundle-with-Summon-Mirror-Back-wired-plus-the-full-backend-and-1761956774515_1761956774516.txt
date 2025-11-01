@@ -1,0 +1,100 @@
+Shipped. Here’s the **ALL-IN** bundle with **Summon + Mirror-Back** wired, plus the full backend and unified Vite frontend (Branding Grid + Agent Console + Roster Admin + Comms):
+
+**[Download: Dream Team Hub — ALL-IN (backend + frontend + Summon/Mirror)](sandbox:/mnt/data/dream-team-hub-all-in.zip)**
+
+### What’s inside
+
+#### Backend (`/backend`)
+
+* Fully mounted routers: `/control`, `/intake`, `/decisions`, `/brainstorm`, `/audits`, `/pods`, `/roles`, `/agents`, `/agents/semantic`, `/comms`
+* **Agents runtime** + learning memory; roster auto-import on boot; semantic endpoints mounted
+* **Comms** router:
+
+  * `POST /comms/summon` → posts a formatted Summon block to the Pod’s `thread_id`
+  * `POST /comms/mirror` → posts a formatted Mirror-Back summary to the Pod’s `thread_id`
+  * Uses real **OpenAI Threads** when `USE_OPENAI=1` (falls back to logging otherwise)
+* Alembic scaffolding; `Procfile`
+* Roster data: `backend/data/dream_team_roster_full.json`
+
+#### Frontend (`/frontend`)
+
+* Vite + React app with tabs: **Branding Grid · Agent Console · Roster Admin · Summon & Mirror**
+* **Branding Grid**: dynamic pod tabs + role/agent cards with glass UI & gradients
+* **Agent Console**: run tasks, send feedback (learning), view memory, semantic search
+* **Roster Admin**: onboard Pods, Role Cards, and Agents (upsert)
+* **Summon & Mirror**: composer UI to post Summon/Mirror-Back to canonical threads
+
+---
+
+## Quick start
+
+### Backend
+
+```bash
+cd backend
+pip install -r requirements.txt
+# Optional for live LLM & semantic:
+pip install -r requirements.agent.txt
+
+# Tables + seed
+python -c "from app.seed import seed; seed()"
+
+# Run API
+uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+```
+
+Open `http://localhost:8000/docs`.
+
+**Backend env (set in `.env` or Replit Secrets):**
+
+```
+DATABASE_URL=sqlite:///./dream_team_hub.db
+IMPORT_ROSTER_ON_BOOT=1
+ROSTER_JSON_PATH=backend/data/dream_team_roster_full.json
+
+# LLM / Threads
+USE_OPENAI=0
+LLM_MODEL=gpt-4o-mini
+OPENAI_API_KEY=sk-...
+
+# Semantic memory (pgvector/Postgres)
+EMBED_MODEL=text-embedding-3-small
+
+# Google Drive SA (optional)
+GOOGLE_SERVICE_ACCOUNT_JSON_BASE64=
+```
+
+> Flip `USE_OPENAI=1` and add `OPENAI_API_KEY` to enable real agent calls and Threads posting. Make sure each Pod has a `thread_id` (via Roster Admin → Pods).
+
+### Frontend
+
+```bash
+cd frontend
+cp .env.sample .env         # set VITE_API_URL (e.g., http://localhost:8000 or your Replit URL)
+npm install
+npm run dev -- --host
+```
+
+Open the Vite dev URL. You’ll see the four tabs; **Summon & Mirror** posts to `/comms`.
+
+---
+
+## How to use Summon + Mirror-Back
+
+1. In **Roster Admin → Pods**, create pods and (optionally) paste their `thread_id`.
+2. Go to **Summon & Mirror** tab:
+
+   * Pick a Pod
+   * Summon: type **Ask**, **Deliverables**, **Due**, **Owner**, **Backup** → **Post Summon**
+   * Mirror-Back: type **Outcome**, **Links**, **Decision**, **Owner/Next**, **Decision Log ID** → **Post Mirror-Back**
+3. If `USE_OPENAI=1`, messages are posted to your `thread_id`; otherwise the server logs the payload (safe fallback).
+
+---
+
+## Notes & next steps
+
+* Agents are in an in-memory registry (upsert via UI). If you want DB-persisted agent specs, I can add a tiny table + CRUD.
+* If you want full **Pods** edit/delete, I can add `PUT/DELETE` endpoints for Pods.
+* Drive search/move stubs are included in the backend; wire your service account when ready.
+
+If you want me to pre-map your **thread IDs** for each Pod or add **DB-persisted Agent Specs**, say the word and I’ll ship a small follow-up patch.
