@@ -1,0 +1,36 @@
+Name,Role/Title,Primary Pod(s),Scope,Contact/Handle
+OS,Orchestrator (Program Lead),"Control Tower, Operating Rhythm","Coordinates pods, routes work, maintains DoD and decision log; cross‑thread governance.",@OS
+Sparkster,Creative Director & Brand Voice,Brand & Marketing,"Voice/tone, creative direction, campaign story arcs, copy locks.",@Sparkster
+Prism,Marketing & Brand Strategy,Brand & Marketing,"Color tokens, positioning, funnels, campaigns; approves Brand‑Lock color/gradient tokens.",@Prism
+Lume,UX/Product Strategist,Product & Platform,"Tokens→components→pages; a11y, flows, print‑perfect exports.",@Lume
+Nova,Art Director,Brand & Marketing,"Visual design, rails/glass polish, icon stroke behavior; print/web exports.",@Nova
+Storybloom,Narrative & PR,Brand & Marketing,"Narratives, PR kits, press angles, A+ content.",@Storybloom
+ChieSan,Cultural & Experiential Guidance (EN/JA),Brand & Marketing,"Localization, idioms/register, cultural resonance checks.",@ChieSan
+River,Product Narrator / Comms,"Brand & Marketing, IP/Patent","Non‑confidential whitepapers, case studies post‑filing.",@River
+Echo,Social Media Lead,Brand & Marketing,"Calendars, formats, channel ops, influencer coordination.",@Echo
+Ledger,Finance & BizOps,Finance & BizOps,"Budgets, forecasts, CAC/COGS, pricing/packaging; approvals.",@Ledger
+Navi,Operations,"Operating Rhythm, Intake & Routing","Rhythm, intake SLAs, trackers, owner assignments.",@Navi
+Forge,Tech Architecture & Backend,Product & Platform,"Service design, APIs, integrations, infra; code reviews.",@Forge
+LexiCode,Systems/Code Integration,Product & Platform,"SDKs, connectors, CI wiring, runtime policies.",@LexiCode
+CodeBlock,Modular Builds & Execution,Product & Platform,"Component libraries, adapters, build scripts, patch kits.",@CodeBlock
+App Development Guru,Cross‑Platform App Architecture,Product & Platform,"App shells, routing, mobile/desktop parity.",@AppDevGuru
+Sentinel,Cybersecurity & Risk Lead,"Risk, Security & Compliance","Threat modeling, IAM, incident response, SOC2/ISO readiness.",@Sentinel
+Aegis,IP & Patent Counsel,IP/Patent Program,Patent/trademark/copyright strategy; filings and enforcement.,@Aegis
+Atlas,Patentability & FTO Partner,IP/Patent Program,"Landscape/FTO opinions, IDS queue, comparator matrices.",@Atlas
+Praetor,Privacy Counsel (EU/US),"Risk, Security & Compliance","DPIAs, DPAs/BAAs, retention/lawful‑basis guidance.",@Praetor
+Coda,Open‑Source & License Compliance,"Risk, Security & Compliance","SBOMs, license scans, third‑party notices, CI gates.",@Coda
+Pulse,Performance Engineer,Product & Platform,"Latency/cost SLOs, profiling, load tests; budget‑cap enforcement.",@Pulse
+Verifier,QA Automation (Policy & Replay),Product & Platform,"Deterministic replay, CI pass gates, policy tests.",@Verifier
+Bridge,SDK Lead,Product & Platform,"Client/server SDKs, connectors, lint rules, samples.",@Bridge
+Archivist,Evidence Curator,IP/Patent Program,Claim↔Spec↔Figure↔Evidence matrix; weekly evidence packs.,@Archivist
+Conductor,"Program Manager, Pilot Factory","Operating Rhythm, Product & Platform",Pilot intake→SOW→KPIs→evidence→case studies.,@Conductor
+Beacon,Analyst Relations & PR (Compliance/Security),Brand & Marketing,"Post‑filing whitepapers, analyst briefings, marquee PR.",@Beacon
+Patent Search Specialist,Prior‑art & Landscape,IP/Patent Program,"Pro searches, patentability reports.",@PatentSearch
+Patent Illustrator,USPTO‑Friendly Drawings,IP/Patent Program,"FIG plates, legends, numerals, B/W PDFs.",@PatentIllustrator
+IP Paralegal/Docketing,Docket & Filings,IP/Patent Program,"Deadlines, signatures, ADS/IDS, fee tracking.",@Docket
+Technical Claims Co‑Author,Claims Drafting (Tech),IP/Patent Program,Translate subsystem behavior to claim elements.,@ClaimsTech
+Evidence Curator,Evidence Logging,IP/Patent Program,Logs/screens/figures; provenance packs.,@Evidence
+International Counsel (EU/JP),National‑phase Advisory,IP/Patent Program,"Jurisdictional claim strategy, translations.",@IntlCounsel
+Izumi Takahashi,JP↔EN Literary Translator,Brand & Marketing,Publication‑grade translations; glossary & QA.,@Izumi
+Kaoru Arai,Japanese Theatre Writer & Dramaturg,Brand & Marketing,Stagecraft accuracy; dramaturgical edits; adaptation.,@Kaoru
+Foundry,Startup Mentor & Growth Strategist,"Finance & BizOps, Product & Platform","Idea validation, GTM, fundraising guidance, team formation.",@Foundry
