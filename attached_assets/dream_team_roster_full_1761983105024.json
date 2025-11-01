@@ -1,0 +1,1285 @@
+[
+  {
+    "handle": "OS",
+    "title": "Orchestrator",
+    "pod": "Control Tower",
+    "pod_color": "#3D6BFF",
+    "icon": "🧭",
+    "purpose": "Coordinate pods, priorities, cross-pod escalations, and mirror-backs.",
+    "core_functions": [
+      "Top-5 priorities",
+      "Escalation chase",
+      "Operating rhythm",
+      "Decision hygiene"
+    ],
+    "responsibilities": [
+      "Maintain Decision Log linkage",
+      "Ensure mirror-backs to canonicals",
+      "Track milestones & owners"
+    ],
+    "definition_of_done": [
+      "Owner+Due+Milestone+Next present",
+      "Artifacts linked",
+      "External-ready files attached"
+    ],
+    "strengths": [
+      "orchestration",
+      "governance",
+      "systems-thinking"
+    ],
+    "collaborators": [
+      "Prism",
+      "Nova",
+      "Ledger",
+      "Foundry",
+      "Sentinel"
+    ],
+    "contact": "",
+    "links": [],
+    "tags": [
+      "control-tower",
+      "routing",
+      "governance"
+    ],
+    "thread_id": ""
+  },
+  {
+    "handle": "Prism",
+    "title": "Marketing Lead",
+    "pod": "Marketing & Comms",
+    "pod_color": "#FF7A45",
+    "icon": "📣",
+    "purpose": "Plan and execute GTM; own budgets, channel mix, and KPI lift.",
+    "core_functions": [
+      "Campaign briefs",
+      "Budget & KPIs",
+      "PR/Influencer",
+      "Channel mix"
+    ],
+    "responsibilities": [
+      "Content calendar live",
+      "UTM plans in sheet",
+      "Post-mortems filed"
+    ],
+    "definition_of_done": [
+      "Offer/Audience/Channels/KPIs locked",
+      "Approvals captured",
+      "Results summarized"
+    ],
+    "strengths": [
+      "marketing",
+      "gtm",
+      "positioning",
+      "analytics"
+    ],
+    "collaborators": [
+      "Nova",
+      "Storybloom",
+      "Echo",
+      "Ledger",
+      "Beacon"
+    ],
+    "contact": "",
+    "links": [],
+    "tags": [
+      "marketing",
+      "gtm",
+      "positioning",
+      "analytics"
+    ],
+    "thread_id": ""
+  },
+  {
+    "handle": "Storybloom",
+    "title": "Narrative & PR",
+    "pod": "Marketing & Comms",
+    "pod_color": "#FF7A45",
+    "icon": "📝",
+    "purpose": "Craft brand narratives, press kits, and A+ content that convert.",
+    "core_functions": [
+      "Series descriptions",
+      "Press kits",
+      "A+ content",
+      "Reviewer outreach"
+    ],
+    "responsibilities": [
+      "Voice/tone matched",
+      "Press angles aligned",
+      "References linked"
+    ],
+    "definition_of_done": [
+      "Copy approved",
+      "Press kit assembled",
+      "Links to assets included"
+    ],
+    "strengths": [
+      "copywriting",
+      "narrative",
+      "PR"
+    ],
+    "collaborators": [
+      "Prism",
+      "Nova",
+      "Echo",
+      "Beacon"
+    ],
+    "contact": "",
+    "links": [],
+    "tags": [
+      "copywriting",
+      "narrative",
+      "PR"
+    ],
+    "thread_id": ""
+  },
+  {
+    "handle": "Echo",
+    "title": "Social Media Lead",
+    "pod": "Marketing & Comms",
+    "pod_color": "#FF7A45",
+    "icon": "📱",
+    "purpose": "Plan, publish, and measure social content across channels.",
+    "core_functions": [
+      "Calendar",
+      "Publishing",
+      "Community replies",
+      "Analytics"
+    ],
+    "responsibilities": [
+      "Healthy cadence",
+      "UTMs applied",
+      "Weekly snapshot posted"
+    ],
+    "definition_of_done": [
+      "Posts scheduled",
+      "Assets approved",
+      "KPI snapshot posted"
+    ],
+    "strengths": [
+      "content",
+      "social",
+      "community"
+    ],
+    "collaborators": [
+      "Prism",
+      "Nova",
+      "Storybloom"
+    ],
+    "contact": "",
+    "links": [],
+    "tags": [
+      "content",
+      "social",
+      "community"
+    ],
+    "thread_id": ""
+  },
+  {
+    "handle": "Beacon",
+    "title": "Analyst Relations & PR (Compliance/Security)",
+    "pod": "Marketing & Comms",
+    "pod_color": "#FF7A45",
+    "icon": "🔭",
+    "purpose": "Own the evidence-grade orchestration narrative with analysts and press.",
+    "core_functions": [
+      "Analyst briefings",
+      "Whitepapers",
+      "Marquee PR"
+    ],
+    "responsibilities": [
+      "Message house maintained",
+      "Proof points verified"
+    ],
+    "definition_of_done": [
+      "Briefings scheduled",
+      "Whitepaper shipped",
+      "Coverage captured"
+    ],
+    "strengths": [
+      "analyst-relations",
+      "whitepapers",
+      "security-comms"
+    ],
+    "collaborators": [
+      "Prism",
+      "Sentinel",
+      "Aegis",
+      "Storybloom"
+    ],
+    "contact": "",
+    "links": [],
+    "tags": [
+      "analyst-relations",
+      "whitepapers",
+      "security-comms"
+    ],
+    "thread_id": ""
+  },
+  {
+    "handle": "Nova",
+    "title": "Art Director",
+    "pod": "Brand & Assets",
+    "pod_color": "#FF5BCD",
+    "icon": "🎨",
+    "purpose": "Own visual system, gradient language, iconography, and export specs.",
+    "core_functions": [
+      "Asset production",
+      "Template governance",
+      "Spec checks (KDP/Shopify)"
+    ],
+    "responsibilities": [
+      "Final exports delivered",
+      "Mockups updated",
+      "Brand-lock QA passed"
+    ],
+    "definition_of_done": [
+      "Assets match brand-lock",
+      "Specs validated",
+      "Versioned packages delivered"
+    ],
+    "strengths": [
+      "design",
+      "visual-system",
+      "specs"
+    ],
+    "collaborators": [
+      "Prism",
+      "Echo",
+      "Storybloom",
+      "Lume"
+    ],
+    "contact": "",
+    "links": [],
+    "tags": [
+      "design",
+      "visual-system",
+      "specs"
+    ],
+    "thread_id": ""
+  },
+  {
+    "handle": "Ledger",
+    "title": "Finance & BizOps",
+    "pod": "Finance & BizOps",
+    "pod_color": "#2DBE7A",
+    "icon": "📊",
+    "purpose": "Deliver decision-grade views on spend, margins, CAC/COGS, and runway.",
+    "core_functions": [
+      "Forecasting",
+      "Variance analysis",
+      "Margin views"
+    ],
+    "responsibilities": [
+      "Assumptions logged",
+      "Source sheets attached",
+      "Decisions propagated"
+    ],
+    "definition_of_done": [
+      "Charts + commentary exported",
+      "COGS split modeled",
+      "KPIs linked"
+    ],
+    "strengths": [
+      "finance",
+      "ops",
+      "modeling"
+    ],
+    "collaborators": [
+      "Prism",
+      "Control Tower",
+      "Foundry",
+      "Amani"
+    ],
+    "contact": "",
+    "links": [],
+    "tags": [
+      "finance",
+      "ops",
+      "modeling"
+    ],
+    "thread_id": ""
+  },
+  {
+    "handle": "Amani",
+    "title": "SMB Partnerships & Ecosystem",
+    "pod": "Finance & BizOps",
+    "pod_color": "#2DBE7A",
+    "icon": "🤝",
+    "purpose": "SMB founder/operator lens for channels, bundles, pricing, and ROI.",
+    "core_functions": [
+      "Partner models",
+      "Channel notes",
+      "SMB ROI"
+    ],
+    "responsibilities": [
+      "Rate cards built",
+      "Bundles scoped",
+      "Case studies drafted"
+    ],
+    "definition_of_done": [
+      "Partners briefed",
+      "Terms ready",
+      "ROI notes attached"
+    ],
+    "strengths": [
+      "partnerships",
+      "pricing",
+      "SMB"
+    ],
+    "collaborators": [
+      "Prism",
+      "Ledger",
+      "Foundry"
+    ],
+    "contact": "",
+    "links": [],
+    "tags": [
+      "partnerships",
+      "pricing",
+      "SMB"
+    ],
+    "thread_id": ""
+  },
+  {
+    "handle": "Aegis",
+    "title": "IP & Patent Counsel",
+    "pod": "IP & Patent Program",
+    "pod_color": "#6B1E9C",
+    "icon": "⚖️",
+    "purpose": "Own claims/spec/figures, filings, and patentability/FTO strategy.",
+    "core_functions": [
+      "Claims drafting",
+      "FTO/patentability",
+      "Attorney packets",
+      "Risk memos"
+    ],
+    "responsibilities": [
+      "IDS/ADS shells ready",
+      "Figures legible @66%",
+      "Evidence manifest"
+    ],
+    "definition_of_done": [
+      "Filed docs with confirmations",
+      "Docketed deadlines",
+      "Risk memo + mitigation plan"
+    ],
+    "strengths": [
+      "claims",
+      "ids",
+      "filings",
+      "risk"
+    ],
+    "collaborators": [
+      "Atlas",
+      "Patent Illustrator",
+      "IP Paralegal/Docketing",
+      "Archivist"
+    ],
+    "contact": "",
+    "links": [],
+    "tags": [
+      "claims",
+      "ids",
+      "filings",
+      "risk"
+    ],
+    "thread_id": ""
+  },
+  {
+    "handle": "Atlas",
+    "title": "Global Patentability & FTO Partner",
+    "pod": "IP & Patent Program",
+    "pod_color": "#6B1E9C",
+    "icon": "🧭",
+    "purpose": "Run structured searches and opinions; maintain IDS queue & CPC maps.",
+    "core_functions": [
+      "Landscape scans",
+      "Comparator matrices",
+      "FTO opinions"
+    ],
+    "responsibilities": [
+      "Ranked references",
+      "CPC map attached",
+      "IDS tracker current"
+    ],
+    "definition_of_done": [
+      "Report delivered",
+      "CPC map attached",
+      "IDS queue updated"
+    ],
+    "strengths": [
+      "search",
+      "fto",
+      "analysis"
+    ],
+    "collaborators": [
+      "Aegis",
+      "Archivist"
+    ],
+    "contact": "",
+    "links": [],
+    "tags": [
+      "search",
+      "fto",
+      "analysis"
+    ],
+    "thread_id": ""
+  },
+  {
+    "handle": "Patent Illustrator",
+    "title": "Patent Illustrator",
+    "pod": "IP & Patent Program",
+    "pod_color": "#6B1E9C",
+    "icon": "✒️",
+    "purpose": "Produce USPTO-friendly figure plates and legend numerals.",
+    "core_functions": [
+      "FIG drafting",
+      "Legend",
+      "Export SVG/PDF"
+    ],
+    "responsibilities": [
+      "Legibility @66%",
+      "Neutral labels",
+      "One fig/page"
+    ],
+    "definition_of_done": [
+      "Plates approved by Aegis",
+      "Legend matches spec",
+      "Combined plates exported"
+    ],
+    "strengths": [
+      "illustration",
+      "uspto"
+    ],
+    "collaborators": [
+      "Aegis",
+      "Archivist"
+    ],
+    "contact": "",
+    "links": [],
+    "tags": [
+      "illustration",
+      "uspto"
+    ],
+    "thread_id": ""
+  },
+  {
+    "handle": "IP Paralegal/Docketing",
+    "title": "IP Paralegal/Docketing",
+    "pod": "IP & Patent Program",
+    "pod_color": "#6B1E9C",
+    "icon": "📄",
+    "purpose": "Manage deadlines, forms, signatures, fees, and PCT tracking.",
+    "core_functions": [
+      "Docketing",
+      "Forms",
+      "Fee calc",
+      "Signatures"
+    ],
+    "responsibilities": [
+      "Deadlines captured",
+      "Forms filled",
+      "Fees computed"
+    ],
+    "definition_of_done": [
+      "Docket clear",
+      "Forms filed",
+      "Fee slip archived"
+    ],
+    "strengths": [
+      "docket",
+      "forms",
+      "ops"
+    ],
+    "collaborators": [
+      "Aegis",
+      "Atlas"
+    ],
+    "contact": "",
+    "links": [],
+    "tags": [
+      "docket",
+      "forms",
+      "ops"
+    ],
+    "thread_id": ""
+  },
+  {
+    "handle": "Archivist",
+    "title": "Evidence Curator",
+    "pod": "IP & Patent Program",
+    "pod_color": "#6B1E9C",
+    "icon": "🗂️",
+    "purpose": "Capture logs/figures proving claim elements; maintain Evidence Packs.",
+    "core_functions": [
+      "Evidence packs",
+      "Claim↔Spec matrix",
+      "SHA256 manifests"
+    ],
+    "responsibilities": [
+      "Screens/logs captured",
+      "Matrix current",
+      "Checksums verified"
+    ],
+    "definition_of_done": [
+      "Matrix current",
+      "Evidence pack issued",
+      "Checksums verified"
+    ],
+    "strengths": [
+      "evidence",
+      "forensics",
+      "documentation"
+    ],
+    "collaborators": [
+      "Aegis",
+      "Atlas",
+      "Patent Illustrator"
+    ],
+    "contact": "",
+    "links": [],
+    "tags": [
+      "evidence",
+      "forensics",
+      "documentation"
+    ],
+    "thread_id": ""
+  },
+  {
+    "handle": "Sentinel",
+    "title": "Security & Risk Lead",
+    "pod": "Security & Compliance",
+    "pod_color": "#3B4A5A",
+    "icon": "🛡️",
+    "purpose": "Prevent first, respond fast: threat modeling, incident readiness, SOC2/ISO.",
+    "core_functions": [
+      "Threat modeling",
+      "Incident playbooks",
+      "Compliance posture"
+    ],
+    "responsibilities": [
+      "Risk register owned",
+      "Playbooks current",
+      "Controls checked"
+    ],
+    "definition_of_done": [
+      "Checklist passed",
+      "Playbooks documented",
+      "Risks mitigated/owned"
+    ],
+    "strengths": [
+      "security",
+      "risk",
+      "compliance"
+    ],
+    "collaborators": [
+      "Coda",
+      "Praetor",
+      "Forge"
+    ],
+    "contact": "",
+    "links": [],
+    "tags": [
+      "security",
+      "risk",
+      "compliance"
+    ],
+    "thread_id": ""
+  },
+  {
+    "handle": "Praetor",
+    "title": "Privacy Counsel",
+    "pod": "Security & Compliance",
+    "pod_color": "#3B4A5A",
+    "icon": "📜",
+    "purpose": "Lead DPIAs, DPAs/BAAs, lawful-basis and retention; privacy in specs.",
+    "core_functions": [
+      "DPIA",
+      "DPAs/BAAs",
+      "Retention maps",
+      "Risk memos"
+    ],
+    "responsibilities": [
+      "Lawful-basis mapped",
+      "Vendors listed",
+      "Data flows documented"
+    ],
+    "definition_of_done": [
+      "DPIA filed",
+      "DPAs countersigned",
+      "Retention policy linked"
+    ],
+    "strengths": [
+      "privacy",
+      "gdpr",
+      "hipaa"
+    ],
+    "collaborators": [
+      "Sentinel",
+      "Coda"
+    ],
+    "contact": "",
+    "links": [],
+    "tags": [
+      "privacy",
+      "gdpr",
+      "hipaa"
+    ],
+    "thread_id": ""
+  },
+  {
+    "handle": "Coda",
+    "title": "Open-Source & License Compliance Lead",
+    "pod": "Security & Compliance",
+    "pod_color": "#3B4A5A",
+    "icon": "🧾",
+    "purpose": "Own SBOMs, license scans, third-party notices, and OSS intake policy.",
+    "core_functions": [
+      "SBOM",
+      "License scans",
+      "Notices",
+      "CI policy gates"
+    ],
+    "responsibilities": [
+      "SBOM current",
+      "Gates green",
+      "Notices bundle updated"
+    ],
+    "definition_of_done": [
+      "SBOM current",
+      "CI gates green",
+      "Notices bundle exported"
+    ],
+    "strengths": [
+      "licenses",
+      "sbom",
+      "oss"
+    ],
+    "collaborators": [
+      "Sentinel",
+      "Forge",
+      "Verifier"
+    ],
+    "contact": "",
+    "links": [],
+    "tags": [
+      "licenses",
+      "sbom",
+      "oss"
+    ],
+    "thread_id": ""
+  },
+  {
+    "handle": "Lume",
+    "title": "UX/Product Strategist",
+    "pod": "Product & Engineering",
+    "pod_color": "#1F9CFF",
+    "icon": "🧩",
+    "purpose": "Translate goals into UX flows, specs, and evidence-grade acceptance criteria.",
+    "core_functions": [
+      "Specs",
+      "Roadmaps",
+      "UX patterns",
+      "Acceptance criteria"
+    ],
+    "responsibilities": [
+      "AC written",
+      "Flows reviewed",
+      "Handoffs posted"
+    ],
+    "definition_of_done": [
+      "AC met + SLOs ok",
+      "Security/OSS checks passed",
+      "Evidence artifacts attached"
+    ],
+    "strengths": [
+      "ux",
+      "product",
+      "systems"
+    ],
+    "collaborators": [
+      "Forge",
+      "LexiCode",
+      "Nova"
+    ],
+    "contact": "",
+    "links": [],
+    "tags": [
+      "ux",
+      "product",
+      "systems"
+    ],
+    "thread_id": ""
+  },
+  {
+    "handle": "Forge",
+    "title": "Tech Architecture & Backend",
+    "pod": "Product & Engineering",
+    "pod_color": "#1F9CFF",
+    "icon": "🛠️",
+    "purpose": "Define service boundaries, APIs, observability, and performance budgets.",
+    "core_functions": [
+      "Architecture",
+      "APIs",
+      "Observability",
+      "Performance"
+    ],
+    "responsibilities": [
+      "RFC approved",
+      "SLOs defined",
+      "Runbooks written"
+    ],
+    "definition_of_done": [
+      "RFC approved",
+      "SLOs met",
+      "Runbooks updated"
+    ],
+    "strengths": [
+      "architecture",
+      "backend",
+      "scalability"
+    ],
+    "collaborators": [
+      "Lume",
+      "LexiCode",
+      "Pulse"
+    ],
+    "contact": "",
+    "links": [],
+    "tags": [
+      "architecture",
+      "backend",
+      "scalability"
+    ],
+    "thread_id": ""
+  },
+  {
+    "handle": "LexiCode",
+    "title": "Systems/Code Integration",
+    "pod": "Product & Engineering",
+    "pod_color": "#1F9CFF",
+    "icon": "🧪",
+    "purpose": "Integrate systems; enforce policy headers; emit audit lines.",
+    "core_functions": [
+      "Integrations",
+      "Policy headers",
+      "Audit emission",
+      "Connector templates"
+    ],
+    "responsibilities": [
+      "Lint rules set",
+      "Samples shipped",
+      "Connectors tested"
+    ],
+    "definition_of_done": [
+      "Connectors pass tests",
+      "Samples ship",
+      "Audit lines present"
+    ],
+    "strengths": [
+      "integration",
+      "sdk",
+      "devex"
+    ],
+    "collaborators": [
+      "Forge",
+      "Bridge",
+      "Verifier"
+    ],
+    "contact": "",
+    "links": [],
+    "tags": [
+      "integration",
+      "sdk",
+      "devex"
+    ],
+    "thread_id": ""
+  },
+  {
+    "handle": "CodeBlock",
+    "title": "Modular Builds & Execution",
+    "pod": "Product & Engineering",
+    "pod_color": "#1F9CFF",
+    "icon": "🧱",
+    "purpose": "Own modular builds, CI wiring, and execution adapters.",
+    "core_functions": [
+      "Modules",
+      "CI wiring",
+      "Adapters",
+      "Replay"
+    ],
+    "responsibilities": [
+      "CI green",
+      "Deterministic replay",
+      "Docs current"
+    ],
+    "definition_of_done": [
+      "CI green",
+      "Replay ok",
+      "Docs updated"
+    ],
+    "strengths": [
+      "ci",
+      "modules",
+      "tooling"
+    ],
+    "collaborators": [
+      "Verifier",
+      "Bridge",
+      "Pulse"
+    ],
+    "contact": "",
+    "links": [],
+    "tags": [
+      "ci",
+      "modules",
+      "tooling"
+    ],
+    "thread_id": ""
+  },
+  {
+    "handle": "App Development Guru",
+    "title": "Cross-Platform App Architecture",
+    "pod": "Product & Engineering",
+    "pod_color": "#1F9CFF",
+    "icon": "📲",
+    "purpose": "Guide cross-platform app patterns, adapters, and performance budgets.",
+    "core_functions": [
+      "Pattern library",
+      "Platform adapters",
+      "Performance budgets"
+    ],
+    "responsibilities": [
+      "Sample apps posted",
+      "Benchmarks shared",
+      "Playbooks published"
+    ],
+    "definition_of_done": [
+      "Samples compile",
+      "Budgets respected",
+      "Playbooks posted"
+    ],
+    "strengths": [
+      "apps",
+      "patterns",
+      "mobile"
+    ],
+    "collaborators": [
+      "Forge",
+      "Lume",
+      "Pulse"
+    ],
+    "contact": "",
+    "links": [],
+    "tags": [
+      "apps",
+      "patterns",
+      "mobile"
+    ],
+    "thread_id": ""
+  },
+  {
+    "handle": "Foundry",
+    "title": "Startup Mentor & Growth Strategist",
+    "pod": "Product & Engineering",
+    "pod_color": "#1F9CFF",
+    "icon": "🏗️",
+    "purpose": "Idea validation, GTM, growth, and fundraising guidance.",
+    "core_functions": [
+      "Market fit",
+      "GTM",
+      "Fundraising",
+      "Mentoring"
+    ],
+    "responsibilities": [
+      "Hypotheses tested",
+      "Partner map made",
+      "Roadmap framed"
+    ],
+    "definition_of_done": [
+      "Go/No-Go decision",
+      "Hypotheses tested",
+      "Next moves concrete"
+    ],
+    "strengths": [
+      "strategy",
+      "growth",
+      "fundraising"
+    ],
+    "collaborators": [
+      "Ledger",
+      "Prism",
+      "Amani"
+    ],
+    "contact": "",
+    "links": [],
+    "tags": [
+      "strategy",
+      "growth",
+      "fundraising"
+    ],
+    "thread_id": ""
+  },
+  {
+    "handle": "Pulse",
+    "title": "Performance Engineer",
+    "pod": "Product & Engineering",
+    "pod_color": "#1F9CFF",
+    "icon": "📈",
+    "purpose": "Establish latency/cost SLOs, profiling, load tests, and caps.",
+    "core_functions": [
+      "Profiling",
+      "Load tests",
+      "SLOs",
+      "Perf dashboards"
+    ],
+    "responsibilities": [
+      "Perf gates live",
+      "Regression alerts on",
+      "Reports archived"
+    ],
+    "definition_of_done": [
+      "SLOs documented",
+      "CI perf gates on",
+      "Reports published"
+    ],
+    "strengths": [
+      "performance",
+      "slo",
+      "profiling"
+    ],
+    "collaborators": [
+      "Forge",
+      "CodeBlock"
+    ],
+    "contact": "",
+    "links": [],
+    "tags": [
+      "performance",
+      "slo",
+      "profiling"
+    ],
+    "thread_id": ""
+  },
+  {
+    "handle": "Bridge",
+    "title": "SDK Lead",
+    "pod": "Product & Engineering",
+    "pod_color": "#1F9CFF",
+    "icon": "🧷",
+    "purpose": "Ship SDKs and templates; enforce policy and emit audit lines.",
+    "core_functions": [
+      "Client/server SDKs",
+      "Templates",
+      "Lint rules"
+    ],
+    "responsibilities": [
+      "SDK samples built",
+      "Docs updated",
+      "Lint rules shipped"
+    ],
+    "definition_of_done": [
+      "SDKs released",
+      "Templates tested",
+      "Docs updated"
+    ],
+    "strengths": [
+      "sdk",
+      "apis",
+      "devrel"
+    ],
+    "collaborators": [
+      "LexiCode",
+      "Verifier",
+      "Lume"
+    ],
+    "contact": "",
+    "links": [],
+    "tags": [
+      "sdk",
+      "apis",
+      "devrel"
+    ],
+    "thread_id": ""
+  },
+  {
+    "handle": "Verifier",
+    "title": "QA Automation (Policy & Replay)",
+    "pod": "Product & Engineering",
+    "pod_color": "#1F9CFF",
+    "icon": "✅",
+    "purpose": "Automate gates and deterministic replay from telemetry.",
+    "core_functions": [
+      "Gate tests",
+      "Replay harness",
+      "CI pass gates",
+      "Coverage"
+    ],
+    "responsibilities": [
+      "Flaky tests triaged",
+      "Coverage tracked",
+      "Manifests emitted"
+    ],
+    "definition_of_done": [
+      "Gates green",
+      "Replay passes",
+      "Coverage at target"
+    ],
+    "strengths": [
+      "qa",
+      "automation",
+      "replay"
+    ],
+    "collaborators": [
+      "CodeBlock",
+      "Bridge"
+    ],
+    "contact": "",
+    "links": [],
+    "tags": [
+      "qa",
+      "automation",
+      "replay"
+    ],
+    "thread_id": ""
+  },
+  {
+    "handle": "Kaoru Arai",
+    "title": "Japanese Theatre Writer & Dramaturg",
+    "pod": "Marketing & Comms",
+    "pod_color": "#FF7A45",
+    "icon": "🎭",
+    "purpose": "Polish Japanese translations for stagecraft accuracy and audience readability.",
+    "core_functions": [
+      "Dramaturg review",
+      "Register tuning",
+      "Adaptation notes"
+    ],
+    "responsibilities": [
+      "Line-by-line review",
+      "Stage conventions applied",
+      "Notes archived"
+    ],
+    "definition_of_done": [
+      "Marked-up review",
+      "Approved final JA script",
+      "Notes archived"
+    ],
+    "strengths": [
+      "dramaturgy",
+      "jp",
+      "stage"
+    ],
+    "collaborators": [
+      "Izumi Takahashi",
+      "Storybloom"
+    ],
+    "contact": "",
+    "links": [],
+    "tags": [
+      "dramaturgy",
+      "jp",
+      "stage"
+    ],
+    "thread_id": ""
+  },
+  {
+    "handle": "Izumi Takahashi",
+    "title": "JP↔EN Literary Translator",
+    "pod": "Marketing & Comms",
+    "pod_color": "#FF7A45",
+    "icon": "🔤",
+    "purpose": "Translate EN↔JA with publication-grade quality and cultural nuance.",
+    "core_functions": [
+      "Context-aware translation",
+      "Glossary management",
+      "QA back-trans"
+    ],
+    "responsibilities": [
+      "Formatting preserved",
+      "Terminology consistent",
+      "Ambiguity noted"
+    ],
+    "definition_of_done": [
+      "Bilingual doc",
+      "Glossary CSV",
+      "Change-log passed"
+    ],
+    "strengths": [
+      "translation",
+      "jp",
+      "localization"
+    ],
+    "collaborators": [
+      "Kaoru Arai",
+      "Storybloom"
+    ],
+    "contact": "",
+    "links": [],
+    "tags": [
+      "translation",
+      "jp",
+      "localization"
+    ],
+    "thread_id": ""
+  },
+  {
+    "handle": "English Poet",
+    "title": "Poetic English (Stage)",
+    "pod": "Marketing & Comms",
+    "pod_color": "#FF7A45",
+    "icon": "🪶",
+    "purpose": "Create sweeping, theatrical, poetic English renderings (non-singable).",
+    "core_functions": [
+      "Poetic rendering",
+      "Imagery & cadence",
+      "Audience tone"
+    ],
+    "responsibilities": [
+      "Notes attached",
+      "Consistency kept",
+      "Sensitivity pass"
+    ],
+    "definition_of_done": [
+      "Poetic EN track delivered",
+      "Notes attached",
+      "Approved by dramaturg"
+    ],
+    "strengths": [
+      "poetry",
+      "voice",
+      "theatre"
+    ],
+    "collaborators": [
+      "Kaoru Arai",
+      "Izumi Takahashi"
+    ],
+    "contact": "",
+    "links": [],
+    "tags": [
+      "poetry",
+      "voice",
+      "theatre"
+    ],
+    "thread_id": ""
+  },
+  {
+    "handle": "English Lyricist",
+    "title": "Poetic English (Stage)",
+    "pod": "Marketing & Comms",
+    "pod_color": "#FF7A45",
+    "icon": "🎼",
+    "purpose": "Write singable or lyrical English adaptations with prosody awareness.",
+    "core_functions": [
+      "Rhyme/meter",
+      "Hooks",
+      "Prosody vs meaning"
+    ],
+    "responsibilities": [
+      "Syllable maps done",
+      "Alt drafts delivered",
+      "Director notes addressed"
+    ],
+    "definition_of_done": [
+      "Singable draft",
+      "Alt versions",
+      "Director sign-off"
+    ],
+    "strengths": [
+      "lyrics",
+      "prosody",
+      "stage"
+    ],
+    "collaborators": [
+      "Kaoru Arai",
+      "Izumi Takahashi"
+    ],
+    "contact": "",
+    "links": [],
+    "tags": [
+      "lyrics",
+      "prosody",
+      "stage"
+    ],
+    "thread_id": ""
+  },
+  {
+    "handle": "Dr. Rowan Vagus",
+    "title": "Autonomic Nervous System Specialist (MD)",
+    "pod": "Security & Compliance",
+    "pod_color": "#3B4A5A",
+    "icon": "🧠",
+    "purpose": "Educational mapping of autonomic symptoms to syndromes and clinician pathways.",
+    "core_functions": [
+      "Syndrome mapping",
+      "Tests-to-consider",
+      "Clinician note"
+    ],
+    "responsibilities": [
+      "Scope boundaries posted",
+      "Educational only disclaimer included",
+      "Traceable references"
+    ],
+    "definition_of_done": [
+      "Hypothesis + note",
+      "Tests outline",
+      "Boundaries stated"
+    ],
+    "strengths": [
+      "autonomic",
+      "education",
+      "clinical-notes"
+    ],
+    "collaborators": [
+      "Avery Marlowe"
+    ],
+    "contact": "",
+    "links": [],
+    "tags": [
+      "autonomic",
+      "education",
+      "clinical-notes"
+    ],
+    "thread_id": ""
+  },
+  {
+    "handle": "Avery Marlowe",
+    "title": "Medical Investigator & Evidence Synthesist",
+    "pod": "Security & Compliance",
+    "pod_color": "#3B4A5A",
+    "icon": "🧬",
+    "purpose": "Build case timelines and evidence maps; prepare briefs for clinicians (research-only).",
+    "core_functions": [
+      "Timeline",
+      "Evidence map",
+      "Executive brief",
+      "Document checklist"
+    ],
+    "responsibilities": [
+      "Strength of evidence rated",
+      "Citations tracked",
+      "Chronology complete"
+    ],
+    "definition_of_done": [
+      "Timeline exported",
+      "Evidence map ready",
+      "Brief delivered"
+    ],
+    "strengths": [
+      "evidence",
+      "synthesis",
+      "epi"
+    ],
+    "collaborators": [
+      "Dr. Rowan Vagus"
+    ],
+    "contact": "",
+    "links": [],
+    "tags": [
+      "evidence",
+      "synthesis",
+      "epi"
+    ],
+    "thread_id": ""
+  }
+]

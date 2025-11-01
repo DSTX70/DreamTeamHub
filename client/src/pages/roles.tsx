@@ -113,7 +113,12 @@ export default function Roles() {
               {/* Pink rail at top (Roster & Roles pod color) - all cards use roster color */}
               <div className="rail pod-rail roster"></div>
               <div className="inner">
-                <p className="title" style={{ font: '800 22px/1 Inter' }}>{role.handle}</p>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', marginBottom: 'var(--space-1)' }}>
+                  {role.icon && (
+                    <span style={{ fontSize: '28px', lineHeight: 1 }}>{role.icon}</span>
+                  )}
+                  <p className="title" style={{ font: '800 22px/1 Inter' }}>{role.handle}</p>
+                </div>
                 <p className="subtitle">{role.title}</p>
                 <div className="chips">
                   <span className="chip">{role.pod}</span>
@@ -131,6 +136,31 @@ export default function Roles() {
                       ))}
                       {role.coreFunctions.length > 3 && (
                         <span className="chip">+{role.coreFunctions.length - 3}</span>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {role.strengths && role.strengths.length > 0 && (
+                  <div style={{ marginBottom: 'var(--space-3)' }}>
+                    <div style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', marginBottom: 'var(--space-2)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Strengths</div>
+                    <div className="chips">
+                      {role.strengths.map((strength, idx) => (
+                        <span key={idx} className="chip">{strength}</span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {role.collaborators && role.collaborators.length > 0 && (
+                  <div style={{ marginBottom: 'var(--space-3)' }}>
+                    <div style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', marginBottom: 'var(--space-2)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Collaborates With</div>
+                    <div className="chips">
+                      {role.collaborators.slice(0, 5).map((collab, idx) => (
+                        <span key={idx} className="chip">{collab}</span>
+                      ))}
+                      {role.collaborators.length > 5 && (
+                        <span className="chip">+{role.collaborators.length - 5}</span>
                       )}
                     </div>
                   </div>
