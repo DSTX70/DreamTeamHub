@@ -51,7 +51,7 @@ function shallowEqualJSON(a:any, b:any){
 
 function diffPolicyKeys(agentPolicies:any): PolicyKeyDiff[] {
   const diffs: PolicyKeyDiff[] = [];
-  const keys = new Set<string>([...Object.keys(BASE_POLICIES), ...Object.keys(agentPolicies||{})]);
+  const keys = Array.from(new Set<string>([...Object.keys(BASE_POLICIES), ...Object.keys(agentPolicies||{})]));
   for(const k of keys){
     const baseVal = (BASE_POLICIES as any)[k];
     const agentVal = (agentPolicies||{})[k];
