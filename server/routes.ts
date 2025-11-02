@@ -3,7 +3,7 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated } from "./replitAuth";
 import { 
-  insertPodSchema, insertPersonSchema, insertRoleCardSchema, insertRoleRaciSchema, insertAgentSpecSchema,
+  insertPodSchema, insertPodAgentSchema, insertPersonSchema, insertRoleCardSchema, insertRoleRaciSchema, insertAgentSpecSchema,
   insertWorkItemSchema, insertDecisionSchema, insertBrainstormSessionSchema,
   insertBrainstormParticipantSchema, insertBrainstormIdeaSchema, insertBrainstormClusterSchema,
   insertAuditSchema, insertAuditCheckSchema, insertAuditFindingSchema,
@@ -143,6 +143,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error('Error deleting pod:', error);
       res.status(500).json({ error: error.message || 'Failed to delete pod' });
+    }
+  });
+
+  // ===========================
+  // POD AGENTS
+  // ===========================
+  
+  app.get("/api/pod-agents", isAuthenticated, async (req, res) => {
+    try {
+      const podId = req.query.podId ? parseInt(req.query.podId as string) : undefined;
+      const agents = await storage.getPodAgents(podId);
+      res.json(agents);
+    } catch (error) {
+      console.error('Error fetching pod agents:', error);
+      res.status(500).json({ error: 'Failed to fetch pod agents' });
+    }
+  });
+
+  app.post("/api/pod-agents", isAuthenticated, async (req, res) => {
+    try {
+      const data = insertPodAgentSchema.parse(req.body);
+      const agent = await storage.createPodAgent(data);
+      res.status(201).json(agent);
+    } catch (error: any) {
+      console.error('Error creating pod agent:', error);
+      res.status(400).json({ error: error.message || 'Failed to create pod agent' });
     }
   });
 

@@ -1,15 +1,15 @@
 // Referenced from javascript_database integration blueprint
 import { 
-  users, pods, persons, roleCards, roleRaci, agentSpecs, workItems, decisions,
+  users, pods, podAgents, persons, roleCards, roleRaci, agentSpecs, workItems, decisions,
   brainstormSessions, brainstormParticipants, brainstormIdeas, brainstormClusters, brainstormArtifacts,
   audits, auditChecks, auditFindings, auditArtifacts, events,
   conversations, messages, agentMemories, agentRuns,
   type User, type UpsertUser,
-  type Pod, type Person, type RoleCard, type RoleRaci, type AgentSpec, type WorkItem, type Decision,
+  type Pod, type PodAgent, type Person, type RoleCard, type RoleRaci, type AgentSpec, type WorkItem, type Decision,
   type BrainstormSession, type BrainstormParticipant, type BrainstormIdea, type BrainstormCluster, type BrainstormArtifact,
   type Audit, type AuditCheck, type AuditFinding, type AuditArtifact, type Event,
   type Conversation, type Message, type AgentMemory, type AgentRun,
-  type InsertPod, type InsertPerson, type InsertRoleCard, type InsertRoleRaci, type InsertAgentSpec, type InsertWorkItem, type InsertDecision,
+  type InsertPod, type InsertPodAgent, type InsertPerson, type InsertRoleCard, type InsertRoleRaci, type InsertAgentSpec, type InsertWorkItem, type InsertDecision,
   type InsertBrainstormSession, type InsertBrainstormParticipant, type InsertBrainstormIdea, type InsertBrainstormCluster, type InsertBrainstormArtifact,
   type InsertAudit, type InsertAuditCheck, type InsertAuditFinding, type InsertAuditArtifact, type InsertEvent,
   type InsertConversation, type InsertMessage, type InsertAgentMemory, type InsertAgentRun,
@@ -28,6 +28,10 @@ export interface IStorage {
   createPod(pod: InsertPod): Promise<Pod>;
   updatePod(id: number, pod: Partial<InsertPod>): Promise<Pod | undefined>;
   deletePod(id: number): Promise<boolean>;
+  
+  // Pod Agents
+  getPodAgents(podId?: number): Promise<PodAgent[]>;
+  createPodAgent(agent: InsertPodAgent): Promise<PodAgent>;
   
   // Persons
   getPersons(): Promise<Person[]>;
@@ -165,6 +169,19 @@ export class DatabaseStorage implements IStorage {
   async deletePod(id: number): Promise<boolean> {
     const result = await db.delete(pods).where(eq(pods.id, id));
     return true;
+  }
+
+  // ===== POD AGENTS =====
+  async getPodAgents(podId?: number): Promise<PodAgent[]> {
+    if (podId) {
+      return await db.select().from(podAgents).where(eq(podAgents.podId, podId));
+    }
+    return await db.select().from(podAgents);
+  }
+
+  async createPodAgent(agent: InsertPodAgent): Promise<PodAgent> {
+    const [newAgent] = await db.insert(podAgents).values(agent).returning();
+    return newAgent;
   }
 
   // ===== PERSONS =====
