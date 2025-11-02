@@ -106,7 +106,17 @@ function RolesPanel(){
   // For Role↔Agent link display
   const [agentSpecs, setAgentSpecs] = useState<any[]>([])
 
-  useEffect(()=>{ (async()=>{ try{ setItems(await listRoles()); setAgentSpecs(await listAgentSpecs()) }catch{ setItems([]); setAgentSpecs([]) } })() }, [])
+  useEffect(()=>{ (async()=>{ try{ 
+    const roles = await listRoles(); 
+    const specs = await listAgentSpecs();
+    console.log(`[RosterAdmin] Loaded ${roles.length} roles and ${specs.length} agent specs`);
+    setItems(roles); 
+    setAgentSpecs(specs);
+  }catch(err){ 
+    console.error('[RosterAdmin] Failed to load roles/specs:', err);
+    setItems([]); 
+    setAgentSpecs([]);
+  } })() }, [])
 
   useEffect(()=>{
     if(!sel) return
@@ -163,10 +173,10 @@ function RolesPanel(){
       </div>
       <CsvErrorModal open={csvModal} onClose={()=>setCsvModal(false)} errors={csvErrors} />
 
-      <h3 style={{marginTop:16}}>Existing Roles</h3>
-      <div style={{display:'grid', gap:10}}>
-        {items.map((r:RoleCard)=>(
-          <RoleRow key={r.id || r.handle + r.title} r={r} hasAgent={!!agentsByHandle[r.handle]} />
+      <h3 style={{marginTop:16}}>Existing Roles ({items.length} total)</h3>
+      <div style={{display:'grid', gap:10}} data-testid="roles-list">
+        {items.map((r:RoleCard, index)=>(
+          <RoleRow key={r.id || `${r.handle}-${index}`} r={r} hasAgent={!!agentsByHandle[r.handle]} />
         ))}
       </div>
     </section>
@@ -226,7 +236,7 @@ function AgentSpecsPanel(){
   const fileJSON = useRef<HTMLInputElement|null>(null)
   const fileCSV = useRef<HTMLInputElement|null>(null)
 
-  async function refresh(){ try{ const d = await listAgentSpecs(); setItems(d) } catch { setItems([]) } }
+  async function refresh(){ try{ const d = await listAgentSpecs(); console.log(`[AgentSpecsPanel] Loaded ${d.length} agent specs`); setItems(d) } catch(err) { console.error('[AgentSpecsPanel] Failed to load specs:', err); setItems([]) } }
   useEffect(()=>{ refresh(); const stash=localStorage.getItem('clone_agent_spec_from_role'); if(stash){ try{ const spec=JSON.parse(stash); setForm({ ...form, ...spec, instruction_blocks:(spec.instruction_blocks||[]).join('\n'), tools:(spec.tools||[]).join(',') }); localStorage.removeItem('clone_agent_spec_from_role') }catch{} } }, [])
 
   useEffect(()=>{
@@ -383,14 +393,20 @@ function AgentSpecsPanel(){
       </div>
       <CsvErrorModal open={csvModal} onClose={()=>setCsvModal(false)} errors={csvErrors} />
 
-      <h3 style={{marginTop:16}}>Agent Specs in DB</h3>
-      <div style={{display:'grid', gap:10}}>
+      <h3 style={{marginTop:16}}>Agent Specs in DB ({items.length} total)</h3>
+      <div style={{display:'grid', gap:10}} data-testid="agent-specs-list">
         {items.map((a:any)=>(
-          <div key={a.handle} className="card">
+          <div key={a.handle} className="card" data-testid={`agent-card-${a.handle}`}>
             <div className="rail"></div>
             <div className="inner">
               <div className="title">{a.handle} — {a.title}</div>
-              <div className="chips"><span className="chip">{a.pod}</span>{a.thread_id ? <span className="chip">thread: {a.thread_id}</span> : null}</div>
+              <div className="chips">
+                <span className="chip">{a.pod}</span>
+                {a.autonomyLevel !== undefined && (
+                  <span className="chip">L{a.autonomyLevel}</span>
+                )}
+                {a.thread_id ? <span className="chip">thread: {a.thread_id}</span> : null}
+              </div>
               <p className="oneliner">{(a.system_prompt||'').slice(0,160)}{(a.system_prompt||'').length>160?'…':''}</p>
               <div style={{display:'flex', gap:8, flexWrap:'wrap'}}>
                 <button className="btn btn--secondary btn--sm" onClick={()=>setSel(a)}>Edit</button>

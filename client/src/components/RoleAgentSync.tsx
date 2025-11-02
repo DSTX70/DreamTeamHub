@@ -44,17 +44,31 @@ export default function RoleAgentSync() {
   const hasSuggestions = (diffs: any[]) => diffs.some((d) => typeof d.suggestion !== 'undefined');
 
   const applySuggestion = async (handle: string, field: string, suggestion: any) => {
-    const base =
-      specsByHandle[handle] || roleToSuggestedAgent(roles.find((r: any) => r.handle === handle)!);
-    const updated: any = { ...base, [field]: suggestion };
-    await upsertAgentSpec(updated);
+    try {
+      const base =
+        specsByHandle[handle] || roleToSuggestedAgent(roles.find((r: any) => r.handle === handle)!);
+      const updated: any = { ...base, [field]: suggestion };
+      await upsertAgentSpec(updated);
+      await refresh();
+      setStatus(`✅ Applied ${field} for ${handle}`);
+    } catch (error) {
+      console.error(`Failed to apply suggestion for ${handle}:`, error);
+      setStatus(`❌ Failed to apply ${field} for ${handle}`);
+    }
   };
 
   const applyPolicyKey = async (handle: string, key: string, suggestion: any) => {
-    const base =
-      specsByHandle[handle] || roleToSuggestedAgent(roles.find((r: any) => r.handle === handle)!);
-    const updated: any = { ...base, policies: { ...(base.policies || {}), [key]: suggestion } };
-    await upsertAgentSpec(updated);
+    try {
+      const base =
+        specsByHandle[handle] || roleToSuggestedAgent(roles.find((r: any) => r.handle === handle)!);
+      const updated: any = { ...base, policies: { ...(base.policies || {}), [key]: suggestion } };
+      await upsertAgentSpec(updated);
+      await refresh();
+      setStatus(`✅ Applied policy ${key} for ${handle}`);
+    } catch (error) {
+      console.error(`Failed to apply policy key for ${handle}:`, error);
+      setStatus(`❌ Failed to apply policy ${key} for ${handle}`);
+    }
   };
 
   const applyAllForHandle = async (handle: string, diffs: any[]) => {
@@ -75,6 +89,10 @@ export default function RoleAgentSync() {
       }
       await upsertAgentSpec(updated);
       await refresh();
+      setStatus(`✅ Applied all suggestions for ${handle}`);
+    } catch (error) {
+      console.error(`Failed to apply all for ${handle}:`, error);
+      setStatus(`❌ Failed to apply all for ${handle}. Check console.`);
     } finally {
       setLoading(false);
     }
@@ -89,23 +107,38 @@ export default function RoleAgentSync() {
     setLoading(true);
     setStatus('Applying all suggestions...');
     try {
+      let successCount = 0;
+      let errorCount = 0;
       for (const row of targets) {
-        const base = specsByHandle[row.role.handle] || roleToSuggestedAgent(row.role);
-        const updated: any = { ...base };
-        for (const d of row.diffs) {
-          if (d.field === 'policies' && d.policyKeyDiffs?.length) {
-            updated.policies = { ...(base.policies || {}) };
-            for (const pk of d.policyKeyDiffs) {
-              updated.policies[pk.key] = pk.suggestion;
+        try {
+          const base = specsByHandle[row.role.handle] || roleToSuggestedAgent(row.role);
+          const updated: any = { ...base };
+          for (const d of row.diffs) {
+            if (d.field === 'policies' && d.policyKeyDiffs?.length) {
+              updated.policies = { ...(base.policies || {}) };
+              for (const pk of d.policyKeyDiffs) {
+                updated.policies[pk.key] = pk.suggestion;
+              }
+            } else if (typeof d.suggestion !== 'undefined') {
+              updated[d.field] = d.suggestion;
             }
-          } else if (typeof d.suggestion !== 'undefined') {
-            updated[d.field] = d.suggestion;
           }
+          await upsertAgentSpec(updated);
+          successCount++;
+        } catch (error) {
+          console.error(`Failed to update ${row.role.handle}:`, error);
+          errorCount++;
         }
-        await upsertAgentSpec(updated);
       }
-      setStatus('Applied suggestions for ' + targets.length + ' items.');
+      if (errorCount === 0) {
+        setStatus(`✅ Applied suggestions for ${successCount} items.`);
+      } else {
+        setStatus(`⚠️ Applied ${successCount} items, ${errorCount} failed. Check console for details.`);
+      }
       await refresh();
+    } catch (error) {
+      console.error('Error applying suggestions:', error);
+      setStatus('❌ Error applying suggestions. Check console.');
     } finally {
       setLoading(false);
     }
