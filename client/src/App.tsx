@@ -21,6 +21,7 @@ import SummonMirrorPage from "@/pages/summon-mirror";
 import RosterAdminPage from "@/pages/roster-admin";
 import RoleAgentSyncPage from "@/pages/role-agent-sync";
 import BrandGuidePage from "@/pages/brand-guide";
+import HelpPage from "@/pages/help";
 import { Button } from "@/components/ui/button";
 import { LogOut, User as UserIcon } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -41,6 +42,7 @@ function AuthenticatedRoutes() {
       <Route path="/roster-admin" component={RosterAdminPage} />
       <Route path="/role-agent-sync" component={RoleAgentSyncPage} />
       <Route path="/brand-guide" component={BrandGuidePage} />
+      <Route path="/help" component={HelpPage} />
       <Route component={NotFound} />
     </Switch>
   );
