@@ -41,8 +41,21 @@ export const pods = pgTable("pods", {
   id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
   name: text("name").notNull().unique(),
   charter: text("charter"),
+  pillar: text("pillar"), // Imagination, Innovation, Impact
+  purpose: text("purpose"),
+  type: text("type"), // New, Existing, etc.
+  priority: text("priority"), // High, Medium, Low
+  autonomyLevel: text("autonomy_level"), // L0, L1, L2, L3
+  budget: text("budget"),
+  owner: text("owner"),
+  kpis: text("kpis"),
+  deliverables: text("deliverables"),
+  milestones: text("milestones"),
+  linkedBUs: jsonb("linked_bus").$type<string[]>().notNull().default(sql`'[]'`),
+  sharedServices: jsonb("shared_services").$type<string[]>().notNull().default(sql`'[]'`),
   owners: jsonb("owners").$type<string[]>().notNull().default(sql`'[]'`),
   threadId: text("thread_id"),
+  version: text("version").default('vNext_2025Q4'),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
@@ -53,6 +66,16 @@ export const persons = pgTable("persons", {
   roles: jsonb("roles").$type<string[]>().notNull().default(sql`'[]'`),
   podId: integer("pod_id").references(() => pods.id),
   contact: text("contact"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+// Pod-specific role-based agents (separate from the 40 Dream Team agentSpecs)
+export const podAgents = pgTable("pod_agents", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  title: text("title").notNull(),
+  autonomyLevel: text("autonomy_level").notNull(), // L0, L1, L2, L3
+  podId: integer("pod_id").notNull().references(() => pods.id),
+  status: text("status").notNull().default('active'), // active, inactive
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
@@ -312,6 +335,14 @@ export const agentRuns = pgTable("agent_runs", {
 export const podsRelations = relations(pods, ({ many }) => ({
   persons: many(persons),
   workItems: many(workItems),
+  podAgents: many(podAgents),
+}));
+
+export const podAgentsRelations = relations(podAgents, ({ one }) => ({
+  pod: one(pods, {
+    fields: [podAgents.podId],
+    references: [pods.id],
+  }),
 }));
 
 export const personsRelations = relations(persons, ({ one, many }) => ({
@@ -457,6 +488,11 @@ export const agentRunsRelations = relations(agentRuns, ({ one }) => ({
 export const insertPodSchema = createInsertSchema(pods).omit({ id: true, createdAt: true });
 export type InsertPod = z.infer<typeof insertPodSchema>;
 export type Pod = typeof pods.$inferSelect;
+
+// Pod Agents
+export const insertPodAgentSchema = createInsertSchema(podAgents).omit({ id: true, createdAt: true });
+export type InsertPodAgent = z.infer<typeof insertPodAgentSchema>;
+export type PodAgent = typeof podAgents.$inferSelect;
 
 // Persons
 export const insertPersonSchema = createInsertSchema(persons).omit({ id: true, createdAt: true });
