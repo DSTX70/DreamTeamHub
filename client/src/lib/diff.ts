@@ -4,8 +4,8 @@ export type Role = {
 }
 
 export type AgentSpec = {
-  handle:string; title:string; pod:string; thread_id?:string;
-  system_prompt?:string; instruction_blocks?:string[]; tools?:string[]; policies?:any;
+  handle:string; title:string; pod:string; threadId?:string;
+  systemPrompt?:string; instructionBlocks?:string[]; tools?:string[]; policies?:any;
 }
 
 export type PolicyKeyDiff = {
@@ -69,9 +69,9 @@ export function roleToSuggestedAgent(r: Role): AgentSpec {
     handle: r.handle,
     title: r.title,
     pod: r.pod,
-    thread_id: "",
-    system_prompt: buildBaselinePrompt(r.handle, r.title, r.pod),
-    instruction_blocks: (r.definition_of_done || []).slice(),
+    threadId: "",
+    systemPrompt: buildBaselinePrompt(r.handle, r.title, r.pod),
+    instructionBlocks: (r.definition_of_done || []).slice(),
     tools: BASE_TOOLS.slice(),
     policies: { ...BASE_POLICIES }
   };
@@ -89,9 +89,9 @@ export function diffRoleAgent(r: Role, a?: AgentSpec): DiffItem[] {
 
   // Instruction blocks from DoD if agent lacks them
   const roleDoD = r.definition_of_done || [];
-  const agentIB = a.instruction_blocks || [];
+  const agentIB = a.instructionBlocks || [];
   if(roleDoD.length && !agentIB.length){
-    diffs.push({ field:"instruction_blocks", roleValue:roleDoD, agentValue:agentIB, suggestion:roleDoD });
+    diffs.push({ field:"instructionBlocks", roleValue:roleDoD, agentValue:agentIB, suggestion:roleDoD });
   }
 
   // Tools baseline if empty
@@ -102,9 +102,9 @@ export function diffRoleAgent(r: Role, a?: AgentSpec): DiffItem[] {
 
   // System prompt baseline if empty or lacks key guidance
   const baselinePrompt = buildBaselinePrompt(r.handle, r.title, r.pod);
-  const agentPrompt = a.system_prompt || "";
+  const agentPrompt = a.systemPrompt || "";
   if(!agentPrompt || !/Brand[- ]?Lock|Definition of Done|link artifacts/i.test(agentPrompt)){
-    diffs.push({ field:"system_prompt", roleValue: baselinePrompt, agentValue: agentPrompt, suggestion: baselinePrompt });
+    diffs.push({ field:"systemPrompt", roleValue: baselinePrompt, agentValue: agentPrompt, suggestion: baselinePrompt });
   }
 
   // Policies: suggest merged baseline + show per-key differences
