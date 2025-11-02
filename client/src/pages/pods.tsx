@@ -1,13 +1,31 @@
-import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/empty-state";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Plus, Layers } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 import type { Pod, Person } from "@shared/schema";
 import { getPodRailClass } from "@/lib/pod-utils";
 
 export default function Pods() {
+  const [showPersonDialog, setShowPersonDialog] = useState(false);
+  const [showPodDialog, setShowPodDialog] = useState(false);
+  const [personName, setPersonName] = useState('');
+  const [personHandle, setPersonHandle] = useState('');
+  const [personEmail, setPersonEmail] = useState('');
+  const [personPodId, setPersonPodId] = useState<number | null>(null);
+  const [podName, setPodName] = useState('');
+  const [podCharter, setPodCharter] = useState('');
+  const { toast } = useToast();
+
   const { data: pods, isLoading: isLoadingPods } = useQuery<Pod[]>({
     queryKey: ['/api/pods'],
   });
@@ -22,6 +40,86 @@ export default function Pods() {
     return persons?.filter(p => p.podId === podId) || [];
   };
 
+  const createPersonMutation = useMutation({
+    mutationFn: (data: { name: string; handle: string; email: string; podId: number }) =>
+      apiRequest('POST', '/api/persons', data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/persons'] });
+      setShowPersonDialog(false);
+      setPersonName('');
+      setPersonHandle('');
+      setPersonEmail('');
+      setPersonPodId(null);
+      toast({
+        title: 'Person added',
+        description: 'Team member has been added successfully',
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to add person',
+        variant: 'destructive',
+      });
+    },
+  });
+
+  const createPodMutation = useMutation({
+    mutationFn: (data: { name: string; charter?: string }) =>
+      apiRequest('POST', '/api/pods', data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/pods'] });
+      setShowPodDialog(false);
+      setPodName('');
+      setPodCharter('');
+      toast({
+        title: 'Pod created',
+        description: 'New pod has been created successfully',
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to create pod',
+        variant: 'destructive',
+      });
+    },
+  });
+
+  const handleCreatePerson = () => {
+    if (!personName || !personHandle || !personEmail || !personPodId) {
+      toast({
+        title: 'Missing fields',
+        description: 'Please fill in all required fields',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    createPersonMutation.mutate({
+      name: personName,
+      handle: personHandle,
+      email: personEmail,
+      podId: personPodId,
+    });
+  };
+
+  const handleCreatePod = () => {
+    if (!podName) {
+      toast({
+        title: 'Missing field',
+        description: 'Please provide a pod name',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    createPodMutation.mutate({
+      name: podName,
+      charter: podCharter || undefined,
+    });
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -30,16 +128,121 @@ export default function Pods() {
           <p className="text-sm text-muted-foreground">Manage organizational pods and team members</p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" data-testid="button-create-person">
+          <Button variant="outline" onClick={() => setShowPersonDialog(true)} data-testid="button-create-person">
             <Plus className="h-4 w-4 mr-2" />
             Add Person
           </Button>
-          <Button data-testid="button-create-pod">
+          <Button onClick={() => setShowPodDialog(true)} data-testid="button-create-pod">
             <Plus className="h-4 w-4 mr-2" />
             Create Pod
           </Button>
         </div>
       </div>
+
+      {/* Add Person Dialog */}
+      <Dialog open={showPersonDialog} onOpenChange={setShowPersonDialog}>
+        <DialogContent data-testid="dialog-create-person">
+          <DialogHeader>
+            <DialogTitle>Add Team Member</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="person-name">Full Name</Label>
+              <Input
+                id="person-name"
+                data-testid="input-person-name"
+                value={personName}
+                onChange={(e) => setPersonName(e.target.value)}
+                placeholder="e.g., Jane Smith"
+              />
+            </div>
+            <div>
+              <Label htmlFor="person-handle">Handle</Label>
+              <Input
+                id="person-handle"
+                data-testid="input-person-handle"
+                value={personHandle}
+                onChange={(e) => setPersonHandle(e.target.value)}
+                placeholder="e.g., jane_smith"
+              />
+            </div>
+            <div>
+              <Label htmlFor="person-email">Email</Label>
+              <Input
+                id="person-email"
+                type="email"
+                data-testid="input-person-email"
+                value={personEmail}
+                onChange={(e) => setPersonEmail(e.target.value)}
+                placeholder="e.g., jane@example.com"
+              />
+            </div>
+            <div>
+              <Label htmlFor="person-pod">Pod</Label>
+              <Select value={personPodId?.toString()} onValueChange={(val) => setPersonPodId(parseInt(val))}>
+                <SelectTrigger id="person-pod" data-testid="select-person-pod">
+                  <SelectValue placeholder="Select a pod..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {pods?.map(pod => (
+                    <SelectItem key={pod.id} value={pod.id.toString()} data-testid={`option-pod-${pod.id}`}>
+                      {pod.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <Button
+              onClick={handleCreatePerson}
+              disabled={!personName || !personHandle || !personEmail || !personPodId || createPersonMutation.isPending}
+              className="w-full"
+              data-testid="button-submit-person"
+            >
+              {createPersonMutation.isPending ? 'Adding...' : 'Add Person'}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Create Pod Dialog */}
+      <Dialog open={showPodDialog} onOpenChange={setShowPodDialog}>
+        <DialogContent data-testid="dialog-create-pod">
+          <DialogHeader>
+            <DialogTitle>Create New Pod</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="pod-name">Pod Name</Label>
+              <Input
+                id="pod-name"
+                data-testid="input-pod-name"
+                value={podName}
+                onChange={(e) => setPodName(e.target.value)}
+                placeholder="e.g., Marketing & Communications"
+              />
+            </div>
+            <div>
+              <Label htmlFor="pod-charter">Charter (Optional)</Label>
+              <Textarea
+                id="pod-charter"
+                data-testid="input-pod-charter"
+                value={podCharter}
+                onChange={(e) => setPodCharter(e.target.value)}
+                placeholder="Describe the pod's mission and responsibilities..."
+                rows={3}
+              />
+            </div>
+            <Button
+              onClick={handleCreatePod}
+              disabled={!podName || createPodMutation.isPending}
+              className="w-full"
+              data-testid="button-submit-pod"
+            >
+              {createPodMutation.isPending ? 'Creating...' : 'Create Pod'}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Pods Grid - Using Brand Guide Styling */}
       {isLoading ? (
@@ -123,7 +326,7 @@ export default function Pods() {
               description="Create your first organizational pod to get started"
               action={{
                 label: "Create Pod",
-                onClick: () => {},
+                onClick: () => setShowPodDialog(true),
               }}
             />
           </CardContent>

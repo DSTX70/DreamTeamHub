@@ -104,6 +104,7 @@ export const agentSpecs = pgTable("agent_specs", {
   instructionBlocks: jsonb("instruction_blocks").$type<string[]>().notNull().default(sql`'[]'`),
   tools: jsonb("tools").$type<string[]>().notNull().default(sql`'[]'`),
   policies: jsonb("policies").$type<Record<string, any>>().notNull().default(sql`'{}'`),
+  autonomyLevel: integer("autonomy_level").notNull().default(1), // L0=0, L1=1, L2=2, L3=3
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });

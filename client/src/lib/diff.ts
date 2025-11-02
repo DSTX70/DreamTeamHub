@@ -5,7 +5,7 @@ export type Role = {
 
 export type AgentSpec = {
   handle:string; title:string; pod:string; threadId?:string;
-  systemPrompt?:string; instructionBlocks?:string[]; tools?:string[]; policies?:any;
+  systemPrompt?:string; instructionBlocks?:string[]; tools?:string[]; policies?:any; autonomyLevel?:number;
 }
 
 export type PolicyKeyDiff = {
@@ -73,7 +73,8 @@ export function roleToSuggestedAgent(r: Role): AgentSpec {
     systemPrompt: buildBaselinePrompt(r.handle, r.title, r.pod),
     instructionBlocks: (r.definition_of_done || []).slice(),
     tools: BASE_TOOLS.slice(),
-    policies: { ...BASE_POLICIES }
+    policies: { ...BASE_POLICIES },
+    autonomyLevel: 1  // Default L1 — Operator
   };
 }
 
