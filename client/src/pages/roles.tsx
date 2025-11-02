@@ -5,7 +5,8 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/empty-state";
-import { Search, Users, Plus, CheckCircle2 } from "lucide-react";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Search, Users, Plus, CheckCircle2, ChevronDown } from "lucide-react";
 import type { RoleCard } from "@shared/schema";
 
 export default function Roles() {
@@ -116,31 +117,49 @@ export default function Roles() {
       ) : filteredRoles && filteredRoles.length > 0 ? (
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           {filteredRoles.map((role) => (
-            <div key={role.id} className="role-card" data-testid={`role-card-${role.handle}`}>
-              {/* Pod-specific colored rail using actual pod color */}
-              <div 
-                className="rail" 
-                style={{ 
-                  background: role.podColor || '#C95CAF',
-                  height: '8px',
-                  width: '100%',
-                  borderRadius: 'var(--radius-md) var(--radius-md) 0 0'
-                }}
-              ></div>
-              <div className="inner">
-                <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', marginBottom: 'var(--space-1)' }}>
-                  {role.icon && (
-                    <span style={{ fontSize: '28px', lineHeight: 1 }}>{role.icon}</span>
-                  )}
-                  <p className="title" style={{ font: '800 22px/1 Inter' }}>{role.handle}</p>
-                </div>
-                <p className="subtitle">{role.title}</p>
-                <div className="chips">
-                  <span className="chip">{role.pod}</span>
-                </div>
-                <p style={{ color: 'var(--text-secondary)', marginBottom: 'var(--space-4)' }}>
-                  {role.purpose}
-                </p>
+            <Collapsible key={role.id} defaultOpen={false}>
+              <div className="role-card" data-testid={`role-card-${role.handle}`}>
+                {/* Pod-specific colored rail using actual pod color */}
+                <div 
+                  className="rail" 
+                  style={{ 
+                    background: role.podColor || '#C95CAF',
+                    height: '8px',
+                    width: '100%',
+                    borderRadius: 'var(--radius-md) var(--radius-md) 0 0'
+                  }}
+                ></div>
+                <div className="inner">
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', marginBottom: 'var(--space-1)' }}>
+                    {role.icon && (
+                      <span style={{ fontSize: '28px', lineHeight: 1 }}>{role.icon}</span>
+                    )}
+                    <p className="title" style={{ font: '800 22px/1 Inter', flex: 1 }}>{role.handle}</p>
+                    <CollapsibleTrigger asChild>
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className="h-8 w-8"
+                        data-testid={`button-toggle-${role.handle}`}
+                      >
+                        <ChevronDown className="h-4 w-4 transition-transform duration-200 [[data-state=open]>&]:rotate-180" />
+                      </Button>
+                    </CollapsibleTrigger>
+                  </div>
+                  <p className="subtitle">{role.title}</p>
+                  <div className="chips">
+                    <span className="chip">{role.pod}</span>
+                  </div>
+                  <p style={{ color: 'var(--text-secondary)', marginBottom: 'var(--space-4)' }}>
+                    {role.purpose}
+                  </p>
+
+                  <CollapsibleContent className="space-y-3"
+                    style={{ 
+                      overflow: 'hidden',
+                      transition: 'all 0.2s ease-in-out'
+                    }}
+                  >
                 
                 {role.coreFunctions && role.coreFunctions.length > 0 && (
                   <div style={{ marginBottom: 'var(--space-3)' }}>
@@ -195,17 +214,19 @@ export default function Roles() {
                   </div>
                 )}
 
-                {role.tags && role.tags.length > 0 && (
-                  <div style={{ paddingTop: 'var(--space-3)', borderTop: '1px dashed var(--brand-line)' }}>
-                    <div className="chips">
-                      {role.tags.map((tag, idx) => (
-                        <span key={idx} className="chip">#{tag}</span>
-                      ))}
-                    </div>
-                  </div>
-                )}
+                    {role.tags && role.tags.length > 0 && (
+                      <div style={{ paddingTop: 'var(--space-3)', borderTop: '1px dashed var(--brand-line)' }}>
+                        <div className="chips">
+                          {role.tags.map((tag, idx) => (
+                            <span key={idx} className="chip">#{tag}</span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </CollapsibleContent>
+                </div>
               </div>
-            </div>
+            </Collapsible>
           ))}
         </div>
       ) : (
