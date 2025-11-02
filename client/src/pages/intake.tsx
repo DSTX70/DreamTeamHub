@@ -31,6 +31,7 @@ const workItemSchema = z.object({
 
 export default function Intake() {
   const [showForm, setShowForm] = useState(false);
+  const [editingItem, setEditingItem] = useState<WorkItem | null>(null);
   const { toast } = useToast();
 
   const { data: workItems, isLoading: isLoadingItems } = useQuery<WorkItem[]>({
@@ -77,8 +78,50 @@ export default function Intake() {
     },
   });
 
+  const updateMutation = useMutation({
+    mutationFn: (data: { id: number; updates: z.infer<typeof workItemSchema> }) => 
+      apiRequest('PUT', `/api/work-items/${data.id}`, data.updates),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/work-items'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/control/dashboard'] });
+      toast({
+        title: "Work item updated",
+        description: "The work item has been updated successfully",
+      });
+      form.reset();
+      setEditingItem(null);
+      setShowForm(false);
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to update work item",
+        variant: "destructive",
+      });
+    },
+  });
+
   const onSubmit = (data: z.infer<typeof workItemSchema>) => {
-    createMutation.mutate(data);
+    if (editingItem) {
+      updateMutation.mutate({ id: editingItem.id, updates: data });
+    } else {
+      createMutation.mutate(data);
+    }
+  };
+
+  const handleEditItem = (item: WorkItem) => {
+    setEditingItem(item);
+    setShowForm(true);
+    form.reset({
+      title: item.title,
+      description: item.description || "",
+      podId: item.podId ?? undefined,
+      ownerId: item.ownerId ?? undefined,
+      status: item.status,
+      priority: item.priority || "medium",
+      dueDate: item.dueDate ? format(new Date(item.dueDate), 'yyyy-MM-dd') : undefined,
+      milestone: item.milestone || "",
+    });
   };
 
   return (
@@ -88,18 +131,41 @@ export default function Intake() {
           <h1 className="text-2xl font-semibold mb-2" data-testid="page-title">Intake & Routing</h1>
           <p className="text-sm text-muted-foreground">Create and manage work items with pod assignments and milestones</p>
         </div>
-        <Button onClick={() => setShowForm(!showForm)} data-testid="button-create-work-item">
+        <Button 
+          variant="default" 
+          onClick={() => {
+            if (showForm) {
+              // Closing the form
+              setShowForm(false);
+              setEditingItem(null);
+              form.reset();
+            } else {
+              // Opening create form
+              setEditingItem(null);
+              form.reset({
+                title: "",
+                description: "",
+                status: "todo",
+                priority: "medium",
+              });
+              setShowForm(true);
+            }
+          }} 
+          data-testid="button-create-work-item"
+        >
           <Plus className="h-4 w-4 mr-2" />
           {showForm ? "Cancel" : "Create Work Item"}
         </Button>
       </div>
 
-      {/* Create Form */}
+      {/* Create/Edit Form */}
       {showForm && (
         <Card>
           <CardHeader>
-            <CardTitle>New Work Item</CardTitle>
-            <CardDescription>Add a new work item to the intake queue</CardDescription>
+            <CardTitle>{editingItem ? "Edit Work Item" : "New Work Item"}</CardTitle>
+            <CardDescription>
+              {editingItem ? "Update the work item details" : "Add a new work item to the intake queue"}
+            </CardDescription>
           </CardHeader>
           <CardContent>
             <Form {...form}>
@@ -194,7 +260,7 @@ export default function Intake() {
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Priority</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <Select onValueChange={field.onChange} value={field.value}>
                           <FormControl>
                             <SelectTrigger data-testid="select-priority">
                               <SelectValue />
@@ -243,11 +309,26 @@ export default function Intake() {
                 </div>
 
                 <div className="flex justify-end gap-3">
-                  <Button type="button" variant="outline" onClick={() => setShowForm(false)}>
+                  <Button 
+                    type="button" 
+                    variant="outline" 
+                    onClick={() => {
+                      setShowForm(false);
+                      setEditingItem(null);
+                      form.reset();
+                    }}
+                  >
                     Cancel
                   </Button>
-                  <Button type="submit" disabled={createMutation.isPending} data-testid="button-submit">
-                    {createMutation.isPending ? "Creating..." : "Create Work Item"}
+                  <Button 
+                    type="submit" 
+                    disabled={createMutation.isPending || updateMutation.isPending} 
+                    data-testid="button-submit"
+                  >
+                    {editingItem 
+                      ? (updateMutation.isPending ? "Updating..." : "Update Work Item")
+                      : (createMutation.isPending ? "Creating..." : "Create Work Item")
+                    }
                   </Button>
                 </div>
               </form>
@@ -272,7 +353,12 @@ export default function Intake() {
       ) : workItems && workItems.length > 0 ? (
         <div className="space-y-4">
           {workItems.map((item) => (
-            <article key={item.id} className="role-card" data-testid={`work-item-${item.id}`}>
+            <article 
+              key={item.id} 
+              className="role-card hover-elevate cursor-pointer" 
+              onClick={() => handleEditItem(item)}
+              data-testid={`work-item-${item.id}`}
+            >
               {/* Teal rail at top (Intake & Routing pod color) */}
               <div className="rail pod-rail intake h-1.5" />
               
