@@ -28,9 +28,13 @@ export default function Brainstorm() {
         </Button>
       </div>
 
-      {/* Info Cards */}
+      {/* Info Cards - Click to navigate to workflow pages */}
       <div className="grid gap-4 md:grid-cols-3">
-        <article className="role-card">
+        <article 
+          className="role-card cursor-pointer hover-elevate active-elevate-2"
+          onClick={() => window.location.href = '/brainstorm/diverge'}
+          data-testid="card-diverge"
+        >
           {/* Pink rail at top (Brand pod color - Diverge) */}
           <div className="rail pod-rail brand h-1.5" />
           <div className="inner">
@@ -39,7 +43,11 @@ export default function Brainstorm() {
           </div>
         </article>
 
-        <article className="role-card">
+        <article 
+          className="role-card cursor-pointer hover-elevate active-elevate-2"
+          onClick={() => window.location.href = '/brainstorm/cluster'}
+          data-testid="card-cluster"
+        >
           {/* Cyan rail at top (Product pod color - Cluster) */}
           <div className="rail pod-rail product h-1.5" />
           <div className="inner">
@@ -48,7 +56,11 @@ export default function Brainstorm() {
           </div>
         </article>
 
-        <article className="role-card">
+        <article 
+          className="role-card cursor-pointer hover-elevate active-elevate-2"
+          onClick={() => window.location.href = '/brainstorm/score'}
+          data-testid="card-score-commit"
+        >
           {/* Yellow rail at top (Decision pod color - Score & Commit) */}
           <div className="rail pod-rail decision h-1.5" />
           <div className="inner">
