@@ -184,28 +184,50 @@ function RolesPanel(){
 }
 
 function RoleRow({r, hasAgent}:{r:RoleCard, hasAgent:boolean}){
-  const cloneToAgent = ()=>{
-    const spec = {
-      handle: r.handle, title: r.title, pod: r.pod, thread_id: '',
-      system_prompt: `You are ${r.handle}, ${r.title} in the ${r.pod} pod. Keep outputs concise.`,
-      instruction_blocks: (r.definition_of_done||[]),
-      tools: ['threads.post','drive.search','zip.kit','hash.index'],
-      policies: {"may_post_threads": false, "may_modify_drive": false}
+  const cloneToAgent = async ()=>{
+    if(hasAgent){
+      alert(`Agent spec for ${r.handle} already exists! View it in the "Agent Specs in DB" section below or on the Role ⇄ Agent Specs Sync page.`)
+      return
     }
-    localStorage.setItem('clone_agent_spec_from_role', JSON.stringify(spec))
-    alert('Cloned into Agent Specs form. Switch to Agent Specs panel to confirm and save.')
+    try {
+      const spec = {
+        handle: r.handle, 
+        title: r.title, 
+        pod: r.pod, 
+        threadId: '',
+        systemPrompt: `You are ${r.handle}, ${r.title} in the ${r.pod} pod. Keep outputs concise.`,
+        instructionBlocks: (r.definition_of_done||[]),
+        tools: ['threads.post','drive.search','zip.kit','hash.index'],
+        policies: {"may_post_threads": false, "may_modify_drive": false},
+        autonomyLevel: 1
+      }
+      await upsertAgentSpec(spec)
+      alert(`✅ Agent spec created for ${r.handle}! Scroll down to see it in "Agent Specs in DB" or refresh the page.`)
+      window.location.reload()
+    } catch(err) {
+      console.error('Failed to clone agent:', err)
+      alert(`❌ Failed to create agent spec: ${err}`)
+    }
   }
   return (
     <div className="card">
       <div className="rail"></div>
       <div className="inner">
         <div className="title">
-          {r.handle} — {r.title} {hasAgent ? <span className="chip">Agent linked</span> : <span className="chip">No agent</span>}
+          {r.handle} — {r.title} {hasAgent ? <span className="chip" style={{backgroundColor:'#22c55e'}}>✓ Agent Exists</span> : <span className="chip" style={{backgroundColor:'#666'}}>No Agent</span>}
         </div>
         <div className="chips"><span className="chip">{r.pod}</span>{(r.tags||[]).map((t,i)=><span className="chip" key={i}>{t}</span>)}</div>
         <p className="oneliner">{r.purpose||''}</p>
         <div style={{display:'flex', gap:8}}>
-          <button className="btn btn--secondary btn--sm" onClick={cloneToAgent}><span className="icon">🤖</span>Clone → Agent</button>
+          {hasAgent ? (
+            <button className="btn btn--ghost btn--sm" onClick={cloneToAgent} data-testid={`button-view-agent-${r.handle}`}>
+              <span className="icon">✓</span>Agent Already Exists
+            </button>
+          ) : (
+            <button className="btn btn--secondary btn--sm" onClick={cloneToAgent} data-testid={`button-clone-agent-${r.handle}`}>
+              <span className="icon">🤖</span>Create Agent Spec
+            </button>
+          )}
         </div>
       </div>
     </div>
