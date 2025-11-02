@@ -139,10 +139,10 @@ export default function Roles() {
                       <Button 
                         variant="ghost" 
                         size="icon" 
-                        className="h-8 w-8"
+                        className="h-8 w-8 group"
                         data-testid={`button-toggle-${role.handle}`}
                       >
-                        <ChevronDown className="h-4 w-4 transition-transform duration-200 [[data-state=open]>&]:rotate-180" />
+                        <ChevronDown className="h-4 w-4 transition-transform duration-200 group-data-[state=open]:rotate-180" />
                       </Button>
                     </CollapsibleTrigger>
                   </div>

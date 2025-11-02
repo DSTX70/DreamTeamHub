@@ -6,7 +6,7 @@ async function seed() {
   console.log("🌱 Starting database seed...");
 
   try {
-    // Create canonical pods
+    // Create canonical pods (matching role card pod names)
     console.log("Creating pods...");
     const podNames = [
       "Control Tower",
@@ -16,6 +16,15 @@ async function seed() {
       "Marketing",
       "Finance",
       "Product & Engineering",
+      "Brand & Marketing",
+      "Brand & Marketing — Translation/Adaptation",
+      "Finance & BizOps",
+      "Medical — Case Research",
+      "Medical — Clinical Advisory",
+      "Operating Rhythm",
+      "Product & Platform",
+      "Risk",
+      "SAB — Executive Council",
     ];
 
     const createdPods = [];
@@ -52,37 +61,45 @@ async function seed() {
     const importedRoles = await storage.bulkCreateRoleCards(roleCards);
     console.log(`  ✓ Imported ${importedRoles.length} role cards`);
 
-    // Create sample persons
-    console.log("\nCreating sample persons...");
+    // Create persons from ALL role cards
+    console.log("\nCreating persons from role cards...");
+    
+    // Create a map of pod names to pod IDs for quick lookup
+    const podMap = new Map(createdPods.map(p => [p.name, p.id]));
+    
+    let personsCreated = 0;
+    for (const roleCard of importedRoles) {
+      const podId = podMap.get(roleCard.pod);
+      
+      if (podId) {
+        try {
+          await storage.createPerson({
+            handle: roleCard.handle,
+            name: roleCard.title,
+            roles: [roleCard.handle],
+            podId: podId,
+            contact: roleCard.contact || `${roleCard.handle.toLowerCase()}@dreamteam.io`,
+          });
+          personsCreated++;
+        } catch (error) {
+          // Skip if person already exists (duplicate handle)
+          console.log(`  ⊘ Skipped ${roleCard.handle} (already exists)`);
+        }
+      } else {
+        console.log(`  ⚠ Warning: No pod found for "${roleCard.pod}" (role: ${roleCard.handle})`);
+      }
+    }
+    
+    console.log(`  ✓ Created ${personsCreated} persons from role cards`);
+
+    // Get pod references for creating sample work items
     const controlTowerPod = createdPods.find(p => p.name === "Control Tower");
     const ipPod = createdPods.find(p => p.name === "IP & Patent Program");
-    
-    if (controlTowerPod) {
-      await storage.createPerson({
-        handle: "admin",
-        name: "Admin User",
-        roles: ["Orchestrator"],
-        podId: controlTowerPod.id,
-        contact: "admin@dreamteam.io",
-      });
-      console.log("  ✓ Created admin user");
-    }
-
-    if (ipPod) {
-      await storage.createPerson({
-        handle: "aegis-user",
-        name: "IP Counsel",
-        roles: ["IP & Patent Counsel"],
-        podId: ipPod.id,
-        contact: "ip@dreamteam.io",
-      });
-      console.log("  ✓ Created IP counsel user");
-    }
 
     // Create sample work items
     console.log("\nCreating sample work items...");
     const persons = await storage.getPersons();
-    const adminPerson = persons.find(p => p.handle === "admin");
+    const adminPerson = persons.find(p => p.handle === "OS");
 
     if (adminPerson && controlTowerPod) {
       await storage.createWorkItem({
@@ -141,7 +158,7 @@ async function seed() {
     console.log(`\nSummary:`);
     console.log(`  - ${createdPods.length} pods`);
     console.log(`  - ${importedRoles.length} role cards`);
-    console.log(`  - ${persons.length} persons`);
+    console.log(`  - ${personsCreated} persons (created from role cards)`);
     console.log(`  - 3 work items`);
     console.log(`  - 1 decision`);
 
