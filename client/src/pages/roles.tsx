@@ -133,6 +133,8 @@ export default function Roles() {
                       variant={isSelected ? "default" : "outline"}
                       size="sm"
                       onClick={() => setSelectedPod(podName)}
+                      data-pod={podName}
+                      className={isSelected ? "pod-accent" : ""}
                       data-testid={`filter-pod-${podName.toLowerCase().replace(/\s+/g, '-')}`}
                     >
                       {podName}
