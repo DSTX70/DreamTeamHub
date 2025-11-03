@@ -44,6 +44,7 @@ The platform is structured into several core modules:
 ### Feature Specifications
 - **Quick Start Section**: Provides 6 action tiles (e.g., New Discussion, Brainstorm, Audit) with smart modals.
 - **Idea Spark Capture**: Floating action button accessible from all screens for quick idea capture. Supports title, content, file URL, pod tagging, and project linkage. Smart filtering shows all sparks on Dashboard and only project-linked sparks on Projects page.
+- **Interactive Demo Viewer**: Standalone HTML-based demo showcasing the entire platform with interactive tabs (Overview, Features, Architecture, Pods, Tech), embedded in-app with export functionality for sharing.
 - **AI-Powered Conversations**: Personas respond based on their defined role, expertise, and context, leveraging agent memory.
 - **Agent Spec Sync**: Features two-way diff view, pod-specific baseline prompts, smart suggestions for agent fields, and batch application of changes.
 
