@@ -97,21 +97,37 @@ The application features a collapsible sidebar with four main sections:
 
 ### Understanding Pod Colors
 
-The platform uses 11 distinct pod colors to help you quickly identify functional areas:
+The platform uses 21 distinct pod colors to help you quickly identify functional areas. Each pod has a unique color that appears on agent cards, filter buttons, and throughout the interface:
 
-| Pod | Color | Hex Code | Usage |
-|-----|-------|----------|-------|
-| Control Tower | Blue | #3D6BFF | Dashboard, coordination |
-| Intake & Routing | Teal | #5CE1CF | Work item management |
-| Decision Log | Yellow | #FFC24D | Decision tracking |
-| Roster & Roles | Pink | #C95CAF | Team management |
-| IP & Patent | Purple | #6B1E9C | Intellectual property |
-| Security & Compliance | Gray-Blue | #3B4A5A | Security audits |
-| Product & Engineering | Cyan | #1F9CFF | Product development |
-| Brand & Assets | Magenta | #FF5BCD | Brand management |
-| Marketing & Comms | Orange | #FF7A45 | Marketing activities |
-| Finance & BizOps | Green | #2DBE7A | Financial operations |
-| Operating Rhythm | Indigo | #5A67FF | Process management |
+| Pod | Hex Code | Description |
+|-----|----------|-------------|
+| Retail Collective Pod (RCP) | #2EC5C2 | Retail operations and strategy |
+| Social & Influence CoE (SICoE) | #6F5AE8 | Social media and influencer management |
+| Creative Pod | #C95CAF | Creative content and design |
+| Product & Platform Pod | #0FA3B1 | Product development and engineering |
+| IP/Patent Program Pod | #FF7A1A | Intellectual property management |
+| Security & Compliance Pod | #E4572E | Security audits and compliance |
+| Marketing & PR Pod | #FFD449 | Marketing and public relations |
+| Ops & Finance Pod | #1A1A1A | Operations and financial management |
+| Cultural Pod | #34AABB | Cultural initiatives and diversity |
+| Impact Programs Office (IPO) | #E24F8A | Impact and sustainability programs |
+| Education & Cohorts Pod | #5CB85C | Educational programs and training |
+| Accessibility & Captioning Pod | #007ACC | Accessibility and content captioning |
+| Packaging & Pre-Press Pod | #D4AF37 | Packaging design and pre-press |
+| WMS / 3PL Ops Pod | #7A6FF0 | Warehouse and logistics operations |
+| Channel Integrations Pod | #50C3B8 | Integration and channel management |
+| Author Platform Studio | #8C2E3F | Author tools and platforms |
+| Music Rights & Distribution Pod | #6B1E9C | Music licensing and distribution |
+| Agent Governance Pod | #FF9B28 | AI agent oversight and governance |
+| Tenant & Billing Pod | #2E86DE | Tenant management and billing |
+| GlobalCollabs Partnerships Pod | #F45B69 | Global partnerships and collaborations |
+| Data Stewardship & Metrics Pod | #2F9E44 | Data governance and analytics |
+
+**Visual Indicators**: Pod colors appear as:
+- Colored rail on the left edge of agent cards
+- Pod-colored chips/badges next to agent names
+- Highlighted filter buttons when selecting pods
+- Background accents in pod-specific views
 
 ---
 
@@ -1063,7 +1079,7 @@ prod-mgr,Product Manager,Product,UX Research|Data Analysis,Professional,Roadmap 
 
 ### Roster Admin
 
-**Purpose**: Advanced team management with assignment rules and availability tracking.
+**Purpose**: Advanced team management with assignment rules and availability tracking. Also serves as the interface for creating and managing AI agents.
 
 #### Features
 
@@ -1072,6 +1088,12 @@ prod-mgr,Product Manager,Product,UX Research|Data Analysis,Professional,Roadmap 
 - Role assignments
 - Pod memberships
 - Contact information
+
+**Agent Creation & Management**
+- Create new AI agents with validated forms
+- Assign agents to pods
+- Configure agent attributes and behaviors
+- Set autonomy levels and expertise areas
 
 **Assignment Rules**
 - Auto-assignment based on criteria
@@ -1085,13 +1107,43 @@ prod-mgr,Product Manager,Product,UX Research|Data Analysis,Professional,Roadmap 
 - Workload distribution
 - Coverage management
 
+#### Creating New Agents
+
+**To create a new agent**:
+1. Navigate to **Roster Admin** or **Roles** page
+2. Click **+ Create Agent** button
+3. Fill in the required fields (marked with *):
+   - **Agent ID**: Unique identifier (e.g., `agent_example`)
+   - **Title**: Display name for the agent
+   - **Pod Name**: Select from available pods
+   - **Expertise Areas**: Key skills (comma-separated or multiple entries)
+   - **Tone**: Communication style (Professional, Friendly, etc.)
+   - **Autonomy Level**: L0 (Full) to L3 (Human-in-Loop)
+4. Optionally configure:
+   - **Skill Pack Path**: Directory path for agent's skill pack
+   - **System Prompt**: Core instructions and behavior
+5. Click **Create Agent** to save
+
+**Form Validation**: The agent creation form uses real-time validation to ensure:
+- All required fields are completed
+- Agent ID follows proper naming conventions
+- Pod name is selected from available options
+- All data meets system requirements
+
+**Tips for Agent Creation**:
+- Use descriptive, unique agent IDs
+- Assign agents to the most relevant pod
+- L0 autonomy = Full autonomy; L3 = Requires human approval
+- System prompts help define agent personality and behavior
+
 #### Managing the Roster
 
 **To view the roster**:
-1. Navigate to **Roster Admin**
-2. See complete team list
-3. Filter by pod, role, status
+1. Navigate to **Roster Admin** or **Roles** page
+2. See complete team list (agents + persons)
+3. Filter by pod, role, agent type
 4. Sort by name, pod, availability
+5. Use pod-colored filter buttons for quick pod selection
 
 **To update availability**:
 1. Find person in roster
