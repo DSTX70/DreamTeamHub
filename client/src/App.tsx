@@ -28,6 +28,7 @@ import AgentCreate from "@/pages/agent-create";
 import { Button } from "@/components/ui/button";
 import { LogOut, User as UserIcon } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { IdeaSparkButton } from "@/components/idea-spark";
 
 function AuthenticatedRoutes() {
   return (
@@ -114,6 +115,7 @@ function AppContent() {
             </div>
           </main>
         </div>
+        <IdeaSparkButton />
       </div>
     </SidebarProvider>
   );
