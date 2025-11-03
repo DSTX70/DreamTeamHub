@@ -8,6 +8,7 @@ import { AlertCircle, CheckCircle2, Clock, Target, MessageSquare, Lightbulb, Cli
 import type { WorkItem } from "@shared/schema";
 import { format } from "date-fns";
 import { QuickStartDialog } from "@/components/quick-start-dialog";
+import { IdeaSparksList } from "@/components/idea-sparks-list";
 
 interface ControlTowerData {
   top5: WorkItem[];
@@ -248,6 +249,15 @@ export default function ControlTower() {
             />
           )}
         </BrandedCard>
+      </div>
+
+      {/* Idea Sparks Section */}
+      <div className="mt-6">
+        <h2 className="text-lg font-semibold mb-4 text-foreground flex items-center gap-2">
+          <Lightbulb className="h-5 w-5 text-yellow-500" />
+          Recent Idea Sparks
+        </h2>
+        <IdeaSparksList limit={5} />
       </div>
     </BrandedSection>
   );
