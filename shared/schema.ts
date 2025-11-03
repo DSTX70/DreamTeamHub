@@ -364,6 +364,80 @@ export const agentRuns = pgTable("agent_runs", {
 });
 
 // ===========================
+// PROJECTS
+// ===========================
+
+export const projects = pgTable("projects", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  title: text("title").notNull(),
+  description: text("description"),
+  category: text("category").notNull(), // Imagination | Innovation | Impact
+  status: text("status").notNull().default('planning'), // planning | active | on_hold | completed | archived
+  priority: text("priority").default('medium'), // low | medium | high | critical
+  ownerId: integer("owner_id").references(() => persons.id),
+  podId: integer("pod_id").references(() => pods.id),
+  startDate: timestamp("start_date"),
+  dueDate: timestamp("due_date"),
+  completedAt: timestamp("completed_at"),
+  metadata: jsonb("metadata").$type<Record<string, any>>().default(sql`'{}'`),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const projectFiles = pgTable("project_files", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  projectId: integer("project_id").notNull().references(() => projects.id),
+  fileName: text("file_name").notNull(),
+  filePath: text("file_path").notNull(),
+  fileType: text("file_type"), // document | image | spreadsheet | code | other
+  reviewStatus: text("review_status").default('pending'), // pending | approved | rejected | filed
+  reviewedBy: integer("reviewed_by").references(() => persons.id),
+  reviewedAt: timestamp("reviewed_at"),
+  notes: text("notes"),
+  metadata: jsonb("metadata").$type<Record<string, any>>().default(sql`'{}'`),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const projectAgents = pgTable("project_agents", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  projectId: integer("project_id").notNull().references(() => projects.id),
+  agentId: text("agent_id").notNull().references(() => agents.id),
+  role: text("role").notNull().default('shared'), // dedicated | shared
+  assignedAt: timestamp("assigned_at").defaultNow().notNull(),
+  notes: text("notes"),
+});
+
+export const projectTasks = pgTable("project_tasks", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  projectId: integer("project_id").notNull().references(() => projects.id),
+  title: text("title").notNull(),
+  description: text("description"),
+  status: text("status").notNull().default('todo'), // todo | in_progress | blocked | done
+  priority: text("priority").default('medium'), // low | medium | high | critical
+  assignedAgentId: text("assigned_agent_id").references(() => agents.id),
+  assignedPersonId: integer("assigned_person_id").references(() => persons.id),
+  dueDate: timestamp("due_date"),
+  completedAt: timestamp("completed_at"),
+  metadata: jsonb("metadata").$type<Record<string, any>>().default(sql`'{}'`),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const projectMessages = pgTable("project_messages", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  projectId: integer("project_id").notNull().references(() => projects.id),
+  fromAgentId: text("from_agent_id").references(() => agents.id),
+  fromPersonId: integer("from_person_id").references(() => persons.id),
+  toAgentId: text("to_agent_id").references(() => agents.id),
+  toPersonId: integer("to_person_id").references(() => persons.id),
+  content: text("content").notNull(),
+  messageType: text("message_type").default('general'), // general | status_update | question | feedback
+  readAt: timestamp("read_at"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+// ===========================
 // RELATIONS
 // ===========================
 
@@ -372,6 +446,7 @@ export const podsRelations = relations(pods, ({ many }) => ({
   workItems: many(workItems),
   podAgents: many(podAgents),
   agents: many(agents),
+  projects: many(projects),
 }));
 
 export const podAgentsRelations = relations(podAgents, ({ one }) => ({
@@ -396,6 +471,9 @@ export const personsRelations = relations(persons, ({ one, many }) => ({
   workItems: many(workItems),
   facilitatedBrainstorms: many(brainstormSessions),
   facilitatedAudits: many(audits),
+  ownedProjects: many(projects),
+  reviewedFiles: many(projectFiles),
+  assignedTasks: many(projectTasks),
 }));
 
 export const workItemsRelations = relations(workItems, ({ one }) => ({
@@ -513,6 +591,73 @@ export const messagesRelations = relations(messages, ({ one }) => ({
   conversation: one(conversations, {
     fields: [messages.conversationId],
     references: [conversations.id],
+  }),
+}));
+
+export const projectsRelations = relations(projects, ({ one, many }) => ({
+  owner: one(persons, {
+    fields: [projects.ownerId],
+    references: [persons.id],
+  }),
+  pod: one(pods, {
+    fields: [projects.podId],
+    references: [pods.id],
+  }),
+  files: many(projectFiles),
+  agents: many(projectAgents),
+  tasks: many(projectTasks),
+  messages: many(projectMessages),
+}));
+
+export const projectFilesRelations = relations(projectFiles, ({ one }) => ({
+  project: one(projects, {
+    fields: [projectFiles.projectId],
+    references: [projects.id],
+  }),
+  reviewer: one(persons, {
+    fields: [projectFiles.reviewedBy],
+    references: [persons.id],
+  }),
+}));
+
+export const projectAgentsRelations = relations(projectAgents, ({ one }) => ({
+  project: one(projects, {
+    fields: [projectAgents.projectId],
+    references: [projects.id],
+  }),
+  agent: one(agents, {
+    fields: [projectAgents.agentId],
+    references: [agents.id],
+  }),
+}));
+
+export const projectTasksRelations = relations(projectTasks, ({ one }) => ({
+  project: one(projects, {
+    fields: [projectTasks.projectId],
+    references: [projects.id],
+  }),
+  assignedAgent: one(agents, {
+    fields: [projectTasks.assignedAgentId],
+    references: [agents.id],
+  }),
+  assignedPerson: one(persons, {
+    fields: [projectTasks.assignedPersonId],
+    references: [persons.id],
+  }),
+}));
+
+export const projectMessagesRelations = relations(projectMessages, ({ one }) => ({
+  project: one(projects, {
+    fields: [projectMessages.projectId],
+    references: [projects.id],
+  }),
+  fromAgent: one(agents, {
+    fields: [projectMessages.fromAgentId],
+    references: [agents.id],
+  }),
+  fromPerson: one(persons, {
+    fields: [projectMessages.fromPersonId],
+    references: [persons.id],
   }),
 }));
 
@@ -642,3 +787,28 @@ export type AgentRun = typeof agentRuns.$inferSelect;
 export const insertAgentSpecSchema = createInsertSchema(agentSpecs).omit({ createdAt: true, updatedAt: true });
 export type InsertAgentSpec = z.infer<typeof insertAgentSpecSchema>;
 export type AgentSpec = typeof agentSpecs.$inferSelect;
+
+// Projects
+export const insertProjectSchema = createInsertSchema(projects).omit({ id: true, createdAt: true, updatedAt: true });
+export type InsertProject = z.infer<typeof insertProjectSchema>;
+export type Project = typeof projects.$inferSelect;
+
+// Project Files
+export const insertProjectFileSchema = createInsertSchema(projectFiles).omit({ id: true, createdAt: true, updatedAt: true });
+export type InsertProjectFile = z.infer<typeof insertProjectFileSchema>;
+export type ProjectFile = typeof projectFiles.$inferSelect;
+
+// Project Agents
+export const insertProjectAgentSchema = createInsertSchema(projectAgents).omit({ id: true, assignedAt: true });
+export type InsertProjectAgent = z.infer<typeof insertProjectAgentSchema>;
+export type ProjectAgent = typeof projectAgents.$inferSelect;
+
+// Project Tasks
+export const insertProjectTaskSchema = createInsertSchema(projectTasks).omit({ id: true, createdAt: true, updatedAt: true });
+export type InsertProjectTask = z.infer<typeof insertProjectTaskSchema>;
+export type ProjectTask = typeof projectTasks.$inferSelect;
+
+// Project Messages
+export const insertProjectMessageSchema = createInsertSchema(projectMessages).omit({ id: true, createdAt: true });
+export type InsertProjectMessage = z.infer<typeof insertProjectMessageSchema>;
+export type ProjectMessage = typeof projectMessages.$inferSelect;
