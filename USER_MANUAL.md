@@ -1633,6 +1633,76 @@ Planned user settings include:
 
 ### API Documentation
 
+#### Manifest Importer API
+
+The Manifest Importer allows bulk import of pod configurations from JSON manifest files.
+
+**Endpoint**: `POST /api/import/new-pods`
+**Authentication**: Required (user must be logged in)
+
+**Request Body**:
+```json
+{
+  "pods": [
+    {
+      "name": "Pod Name",
+      "charter": "Pod mission",
+      "pillar": "Imagination | Innovation | Impact",
+      "purpose": "Pod purpose",
+      "type": "New | Existing",
+      "priority": "High | Medium | Low",
+      "autonomyLevel": "L0 | L1 | L2 | L3"
+    }
+  ]
+}
+```
+
+**Response**:
+```json
+{
+  "success": true,
+  "message": "Import completed: 1 created, 0 updated, 0 failed",
+  "results": {
+    "total": 1,
+    "created": 1,
+    "updated": 0,
+    "failed": 0,
+    "errors": []
+  }
+}
+```
+
+**Behavior**:
+- Validates all pod data against schema
+- Updates existing pods (matched by name)
+- Creates new pods if they don't exist
+- Returns detailed results with any errors
+
+---
+
+#### Agent Goldens (Nightly Snapshots)
+
+The Agent Goldens system creates automated snapshots of all agent configurations for backup and historical tracking.
+
+**Automatic Snapshots**:
+- Runs every night at 2:00 AM (server time)
+- Captures all agents and agent specifications
+- Stores complete snapshot with metadata
+- No user action required
+
+**Manual Snapshot**: `POST /api/agent-goldens/snapshot`
+**View Snapshots**: `GET /api/agent-goldens?limit=30`
+**Get Specific**: `GET /api/agent-goldens/:id`
+
+**Use Cases**:
+- Restore agents to a previous state
+- Track configuration changes over time
+- Audit agent evolution
+- Backup before major changes
+- Historical analysis of agent ecosystem
+
+---
+
 For developers integrating with Dream Team Hub:
 - REST API documentation: [URL]
 - Webhook configuration: [URL]

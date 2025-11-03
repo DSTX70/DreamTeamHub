@@ -147,6 +147,129 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Manifest Importer - Bulk import pods from manifest file
+  app.post("/api/import/new-pods", isAuthenticated, async (req, res) => {
+    try {
+      const { pods: manifestPods } = req.body;
+      
+      if (!Array.isArray(manifestPods)) {
+        return res.status(400).json({ 
+          error: 'Invalid manifest format. Expected { pods: [...] }' 
+        });
+      }
+
+      const results = {
+        total: manifestPods.length,
+        created: 0,
+        updated: 0,
+        failed: 0,
+        errors: [] as string[]
+      };
+
+      for (const podData of manifestPods) {
+        try {
+          // Validate the pod data against schema
+          const validatedData = insertPodSchema.parse(podData);
+          
+          // Check if pod already exists by name
+          const existingPods = await storage.getPods();
+          const existingPod = existingPods.find(p => p.name === validatedData.name);
+
+          if (existingPod) {
+            // Update existing pod
+            await storage.updatePod(existingPod.id, validatedData);
+            results.updated++;
+          } else {
+            // Create new pod
+            await storage.createPod(validatedData);
+            results.created++;
+          }
+        } catch (error: any) {
+          results.failed++;
+          results.errors.push(`Pod "${podData?.name || 'unknown'}": ${error.message}`);
+        }
+      }
+
+      res.status(200).json({
+        success: true,
+        message: `Import completed: ${results.created} created, ${results.updated} updated, ${results.failed} failed`,
+        results
+      });
+    } catch (error: any) {
+      console.error('Error importing pods:', error);
+      res.status(500).json({ 
+        error: 'Failed to import pods',
+        details: error.message 
+      });
+    }
+  });
+
+  // ===========================
+  // AGENT GOLDENS (Nightly Snapshots)
+  // ===========================
+
+  // Get recent golden snapshots
+  app.get("/api/agent-goldens", isAuthenticated, async (req, res) => {
+    try {
+      const limit = req.query.limit ? parseInt(req.query.limit as string) : 30;
+      const goldens = await storage.getAgentGoldens(limit);
+      res.json(goldens);
+    } catch (error) {
+      console.error('Error fetching agent goldens:', error);
+      res.status(500).json({ error: 'Failed to fetch agent goldens' });
+    }
+  });
+
+  // Get specific golden snapshot
+  app.get("/api/agent-goldens/:id", isAuthenticated, async (req, res) => {
+    try {
+      const golden = await storage.getAgentGolden(parseInt(req.params.id));
+      if (!golden) {
+        return res.status(404).json({ error: 'Golden snapshot not found' });
+      }
+      res.json(golden);
+    } catch (error) {
+      console.error('Error fetching agent golden:', error);
+      res.status(500).json({ error: 'Failed to fetch agent golden' });
+    }
+  });
+
+  // Manually trigger golden snapshot creation
+  app.post("/api/agent-goldens/snapshot", isAuthenticated, async (req, res) => {
+    try {
+      const startTime = Date.now();
+      
+      // Fetch all agents and specs
+      const agents = await storage.getAgents({});
+      const agentSpecs = await storage.getAgentSpecs();
+
+      // Create snapshot
+      const golden = await storage.createAgentGolden({
+        snapshotDate: new Date(),
+        agentCount: agents.length,
+        agentData: agents,
+        agentSpecsData: agentSpecs,
+        metadata: {
+          triggeredBy: 'manual',
+          duration: Date.now() - startTime,
+          checksum: `${agents.length}-${agentSpecs.length}-${Date.now()}`
+        }
+      });
+
+      res.status(201).json({
+        success: true,
+        message: `Created snapshot of ${agents.length} agents and ${agentSpecs.length} specs`,
+        golden
+      });
+    } catch (error: any) {
+      console.error('Error creating agent golden:', error);
+      res.status(500).json({ 
+        error: 'Failed to create agent golden',
+        details: error.message 
+      });
+    }
+  });
+
   // ===========================
   // POD AGENTS
   // ===========================

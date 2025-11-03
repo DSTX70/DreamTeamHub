@@ -444,6 +444,21 @@ export const projectMessages = pgTable("project_messages", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+// Agent Goldens - Nightly snapshots of agent configurations
+export const agentGoldens = pgTable("agent_goldens", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  snapshotDate: timestamp("snapshot_date").notNull().defaultNow(),
+  agentCount: integer("agent_count").notNull(),
+  agentData: jsonb("agent_data").$type<any[]>().notNull(),
+  agentSpecsData: jsonb("agent_specs_data").$type<any[]>(),
+  metadata: jsonb("metadata").$type<{
+    triggeredBy?: string;
+    duration?: number;
+    checksum?: string;
+  }>().default(sql`'{}'`),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
 // ===========================
 // RELATIONS
 // ===========================
@@ -836,3 +851,7 @@ export type ProjectTask = typeof projectTasks.$inferSelect;
 export const insertProjectMessageSchema = createInsertSchema(projectMessages).omit({ id: true, createdAt: true });
 export type InsertProjectMessage = z.infer<typeof insertProjectMessageSchema>;
 export type ProjectMessage = typeof projectMessages.$inferSelect;
+
+export const insertAgentGoldenSchema = createInsertSchema(agentGoldens).omit({ id: true, createdAt: true });
+export type InsertAgentGolden = z.infer<typeof insertAgentGoldenSchema>;
+export type AgentGolden = typeof agentGoldens.$inferSelect;

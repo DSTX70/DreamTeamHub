@@ -5,17 +5,20 @@ import {
   audits, auditChecks, auditFindings, auditArtifacts, events,
   conversations, messages, agentMemories, agentRuns,
   projects, projectFiles, projectAgents, projectTasks, projectMessages,
+  agentGoldens,
   type User, type UpsertUser,
   type Pod, type PodAgent, type Agent, type Person, type RoleCard, type RoleRaci, type AgentSpec, type WorkItem, type Decision,
   type BrainstormSession, type BrainstormParticipant, type BrainstormIdea, type BrainstormCluster, type BrainstormArtifact,
   type Audit, type AuditCheck, type AuditFinding, type AuditArtifact, type Event,
   type Conversation, type Message, type AgentMemory, type AgentRun,
   type Project, type ProjectFile, type ProjectAgent, type ProjectTask, type ProjectMessage,
+  type AgentGolden,
   type InsertPod, type InsertPodAgent, type InsertAgent, type InsertPerson, type InsertRoleCard, type InsertRoleRaci, type InsertAgentSpec, type InsertWorkItem, type InsertDecision,
   type InsertBrainstormSession, type InsertBrainstormParticipant, type InsertBrainstormIdea, type InsertBrainstormCluster, type InsertBrainstormArtifact,
   type InsertAudit, type InsertAuditCheck, type InsertAuditFinding, type InsertAuditArtifact, type InsertEvent,
   type InsertConversation, type InsertMessage, type InsertAgentMemory, type InsertAgentRun,
   type InsertProject, type InsertProjectFile, type InsertProjectAgent, type InsertProjectTask, type InsertProjectMessage,
+  type InsertAgentGolden,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, or, sql, inArray } from "drizzle-orm";
@@ -162,6 +165,11 @@ export interface IStorage {
   // Project Messages
   getProjectMessages(projectId: number): Promise<ProjectMessage[]>;
   createProjectMessage(message: InsertProjectMessage): Promise<ProjectMessage>;
+  
+  // Agent Goldens (Nightly Snapshots)
+  getAgentGoldens(limit?: number): Promise<AgentGolden[]>;
+  getAgentGolden(id: number): Promise<AgentGolden | undefined>;
+  createAgentGolden(golden: InsertAgentGolden): Promise<AgentGolden>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -761,6 +769,23 @@ export class DatabaseStorage implements IStorage {
 
   async createProjectMessage(message: InsertProjectMessage): Promise<ProjectMessage> {
     const [created] = await db.insert(projectMessages).values(message).returning();
+    return created;
+  }
+
+  // ===== AGENT GOLDENS (NIGHTLY SNAPSHOTS) =====
+  async getAgentGoldens(limit: number = 30): Promise<AgentGolden[]> {
+    return await db.select().from(agentGoldens)
+      .orderBy(desc(agentGoldens.snapshotDate))
+      .limit(limit);
+  }
+
+  async getAgentGolden(id: number): Promise<AgentGolden | undefined> {
+    const [golden] = await db.select().from(agentGoldens).where(eq(agentGoldens.id, id));
+    return golden || undefined;
+  }
+
+  async createAgentGolden(golden: InsertAgentGolden): Promise<AgentGolden> {
+    const [created] = await db.insert(agentGoldens).values(golden).returning();
     return created;
   }
 }
