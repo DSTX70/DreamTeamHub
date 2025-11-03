@@ -195,16 +195,15 @@ export default function AgentCreate() {
 
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="space-y-2">
-                  <Label htmlFor="pillar">Pillar</Label>
+                  <Label htmlFor="pillar">Pillar (Optional)</Label>
                   <Select
                     value={pillar}
                     onValueChange={setPillar}
                   >
                     <SelectTrigger id="pillar" data-testid="select-pillar">
-                      <SelectValue placeholder="Select pillar..." />
+                      <SelectValue placeholder="None" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">None</SelectItem>
                       <SelectItem value="Imagination">Imagination</SelectItem>
                       <SelectItem value="Innovation">Innovation</SelectItem>
                       <SelectItem value="Impact">Impact</SelectItem>
@@ -213,16 +212,15 @@ export default function AgentCreate() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="pod">Pod Assignment</Label>
+                  <Label htmlFor="pod">Pod Assignment (Optional)</Label>
                   <Select
                     value={podId}
                     onValueChange={setPodId}
                   >
                     <SelectTrigger id="pod" data-testid="select-pod">
-                      <SelectValue placeholder="Select pod..." />
+                      <SelectValue placeholder="None" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">None</SelectItem>
                       {pods?.map((pod) => (
                         <SelectItem key={pod.id} value={pod.id.toString()}>
                           {pod.name}
