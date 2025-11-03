@@ -930,27 +930,87 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // ===========================
-  // AGENT LEARNING & MEMORY
+  // UNIFIED AGENTS API
   // ===========================
 
-  // List all agents (role cards as agents)
+  // List all unified agents with filtering
   app.get("/api/agents", isAuthenticated, async (req, res) => {
     try {
-      const roleCards = await storage.getRoleCards({});
-      const agents = roleCards.map(role => ({
-        handle: role.handle,
-        title: role.title,
-        pod: role.pod,
-        purpose: role.purpose,
-        core_functions: role.coreFunctions,
-        definition_of_done: role.definitionOfDone,
-      }));
-      res.json({ agents });
+      const { type, podId, pillar, status, autonomyLevel } = req.query;
+      
+      const filters: any = {};
+      if (type) filters.type = type as string;
+      if (podId) filters.podId = parseInt(podId as string);
+      if (pillar) filters.pillar = pillar as string;
+      if (status) filters.status = status as string;
+      if (autonomyLevel) filters.autonomyLevel = autonomyLevel as string;
+
+      const agents = await storage.getAgents(filters);
+      res.json(agents);
     } catch (error: any) {
-      console.error('Error fetching agents:', error);
-      res.status(500).json({ error: error.message || 'Failed to fetch agents' });
+      console.error('Error fetching unified agents:', error);
+      res.status(500).json({ error: error.message || 'Failed to fetch unified agents' });
     }
   });
+
+  // Get single unified agent
+  app.get("/api/agents/:id", isAuthenticated, async (req, res) => {
+    try {
+      const agent = await storage.getAgent(req.params.id);
+      if (!agent) {
+        return res.status(404).json({ error: 'Agent not found' });
+      }
+      res.json(agent);
+    } catch (error: any) {
+      console.error('Error fetching agent:', error);
+      res.status(500).json({ error: error.message || 'Failed to fetch agent' });
+    }
+  });
+
+  // Create new unified agent
+  app.post("/api/agents", isAuthenticated, async (req, res) => {
+    try {
+      const data = insertAgentSchema.parse(req.body);
+      const agent = await storage.createAgent(data);
+      res.status(201).json(agent);
+    } catch (error: any) {
+      console.error('Error creating agent:', error);
+      res.status(400).json({ error: error.message || 'Failed to create agent' });
+    }
+  });
+
+  // Update unified agent
+  app.put("/api/agents/:id", isAuthenticated, async (req, res) => {
+    try {
+      const updates = insertAgentSchema.partial().parse(req.body);
+      const agent = await storage.updateAgent(req.params.id, updates);
+      if (!agent) {
+        return res.status(404).json({ error: 'Agent not found' });
+      }
+      res.json(agent);
+    } catch (error: any) {
+      console.error('Error updating agent:', error);
+      res.status(400).json({ error: error.message || 'Failed to update agent' });
+    }
+  });
+
+  // Delete unified agent
+  app.delete("/api/agents/:id", isAuthenticated, async (req, res) => {
+    try {
+      const success = await storage.deleteAgent(req.params.id);
+      if (!success) {
+        return res.status(404).json({ error: 'Agent not found' });
+      }
+      res.status(204).send();
+    } catch (error: any) {
+      console.error('Error deleting agent:', error);
+      res.status(500).json({ error: error.message || 'Failed to delete agent' });
+    }
+  });
+
+  // ===========================
+  // AGENT LEARNING & MEMORY  
+  // ===========================
 
   // Run an agent task
   app.post("/api/agents/run", isAuthenticated, async (req, res) => {
