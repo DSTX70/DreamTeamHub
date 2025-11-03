@@ -4,15 +4,18 @@ import {
   brainstormSessions, brainstormParticipants, brainstormIdeas, brainstormClusters, brainstormArtifacts,
   audits, auditChecks, auditFindings, auditArtifacts, events,
   conversations, messages, agentMemories, agentRuns,
+  projects, projectFiles, projectAgents, projectTasks, projectMessages,
   type User, type UpsertUser,
   type Pod, type PodAgent, type Agent, type Person, type RoleCard, type RoleRaci, type AgentSpec, type WorkItem, type Decision,
   type BrainstormSession, type BrainstormParticipant, type BrainstormIdea, type BrainstormCluster, type BrainstormArtifact,
   type Audit, type AuditCheck, type AuditFinding, type AuditArtifact, type Event,
   type Conversation, type Message, type AgentMemory, type AgentRun,
+  type Project, type ProjectFile, type ProjectAgent, type ProjectTask, type ProjectMessage,
   type InsertPod, type InsertPodAgent, type InsertAgent, type InsertPerson, type InsertRoleCard, type InsertRoleRaci, type InsertAgentSpec, type InsertWorkItem, type InsertDecision,
   type InsertBrainstormSession, type InsertBrainstormParticipant, type InsertBrainstormIdea, type InsertBrainstormCluster, type InsertBrainstormArtifact,
   type InsertAudit, type InsertAuditCheck, type InsertAuditFinding, type InsertAuditArtifact, type InsertEvent,
   type InsertConversation, type InsertMessage, type InsertAgentMemory, type InsertAgentRun,
+  type InsertProject, type InsertProjectFile, type InsertProjectAgent, type InsertProjectTask, type InsertProjectMessage,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, or, sql, inArray } from "drizzle-orm";
@@ -129,6 +132,36 @@ export interface IStorage {
   // Agent Runs
   getAgentRuns(roleHandle: string, options?: { limit?: number }): Promise<AgentRun[]>;
   createAgentRun(run: InsertAgentRun): Promise<AgentRun>;
+  
+  // Projects
+  getProjects(filters?: { category?: string; status?: string; podId?: number }): Promise<Project[]>;
+  getProject(id: number): Promise<Project | undefined>;
+  createProject(project: InsertProject): Promise<Project>;
+  updateProject(id: number, project: Partial<InsertProject>): Promise<Project | undefined>;
+  deleteProject(id: number): Promise<boolean>;
+  
+  // Project Files
+  getProjectFiles(projectId: number): Promise<ProjectFile[]>;
+  getProjectFile(id: number): Promise<ProjectFile | undefined>;
+  createProjectFile(file: InsertProjectFile): Promise<ProjectFile>;
+  updateProjectFile(id: number, file: Partial<InsertProjectFile>): Promise<ProjectFile | undefined>;
+  deleteProjectFile(id: number): Promise<boolean>;
+  
+  // Project Agents
+  getProjectAgents(projectId: number): Promise<ProjectAgent[]>;
+  createProjectAgent(assignment: InsertProjectAgent): Promise<ProjectAgent>;
+  deleteProjectAgent(id: number): Promise<boolean>;
+  
+  // Project Tasks
+  getProjectTasks(projectId: number): Promise<ProjectTask[]>;
+  getProjectTask(id: number): Promise<ProjectTask | undefined>;
+  createProjectTask(task: InsertProjectTask): Promise<ProjectTask>;
+  updateProjectTask(id: number, task: Partial<InsertProjectTask>): Promise<ProjectTask | undefined>;
+  deleteProjectTask(id: number): Promise<boolean>;
+  
+  // Project Messages
+  getProjectMessages(projectId: number): Promise<ProjectMessage[]>;
+  createProjectMessage(message: InsertProjectMessage): Promise<ProjectMessage>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -600,6 +633,134 @@ export class DatabaseStorage implements IStorage {
 
   async createAgentRun(run: InsertAgentRun): Promise<AgentRun> {
     const [created] = await db.insert(agentRuns).values(run).returning();
+    return created;
+  }
+
+  // ===== PROJECTS =====
+  async getProjects(filters?: { category?: string; status?: string; podId?: number }): Promise<Project[]> {
+    let query = db.select().from(projects);
+    
+    const conditions = [];
+    if (filters?.category) conditions.push(eq(projects.category, filters.category));
+    if (filters?.status) conditions.push(eq(projects.status, filters.status));
+    if (filters?.podId) conditions.push(eq(projects.podId, filters.podId));
+    
+    if (conditions.length > 0) {
+      query = query.where(and(...conditions));
+    }
+    
+    return await query.orderBy(desc(projects.updatedAt));
+  }
+
+  async getProject(id: number): Promise<Project | undefined> {
+    const [project] = await db.select().from(projects).where(eq(projects.id, id));
+    return project || undefined;
+  }
+
+  async createProject(project: InsertProject): Promise<Project> {
+    const [created] = await db.insert(projects).values(project).returning();
+    return created;
+  }
+
+  async updateProject(id: number, project: Partial<InsertProject>): Promise<Project | undefined> {
+    const [updated] = await db.update(projects)
+      .set({ ...project, updatedAt: new Date() })
+      .where(eq(projects.id, id))
+      .returning();
+    return updated || undefined;
+  }
+
+  async deleteProject(id: number): Promise<boolean> {
+    await db.delete(projects).where(eq(projects.id, id));
+    return true;
+  }
+
+  // ===== PROJECT FILES =====
+  async getProjectFiles(projectId: number): Promise<ProjectFile[]> {
+    return await db.select().from(projectFiles)
+      .where(eq(projectFiles.projectId, projectId))
+      .orderBy(desc(projectFiles.createdAt));
+  }
+
+  async getProjectFile(id: number): Promise<ProjectFile | undefined> {
+    const [file] = await db.select().from(projectFiles).where(eq(projectFiles.id, id));
+    return file || undefined;
+  }
+
+  async createProjectFile(file: InsertProjectFile): Promise<ProjectFile> {
+    const [created] = await db.insert(projectFiles).values(file).returning();
+    return created;
+  }
+
+  async updateProjectFile(id: number, file: Partial<InsertProjectFile>): Promise<ProjectFile | undefined> {
+    const [updated] = await db.update(projectFiles)
+      .set({ ...file, updatedAt: new Date() })
+      .where(eq(projectFiles.id, id))
+      .returning();
+    return updated || undefined;
+  }
+
+  async deleteProjectFile(id: number): Promise<boolean> {
+    await db.delete(projectFiles).where(eq(projectFiles.id, id));
+    return true;
+  }
+
+  // ===== PROJECT AGENTS =====
+  async getProjectAgents(projectId: number): Promise<ProjectAgent[]> {
+    return await db.select().from(projectAgents)
+      .where(eq(projectAgents.projectId, projectId))
+      .orderBy(projectAgents.assignedAt);
+  }
+
+  async createProjectAgent(assignment: InsertProjectAgent): Promise<ProjectAgent> {
+    const [created] = await db.insert(projectAgents).values(assignment).returning();
+    return created;
+  }
+
+  async deleteProjectAgent(id: number): Promise<boolean> {
+    await db.delete(projectAgents).where(eq(projectAgents.id, id));
+    return true;
+  }
+
+  // ===== PROJECT TASKS =====
+  async getProjectTasks(projectId: number): Promise<ProjectTask[]> {
+    return await db.select().from(projectTasks)
+      .where(eq(projectTasks.projectId, projectId))
+      .orderBy(projectTasks.createdAt);
+  }
+
+  async getProjectTask(id: number): Promise<ProjectTask | undefined> {
+    const [task] = await db.select().from(projectTasks).where(eq(projectTasks.id, id));
+    return task || undefined;
+  }
+
+  async createProjectTask(task: InsertProjectTask): Promise<ProjectTask> {
+    const [created] = await db.insert(projectTasks).values(task).returning();
+    return created;
+  }
+
+  async updateProjectTask(id: number, task: Partial<InsertProjectTask>): Promise<ProjectTask | undefined> {
+    const [updated] = await db.update(projectTasks)
+      .set({ ...task, updatedAt: new Date() })
+      .where(eq(projectTasks.id, id))
+      .returning();
+    return updated || undefined;
+  }
+
+  async deleteProjectTask(id: number): Promise<boolean> {
+    await db.delete(projectTasks).where(eq(projectTasks.id, id));
+    return true;
+  }
+
+  // ===== PROJECT MESSAGES =====
+  async getProjectMessages(projectId: number): Promise<ProjectMessage[]> {
+    return await db.select().from(projectMessages)
+      .where(eq(projectMessages.projectId, projectId))
+      .orderBy(projectMessages.createdAt);
+  }
+
+  async createProjectMessage(message: InsertProjectMessage): Promise<ProjectMessage> {
+    const [created] = await db.insert(projectMessages).values(message).returning();
     return created;
   }
 }

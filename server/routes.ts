@@ -8,6 +8,7 @@ import {
   insertBrainstormParticipantSchema, insertBrainstormIdeaSchema, insertBrainstormClusterSchema,
   insertAuditSchema, insertAuditCheckSchema, insertAuditFindingSchema,
   insertConversationSchema, insertMessageSchema, insertAgentMemorySchema,
+  insertProjectSchema, insertProjectFileSchema, insertProjectAgentSchema, insertProjectTaskSchema, insertProjectMessageSchema,
 } from "@shared/schema";
 import { generatePersonaResponse } from "./openai-service";
 import { buildAgentContext, recordAgentRun, recordFeedback } from "./agent-context";
@@ -1121,6 +1122,247 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error('Error fetching agent runs:', error);
       res.status(500).json({ error: error.message || 'Failed to fetch agent runs' });
+    }
+  });
+
+  // ===========================
+  // PROJECTS
+  // ===========================
+
+  // Get all projects with filtering
+  app.get("/api/projects", isAuthenticated, async (req, res) => {
+    try {
+      const { category, status, podId } = req.query;
+      
+      const filters: any = {};
+      if (category) filters.category = category as string;
+      if (status) filters.status = status as string;
+      if (podId) filters.podId = parseInt(podId as string);
+
+      const projects = await storage.getProjects(filters);
+      res.json(projects);
+    } catch (error: any) {
+      console.error('Error fetching projects:', error);
+      res.status(500).json({ error: error.message || 'Failed to fetch projects' });
+    }
+  });
+
+  // Get single project
+  app.get("/api/projects/:id", isAuthenticated, async (req, res) => {
+    try {
+      const project = await storage.getProject(parseInt(req.params.id));
+      if (!project) {
+        return res.status(404).json({ error: 'Project not found' });
+      }
+      res.json(project);
+    } catch (error: any) {
+      console.error('Error fetching project:', error);
+      res.status(500).json({ error: error.message || 'Failed to fetch project' });
+    }
+  });
+
+  // Create new project
+  app.post("/api/projects", isAuthenticated, async (req, res) => {
+    try {
+      const data = insertProjectSchema.parse(req.body);
+      const project = await storage.createProject(data);
+      res.status(201).json(project);
+    } catch (error: any) {
+      console.error('Error creating project:', error);
+      res.status(400).json({ error: error.message || 'Failed to create project' });
+    }
+  });
+
+  // Update project
+  app.put("/api/projects/:id", isAuthenticated, async (req, res) => {
+    try {
+      const updates = insertProjectSchema.partial().parse(req.body);
+      const project = await storage.updateProject(parseInt(req.params.id), updates);
+      if (!project) {
+        return res.status(404).json({ error: 'Project not found' });
+      }
+      res.json(project);
+    } catch (error: any) {
+      console.error('Error updating project:', error);
+      res.status(400).json({ error: error.message || 'Failed to update project' });
+    }
+  });
+
+  // Delete project
+  app.delete("/api/projects/:id", isAuthenticated, async (req, res) => {
+    try {
+      await storage.deleteProject(parseInt(req.params.id));
+      res.status(204).send();
+    } catch (error: any) {
+      console.error('Error deleting project:', error);
+      res.status(500).json({ error: error.message || 'Failed to delete project' });
+    }
+  });
+
+  // Get project files
+  app.get("/api/projects/:id/files", isAuthenticated, async (req, res) => {
+    try {
+      const files = await storage.getProjectFiles(parseInt(req.params.id));
+      res.json(files);
+    } catch (error: any) {
+      console.error('Error fetching project files:', error);
+      res.status(500).json({ error: error.message || 'Failed to fetch project files' });
+    }
+  });
+
+  // Create project file
+  app.post("/api/projects/:id/files", isAuthenticated, async (req, res) => {
+    try {
+      const data = insertProjectFileSchema.parse({
+        ...req.body,
+        projectId: parseInt(req.params.id)
+      });
+      const file = await storage.createProjectFile(data);
+      res.status(201).json(file);
+    } catch (error: any) {
+      console.error('Error creating project file:', error);
+      res.status(400).json({ error: error.message || 'Failed to create project file' });
+    }
+  });
+
+  // Update project file
+  app.put("/api/projects/:id/files/:fileId", isAuthenticated, async (req, res) => {
+    try {
+      const updates = insertProjectFileSchema.partial().parse(req.body);
+      const file = await storage.updateProjectFile(parseInt(req.params.fileId), updates);
+      if (!file) {
+        return res.status(404).json({ error: 'Project file not found' });
+      }
+      res.json(file);
+    } catch (error: any) {
+      console.error('Error updating project file:', error);
+      res.status(400).json({ error: error.message || 'Failed to update project file' });
+    }
+  });
+
+  // Delete project file
+  app.delete("/api/projects/:id/files/:fileId", isAuthenticated, async (req, res) => {
+    try {
+      await storage.deleteProjectFile(parseInt(req.params.fileId));
+      res.status(204).send();
+    } catch (error: any) {
+      console.error('Error deleting project file:', error);
+      res.status(500).json({ error: error.message || 'Failed to delete project file' });
+    }
+  });
+
+  // Get project agents
+  app.get("/api/projects/:id/agents", isAuthenticated, async (req, res) => {
+    try {
+      const agents = await storage.getProjectAgents(parseInt(req.params.id));
+      res.json(agents);
+    } catch (error: any) {
+      console.error('Error fetching project agents:', error);
+      res.status(500).json({ error: error.message || 'Failed to fetch project agents' });
+    }
+  });
+
+  // Assign agent to project
+  app.post("/api/projects/:id/agents", isAuthenticated, async (req, res) => {
+    try {
+      const data = insertProjectAgentSchema.parse({
+        ...req.body,
+        projectId: parseInt(req.params.id)
+      });
+      const assignment = await storage.createProjectAgent(data);
+      res.status(201).json(assignment);
+    } catch (error: any) {
+      console.error('Error assigning agent to project:', error);
+      res.status(400).json({ error: error.message || 'Failed to assign agent to project' });
+    }
+  });
+
+  // Remove agent from project
+  app.delete("/api/projects/:id/agents/:assignmentId", isAuthenticated, async (req, res) => {
+    try {
+      await storage.deleteProjectAgent(parseInt(req.params.assignmentId));
+      res.status(204).send();
+    } catch (error: any) {
+      console.error('Error removing agent from project:', error);
+      res.status(500).json({ error: error.message || 'Failed to remove agent from project' });
+    }
+  });
+
+  // Get project tasks
+  app.get("/api/projects/:id/tasks", isAuthenticated, async (req, res) => {
+    try {
+      const tasks = await storage.getProjectTasks(parseInt(req.params.id));
+      res.json(tasks);
+    } catch (error: any) {
+      console.error('Error fetching project tasks:', error);
+      res.status(500).json({ error: error.message || 'Failed to fetch project tasks' });
+    }
+  });
+
+  // Create project task
+  app.post("/api/projects/:id/tasks", isAuthenticated, async (req, res) => {
+    try {
+      const data = insertProjectTaskSchema.parse({
+        ...req.body,
+        projectId: parseInt(req.params.id)
+      });
+      const task = await storage.createProjectTask(data);
+      res.status(201).json(task);
+    } catch (error: any) {
+      console.error('Error creating project task:', error);
+      res.status(400).json({ error: error.message || 'Failed to create project task' });
+    }
+  });
+
+  // Update project task
+  app.put("/api/projects/:id/tasks/:taskId", isAuthenticated, async (req, res) => {
+    try {
+      const updates = insertProjectTaskSchema.partial().parse(req.body);
+      const task = await storage.updateProjectTask(parseInt(req.params.taskId), updates);
+      if (!task) {
+        return res.status(404).json({ error: 'Project task not found' });
+      }
+      res.json(task);
+    } catch (error: any) {
+      console.error('Error updating project task:', error);
+      res.status(400).json({ error: error.message || 'Failed to update project task' });
+    }
+  });
+
+  // Delete project task
+  app.delete("/api/projects/:id/tasks/:taskId", isAuthenticated, async (req, res) => {
+    try {
+      await storage.deleteProjectTask(parseInt(req.params.taskId));
+      res.status(204).send();
+    } catch (error: any) {
+      console.error('Error deleting project task:', error);
+      res.status(500).json({ error: error.message || 'Failed to delete project task' });
+    }
+  });
+
+  // Get project messages
+  app.get("/api/projects/:id/messages", isAuthenticated, async (req, res) => {
+    try {
+      const messages = await storage.getProjectMessages(parseInt(req.params.id));
+      res.json(messages);
+    } catch (error: any) {
+      console.error('Error fetching project messages:', error);
+      res.status(500).json({ error: error.message || 'Failed to fetch project messages' });
+    }
+  });
+
+  // Create project message
+  app.post("/api/projects/:id/messages", isAuthenticated, async (req, res) => {
+    try {
+      const data = insertProjectMessageSchema.parse({
+        ...req.body,
+        projectId: parseInt(req.params.id)
+      });
+      const message = await storage.createProjectMessage(data);
+      res.status(201).json(message);
+    } catch (error: any) {
+      console.error('Error creating project message:', error);
+      res.status(400).json({ error: error.message || 'Failed to create project message' });
     }
   });
 
