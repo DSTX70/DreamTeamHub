@@ -36,7 +36,7 @@ export function IdeaSparkButton() {
       return apiRequest('POST', '/api/idea-sparks', data);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/idea-sparks'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/idea-sparks'], exact: false });
       toast({
         title: 'Idea Spark captured!',
         description: 'Your idea has been saved successfully.',

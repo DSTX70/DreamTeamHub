@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { Project } from "@shared/schema";
+import { IdeaSparksList } from "@/components/idea-sparks-list";
 
 const PILLAR_ICONS = {
   Imagination: Sparkles,
@@ -330,6 +331,15 @@ export default function Projects() {
             })}
           </div>
         )}
+      </div>
+
+      {/* Idea Sparks Section */}
+      <div className="mt-8">
+        <h2 className="text-lg font-semibold mb-4 text-foreground flex items-center gap-2">
+          <Lightbulb className="h-5 w-5 text-yellow-500" />
+          Project Idea Sparks
+        </h2>
+        <IdeaSparksList hasProject={true} limit={8} />
       </div>
     </div>
   );

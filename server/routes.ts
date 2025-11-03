@@ -1553,12 +1553,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get all idea sparks with optional filtering
   app.get("/api/idea-sparks", isAuthenticated, async (req: any, res) => {
     try {
-      const { projectId, pod } = req.query;
+      const { projectId, pod, hasProject } = req.query;
       const userId = req.user.claims.sub;
       
       const filters: any = {};
       if (projectId) filters.projectId = parseInt(projectId as string);
       if (pod) filters.pod = pod as string;
+      if (hasProject === 'true') filters.hasProject = true;
       // Always filter by current user
       filters.userId = userId;
 

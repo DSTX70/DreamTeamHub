@@ -11,15 +11,17 @@ import type { IdeaSpark } from '@shared/schema';
 interface IdeaSparksListProps {
   projectId?: number;
   showAll?: boolean;
+  hasProject?: boolean;
   limit?: number;
 }
 
-export function IdeaSparksList({ projectId, showAll = false, limit }: IdeaSparksListProps) {
+export function IdeaSparksList({ projectId, showAll = false, hasProject = false, limit }: IdeaSparksListProps) {
   const { toast } = useToast();
 
   // Build query params
   const queryParams = new URLSearchParams();
   if (projectId) queryParams.append('projectId', projectId.toString());
+  if (hasProject) queryParams.append('hasProject', 'true');
 
   const queryString = queryParams.toString();
   const queryKey = queryString 
@@ -38,7 +40,7 @@ export function IdeaSparksList({ projectId, showAll = false, limit }: IdeaSparks
       return apiRequest('DELETE', `/api/idea-sparks/${id}`);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/idea-sparks'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/idea-sparks'], exact: false });
       toast({
         title: 'Idea deleted',
         description: 'The idea spark has been removed.',

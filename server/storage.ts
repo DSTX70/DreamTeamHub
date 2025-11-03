@@ -21,7 +21,7 @@ import {
   type InsertAgentGolden,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc, and, or, sql, inArray } from "drizzle-orm";
+import { eq, desc, and, or, sql, inArray, isNotNull } from "drizzle-orm";
 
 export interface IStorage {
   // Users (Replit Auth - mandatory)
@@ -82,7 +82,7 @@ export interface IStorage {
   createDecision(decision: InsertDecision): Promise<Decision>;
   
   // Idea Sparks
-  getIdeaSparks(filters?: { userId?: string; projectId?: number; pod?: string }): Promise<IdeaSpark[]>;
+  getIdeaSparks(filters?: { userId?: string; projectId?: number; pod?: string; hasProject?: boolean }): Promise<IdeaSpark[]>;
   getIdeaSpark(id: number): Promise<IdeaSpark | undefined>;
   createIdeaSpark(spark: InsertIdeaSpark): Promise<IdeaSpark>;
   deleteIdeaSpark(id: number): Promise<boolean>;
@@ -441,7 +441,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   // ===== IDEA SPARKS =====
-  async getIdeaSparks(filters?: { userId?: string; projectId?: number; pod?: string }): Promise<IdeaSpark[]> {
+  async getIdeaSparks(filters?: { userId?: string; projectId?: number; pod?: string; hasProject?: boolean }): Promise<IdeaSpark[]> {
     const conditions = [];
     
     if (filters?.userId) {
@@ -452,6 +452,9 @@ export class DatabaseStorage implements IStorage {
     }
     if (filters?.pod) {
       conditions.push(eq(ideaSparks.pod, filters.pod));
+    }
+    if (filters?.hasProject) {
+      conditions.push(isNotNull(ideaSparks.projectId));
     }
     
     if (conditions.length > 0) {
