@@ -1,4 +1,4 @@
-import { Home, Users, Lightbulb, Shield, FileText, Inbox, Sparkles, Layers, MessageSquare, Bot, Radio, Settings, RefreshCw, Palette, HelpCircle } from "lucide-react";
+import { Home, Users, Lightbulb, Shield, FileText, Inbox, Sparkles, Layers, MessageSquare, Bot, Radio, Settings, RefreshCw, Palette, HelpCircle, FolderKanban } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import {
   Sidebar,
@@ -24,6 +24,15 @@ const navigation = [
     items: [
       { title: "Intake & Routing", url: "/intake", icon: Inbox },
       { title: "Decision Log", url: "/decisions", icon: FileText },
+    ],
+  },
+  {
+    title: "Projects",
+    items: [
+      { title: "All Projects", url: "/projects", icon: FolderKanban },
+      { title: "Imagination", url: "/projects/imagination", icon: Sparkles },
+      { title: "Innovation", url: "/projects/innovation", icon: Lightbulb },
+      { title: "Impact", url: "/projects/impact", icon: Shield },
     ],
   },
   {

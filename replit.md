@@ -24,6 +24,7 @@ Dream Team Hub is a full-stack application built with a clear separation of conc
 ### Technical Implementations
 The platform is structured into several core modules:
 - **Control Tower**: Dashboard for priorities, assignments, escalations, and statistics.
+- **Projects**: Comprehensive project management system organized by business pillars (Imagination, Innovation, Impact) with task management, file management with review workflow, agent/pod assignments, status tracking, and project messaging.
 - **Role Cards System**: Manages Dream Team personas with RACI Matrix and bulk import.
 - **Brainstorm Studio**: Structured ideation with LLM-assisted clustering and idea scoring.
 - **Audit Engine**: Cross-pod compliance checks with evidence capture.
@@ -36,7 +37,7 @@ The platform is structured into several core modules:
 ### Technology Stack
 - **Frontend**: React 18, TypeScript, Wouter, TanStack Query v5, React Hook Form, Zod, Shadcn UI, Tailwind CSS, Lucide React, date-fns.
 - **Backend**: Express.js, TypeScript, PostgreSQL (Neon-backed), Drizzle ORM, Zod. Exposes a RESTful API.
-- **Database**: Comprehensive relational model with over 19 tables.
+- **Database**: Comprehensive relational model with 24 tables including projects system (projects, project_files, project_agents, project_tasks, project_messages).
 
 ### Feature Specifications
 - **Quick Start Section**: Provides 6 action tiles (e.g., New Discussion, Brainstorm, Audit) with smart modals.
