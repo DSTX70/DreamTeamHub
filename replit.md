@@ -15,7 +15,8 @@ Dream Team Hub is a full-stack application built with a clear separation of conc
 ### UI/UX Decisions
 - **Design System**: Professional, inspired by Linear + Notion.
 - **Typography**: Inter for UI, JetBrains Mono for code.
-- **Color Palette**: Blue-based professional scheme with a global dark theme, glass-morphism aesthetics, and custom brand colors (teal, violet, yellow, magenta, jade). Includes 11 pod-specific colors.
+- **Color Palette**: Blue-based professional scheme with a global dark theme, glass-morphism aesthetics, and custom brand colors (teal, violet, yellow, magenta, jade). Includes 21 pod-specific colors for visual coding.
+- **Pod Color System**: Data-attribute-based theming system (`data-pod`) with CSS custom properties enabling visual differentiation of 21 organizational pods across agent cards and UI components. Includes utility classes (`.pod-rail`, `.pod-chip`, `.pod-accent`, `.pod-border`) and Tailwind plugin for consistent color application.
 - **Spacing**: Consistent 2/4/6/8 unit system.
 - **Components**: Utilizes Shadcn UI with Radix UI primitives, a custom elevation system, and branded primitive components (e.g., BrandedCard, BrandedButton).
 - **Responsiveness**: Mobile-first approach.
@@ -25,7 +26,7 @@ Dream Team Hub is a full-stack application built with a clear separation of conc
 The platform is structured into several core modules:
 - **Control Tower**: Dashboard for priorities, assignments, escalations, and statistics.
 - **Projects**: Comprehensive project management system organized by business pillars (Imagination, Innovation, Impact) with task management, file management with review workflow, agent/pod assignments, status tracking, and project messaging.
-- **Role Cards System**: Manages Dream Team personas with RACI Matrix and bulk import.
+- **Role Cards System**: Manages Dream Team personas with RACI Matrix and bulk import. Features visual pod color coding with 21 unique pod colors displayed via colored rails and badges on agent cards.
 - **Brainstorm Studio**: Structured ideation with LLM-assisted clustering and idea scoring.
 - **Audit Engine**: Cross-pod compliance checks with evidence capture.
 - **Decision Log**: Immutable record of key decisions.
