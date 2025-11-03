@@ -399,6 +399,13 @@ export const projectFiles = pgTable("project_files", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
+export const projectPods = pgTable("project_pods", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  projectId: integer("project_id").notNull().references(() => projects.id),
+  podId: integer("pod_id").notNull().references(() => pods.id),
+  assignedAt: timestamp("assigned_at").defaultNow().notNull(),
+});
+
 export const projectAgents = pgTable("project_agents", {
   id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
   projectId: integer("project_id").notNull().references(() => projects.id),
@@ -604,6 +611,7 @@ export const projectsRelations = relations(projects, ({ one, many }) => ({
     references: [pods.id],
   }),
   files: many(projectFiles),
+  pods: many(projectPods),
   agents: many(projectAgents),
   tasks: many(projectTasks),
   messages: many(projectMessages),
@@ -617,6 +625,17 @@ export const projectFilesRelations = relations(projectFiles, ({ one }) => ({
   reviewer: one(persons, {
     fields: [projectFiles.reviewedBy],
     references: [persons.id],
+  }),
+}));
+
+export const projectPodsRelations = relations(projectPods, ({ one }) => ({
+  project: one(projects, {
+    fields: [projectPods.projectId],
+    references: [projects.id],
+  }),
+  pod: one(pods, {
+    fields: [projectPods.podId],
+    references: [pods.id],
   }),
 }));
 
@@ -797,6 +816,11 @@ export type Project = typeof projects.$inferSelect;
 export const insertProjectFileSchema = createInsertSchema(projectFiles).omit({ id: true, createdAt: true, updatedAt: true });
 export type InsertProjectFile = z.infer<typeof insertProjectFileSchema>;
 export type ProjectFile = typeof projectFiles.$inferSelect;
+
+// Project Pods
+export const insertProjectPodSchema = createInsertSchema(projectPods).omit({ id: true, assignedAt: true });
+export type InsertProjectPod = z.infer<typeof insertProjectPodSchema>;
+export type ProjectPod = typeof projectPods.$inferSelect;
 
 // Project Agents
 export const insertProjectAgentSchema = createInsertSchema(projectAgents).omit({ id: true, assignedAt: true });

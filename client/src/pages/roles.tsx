@@ -3,105 +3,163 @@ import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/empty-state";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { Search, Users, Plus, CheckCircle2, ChevronDown } from "lucide-react";
-import type { RoleCard } from "@shared/schema";
+import { Search, Users, Plus, ChevronDown, Brain, Wrench, Target, TrendingUp, Shield } from "lucide-react";
+import type { Agent, Pod } from "@shared/schema";
 
 export default function Roles() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedPod, setSelectedPod] = useState<string | null>(null);
+  const [selectedType, setSelectedType] = useState<string | null>(null);
 
-  const { data: roleCards, isLoading } = useQuery<RoleCard[]>({
-    queryKey: ['/api/roles'],
+  const { data: agents, isLoading: agentsLoading } = useQuery<Agent[]>({
+    queryKey: ['/api/agents'],
   });
 
-  const filteredRoles = roleCards?.filter(role => {
+  const { data: pods, isLoading: podsLoading } = useQuery<Pod[]>({
+    queryKey: ['/api/pods'],
+  });
+
+  const isLoading = agentsLoading || podsLoading;
+
+  const filteredAgents = agents?.filter(agent => {
     const matchesSearch = !searchQuery || 
-      role.handle.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      role.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      role.purpose.toLowerCase().includes(searchQuery.toLowerCase());
+      agent.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      agent.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (agent.promptText && agent.promptText.toLowerCase().includes(searchQuery.toLowerCase()));
     
-    const matchesPod = !selectedPod || role.pod === selectedPod;
+    const matchesPod = !selectedPod || agent.podName === selectedPod;
+    const matchesType = !selectedType || agent.type === selectedType;
     
-    return matchesSearch && matchesPod;
+    return matchesSearch && matchesPod && matchesType;
   });
 
-  // Create a map of pod names to their colors from the actual data
+  // Create a map of pod names to their colors
   const podColorMap = new Map<string, string>();
-  roleCards?.forEach(role => {
-    if (role.pod && role.podColor) {
-      podColorMap.set(role.pod, role.podColor);
+  pods?.forEach(pod => {
+    if (pod.name && pod.color) {
+      podColorMap.set(pod.name, pod.color);
     }
   });
-  
-  const pods = Array.from(new Set(roleCards?.map(r => r.pod) || [])).sort();
+
+  // Get unique pod names from agents
+  const agentPods = Array.from(new Set(agents?.map(a => a.podName).filter(Boolean) || [])).sort();
+
+  // Calculate counts from actual data
+  const dreamTeamCount = agents?.filter(a => a.type === 'dream_team').length || 0;
+  const podRoleCount = agents?.filter(a => a.type === 'pod_role').length || 0;
+  const totalCount = agents?.length || 0;
+
+  const autonomyLevelLabels: Record<string, string> = {
+    'L0': 'L0 - Fully Autonomous',
+    'L1': 'L1 - High Autonomy',
+    'L2': 'L2 - Medium Autonomy',
+    'L3': 'L3 - Human-in-Loop',
+  };
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold mb-2" data-testid="page-title">Role Cards</h1>
-          <p className="text-sm text-muted-foreground">Team personas with purpose, functions, and responsibilities</p>
+          <h1 className="text-2xl font-semibold mb-2" data-testid="page-title">Dream Team Agents</h1>
+          <p className="text-sm text-muted-foreground">
+            {isLoading ? 'Loading agents...' : `${totalCount} AI agents with complete Skill Pack specifications`}
+          </p>
         </div>
-        <Button data-testid="button-create-role">
+        <Button disabled data-testid="button-create-agent">
           <Plus className="h-4 w-4 mr-2" />
-          Add Role
+          Add Agent
         </Button>
       </div>
 
       {/* Filters */}
       <Card>
         <CardContent className="pt-6">
-          <div className="flex flex-col md:flex-row gap-4">
+          <div className="space-y-4">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
-                placeholder="Search by handle, title, or purpose..."
+                placeholder="Search by ID, title, or mission..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-9"
                 data-testid="input-search"
               />
             </div>
-            <div className="flex gap-2 flex-wrap">
-              <Button
-                variant={selectedPod === null ? "default" : "outline"}
-                size="sm"
-                onClick={() => setSelectedPod(null)}
-                data-testid="filter-all-pods"
-              >
-                All Pods
-              </Button>
-              {pods.map(pod => {
-                const podColor = podColorMap.get(pod) || '#3D6BFF';
-                const isSelected = selectedPod === pod;
-                return (
-                  <Button
-                    key={pod}
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setSelectedPod(pod)}
-                    data-testid={`filter-pod-${pod.toLowerCase().replace(/\s+/g, '-')}`}
-                    style={{
-                      borderColor: podColor,
-                      backgroundColor: isSelected ? `${podColor}33` : `${podColor}11`,
-                      color: podColor,
-                      fontWeight: isSelected ? 600 : 400,
-                    }}
-                    className="hover-elevate active-elevate-2"
-                  >
-                    {pod}
-                  </Button>
-                );
-              })}
+
+            <div className="flex flex-col gap-3">
+              {/* Type Filter */}
+              <div className="flex gap-2 flex-wrap items-center">
+                <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Type:</span>
+                <Button
+                  variant={selectedType === null ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setSelectedType(null)}
+                  data-testid="filter-all-types"
+                >
+                  All Types
+                </Button>
+                <Button
+                  variant={selectedType === 'dream_team' ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setSelectedType('dream_team')}
+                  data-testid="filter-type-dream-team"
+                >
+                  Dream Team ({dreamTeamCount})
+                </Button>
+                <Button
+                  variant={selectedType === 'pod_role' ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setSelectedType('pod_role')}
+                  data-testid="filter-type-pod-role"
+                >
+                  Pod Roles ({podRoleCount})
+                </Button>
+              </div>
+
+              {/* Pod Filter */}
+              <div className="flex gap-2 flex-wrap items-center">
+                <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Pod:</span>
+                <Button
+                  variant={selectedPod === null ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setSelectedPod(null)}
+                  data-testid="filter-all-pods"
+                >
+                  All Pods
+                </Button>
+                {agentPods.map(pod => {
+                  const podColor = podColorMap.get(pod) || '#3D6BFF';
+                  const isSelected = selectedPod === pod;
+                  return (
+                    <Button
+                      key={pod}
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setSelectedPod(pod)}
+                      data-testid={`filter-pod-${pod.toLowerCase().replace(/\s+/g, '-')}`}
+                      style={{
+                        borderColor: podColor,
+                        backgroundColor: isSelected ? `${podColor}33` : `${podColor}11`,
+                        color: podColor,
+                        fontWeight: isSelected ? 600 : 400,
+                      }}
+                      className="hover-elevate active-elevate-2"
+                    >
+                      {pod}
+                    </Button>
+                  );
+                })}
+              </div>
             </div>
           </div>
         </CardContent>
       </Card>
 
-      {/* Role Cards Grid - Using Brand Guide Styling */}
+      {/* Agents Grid */}
       {isLoading ? (
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           {[...Array(6)].map((_, i) => (
@@ -114,130 +172,190 @@ export default function Roles() {
             </Card>
           ))}
         </div>
-      ) : filteredRoles && filteredRoles.length > 0 ? (
+      ) : filteredAgents && filteredAgents.length > 0 ? (
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {filteredRoles.map((role) => (
-            <Collapsible key={role.id} defaultOpen={false}>
-              <div className="role-card" data-testid={`role-card-${role.handle}`}>
-                {/* Pod-specific colored rail using actual pod color */}
-                <div 
-                  className="rail" 
-                  style={{ 
-                    background: role.podColor || '#C95CAF',
-                    height: '8px',
-                    width: '100%',
-                    borderRadius: 'var(--radius-md) var(--radius-md) 0 0'
-                  }}
-                ></div>
-                <div className="inner">
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', marginBottom: 'var(--space-1)' }}>
-                    {role.icon && (
-                      <span style={{ fontSize: '28px', lineHeight: 1 }}>{role.icon}</span>
-                    )}
-                    <p className="title" style={{ font: '800 22px/1 Inter', flex: 1 }}>{role.handle}</p>
-                    <CollapsibleTrigger asChild>
-                      <Button 
-                        variant="ghost" 
-                        size="icon" 
-                        className="h-8 w-8 group"
-                        data-testid={`button-toggle-${role.handle}`}
-                      >
-                        <ChevronDown className="h-4 w-4 transition-transform duration-200 group-data-[state=open]:rotate-180" />
-                      </Button>
-                    </CollapsibleTrigger>
-                  </div>
-                  <p className="subtitle">{role.title}</p>
-                  <div className="chips">
-                    <span className="chip">{role.pod}</span>
-                  </div>
-                  <p style={{ color: 'var(--text-secondary)', marginBottom: 'var(--space-4)' }}>
-                    {role.purpose}
-                  </p>
-
-                  <CollapsibleContent className="space-y-3"
+          {filteredAgents.map((agent) => {
+            const podColor = agent.podName ? podColorMap.get(agent.podName) || '#3D6BFF' : '#3D6BFF';
+            const tools = agent.toolsConfig?.tools || [];
+            
+            return (
+              <Collapsible key={agent.id} defaultOpen={false}>
+                <div className="role-card" data-testid={`agent-card-${agent.id}`}>
+                  {/* Pod-specific colored rail */}
+                  <div 
+                    className="rail" 
                     style={{ 
-                      overflow: 'hidden',
-                      transition: 'all 0.2s ease-in-out'
+                      background: podColor,
+                      height: '8px',
+                      width: '100%',
+                      borderRadius: 'var(--radius-md) var(--radius-md) 0 0'
                     }}
-                  >
-                
-                {role.coreFunctions && role.coreFunctions.length > 0 && (
-                  <div style={{ marginBottom: 'var(--space-3)' }}>
-                    <div style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', marginBottom: 'var(--space-2)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Core Functions</div>
-                    <div className="chips">
-                      {role.coreFunctions.slice(0, 3).map((func, idx) => (
-                        <span key={idx} className="chip">{func}</span>
-                      ))}
-                      {role.coreFunctions.length > 3 && (
-                        <span className="chip">+{role.coreFunctions.length - 3}</span>
+                  />
+                  <div className="inner">
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', marginBottom: 'var(--space-1)' }}>
+                      <p className="title" style={{ font: '800 22px/1 Inter', flex: 1 }}>
+                        {agent.id.replace('agent_', '')}
+                      </p>
+                      <CollapsibleTrigger asChild>
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="h-8 w-8 group"
+                          data-testid={`button-toggle-${agent.id}`}
+                        >
+                          <ChevronDown className="h-4 w-4 transition-transform duration-200 group-data-[state=open]:rotate-180" />
+                        </Button>
+                      </CollapsibleTrigger>
+                    </div>
+                    
+                    <p className="subtitle">{agent.title}</p>
+                    
+                    <div className="chips" style={{ marginBottom: 'var(--space-2)' }}>
+                      {agent.podName && <span className="chip">{agent.podName}</span>}
+                      <span className="chip">{agent.type === 'dream_team' ? 'Dream Team' : 'Pod Role'}</span>
+                      {agent.pillar && <span className="chip">{agent.pillar}</span>}
+                    </div>
+
+                    <div className="flex gap-2 mb-4">
+                      <Badge variant="outline" className="text-xs" data-testid={`badge-autonomy-${agent.id}`}>
+                        <Shield className="h-3 w-3 mr-1" />
+                        {autonomyLevelLabels[agent.autonomyLevel] || agent.autonomyLevel}
+                      </Badge>
+                      {agent.status === 'active' && (
+                        <Badge variant="outline" className="text-xs bg-green-500/10 text-green-600 dark:text-green-400" data-testid={`badge-status-${agent.id}`}>
+                          Active
+                        </Badge>
                       )}
                     </div>
-                  </div>
-                )}
 
-                {role.strengths && role.strengths.length > 0 && (
-                  <div style={{ marginBottom: 'var(--space-3)' }}>
-                    <div style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', marginBottom: 'var(--space-2)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Strengths</div>
-                    <div className="chips">
-                      {role.strengths.map((strength, idx) => (
-                        <span key={idx} className="chip">{strength}</span>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {role.collaborators && role.collaborators.length > 0 && (
-                  <div style={{ marginBottom: 'var(--space-3)' }}>
-                    <div style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', marginBottom: 'var(--space-2)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Collaborates With</div>
-                    <div className="chips">
-                      {role.collaborators.slice(0, 5).map((collab, idx) => (
-                        <span key={idx} className="chip">{collab}</span>
-                      ))}
-                      {role.collaborators.length > 5 && (
-                        <span className="chip">+{role.collaborators.length - 5}</span>
-                      )}
-                    </div>
-                  </div>
-                )}
-
-                {role.definitionOfDone && role.definitionOfDone.length > 0 && (
-                  <div style={{ marginBottom: 'var(--space-3)' }}>
-                    <div style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', marginBottom: 'var(--space-2)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Definition of Done</div>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                      {role.definitionOfDone.slice(0, 2).map((item, idx) => (
-                        <div key={idx} style={{ display: 'flex', alignItems: 'start', gap: '6px', fontSize: '13px', color: 'var(--text-secondary)' }}>
-                          <CheckCircle2 className="h-3 w-3 text-muted-foreground mt-0.5 shrink-0" style={{ color: 'var(--text-muted)' }} />
-                          <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', display: '-webkit-box', WebkitLineClamp: 1, WebkitBoxOrient: 'vertical' }}>{item}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                    {role.tags && role.tags.length > 0 && (
-                      <div style={{ paddingTop: 'var(--space-3)', borderTop: '1px dashed var(--brand-line)' }}>
-                        <div className="chips">
-                          {role.tags.map((tag, idx) => (
-                            <span key={idx} className="chip">#{tag}</span>
-                          ))}
-                        </div>
-                      </div>
+                    {agent.promptText && (
+                      <p style={{ 
+                        color: 'var(--text-secondary)', 
+                        marginBottom: 'var(--space-4)',
+                        fontSize: '13px',
+                        lineHeight: '1.5',
+                        display: '-webkit-box',
+                        WebkitLineClamp: 3,
+                        WebkitBoxOrient: 'vertical',
+                        overflow: 'hidden'
+                      }}>
+                        {agent.promptText.substring(0, 200)}...
+                      </p>
                     )}
-                  </CollapsibleContent>
+
+                    <CollapsibleContent className="space-y-3"
+                      style={{ 
+                        overflow: 'hidden',
+                        transition: 'all 0.2s ease-in-out'
+                      }}
+                    >
+                      {/* Full Mission/Prompt */}
+                      {agent.promptText && (
+                        <div style={{ marginBottom: 'var(--space-3)' }}>
+                          <div style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', marginBottom: 'var(--space-2)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                            <Brain className="h-3 w-3 inline mr-1" />
+                            Mission & Context
+                          </div>
+                          <p style={{ 
+                            fontSize: '13px', 
+                            color: 'var(--text-secondary)', 
+                            lineHeight: '1.6',
+                            whiteSpace: 'pre-wrap'
+                          }}>
+                            {agent.promptText}
+                          </p>
+                        </div>
+                      )}
+
+                      {/* Tools */}
+                      {tools.length > 0 && (
+                        <div style={{ marginBottom: 'var(--space-3)' }}>
+                          <div style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', marginBottom: 'var(--space-2)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                            <Wrench className="h-3 w-3 inline mr-1" />
+                            Tools & Capabilities ({tools.length})
+                          </div>
+                          <div className="chips">
+                            {tools.map((tool, idx) => (
+                              <span key={idx} className="chip" title={tool.scopes?.join(', ')}>
+                                {tool.name}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Evaluation Config */}
+                      {agent.evalConfig && (
+                        <div style={{ marginBottom: 'var(--space-3)' }}>
+                          <div style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', marginBottom: 'var(--space-2)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                            <Target className="h-3 w-3 inline mr-1" />
+                            Evaluation
+                          </div>
+                          <div className="flex gap-2 flex-wrap">
+                            {agent.evalConfig.schedule && (
+                              <Badge variant="outline" className="text-xs">
+                                Schedule: {agent.evalConfig.schedule}
+                              </Badge>
+                            )}
+                            {agent.evalConfig.threshold !== undefined && (
+                              <Badge variant="outline" className="text-xs">
+                                Threshold: {agent.evalConfig.threshold}%
+                              </Badge>
+                            )}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Latest Eval Score */}
+                      {agent.lastEvalScore !== null && agent.lastEvalScore !== undefined && (
+                        <div style={{ marginBottom: 'var(--space-3)' }}>
+                          <div style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', marginBottom: 'var(--space-2)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                            <TrendingUp className="h-3 w-3 inline mr-1" />
+                            Latest Score
+                          </div>
+                          <Badge 
+                            variant="outline" 
+                            className={`text-xs ${
+                              agent.lastEvalScore >= 80 
+                                ? 'bg-green-500/10 text-green-600 dark:text-green-400' 
+                                : agent.lastEvalScore >= 60 
+                                ? 'bg-yellow-500/10 text-yellow-600 dark:text-yellow-400'
+                                : 'bg-red-500/10 text-red-600 dark:text-red-400'
+                            }`}
+                          >
+                            {agent.lastEvalScore}% 
+                            {agent.lastEvalAt && ` (${new Date(agent.lastEvalAt).toLocaleDateString()})`}
+                          </Badge>
+                        </div>
+                      )}
+
+                      {/* Skill Pack Path */}
+                      {agent.skillPackPath && (
+                        <div style={{ paddingTop: 'var(--space-3)', borderTop: '1px dashed var(--brand-line)' }}>
+                          <div style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', marginBottom: 'var(--space-1)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                            Skill Pack
+                          </div>
+                          <code style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+                            {agent.skillPackPath}
+                          </code>
+                        </div>
+                      )}
+                    </CollapsibleContent>
+                  </div>
                 </div>
-              </div>
-            </Collapsible>
-          ))}
+              </Collapsible>
+            );
+          })}
         </div>
       ) : (
         <Card>
           <CardContent className="py-12">
             <EmptyState
               icon={Users}
-              title="No role cards found"
-              description={searchQuery || selectedPod ? "Try adjusting your filters" : "Start by creating your first role card"}
+              title="No agents found"
+              description={searchQuery || selectedPod || selectedType ? "Try adjusting your filters" : "No agents available"}
               action={{
-                label: "Create Role Card",
+                label: "Create Agent",
                 onClick: () => {},
               }}
             />

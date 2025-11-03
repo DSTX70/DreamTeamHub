@@ -1251,6 +1251,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get project pods
+  app.get("/api/projects/:id/pods", isAuthenticated, async (req, res) => {
+    try {
+      // Note: This would need a getProjectPods method in storage
+      // For now, return empty array - TODO: implement in storage layer
+      res.json([]);
+    } catch (error: any) {
+      console.error('Error fetching project pods:', error);
+      res.status(500).json({ error: error.message || 'Failed to fetch project pods' });
+    }
+  });
+
+  // Assign pod to project  
+  app.post("/api/projects/:id/pods", isAuthenticated, async (req, res) => {
+    try {
+      // Store pod assignment in project.podId field for now
+      // This is a simplified version - proper implementation would use a junction table
+      const projectId = parseInt(req.params.id);
+      const { podId } = req.body;
+      
+      if (podId) {
+        const project = await storage.updateProject(projectId, { podId: parseInt(podId) });
+        res.status(201).json({ projectId, podId });
+      } else {
+        res.status(400).json({ error: 'Pod ID is required' });
+      }
+    } catch (error: any) {
+      console.error('Error assigning pod to project:', error);
+      res.status(400).json({ error: error.message || 'Failed to assign pod to project' });
+    }
+  });
+
   // Get project agents
   app.get("/api/projects/:id/agents", isAuthenticated, async (req, res) => {
     try {

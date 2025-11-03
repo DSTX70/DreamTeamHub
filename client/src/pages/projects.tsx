@@ -1,22 +1,12 @@
 import { useState, useEffect, useMemo } from "react";
-import { useQuery, useMutation } from "@tanstack/react-query";
-import { useRoute, useLocation } from "wouter";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
+import { useQuery } from "@tanstack/react-query";
+import { useRoute, useLocation, Link } from "wouter";
 import { Plus, Filter, FolderKanban, Calendar, Users, CheckCircle2, AlertCircle, Clock, Sparkles, Lightbulb, Shield } from "lucide-react";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useToast } from "@/hooks/use-toast";
-import { queryClient, apiRequest } from "@/lib/queryClient";
-import type { Project, InsertProject } from "@shared/schema";
-import { insertProjectSchema } from "@shared/schema";
+import type { Project } from "@shared/schema";
 
 const PILLAR_ICONS = {
   Imagination: Sparkles,
@@ -58,50 +48,6 @@ export default function Projects() {
   
   const [selectedCategory, setSelectedCategory] = useState<string>(categoryFromUrl);
   const [selectedStatus, setSelectedStatus] = useState<string>("all");
-  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-  const { toast } = useToast();
-
-  // Form setup
-  const form = useForm({
-    resolver: zodResolver(insertProjectSchema),
-    defaultValues: {
-      title: "",
-      description: "",
-      category: "Imagination" as const,
-      status: "planning" as const,
-      priority: "medium" as const,
-      dueDate: "",
-    },
-  });
-
-  // Create project mutation
-  const createProjectMutation = useMutation({
-    mutationFn: async (data: InsertProject) => {
-      const res = await apiRequest('POST', '/api/projects', data);
-      return res.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/projects'] });
-      setIsCreateModalOpen(false);
-      form.reset();
-      toast({
-        title: "Project created",
-        description: "Your project has been created successfully.",
-      });
-    },
-    onError: (error: Error) => {
-      toast({
-        title: "Error",
-        description: error.message,
-        variant: "destructive",
-      });
-    },
-  });
-
-  // Handle form submission
-  const onSubmit = (data: InsertProject) => {
-    createProjectMutation.mutate(data);
-  };
 
   // Sync category with URL parameter
   useEffect(() => {
@@ -178,171 +124,12 @@ export default function Projects() {
               Organize work by business pillars: Imagination, Innovation, Impact
             </p>
           </div>
-          <Dialog open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen}>
-            <DialogTrigger asChild>
-              <Button data-testid="button-create-project">
-                <Plus className="h-4 w-4" />
-                New Project
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-2xl" data-testid="dialog-create-project">
-              <DialogHeader>
-                <DialogTitle>Create New Project</DialogTitle>
-                <DialogDescription>
-                  Add a new project to one of the business pillars: Imagination, Innovation, or Impact.
-                </DialogDescription>
-              </DialogHeader>
-              <Form {...form}>
-                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                  <FormField
-                    control={form.control}
-                    name="title"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Title</FormLabel>
-                        <FormControl>
-                          <Input {...field} placeholder="Enter project title" data-testid="input-project-title" />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  
-                  <FormField
-                    control={form.control}
-                    name="description"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Description</FormLabel>
-                        <FormControl>
-                          <Textarea 
-                            {...field} 
-                            value={field.value || ""}
-                            placeholder="Describe the project goals and scope" 
-                            rows={3}
-                            data-testid="input-project-description" 
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <div className="grid grid-cols-2 gap-4">
-                    <FormField
-                      control={form.control}
-                      name="category"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Business Pillar</FormLabel>
-                          <Select onValueChange={field.onChange} value={field.value}>
-                            <FormControl>
-                              <SelectTrigger data-testid="select-project-category">
-                                <SelectValue placeholder="Select pillar" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              <SelectItem value="Imagination">Imagination</SelectItem>
-                              <SelectItem value="Innovation">Innovation</SelectItem>
-                              <SelectItem value="Impact">Impact</SelectItem>
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
-                      name="status"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Status</FormLabel>
-                          <Select onValueChange={field.onChange} value={field.value}>
-                            <FormControl>
-                              <SelectTrigger data-testid="select-project-status">
-                                <SelectValue placeholder="Select status" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              <SelectItem value="planning">Planning</SelectItem>
-                              <SelectItem value="active">Active</SelectItem>
-                              <SelectItem value="on_hold">On Hold</SelectItem>
-                              <SelectItem value="completed">Completed</SelectItem>
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4">
-                    <FormField
-                      control={form.control}
-                      name="priority"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Priority</FormLabel>
-                          <Select onValueChange={field.onChange} value={field.value}>
-                            <FormControl>
-                              <SelectTrigger data-testid="select-project-priority">
-                                <SelectValue placeholder="Select priority" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              <SelectItem value="low">Low</SelectItem>
-                              <SelectItem value="medium">Medium</SelectItem>
-                              <SelectItem value="high">High</SelectItem>
-                              <SelectItem value="critical">Critical</SelectItem>
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
-                      name="dueDate"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Due Date (Optional)</FormLabel>
-                          <FormControl>
-                            <Input 
-                              {...field} 
-                              value={field.value || ""}
-                              type="date" 
-                              data-testid="input-project-due-date" 
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-
-                  <div className="flex justify-end gap-2 pt-4">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={() => setIsCreateModalOpen(false)}
-                      data-testid="button-cancel-project"
-                    >
-                      Cancel
-                    </Button>
-                    <Button 
-                      type="submit" 
-                      disabled={createProjectMutation.isPending}
-                      data-testid="button-submit-project"
-                    >
-                      {createProjectMutation.isPending ? "Creating..." : "Create Project"}
-                    </Button>
-                  </div>
-                </form>
-              </Form>
-            </DialogContent>
-          </Dialog>
+          <Link href="/projects/new">
+            <Button data-testid="button-create-project">
+              <Plus className="h-4 w-4" />
+              New Project
+            </Button>
+          </Link>
         </div>
 
         {/* Stats Cards */}
@@ -436,14 +223,15 @@ export default function Projects() {
             <CardContent className="text-center space-y-2">
               <FolderKanban className="h-12 w-12 mx-auto text-muted-foreground" />
               <p className="text-muted-foreground">No projects found</p>
-              <Button 
-                variant="outline" 
-                onClick={() => setIsCreateModalOpen(true)}
-                data-testid="button-create-first-project"
-              >
-                <Plus className="h-4 w-4" />
-                Create your first project
-              </Button>
+              <Link href="/projects/new">
+                <Button 
+                  variant="outline" 
+                  data-testid="button-create-first-project"
+                >
+                  <Plus className="h-4 w-4" />
+                  Create your first project
+                </Button>
+              </Link>
             </CardContent>
           </Card>
         ) : (

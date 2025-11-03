@@ -23,6 +23,7 @@ import RoleAgentSyncPage from "@/pages/role-agent-sync";
 import BrandGuidePage from "@/pages/brand-guide";
 import HelpPage from "@/pages/help";
 import Projects from "@/pages/projects";
+import ProjectCreate from "@/pages/project-create";
 import { Button } from "@/components/ui/button";
 import { LogOut, User as UserIcon } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -37,6 +38,7 @@ function AuthenticatedRoutes() {
       <Route path="/decisions" component={Decisions} />
       <Route path="/intake" component={Intake} />
       <Route path="/pods" component={Pods} />
+      <Route path="/projects/new" component={ProjectCreate} />
       <Route path="/projects" component={Projects} />
       <Route path="/projects/:category" component={Projects} />
       <Route path="/chat" component={ChatPage} />
