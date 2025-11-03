@@ -161,17 +161,20 @@ export default function Roles() {
       ) : filteredAgents && filteredAgents.length > 0 ? (
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           {filteredAgents.map((agent) => {
-            const podColor = '#3D6BFF'; // Default brand color
             const tools = agent.toolsConfig?.tools || [];
             
             return (
               <Collapsible key={agent.id} defaultOpen={false}>
-                <div className="role-card" data-testid={`agent-card-${agent.id}`}>
+                <div 
+                  className="role-card" 
+                  data-pod={agent.podName || undefined}
+                  data-testid={`agent-card-${agent.id}`}
+                >
                   {/* Pod-specific colored rail */}
                   <div 
-                    className="rail" 
+                    className="rail pod-border" 
                     style={{ 
-                      background: podColor,
+                      background: 'var(--pod-current, #3D6BFF)',
                       height: '8px',
                       width: '100%',
                       borderRadius: 'var(--radius-md) var(--radius-md) 0 0'
@@ -197,7 +200,7 @@ export default function Roles() {
                     <p className="subtitle">{agent.title}</p>
                     
                     <div className="chips" style={{ marginBottom: 'var(--space-2)' }}>
-                      {agent.podName && <span className="chip">{agent.podName}</span>}
+                      {agent.podName && <span className="pod-chip">{agent.podName}</span>}
                       <span className="chip">{agent.type === 'dream_team' ? 'Dream Team' : 'Pod Role'}</span>
                       {agent.pillar && <span className="chip">{agent.pillar}</span>}
                     </div>
