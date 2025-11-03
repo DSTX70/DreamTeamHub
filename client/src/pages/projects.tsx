@@ -110,6 +110,23 @@ export default function Projects() {
 
   const activeProjects = allProjects.filter(p => p.status === 'active').length;
 
+  // Get pillar-specific title and icon
+  const getPillarTitle = () => {
+    if (selectedCategory === 'Imagination') return 'Imagination Projects';
+    if (selectedCategory === 'Innovation') return 'Innovation Projects';
+    if (selectedCategory === 'Impact') return 'Impact Projects';
+    return 'Projects';
+  };
+
+  const getPillarIcon = () => {
+    if (selectedCategory === 'Imagination') return Sparkles;
+    if (selectedCategory === 'Innovation') return Lightbulb;
+    if (selectedCategory === 'Impact') return Shield;
+    return FolderKanban;
+  };
+
+  const PillarIcon = getPillarIcon();
+
   return (
     <div className="h-full overflow-auto">
       <div className="p-6 space-y-6">
@@ -117,11 +134,14 @@ export default function Projects() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold flex items-center gap-2" data-testid="heading-projects">
-              <FolderKanban className="h-8 w-8" />
-              Projects
+              <PillarIcon className="h-8 w-8" />
+              {getPillarTitle()}
             </h1>
             <p className="text-muted-foreground mt-1">
-              Organize work by business pillars: Imagination, Innovation, Impact
+              {selectedCategory === 'all' 
+                ? 'Organize work by business pillars: Imagination, Innovation, Impact'
+                : `Projects organized under the ${selectedCategory} pillar`
+              }
             </p>
           </div>
           <Link href="/projects/new">
@@ -132,50 +152,79 @@ export default function Projects() {
           </Link>
         </div>
 
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Total Projects</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold" data-testid="stat-total-projects">{allProjects.length}</div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-1">
-                <Sparkles className="h-3 w-3" />
-                Imagination
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold" data-testid="stat-imagination">{projectsByPillar.Imagination}</div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-1">
-                <Lightbulb className="h-3 w-3" />
-                Innovation
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold" data-testid="stat-innovation">{projectsByPillar.Innovation}</div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-1">
-                <Shield className="h-3 w-3" />
-                Impact
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold" data-testid="stat-impact">{projectsByPillar.Impact}</div>
-            </CardContent>
-          </Card>
-        </div>
+        {/* Stats Cards - Show all pillars on "All Projects" page, only current pillar on pillar-specific pages */}
+        {selectedCategory === 'all' ? (
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground">Total Projects</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold" data-testid="stat-total-projects">{allProjects.length}</div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-1">
+                  <Sparkles className="h-3 w-3" />
+                  Imagination
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold" data-testid="stat-imagination">{projectsByPillar.Imagination}</div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-1">
+                  <Lightbulb className="h-3 w-3" />
+                  Innovation
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold" data-testid="stat-innovation">{projectsByPillar.Innovation}</div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-1">
+                  <Shield className="h-3 w-3" />
+                  Impact
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold" data-testid="stat-impact">{projectsByPillar.Impact}</div>
+              </CardContent>
+            </Card>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground">
+                  Total {selectedCategory} Projects
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold" data-testid={`stat-${selectedCategory.toLowerCase()}-total`}>
+                  {projectsByPillar[selectedCategory as keyof typeof projectsByPillar]}
+                </div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground">
+                  Active Projects
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold" data-testid={`stat-${selectedCategory.toLowerCase()}-active`}>
+                  {allProjects.filter(p => p.category === selectedCategory && p.status === 'active').length}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
 
         {/* Filters */}
         <div className="flex flex-wrap items-center gap-4">
