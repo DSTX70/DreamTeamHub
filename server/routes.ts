@@ -174,7 +174,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       for (const podData of manifestPods) {
         try {
           // Validate the pod data against schema
-          const validatedData = insertPodSchema.parse(podData);
+          const validatedData = insertPodSchema.parse(podData) as any;
           
           // Check if pod already exists by name (O(1) lookup)
           const existingPod = existingPodsByName.get(validatedData.name);
@@ -194,7 +194,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
         } catch (error: any) {
           results.failed++;
-          results.errors.push(`Pod "${podData?.name || 'unknown'}": ${error.message}`);
+          results.errors.push(`Pod "${(podData as any)?.name || 'unknown'}": ${error.message}`);
         }
       }
 
@@ -990,7 +990,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/conversations/:id/messages", isAuthenticated, async (req, res) => {
     try {
-      const messages = await storage.getMessages(parseInt(req.params.id));
+      const conversationId = parseInt(req.params.id);
+      if (isNaN(conversationId)) {
+        return res.status(400).json({ error: 'Invalid conversation ID' });
+      }
+      const messages = await storage.getMessages(conversationId);
       res.json(messages);
     } catch (error) {
       console.error('Error fetching messages:', error);
