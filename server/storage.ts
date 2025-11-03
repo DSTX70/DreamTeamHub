@@ -1,15 +1,15 @@
 // Referenced from javascript_database integration blueprint
 import { 
-  users, pods, podAgents, persons, roleCards, roleRaci, agentSpecs, workItems, decisions,
+  users, pods, podAgents, agents, persons, roleCards, roleRaci, agentSpecs, workItems, decisions,
   brainstormSessions, brainstormParticipants, brainstormIdeas, brainstormClusters, brainstormArtifacts,
   audits, auditChecks, auditFindings, auditArtifacts, events,
   conversations, messages, agentMemories, agentRuns,
   type User, type UpsertUser,
-  type Pod, type PodAgent, type Person, type RoleCard, type RoleRaci, type AgentSpec, type WorkItem, type Decision,
+  type Pod, type PodAgent, type Agent, type Person, type RoleCard, type RoleRaci, type AgentSpec, type WorkItem, type Decision,
   type BrainstormSession, type BrainstormParticipant, type BrainstormIdea, type BrainstormCluster, type BrainstormArtifact,
   type Audit, type AuditCheck, type AuditFinding, type AuditArtifact, type Event,
   type Conversation, type Message, type AgentMemory, type AgentRun,
-  type InsertPod, type InsertPodAgent, type InsertPerson, type InsertRoleCard, type InsertRoleRaci, type InsertAgentSpec, type InsertWorkItem, type InsertDecision,
+  type InsertPod, type InsertPodAgent, type InsertAgent, type InsertPerson, type InsertRoleCard, type InsertRoleRaci, type InsertAgentSpec, type InsertWorkItem, type InsertDecision,
   type InsertBrainstormSession, type InsertBrainstormParticipant, type InsertBrainstormIdea, type InsertBrainstormCluster, type InsertBrainstormArtifact,
   type InsertAudit, type InsertAuditCheck, type InsertAuditFinding, type InsertAuditArtifact, type InsertEvent,
   type InsertConversation, type InsertMessage, type InsertAgentMemory, type InsertAgentRun,
@@ -29,9 +29,16 @@ export interface IStorage {
   updatePod(id: number, pod: Partial<InsertPod>): Promise<Pod | undefined>;
   deletePod(id: number): Promise<boolean>;
   
-  // Pod Agents
+  // Pod Agents (DEPRECATED - use unified agents instead)
   getPodAgents(podId?: number): Promise<PodAgent[]>;
   createPodAgent(agent: InsertPodAgent): Promise<PodAgent>;
+  
+  // Unified Agents (Dream Team + Pod Roles with Skill Packs)
+  getAgents(filters?: { type?: string; podId?: number; pillar?: string; status?: string }): Promise<Agent[]>;
+  getAgent(id: string): Promise<Agent | undefined>;
+  createAgent(agent: InsertAgent): Promise<Agent>;
+  updateAgent(id: string, agent: Partial<InsertAgent>): Promise<Agent | undefined>;
+  deleteAgent(id: string): Promise<boolean>;
   
   // Persons
   getPersons(): Promise<Person[]>;
@@ -171,7 +178,7 @@ export class DatabaseStorage implements IStorage {
     return true;
   }
 
-  // ===== POD AGENTS =====
+  // ===== POD AGENTS (DEPRECATED - use unified agents) =====
   async getPodAgents(podId?: number): Promise<PodAgent[]> {
     if (podId) {
       return await db.select().from(podAgents).where(eq(podAgents.podId, podId));
@@ -182,6 +189,46 @@ export class DatabaseStorage implements IStorage {
   async createPodAgent(agent: InsertPodAgent): Promise<PodAgent> {
     const [newAgent] = await db.insert(podAgents).values(agent).returning();
     return newAgent;
+  }
+
+  // ===== UNIFIED AGENTS (Dream Team + Pod Roles with Skill Packs) =====
+  async getAgents(filters?: { type?: string; podId?: number; pillar?: string; status?: string }): Promise<Agent[]> {
+    let query = db.select().from(agents);
+    
+    const conditions = [];
+    if (filters?.type) conditions.push(eq(agents.type, filters.type));
+    if (filters?.podId) conditions.push(eq(agents.podId, filters.podId));
+    if (filters?.pillar) conditions.push(eq(agents.pillar, filters.pillar));
+    if (filters?.status) conditions.push(eq(agents.status, filters.status));
+    
+    if (conditions.length > 0) {
+      query = query.where(and(...conditions)) as any;
+    }
+    
+    return await query.orderBy(agents.title);
+  }
+
+  async getAgent(id: string): Promise<Agent | undefined> {
+    const [agent] = await db.select().from(agents).where(eq(agents.id, id));
+    return agent || undefined;
+  }
+
+  async createAgent(agent: InsertAgent): Promise<Agent> {
+    const [created] = await db.insert(agents).values(agent).returning();
+    return created;
+  }
+
+  async updateAgent(id: string, agent: Partial<InsertAgent>): Promise<Agent | undefined> {
+    const [updated] = await db.update(agents)
+      .set({ ...agent, updatedAt: new Date() })
+      .where(eq(agents.id, id))
+      .returning();
+    return updated || undefined;
+  }
+
+  async deleteAgent(id: string): Promise<boolean> {
+    await db.delete(agents).where(eq(agents.id, id));
+    return true;
   }
 
   // ===== PERSONS =====

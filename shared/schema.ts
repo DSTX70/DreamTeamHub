@@ -70,6 +70,7 @@ export const persons = pgTable("persons", {
 });
 
 // Pod-specific role-based agents (separate from the 40 Dream Team agentSpecs)
+// DEPRECATED: Being migrated to unified agents table
 export const podAgents = pgTable("pod_agents", {
   id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
   title: text("title").notNull(),
@@ -77,6 +78,40 @@ export const podAgents = pgTable("pod_agents", {
   podId: integer("pod_id").notNull().references(() => pods.id),
   status: text("status").notNull().default('active'), // active, inactive
   createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+// ===========================
+// UNIFIED AGENTS (Dream Team + Pod Roles with Skill Packs)
+// ===========================
+
+export const agents = pgTable("agents", {
+  id: text("id").primaryKey(), // agent_os, agent_helm, agent_governance_designer, etc.
+  title: text("title").notNull(), // OS, Helm, Governance Designer, etc.
+  type: text("type").notNull().default('dream_team'), // dream_team | pod_role
+  pillar: text("pillar"), // Imagination | Innovation | Impact
+  podId: integer("pod_id").references(() => pods.id), // nullable - some agents span multiple pods
+  podName: text("pod_name"), // For display/reference
+  autonomyLevel: text("autonomy_level").notNull().default('L1'), // L0, L1, L2, L3
+  status: text("status").notNull().default('active'), // active | inactive
+  
+  // Skill Pack fields
+  skillPackPath: text("skill_pack_path"), // agents/agent_os
+  promptText: text("prompt_text"), // Loaded from prompt.txt
+  toolsConfig: jsonb("tools_config").$type<{tools: {name: string; scopes: string[]}[]}>(), // Loaded from tools.yaml
+  evalConfig: jsonb("eval_config").$type<{schedule?: string; threshold?: number}>(), // Loaded from eval.yaml
+  goldensPath: text("goldens_path"), // agents/agent_os/goldens.csv
+  
+  // Evaluation results
+  lastEvalScore: integer("last_eval_score"), // 0-100%
+  lastEvalAt: timestamp("last_eval_at"),
+  evalHistory: jsonb("eval_history").$type<{date: string; score: number; passed: number; failed: number}[]>().default(sql`'[]'`),
+  
+  // Legacy fields for backward compatibility with agentSpecs
+  threadId: text("thread_id"),
+  systemPrompt: text("system_prompt"), // Deprecated - use promptText from Skill Pack
+  
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
 // ===========================
@@ -336,11 +371,19 @@ export const podsRelations = relations(pods, ({ many }) => ({
   persons: many(persons),
   workItems: many(workItems),
   podAgents: many(podAgents),
+  agents: many(agents),
 }));
 
 export const podAgentsRelations = relations(podAgents, ({ one }) => ({
   pod: one(pods, {
     fields: [podAgents.podId],
+    references: [pods.id],
+  }),
+}));
+
+export const agentsRelations = relations(agents, ({ one }) => ({
+  pod: one(pods, {
+    fields: [agents.podId],
     references: [pods.id],
   }),
 }));
@@ -489,10 +532,16 @@ export const insertPodSchema = createInsertSchema(pods).omit({ id: true, created
 export type InsertPod = z.infer<typeof insertPodSchema>;
 export type Pod = typeof pods.$inferSelect;
 
-// Pod Agents
+// Pod Agents (DEPRECATED - migrating to unified agents table)
 export const insertPodAgentSchema = createInsertSchema(podAgents).omit({ id: true, createdAt: true });
 export type InsertPodAgent = z.infer<typeof insertPodAgentSchema>;
 export type PodAgent = typeof podAgents.$inferSelect;
+
+// Unified Agents (Dream Team + Pod Roles with Skill Packs)
+// Note: id is TEXT (not auto-generated), so it must be provided during insert
+export const insertAgentSchema = createInsertSchema(agents).omit({ createdAt: true, updatedAt: true, lastEvalAt: true });
+export type InsertAgent = z.infer<typeof insertAgentSchema>;
+export type Agent = typeof agents.$inferSelect;
 
 // Persons
 export const insertPersonSchema = createInsertSchema(persons).omit({ id: true, createdAt: true });

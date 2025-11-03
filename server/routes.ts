@@ -3,7 +3,7 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated } from "./replitAuth";
 import { 
-  insertPodSchema, insertPodAgentSchema, insertPersonSchema, insertRoleCardSchema, insertRoleRaciSchema, insertAgentSpecSchema,
+  insertPodSchema, insertPodAgentSchema, insertAgentSchema, insertPersonSchema, insertRoleCardSchema, insertRoleRaciSchema, insertAgentSpecSchema,
   insertWorkItemSchema, insertDecisionSchema, insertBrainstormSessionSchema,
   insertBrainstormParticipantSchema, insertBrainstormIdeaSchema, insertBrainstormClusterSchema,
   insertAuditSchema, insertAuditCheckSchema, insertAuditFindingSchema,
@@ -169,6 +169,74 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error('Error creating pod agent:', error);
       res.status(400).json({ error: error.message || 'Failed to create pod agent' });
+    }
+  });
+
+  // ===========================
+  // UNIFIED AGENTS (Dream Team + Pod Roles with Skill Packs)
+  // ===========================
+
+  app.get("/api/agents", isAuthenticated, async (req, res) => {
+    try {
+      const filters: any = {};
+      if (req.query.type) filters.type = req.query.type as string;
+      if (req.query.podId) filters.podId = parseInt(req.query.podId as string);
+      if (req.query.pillar) filters.pillar = req.query.pillar as string;
+      if (req.query.status) filters.status = req.query.status as string;
+      
+      const agents = await storage.getAgents(filters);
+      res.json(agents);
+    } catch (error) {
+      console.error('Error fetching agents:', error);
+      res.status(500).json({ error: 'Failed to fetch agents' });
+    }
+  });
+
+  app.get("/api/agents/:id", isAuthenticated, async (req, res) => {
+    try {
+      const agent = await storage.getAgent(req.params.id);
+      if (!agent) {
+        return res.status(404).json({ error: 'Agent not found' });
+      }
+      res.json(agent);
+    } catch (error) {
+      console.error('Error fetching agent:', error);
+      res.status(500).json({ error: 'Failed to fetch agent' });
+    }
+  });
+
+  app.post("/api/agents", isAuthenticated, async (req, res) => {
+    try {
+      const data = insertAgentSchema.parse(req.body);
+      const agent = await storage.createAgent(data);
+      res.status(201).json(agent);
+    } catch (error: any) {
+      console.error('Error creating agent:', error);
+      res.status(400).json({ error: error.message || 'Failed to create agent' });
+    }
+  });
+
+  app.put("/api/agents/:id", isAuthenticated, async (req, res) => {
+    try {
+      const data = insertAgentSchema.parse(req.body);
+      const agent = await storage.updateAgent(req.params.id, data);
+      if (!agent) {
+        return res.status(404).json({ error: 'Agent not found' });
+      }
+      res.json(agent);
+    } catch (error: any) {
+      console.error('Error updating agent:', error);
+      res.status(400).json({ error: error.message || 'Failed to update agent' });
+    }
+  });
+
+  app.delete("/api/agents/:id", isAuthenticated, async (req, res) => {
+    try {
+      await storage.deleteAgent(req.params.id);
+      res.status(204).send();
+    } catch (error: any) {
+      console.error('Error deleting agent:', error);
+      res.status(500).json({ error: error.message || 'Failed to delete agent' });
     }
   });
 
