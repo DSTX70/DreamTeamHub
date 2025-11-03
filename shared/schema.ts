@@ -204,6 +204,29 @@ export const decisions = pgTable("decisions", {
 });
 
 // ===========================
+// IDEA SPARKS
+// ===========================
+
+export const ideaSparks = pgTable("idea_sparks", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  title: text("title").notNull(),
+  content: text("content"),
+  fileUrl: text("file_url"),
+  pod: text("pod"), // Pod name/tag
+  projectId: integer("project_id").references(() => projects.id),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const insertIdeaSparkSchema = createInsertSchema(ideaSparks).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertIdeaSpark = z.infer<typeof insertIdeaSparkSchema>;
+export type IdeaSpark = typeof ideaSparks.$inferSelect;
+
+// ===========================
 // BRAINSTORM STUDIO
 // ===========================
 

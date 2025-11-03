@@ -1,19 +1,19 @@
 // Referenced from javascript_database integration blueprint
 import { 
-  users, pods, podAgents, agents, persons, roleCards, roleRaci, agentSpecs, workItems, decisions,
+  users, pods, podAgents, agents, persons, roleCards, roleRaci, agentSpecs, workItems, decisions, ideaSparks,
   brainstormSessions, brainstormParticipants, brainstormIdeas, brainstormClusters, brainstormArtifacts,
   audits, auditChecks, auditFindings, auditArtifacts, events,
   conversations, messages, agentMemories, agentRuns,
   projects, projectFiles, projectAgents, projectTasks, projectMessages,
   agentGoldens,
   type User, type UpsertUser,
-  type Pod, type PodAgent, type Agent, type Person, type RoleCard, type RoleRaci, type AgentSpec, type WorkItem, type Decision,
+  type Pod, type PodAgent, type Agent, type Person, type RoleCard, type RoleRaci, type AgentSpec, type WorkItem, type Decision, type IdeaSpark,
   type BrainstormSession, type BrainstormParticipant, type BrainstormIdea, type BrainstormCluster, type BrainstormArtifact,
   type Audit, type AuditCheck, type AuditFinding, type AuditArtifact, type Event,
   type Conversation, type Message, type AgentMemory, type AgentRun,
   type Project, type ProjectFile, type ProjectAgent, type ProjectTask, type ProjectMessage,
   type AgentGolden,
-  type InsertPod, type InsertPodAgent, type InsertAgent, type InsertPerson, type InsertRoleCard, type InsertRoleRaci, type InsertAgentSpec, type InsertWorkItem, type InsertDecision,
+  type InsertPod, type InsertPodAgent, type InsertAgent, type InsertPerson, type InsertRoleCard, type InsertRoleRaci, type InsertAgentSpec, type InsertWorkItem, type InsertDecision, type InsertIdeaSpark,
   type InsertBrainstormSession, type InsertBrainstormParticipant, type InsertBrainstormIdea, type InsertBrainstormCluster, type InsertBrainstormArtifact,
   type InsertAudit, type InsertAuditCheck, type InsertAuditFinding, type InsertAuditArtifact, type InsertEvent,
   type InsertConversation, type InsertMessage, type InsertAgentMemory, type InsertAgentRun,
@@ -80,6 +80,12 @@ export interface IStorage {
   getDecisions(): Promise<Decision[]>;
   getDecision(id: number): Promise<Decision | undefined>;
   createDecision(decision: InsertDecision): Promise<Decision>;
+  
+  // Idea Sparks
+  getIdeaSparks(filters?: { userId?: string; projectId?: number; pod?: string }): Promise<IdeaSpark[]>;
+  getIdeaSpark(id: number): Promise<IdeaSpark | undefined>;
+  createIdeaSpark(spark: InsertIdeaSpark): Promise<IdeaSpark>;
+  deleteIdeaSpark(id: number): Promise<boolean>;
   
   // Brainstorm Sessions
   getBrainstormSessions(): Promise<BrainstormSession[]>;
@@ -432,6 +438,42 @@ export class DatabaseStorage implements IStorage {
   async createDecision(decision: InsertDecision): Promise<Decision> {
     const [created] = await db.insert(decisions).values(decision).returning();
     return created;
+  }
+
+  // ===== IDEA SPARKS =====
+  async getIdeaSparks(filters?: { userId?: string; projectId?: number; pod?: string }): Promise<IdeaSpark[]> {
+    const conditions = [];
+    
+    if (filters?.userId) {
+      conditions.push(eq(ideaSparks.userId, filters.userId));
+    }
+    if (filters?.projectId) {
+      conditions.push(eq(ideaSparks.projectId, filters.projectId));
+    }
+    if (filters?.pod) {
+      conditions.push(eq(ideaSparks.pod, filters.pod));
+    }
+    
+    if (conditions.length > 0) {
+      return await db.select().from(ideaSparks).where(and(...conditions)).orderBy(desc(ideaSparks.createdAt));
+    }
+    
+    return await db.select().from(ideaSparks).orderBy(desc(ideaSparks.createdAt));
+  }
+
+  async getIdeaSpark(id: number): Promise<IdeaSpark | undefined> {
+    const [spark] = await db.select().from(ideaSparks).where(eq(ideaSparks.id, id));
+    return spark;
+  }
+
+  async createIdeaSpark(spark: InsertIdeaSpark): Promise<IdeaSpark> {
+    const [created] = await db.insert(ideaSparks).values(spark).returning();
+    return created;
+  }
+
+  async deleteIdeaSpark(id: number): Promise<boolean> {
+    const result = await db.delete(ideaSparks).where(eq(ideaSparks.id, id));
+    return result.rowCount ? result.rowCount > 0 : false;
   }
 
   // ===== BRAINSTORM SESSIONS =====

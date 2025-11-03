@@ -34,6 +34,7 @@ function AuthenticatedRoutes() {
     <Switch>
       <Route path="/" component={ControlTower} />
       <Route path="/roles" component={Roles} />
+      <Route path="/agents" component={Roles} />
       <Route path="/agents/new" component={AgentCreate} />
       <Route path="/brainstorm" component={Brainstorm} />
       <Route path="/audits" component={Audits} />
