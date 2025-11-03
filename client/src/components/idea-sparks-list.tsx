@@ -24,12 +24,12 @@ export function IdeaSparksList({ projectId, showAll = false, hasProject = false,
   if (hasProject) queryParams.append('hasProject', 'true');
 
   const queryString = queryParams.toString();
-  const queryKey = queryString 
-    ? ['/api/idea-sparks', queryString]
-    : ['/api/idea-sparks'];
+  const apiUrl = queryString 
+    ? `/api/idea-sparks?${queryString}`
+    : '/api/idea-sparks';
 
   const { data: allSparks = [], isLoading } = useQuery<IdeaSpark[]>({
-    queryKey,
+    queryKey: [apiUrl],
   });
 
   // Apply limit if specified

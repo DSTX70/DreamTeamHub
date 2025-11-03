@@ -16,8 +16,8 @@ export function IdeaSparkButton() {
   const [isOpen, setIsOpen] = useState(false);
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
-  const [pod, setPod] = useState('');
-  const [projectId, setProjectId] = useState<string>('');
+  const [pod, setPod] = useState<string>('none');
+  const [projectId, setProjectId] = useState<string>('none');
   const [fileUrl, setFileUrl] = useState('');
   const { toast } = useToast();
 
@@ -44,8 +44,8 @@ export function IdeaSparkButton() {
       // Reset form
       setTitle('');
       setContent('');
-      setPod('');
-      setProjectId('');
+      setPod('none');
+      setProjectId('none');
       setFileUrl('');
       setIsOpen(false);
     },
@@ -73,8 +73,8 @@ export function IdeaSparkButton() {
     const data = {
       title,
       content: content || null,
-      pod: pod || null,
-      projectId: projectId ? parseInt(projectId) : null,
+      pod: (pod && pod !== 'none') ? pod : null,
+      projectId: (projectId && projectId !== 'none') ? parseInt(projectId) : null,
       fileUrl: fileUrl || null,
     };
 
@@ -158,7 +158,7 @@ export function IdeaSparkButton() {
                   <SelectValue placeholder="Select pod..." />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">None</SelectItem>
+                  <SelectItem value="none">None</SelectItem>
                   {pods.map((p) => (
                     <SelectItem key={p.id} value={p.name}>
                       {p.name}
@@ -175,7 +175,7 @@ export function IdeaSparkButton() {
                   <SelectValue placeholder="Select project..." />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">None</SelectItem>
+                  <SelectItem value="none">None</SelectItem>
                   {projects.map((p) => (
                     <SelectItem key={p.id} value={p.id.toString()}>
                       {p.title}
