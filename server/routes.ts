@@ -4,7 +4,7 @@ import { storage } from "./storage";
 import { setupAuth, isAuthenticated } from "./replitAuth";
 import { 
   insertPodSchema, insertPodAgentSchema, insertAgentSchema, insertPersonSchema, insertRoleCardSchema, insertRoleRaciSchema, insertAgentSpecSchema,
-  insertWorkItemSchema, insertDecisionSchema, insertBrainstormSessionSchema,
+  insertWorkItemSchema, insertDecisionSchema, insertIdeaSparkSchema, insertBrainstormSessionSchema,
   insertBrainstormParticipantSchema, insertBrainstormIdeaSchema, insertBrainstormClusterSchema,
   insertAuditSchema, insertAuditCheckSchema, insertAuditFindingSchema,
   insertConversationSchema, insertMessageSchema, insertAgentMemorySchema,
@@ -1543,6 +1543,74 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error('Error creating project message:', error);
       res.status(400).json({ error: error.message || 'Failed to create project message' });
+    }
+  });
+
+  // ===========================
+  // IDEA SPARKS
+  // ===========================
+
+  // Get all idea sparks with optional filtering
+  app.get("/api/idea-sparks", isAuthenticated, async (req: any, res) => {
+    try {
+      const { projectId, pod } = req.query;
+      const userId = req.user.claims.sub;
+      
+      const filters: any = {};
+      if (projectId) filters.projectId = parseInt(projectId as string);
+      if (pod) filters.pod = pod as string;
+      // Always filter by current user
+      filters.userId = userId;
+
+      const sparks = await storage.getIdeaSparks(filters);
+      res.json(sparks);
+    } catch (error: any) {
+      console.error('Error fetching idea sparks:', error);
+      res.status(500).json({ error: error.message || 'Failed to fetch idea sparks' });
+    }
+  });
+
+  // Get single idea spark
+  app.get("/api/idea-sparks/:id", isAuthenticated, async (req, res) => {
+    try {
+      const spark = await storage.getIdeaSpark(parseInt(req.params.id));
+      if (!spark) {
+        return res.status(404).json({ error: 'Idea spark not found' });
+      }
+      res.json(spark);
+    } catch (error: any) {
+      console.error('Error fetching idea spark:', error);
+      res.status(500).json({ error: error.message || 'Failed to fetch idea spark' });
+    }
+  });
+
+  // Create new idea spark
+  app.post("/api/idea-sparks", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const data = insertIdeaSparkSchema.parse({
+        ...req.body,
+        userId,
+      });
+      const spark = await storage.createIdeaSpark(data);
+      res.status(201).json(spark);
+    } catch (error: any) {
+      console.error('Error creating idea spark:', error);
+      res.status(400).json({ error: error.message || 'Failed to create idea spark' });
+    }
+  });
+
+  // Delete idea spark
+  app.delete("/api/idea-sparks/:id", isAuthenticated, async (req, res) => {
+    try {
+      const deleted = await storage.deleteIdeaSpark(parseInt(req.params.id));
+      if (!deleted) {
+        return res.status(404).json({ error: 'Idea spark not found' });
+      }
+      res.status(204).send();
+    } catch (error: any) {
+      console.error('Error deleting idea spark:', error);
+      res.status(500).json({ error: error.message || 'Failed to delete idea spark' });
     }
   });
 
