@@ -166,22 +166,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
         errors: [] as string[]
       };
 
+      // Fetch existing pods once (O(1) instead of O(n))
+      const existingPods = await storage.getPods();
+      const existingPodsByName = new Map(existingPods.map(p => [p.name, p]));
+
+      // Process all pods (with error isolation per pod)
       for (const podData of manifestPods) {
         try {
           // Validate the pod data against schema
           const validatedData = insertPodSchema.parse(podData);
           
-          // Check if pod already exists by name
-          const existingPods = await storage.getPods();
-          const existingPod = existingPods.find(p => p.name === validatedData.name);
+          // Check if pod already exists by name (O(1) lookup)
+          const existingPod = existingPodsByName.get(validatedData.name);
 
           if (existingPod) {
             // Update existing pod
-            await storage.updatePod(existingPod.id, validatedData);
+            const updated = await storage.updatePod(existingPod.id, validatedData);
+            if (updated) {
+              existingPodsByName.set(validatedData.name, updated);
+            }
             results.updated++;
           } else {
             // Create new pod
-            await storage.createPod(validatedData);
+            const created = await storage.createPod(validatedData);
+            existingPodsByName.set(validatedData.name, created);
             results.created++;
           }
         } catch (error: any) {
@@ -243,6 +251,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const agents = await storage.getAgents({});
       const agentSpecs = await storage.getAgentSpecs();
 
+      // Calculate payload size (rough estimate in MB)
+      const payloadSize = JSON.stringify({ agents, agentSpecs }).length / (1024 * 1024);
+      const MAX_SIZE_MB = 50; // PostgreSQL JSONB safe limit
+
+      if (payloadSize > MAX_SIZE_MB) {
+        return res.status(413).json({
+          error: 'Snapshot payload too large',
+          details: `Payload size ${payloadSize.toFixed(2)} MB exceeds limit of ${MAX_SIZE_MB} MB`,
+          payloadSizeMB: parseFloat(payloadSize.toFixed(2))
+        });
+      }
+
       // Create snapshot
       const golden = await storage.createAgentGolden({
         snapshotDate: new Date(),
@@ -252,7 +272,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         metadata: {
           triggeredBy: 'manual',
           duration: Date.now() - startTime,
-          checksum: `${agents.length}-${agentSpecs.length}-${Date.now()}`
+          checksum: `${agents.length}-${agentSpecs.length}-${Date.now()}`,
+          payloadSizeMB: parseFloat(payloadSize.toFixed(2))
         }
       });
 
