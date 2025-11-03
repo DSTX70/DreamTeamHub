@@ -22,7 +22,8 @@
   --pod-data-stewardship-and-metrics-pod: #2F9E44;
 }
 
-[data-pod] { --pod-current: #777; }
+/* Pod-specific data attribute theming */
+[data-pod] { --pod-current: #3D6BFF; } /* Default brand color fallback */
 [data-pod='Retail Collective Pod (RCP)'] { --pod-current: #2EC5C2; }
 [data-pod='Social & Influence CoE (SICoE)'] { --pod-current: #6F5AE8; }
 [data-pod='Creative Pod'] { --pod-current: #C95CAF; }
@@ -44,6 +45,33 @@
 [data-pod='Tenant & Billing Pod'] { --pod-current: #2E86DE; }
 [data-pod='GlobalCollabs Partnerships Pod'] { --pod-current: #F45B69; }
 [data-pod='Data Stewardship & Metrics Pod'] { --pod-current: #2F9E44; }
-.pod-chip{ background: color-mix(in srgb, var(--pod-current) 20%, white); border:1px solid color-mix(in srgb, var(--pod-current) 50%, black); color:#111; padding:4px 10px; border-radius:999px; font-weight:600;}
-.pod-accent{ background: var(--pod-current); color:white;}
-.pod-border{ border-color: var(--pod-current);}
+
+/* Pod utility classes */
+.pod-rail {
+  background: var(--pod-current);
+  height: 8px;
+  width: 100%;
+  border-radius: var(--radius-md) var(--radius-md) 0 0;
+}
+
+.pod-chip {
+  display: inline-block;
+  background: color-mix(in srgb, var(--pod-current) 20%, var(--background));
+  border: 1px solid color-mix(in srgb, var(--pod-current) 50%, var(--border));
+  color: var(--foreground);
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-weight: 600;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.pod-accent {
+  background: var(--pod-current);
+  color: white;
+}
+
+.pod-border {
+  border-color: var(--pod-current);
+}

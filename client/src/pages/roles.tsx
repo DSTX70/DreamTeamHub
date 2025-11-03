@@ -171,15 +171,7 @@ export default function Roles() {
                   data-testid={`agent-card-${agent.id}`}
                 >
                   {/* Pod-specific colored rail */}
-                  <div 
-                    className="rail pod-border" 
-                    style={{ 
-                      background: 'var(--pod-current, #3D6BFF)',
-                      height: '8px',
-                      width: '100%',
-                      borderRadius: 'var(--radius-md) var(--radius-md) 0 0'
-                    }}
-                  />
+                  <div className="pod-rail" />
                   <div className="inner">
                     <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', marginBottom: 'var(--space-1)' }}>
                       <p className="title" style={{ font: '800 22px/1 Inter', flex: 1 }}>
