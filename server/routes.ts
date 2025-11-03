@@ -17,6 +17,15 @@ import type { SummonPayload, MirrorBackPayload } from "./comms-service";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // ===========================
+  // STATIC FILES
+  // ===========================
+  
+  // Serve demo.html as a static file
+  app.get('/demo.html', (_req, res) => {
+    res.sendFile('demo.html', { root: './public' });
+  });
+
+  // ===========================
   // AUTHENTICATION (Replit Auth)
   // ===========================
   
