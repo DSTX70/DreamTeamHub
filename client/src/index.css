@@ -1,5 +1,6 @@
 /* Dream Team Hub Master Brand Tokens */
 @import './dth_tokens.css';
+@import './ui/pod-colors/pod-colors.css';
 
 @tailwind base;
 @tailwind components;

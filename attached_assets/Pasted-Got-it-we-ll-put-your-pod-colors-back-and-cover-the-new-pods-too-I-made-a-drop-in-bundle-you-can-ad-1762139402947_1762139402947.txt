@@ -1,0 +1,70 @@
+Got it—we’ll put your pod colors back and cover the new pods too. I made a drop-in bundle you can add to DTH to restore per-pod color coding on the agents landing page.
+
+* 📦 **Download:** [dth_pod_colors_vNext_2025Q4.zip](sandbox:/mnt/data/dth_pod_colors_vNext_2025Q4.zip)
+
+**What’s inside**
+
+* `pod-colors.css` — CSS variables + `[data-pod]` theming helper classes (`.pod-chip`, `.pod-accent`, `.pod-border`)
+* `pod-colors.json` — canonical Pod → HEX mapping (includes all new pods)
+* `tailwind.podcolors.plugin.js` — Tailwind plugin that adds utilities like `bg-pod-…`, `text-pod-…`, `border-pod-…`
+* `RoleCard.example.tsx` — minimal example showing how to color Role Cards and Pod buttons via `data-pod`
+
+**Pods + colors included (editable)**
+
+* RCP `#2EC5C2`, SICoE `#6F5AE8`, Creative `#C95CAF`, Product & Platform `#0FA3B1`, IP/Patent `#FF7A1A`, Security & Compliance `#E4572E`, Marketing & PR `#FFD449`, Ops & Finance `#1A1A1A`, Cultural `#34AABB`, **IPO `#E24F8A`**, **Education & Cohorts `#5CB85C`**, **Accessibility & Captioning `#007ACC`**, **Packaging & Pre-Press `#D4AF37`**, **WMS/3PL `#7A6FF0`**, **Channel Integrations `#50C3B8`**, **Author Platform Studio `#8C2E3F`**, **Music Rights & Distribution `#6B1E9C`**, **Agent Governance `#FF9B28`**, **Tenant & Billing `#2E86DE`**, **GlobalCollabs Partnerships `#F45B69`**, **Data Stewardship & Metrics `#2F9E44`**.
+
+---
+
+## How to integrate (2 minutes)
+
+1. **Add files to your repo** (suggested path):
+   `/ui/pod-colors/{pod-colors.css,pod-colors.json,tailwind.podcolors.plugin.js,RoleCard.example.tsx}`
+
+2. **Tailwind config**
+
+```js
+// tailwind.config.js
+module.exports = {
+  // ...
+  plugins: [
+    require('./ui/pod-colors/tailwind.podcolors.plugin.js')
+  ],
+};
+```
+
+3. **Import CSS once** (app entry like `_app.tsx` or `main.css`)
+
+```ts
+import './ui/pod-colors/pod-colors.css';
+```
+
+4. **Use it in your UI**
+
+Option A — **Data-attribute theming** (no rebuild needed for color tweaks):
+
+```jsx
+<div data-pod="Packaging & Pre-Press Pod" className="rounded-2xl border pod-border p-4 bg-white">
+  <span className="pod-chip">Packaging & Pre-Press Pod</span>
+  <button className="pod-accent rounded-lg px-3 py-2 text-white">Open</button>
+</div>
+```
+
+Option B — **Tailwind utilities** (compiled from `pod-colors.json`):
+
+```jsx
+<div className="border border-pod-tenant-billing-pod p-4">
+  <button className="bg-pod-tenant-billing-pod text-white rounded-lg px-3 py-2">Tenant & Billing</button>
+</div>
+```
+
+**Tip:** If you add/change pod colors, update `pod-colors.json`.
+
+* For **utility classes**, restart Tailwind build.
+* For **data-pod** theming, it updates live with CSS only.
+
+---
+
+If you want, I can also:
+
+* scan your landing page to auto-inject the `data-pod` attributes from your pod name strings, or
+* generate a **color legend component** and a **Cypress test** to verify every visible Role Card has the correct color applied.

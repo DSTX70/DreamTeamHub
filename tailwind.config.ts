@@ -1,5 +1,6 @@
 import type { Config } from "tailwindcss";
 import podGlassPlugin from "./tailwind.podglass.plugin";
+import podColorsPlugin from "./client/src/ui/pod-colors/tailwind.podcolors.plugin.js";
 
 export default {
   darkMode: ["class"],
@@ -185,5 +186,6 @@ export default {
     require("tailwindcss-animate"),
     require("@tailwindcss/typography"),
     podGlassPlugin,
+    podColorsPlugin,
   ],
 } satisfies Config;

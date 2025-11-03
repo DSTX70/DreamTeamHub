@@ -1,0 +1,49 @@
+:root {
+  --pod-retail-collective-pod-rcp: #2EC5C2;
+  --pod-social-and-influence-coe-sicoe: #6F5AE8;
+  --pod-creative-pod: #C95CAF;
+  --pod-product-and-platform-pod: #0FA3B1;
+  --pod-ip-patent-program-pod: #FF7A1A;
+  --pod-security-and-compliance-pod: #E4572E;
+  --pod-marketing-and-pr-pod: #FFD449;
+  --pod-ops-and-finance-pod: #1A1A1A;
+  --pod-cultural-pod: #34AABB;
+  --pod-impact-programs-office-ipo: #E24F8A;
+  --pod-education-and-cohorts-pod: #5CB85C;
+  --pod-accessibility-and-captioning-pod: #007ACC;
+  --pod-packaging-and-pre-press-pod: #D4AF37;
+  --pod-wms---3pl-ops-pod: #7A6FF0;
+  --pod-channel-integrations-pod: #50C3B8;
+  --pod-author-platform-studio: #8C2E3F;
+  --pod-music-rights-and-distribution-pod: #6B1E9C;
+  --pod-agent-governance-pod: #FF9B28;
+  --pod-tenant-and-billing-pod: #2E86DE;
+  --pod-globalcollabs-partnerships-pod: #F45B69;
+  --pod-data-stewardship-and-metrics-pod: #2F9E44;
+}
+
+[data-pod] { --pod-current: #777; }
+[data-pod='Retail Collective Pod (RCP)'] { --pod-current: #2EC5C2; }
+[data-pod='Social & Influence CoE (SICoE)'] { --pod-current: #6F5AE8; }
+[data-pod='Creative Pod'] { --pod-current: #C95CAF; }
+[data-pod='Product & Platform Pod'] { --pod-current: #0FA3B1; }
+[data-pod='IP/Patent Program Pod'] { --pod-current: #FF7A1A; }
+[data-pod='Security & Compliance Pod'] { --pod-current: #E4572E; }
+[data-pod='Marketing & PR Pod'] { --pod-current: #FFD449; }
+[data-pod='Ops & Finance Pod'] { --pod-current: #1A1A1A; }
+[data-pod='Cultural Pod'] { --pod-current: #34AABB; }
+[data-pod='Impact Programs Office (IPO)'] { --pod-current: #E24F8A; }
+[data-pod='Education & Cohorts Pod'] { --pod-current: #5CB85C; }
+[data-pod='Accessibility & Captioning Pod'] { --pod-current: #007ACC; }
+[data-pod='Packaging & Pre-Press Pod'] { --pod-current: #D4AF37; }
+[data-pod='WMS / 3PL Ops Pod'] { --pod-current: #7A6FF0; }
+[data-pod='Channel Integrations Pod'] { --pod-current: #50C3B8; }
+[data-pod='Author Platform Studio'] { --pod-current: #8C2E3F; }
+[data-pod='Music Rights & Distribution Pod'] { --pod-current: #6B1E9C; }
+[data-pod='Agent Governance Pod'] { --pod-current: #FF9B28; }
+[data-pod='Tenant & Billing Pod'] { --pod-current: #2E86DE; }
+[data-pod='GlobalCollabs Partnerships Pod'] { --pod-current: #F45B69; }
+[data-pod='Data Stewardship & Metrics Pod'] { --pod-current: #2F9E44; }
+.pod-chip{ background: color-mix(in srgb, var(--pod-current) 20%, white); border:1px solid color-mix(in srgb, var(--pod-current) 50%, black); color:#111; padding:4px 10px; border-radius:999px; font-weight:600;}
+.pod-accent{ background: var(--pod-current); color:white;}
+.pod-border{ border-color: var(--pod-current);}
