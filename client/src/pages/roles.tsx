@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useLocation } from "wouter";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -11,6 +12,7 @@ import { Search, Users, Plus, ChevronDown, Brain, Wrench, Target, TrendingUp, Sh
 import type { Agent, Pod } from "@shared/schema";
 
 export default function Roles() {
+  const [, setLocation] = useLocation();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedPod, setSelectedPod] = useState<string | null>(null);
   const [selectedType, setSelectedType] = useState<string | null>(null);
@@ -37,16 +39,8 @@ export default function Roles() {
     return matchesSearch && matchesPod && matchesType;
   });
 
-  // Create a map of pod names to their colors
-  const podColorMap = new Map<string, string>();
-  pods?.forEach(pod => {
-    if (pod.name && pod.color) {
-      podColorMap.set(pod.name, pod.color);
-    }
-  });
-
-  // Get unique pod names from agents
-  const agentPods = Array.from(new Set(agents?.map(a => a.podName).filter(Boolean) || [])).sort();
+  // Get unique pod names from agents (filter out null/undefined)
+  const agentPods = Array.from(new Set(agents?.map(a => a.podName).filter((name): name is string => Boolean(name)) || [])).sort();
 
   // Calculate counts from actual data
   const dreamTeamCount = agents?.filter(a => a.type === 'dream_team').length || 0;
@@ -69,7 +63,7 @@ export default function Roles() {
             {isLoading ? 'Loading agents...' : `${totalCount} AI agents with complete Skill Pack specifications`}
           </p>
         </div>
-        <Button disabled data-testid="button-create-agent">
+        <Button onClick={() => setLocation("/agents/new")} data-testid="button-create-agent">
           <Plus className="h-4 w-4 mr-2" />
           Add Agent
         </Button>
@@ -131,25 +125,17 @@ export default function Roles() {
                 >
                   All Pods
                 </Button>
-                {agentPods.map(pod => {
-                  const podColor = podColorMap.get(pod) || '#3D6BFF';
-                  const isSelected = selectedPod === pod;
+                {agentPods.map(podName => {
+                  const isSelected = selectedPod === podName;
                   return (
                     <Button
-                      key={pod}
-                      variant="outline"
+                      key={podName}
+                      variant={isSelected ? "default" : "outline"}
                       size="sm"
-                      onClick={() => setSelectedPod(pod)}
-                      data-testid={`filter-pod-${pod.toLowerCase().replace(/\s+/g, '-')}`}
-                      style={{
-                        borderColor: podColor,
-                        backgroundColor: isSelected ? `${podColor}33` : `${podColor}11`,
-                        color: podColor,
-                        fontWeight: isSelected ? 600 : 400,
-                      }}
-                      className="hover-elevate active-elevate-2"
+                      onClick={() => setSelectedPod(podName)}
+                      data-testid={`filter-pod-${podName.toLowerCase().replace(/\s+/g, '-')}`}
                     >
-                      {pod}
+                      {podName}
                     </Button>
                   );
                 })}
@@ -175,7 +161,7 @@ export default function Roles() {
       ) : filteredAgents && filteredAgents.length > 0 ? (
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           {filteredAgents.map((agent) => {
-            const podColor = agent.podName ? podColorMap.get(agent.podName) || '#3D6BFF' : '#3D6BFF';
+            const podColor = '#3D6BFF'; // Default brand color
             const tools = agent.toolsConfig?.tools || [];
             
             return (

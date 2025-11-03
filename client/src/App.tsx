@@ -24,6 +24,7 @@ import BrandGuidePage from "@/pages/brand-guide";
 import HelpPage from "@/pages/help";
 import Projects from "@/pages/projects";
 import ProjectCreate from "@/pages/project-create";
+import AgentCreate from "@/pages/agent-create";
 import { Button } from "@/components/ui/button";
 import { LogOut, User as UserIcon } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -33,6 +34,7 @@ function AuthenticatedRoutes() {
     <Switch>
       <Route path="/" component={ControlTower} />
       <Route path="/roles" component={Roles} />
+      <Route path="/agents/new" component={AgentCreate} />
       <Route path="/brainstorm" component={Brainstorm} />
       <Route path="/audits" component={Audits} />
       <Route path="/decisions" component={Decisions} />
