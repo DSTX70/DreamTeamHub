@@ -7,7 +7,7 @@ This document defines the refined branding system for Dream Team Hub, focusing o
 - **Tone**: Calm, audit-grade, "evidence first"
 - **Typography**: Space Grotesk for titles, Inter for body text, JetBrains Mono for code
 - **Icons**: Minimal rounded-line, duotone teal→indigo, tiny orange micro-accent (2–3px dot) when appropriate
-- **Pod Colors**: Rails, icon strokes, and chips only—never full body fills
+- **Pod Colors**: Rails (solid bars), chips (subtle tints), accents (full-color for selected states), and borders
 
 ## Design Tokens
 
@@ -170,28 +170,127 @@ Three variants with color-mixed backgrounds:
 }
 ```
 
-## Pod-Tinted Chips
+## Pod Colors System (21 Pods)
 
-Pod chips use colored text and borders (10-14% opacity) without fills:
+The platform uses a comprehensive 21-pod color system for visual coding and organizational clarity. Pod colors appear as:
+- **Rails**: Solid colored strips on card edges (`.pod-rail`)
+- **Chips**: Tinted badges with colored backgrounds and borders (`.pod-chip`)
+- **Accents**: Full-color backgrounds with white text (`.pod-accent`)
+- **Borders**: Pod-colored borders (`.pod-border`)
+- **Filter Buttons**: Pod-specific colored buttons with `data-pod` attributes
 
+### Pod Color Palette
+
+The system defines CSS variables for all 21 pods. Colors are activated via `data-pod` attributes:
+
+| Pod Name | Hex Code | CSS Variable |
+|----------|----------|--------------|
+| Retail Collective Pod (RCP) | #2EC5C2 | `--pod-retail-collective-pod-rcp` |
+| Social & Influence CoE (SICoE) | #6F5AE8 | `--pod-social-and-influence-coe-sicoe` |
+| Creative Pod | #C95CAF | `--pod-creative-pod` |
+| Product & Platform Pod | #0FA3B1 | `--pod-product-and-platform-pod` |
+| IP/Patent Program Pod | #FF7A1A | `--pod-ip-patent-program-pod` |
+| Security & Compliance Pod | #E4572E | `--pod-security-and-compliance-pod` |
+| Marketing & PR Pod | #FFD449 | `--pod-marketing-and-pr-pod` |
+| Ops & Finance Pod | #1A1A1A | `--pod-ops-and-finance-pod` |
+| Cultural Pod | #34AABB | `--pod-cultural-pod` |
+| Impact Programs Office (IPO) | #E24F8A | `--pod-impact-programs-office-ipo` |
+| Education & Cohorts Pod | #5CB85C | `--pod-education-and-cohorts-pod` |
+| Accessibility & Captioning Pod | #007ACC | `--pod-accessibility-and-captioning-pod` |
+| Packaging & Pre-Press Pod | #D4AF37 | `--pod-packaging-and-pre-press-pod` |
+| WMS / 3PL Ops Pod | #7A6FF0 | `--pod-wms---3pl-ops-pod` |
+| Channel Integrations Pod | #50C3B8 | `--pod-channel-integrations-pod` |
+| Author Platform Studio | #8C2E3F | `--pod-author-platform-studio` |
+| Music Rights & Distribution Pod | #6B1E9C | `--pod-music-rights-and-distribution-pod` |
+| Agent Governance Pod | #FF9B28 | `--pod-agent-governance-pod` |
+| Tenant & Billing Pod | #2E86DE | `--pod-tenant-and-billing-pod` |
+| GlobalCollabs Partnerships Pod | #F45B69 | `--pod-globalcollabs-partnerships-pod` |
+| Data Stewardship & Metrics Pod | #2F9E44 | `--pod-data-stewardship-and-metrics-pod` |
+
+### Usage Examples
+
+**Pod Rails** (solid colored bars):
 ```tsx
-<span className="chip chip-pod-control">Control Tower</span>
-<span className="chip chip-pod-product">Product</span>
-<span className="chip chip-pod-marketing">Marketing</span>
+<article className="role-card" data-pod="Creative Pod">
+  <div className="pod-rail" />
+  {/* Card content */}
+</article>
 ```
 
-Available classes:
-- `.chip-pod-control` - Blue (#3D6BFF)
-- `.chip-pod-intake` - Teal (#5CE1CF)
-- `.chip-pod-decision` - Yellow (#FFC24D)
-- `.chip-pod-roster` - Pink (#C95CAF)
-- `.chip-pod-ip` - Purple (#6B1E9C)
-- `.chip-pod-security` - Gray-blue (#3B4A5A)
-- `.chip-pod-product` - Cyan (#1F9CFF)
-- `.chip-pod-brand` - Magenta (#FF5BCD)
-- `.chip-pod-marketing` - Orange (#FF7A45)
-- `.chip-pod-finance` - Green (#2DBE7A)
-- `.chip-pod-rhythm` - Indigo (#5A67FF)
+**Pod Chips** (tinted badges with subtle backgrounds):
+```tsx
+<span className="pod-chip" data-pod="Product & Platform Pod">
+  Product & Platform Pod
+</span>
+```
+
+**Pod-Colored Filter Buttons** (full-color accent when selected):
+```tsx
+<Button 
+  variant={isSelected ? "default" : "outline"}
+  data-pod="Marketing & PR Pod"
+  className={isSelected ? "pod-accent" : ""}
+>
+  Marketing & PR Pod
+</Button>
+```
+
+**Pod Borders**:
+```tsx
+<div className="pod-border" data-pod="Security & Compliance Pod">
+  Content with pod-colored border
+</div>
+```
+
+### Implementation Details
+
+The pod color system uses a `--pod-current` variable that changes based on the `data-pod` attribute:
+
+```css
+/* Data attribute mapping (from pod-colors.css) */
+[data-pod] { --pod-current: #3D6BFF; } /* Default fallback */
+[data-pod='Creative Pod'] { --pod-current: #C95CAF; }
+[data-pod='Product & Platform Pod'] { --pod-current: #0FA3B1; }
+/* ... all 21 pods mapped */
+
+/* Utility class implementations */
+.pod-rail {
+  background: var(--pod-current);
+  height: 8px;
+  width: 100%;
+  border-radius: var(--radius-md) var(--radius-md) 0 0;
+}
+
+.pod-chip {
+  display: inline-block;
+  background: color-mix(in srgb, var(--pod-current) 20%, var(--background));
+  border: 1px solid color-mix(in srgb, var(--pod-current) 50%, var(--border));
+  color: var(--foreground);
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-weight: 600;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.pod-accent {
+  background: var(--pod-current);
+  color: white;
+}
+
+.pod-border {
+  border-color: var(--pod-current);
+}
+```
+
+**Key Design Decisions**:
+- **Rails**: Solid 8px colored bars for clear visual identification
+- **Chips**: Subtle 20% tinted backgrounds with 50% colored borders, maintaining legibility
+- **Accents**: Full-color backgrounds with white text for maximum emphasis (selected states)
+- **Borders**: Direct pod color application for clean separation
+
+**Files**: `client/src/ui/pod-colors/pod-colors.css`, `client/src/ui/pod-colors/pod-colors.json`
 
 ## Accessibility
 
