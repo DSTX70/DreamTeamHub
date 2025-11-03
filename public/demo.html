@@ -1,0 +1,681 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dream Team Hub Demo - Interactive Platform Overview</title>
+    <meta name="description" content="Explore the Dream Team Hub platform - a comprehensive multi-pod orchestration solution for distributed teams. Interactive demo showcasing all features.">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg-primary: #0a0e14;
+            --bg-secondary: #121821;
+            --bg-card: #1a1f2e;
+            --accent-teal: #14b8a6;
+            --accent-violet: #8b5cf6;
+            --accent-yellow: #fbbf24;
+            --accent-jade: #10b981;
+            --text-primary: #e5e7eb;
+            --text-secondary: #9ca3af;
+            --border: rgba(255, 255, 255, 0.1);
+            --glass-bg: rgba(26, 31, 46, 0.6);
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, var(--bg-primary) 0%, var(--bg-secondary) 100%);
+            color: var(--text-primary);
+            line-height: 1.6;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 4rem;
+            padding: 3rem 0;
+        }
+
+        h1 {
+            font-size: 3.5rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--accent-teal) 0%, var(--accent-violet) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 1rem;
+        }
+
+        .subtitle {
+            font-size: 1.25rem;
+            color: var(--text-secondary);
+            max-width: 700px;
+            margin: 0 auto;
+        }
+
+        .nav-tabs {
+            display: flex;
+            gap: 0.5rem;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-bottom: 3rem;
+            background: var(--glass-bg);
+            backdrop-filter: blur(10px);
+            padding: 0.5rem;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+        }
+
+        .tab {
+            padding: 0.75rem 1.5rem;
+            background: transparent;
+            border: none;
+            color: var(--text-secondary);
+            cursor: pointer;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+            font-size: 0.95rem;
+            font-weight: 500;
+        }
+
+        .tab:hover {
+            background: rgba(255, 255, 255, 0.05);
+            color: var(--text-primary);
+        }
+
+        .tab.active {
+            background: linear-gradient(135deg, var(--accent-teal), var(--accent-violet));
+            color: white;
+        }
+
+        .content-section {
+            display: none;
+            animation: fadeIn 0.5s ease;
+        }
+
+        .content-section.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 3rem;
+        }
+
+        .feature-card {
+            background: var(--glass-bg);
+            backdrop-filter: blur(10px);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 2rem;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .feature-card:hover {
+            transform: translateY(-5px);
+            border-color: var(--accent-teal);
+            box-shadow: 0 10px 30px rgba(20, 184, 166, 0.2);
+        }
+
+        .feature-icon {
+            width: 50px;
+            height: 50px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .feature-card h3 {
+            font-size: 1.25rem;
+            margin-bottom: 0.75rem;
+            color: var(--text-primary);
+        }
+
+        .feature-card p {
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+        }
+
+        .tech-stack {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.75rem;
+            margin-top: 1rem;
+        }
+
+        .tech-badge {
+            padding: 0.5rem 1rem;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+
+        .pod-colors {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: 1rem;
+            margin-top: 2rem;
+        }
+
+        .pod-card {
+            background: var(--bg-card);
+            border-left: 4px solid;
+            padding: 1rem;
+            border-radius: 8px;
+            font-size: 0.9rem;
+        }
+
+        .architecture-diagram {
+            background: var(--glass-bg);
+            backdrop-filter: blur(10px);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 2rem;
+            margin-top: 2rem;
+        }
+
+        .layer {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .layer h4 {
+            color: var(--accent-teal);
+            margin-bottom: 1rem;
+            font-size: 1.1rem;
+        }
+
+        .layer-items {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+
+        .layer-item {
+            background: rgba(20, 184, 166, 0.1);
+            border: 1px solid var(--accent-teal);
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            font-size: 0.85rem;
+        }
+
+        .export-btn {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            padding: 1rem 2rem;
+            background: linear-gradient(135deg, var(--accent-teal), var(--accent-violet));
+            border: none;
+            border-radius: 50px;
+            color: white;
+            font-weight: 600;
+            cursor: pointer;
+            box-shadow: 0 10px 30px rgba(20, 184, 166, 0.3);
+            transition: all 0.3s ease;
+            z-index: 1000;
+        }
+
+        .export-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 15px 40px rgba(20, 184, 166, 0.4);
+        }
+
+        .workflow-list {
+            list-style: none;
+            padding: 0;
+        }
+
+        .workflow-item {
+            background: var(--bg-card);
+            border-left: 3px solid var(--accent-jade);
+            padding: 1rem 1.5rem;
+            margin-bottom: 0.75rem;
+            border-radius: 6px;
+        }
+
+        .workflow-item strong {
+            color: var(--accent-jade);
+            display: block;
+            margin-bottom: 0.25rem;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.5rem;
+            margin: 2rem 0;
+        }
+
+        .stat-card {
+            background: var(--glass-bg);
+            backdrop-filter: blur(10px);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1.5rem;
+            text-align: center;
+        }
+
+        .stat-number {
+            font-size: 2.5rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--accent-teal), var(--accent-violet));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .stat-label {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            margin-top: 0.5rem;
+        }
+
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 2rem;
+            }
+            .container {
+                padding: 1rem;
+            }
+            .features-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Dream Team Hub by i³ collective</h1>
+            <p class="subtitle">Multi-Pod Orchestration Platform for Distributed Teams</p>
+        </header>
+
+        <nav class="nav-tabs">
+            <button class="tab active" data-tab="overview">Overview</button>
+            <button class="tab" data-tab="features">Features</button>
+            <button class="tab" data-tab="architecture">Architecture</button>
+            <button class="tab" data-tab="pods">Pod System</button>
+            <button class="tab" data-tab="tech">Technology</button>
+        </nav>
+
+        <section id="overview" class="content-section active">
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-number">57</div>
+                    <div class="stat-label">AI Agents</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">21</div>
+                    <div class="stat-label">Pod Colors</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">25</div>
+                    <div class="stat-label">Database Tables</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">10+</div>
+                    <div class="stat-label">Core Modules</div>
+                </div>
+            </div>
+
+            <div class="architecture-diagram">
+                <h3 style="margin-bottom: 1.5rem; color: var(--accent-teal);">Platform Capabilities</h3>
+                <p style="color: var(--text-secondary); margin-bottom: 2rem;">
+                    Dream Team Hub is a comprehensive multi-pod orchestration platform designed to streamline 
+                    complex organizational workflows for distributed teams. It unifies management, reduces redundancy, 
+                    synchronizes actions, and enhances collaboration across organizational units.
+                </p>
+                <ul class="workflow-list">
+                    <li class="workflow-item">
+                        <strong>Unified Dashboard</strong>
+                        Single pane of glass for comprehensive operational oversight with real-time priorities, assignments, and escalations
+                    </li>
+                    <li class="workflow-item">
+                        <strong>AI-Powered Collaboration</strong>
+                        32 role-based AI personas powered by OpenAI GPT-4 with context-aware responses and agent memory
+                    </li>
+                    <li class="workflow-item">
+                        <strong>Visual Organization</strong>
+                        21 unique pod colors with data-attribute theming system for instant visual recognition
+                    </li>
+                    <li class="workflow-item">
+                        <strong>Enterprise Security</strong>
+                        Replit Auth (OpenID Connect) with session-based authentication and PostgreSQL storage
+                    </li>
+                </ul>
+            </div>
+        </section>
+
+        <section id="features" class="content-section">
+            <div class="features-grid">
+                <div class="feature-card">
+                    <div class="feature-icon" style="background: linear-gradient(135deg, #14b8a6, #0891b2);">📊</div>
+                    <h3>Control Tower</h3>
+                    <p>Centralized dashboard for priorities, assignments, escalations, statistics, and recent Idea Sparks with real-time updates.</p>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feature-icon" style="background: linear-gradient(135deg, #8b5cf6, #7c3aed);">📁</div>
+                    <h3>Project Management</h3>
+                    <p>Comprehensive system organized by business pillars (Imagination, Innovation, Impact) with tasks, files, agents, and messaging.</p>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feature-icon" style="background: linear-gradient(135deg, #fbbf24, #f59e0b);">💡</div>
+                    <h3>Idea Spark</h3>
+                    <p>Quick capture accessible from all screens with title, description, file URL, pod tagging, and project linkage capabilities.</p>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feature-icon" style="background: linear-gradient(135deg, #ec4899, #db2777);">👥</div>
+                    <h3>Role Cards System</h3>
+                    <p>Manage 57 Dream Team personas with RACI Matrix, bulk import, and visual pod color coding with colored rails and badges.</p>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feature-icon" style="background: linear-gradient(135deg, #10b981, #059669);">🧠</div>
+                    <h3>Brainstorm Studio</h3>
+                    <p>Structured ideation with LLM-assisted clustering and idea scoring for collaborative innovation sessions.</p>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feature-icon" style="background: linear-gradient(135deg, #f97316, #ea580c);">✓</div>
+                    <h3>Audit Engine</h3>
+                    <p>Cross-pod compliance checks with evidence capture, ensuring quality and adherence across all organizational units.</p>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feature-icon" style="background: linear-gradient(135deg, #6366f1, #4f46e5);">📝</div>
+                    <h3>Decision Log</h3>
+                    <p>Immutable record of key decisions with full context, rationale, and impact tracking for accountability.</p>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feature-icon" style="background: linear-gradient(135deg, #06b6d4, #0891b2);">🔄</div>
+                    <h3>Intake & Routing</h3>
+                    <p>Automated work item lifecycle management with smart routing and status tracking across the platform.</p>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feature-icon" style="background: linear-gradient(135deg, #a855f7, #9333ea);">💬</div>
+                    <h3>Dream Team Chat</h3>
+                    <p>AI-powered conversational interface with 32 role-based personas, context-aware responses, and persistent agent memory.</p>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feature-icon" style="background: linear-gradient(135deg, #14b8a6, #10b981);">🔗</div>
+                    <h3>Roles ⇄ Agent Specs Sync</h3>
+                    <p>Two-way synchronization between Role Cards and Agent Specifications with diff views and smart suggestions.</p>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feature-icon" style="background: linear-gradient(135deg, #84cc16, #65a30d);">🏢</div>
+                    <h3>Pods & Persons</h3>
+                    <p>Organizational unit and team member management with complete hierarchy and relationship tracking.</p>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feature-icon" style="background: linear-gradient(135deg, #3b82f6, #2563eb);">⚡</div>
+                    <h3>Quick Start Actions</h3>
+                    <p>6 smart action tiles (Discussion, Brainstorm, Audit, Conversation, Resume, Quick Chat) with intelligent modals.</p>
+                </div>
+            </div>
+        </section>
+
+        <section id="architecture" class="content-section">
+            <div class="architecture-diagram">
+                <h3 style="margin-bottom: 1.5rem; color: var(--accent-violet);">System Architecture</h3>
+                
+                <div class="layer">
+                    <h4>Frontend Layer</h4>
+                    <div class="layer-items">
+                        <span class="layer-item">React 18</span>
+                        <span class="layer-item">TypeScript</span>
+                        <span class="layer-item">Wouter Routing</span>
+                        <span class="layer-item">TanStack Query v5</span>
+                        <span class="layer-item">React Hook Form</span>
+                        <span class="layer-item">Zod Validation</span>
+                        <span class="layer-item">Shadcn UI</span>
+                        <span class="layer-item">Tailwind CSS</span>
+                        <span class="layer-item">Lucide Icons</span>
+                        <span class="layer-item">Framer Motion</span>
+                    </div>
+                </div>
+
+                <div class="layer">
+                    <h4>Backend Layer</h4>
+                    <div class="layer-items">
+                        <span class="layer-item">Express.js</span>
+                        <span class="layer-item">TypeScript</span>
+                        <span class="layer-item">RESTful API</span>
+                        <span class="layer-item">Session Management</span>
+                        <span class="layer-item">Middleware Auth</span>
+                        <span class="layer-item">Zod Validation</span>
+                    </div>
+                </div>
+
+                <div class="layer">
+                    <h4>Database Layer</h4>
+                    <div class="layer-items">
+                        <span class="layer-item">PostgreSQL (Neon)</span>
+                        <span class="layer-item">Drizzle ORM</span>
+                        <span class="layer-item">25 Tables</span>
+                        <span class="layer-item">Relational Model</span>
+                        <span class="layer-item">Type-Safe Queries</span>
+                    </div>
+                </div>
+
+                <div class="layer">
+                    <h4>External Services</h4>
+                    <div class="layer-items">
+                        <span class="layer-item">OpenAI GPT-4</span>
+                        <span class="layer-item">Replit Auth (OIDC)</span>
+                        <span class="layer-item">Google Login</span>
+                        <span class="layer-item">GitHub Login</span>
+                        <span class="layer-item">Email Auth</span>
+                    </div>
+                </div>
+            </div>
+
+            <div style="margin-top: 2rem; background: var(--glass-bg); backdrop-filter: blur(10px); border: 1px solid var(--border); border-radius: 12px; padding: 2rem;">
+                <h3 style="margin-bottom: 1.5rem; color: var(--accent-jade);">Database Schema</h3>
+                <p style="color: var(--text-secondary); margin-bottom: 1rem;">
+                    Comprehensive relational model with 25 tables including:
+                </p>
+                <div class="tech-stack">
+                    <span class="tech-badge">users & sessions</span>
+                    <span class="tech-badge">projects</span>
+                    <span class="tech-badge">project_files</span>
+                    <span class="tech-badge">project_agents</span>
+                    <span class="tech-badge">project_tasks</span>
+                    <span class="tech-badge">project_messages</span>
+                    <span class="tech-badge">idea_sparks</span>
+                    <span class="tech-badge">role_cards</span>
+                    <span class="tech-badge">agent_specs</span>
+                    <span class="tech-badge">pods</span>
+                    <span class="tech-badge">persons</span>
+                    <span class="tech-badge">conversations</span>
+                    <span class="tech-badge">messages</span>
+                    <span class="tech-badge">and more...</span>
+                </div>
+            </div>
+        </section>
+
+        <section id="pods" class="content-section">
+            <div class="architecture-diagram">
+                <h3 style="margin-bottom: 1.5rem; color: var(--accent-yellow);">21-Pod Color System</h3>
+                <p style="color: var(--text-secondary); margin-bottom: 2rem;">
+                    Visual differentiation system with 21 unique pod colors, data-attribute theming, 
+                    and utility classes for consistent application across the platform.
+                </p>
+                
+                <div class="pod-colors">
+                    <div class="pod-card" style="border-color: #ef4444;">Red Pod</div>
+                    <div class="pod-card" style="border-color: #f97316;">Orange Pod</div>
+                    <div class="pod-card" style="border-color: #fbbf24;">Amber Pod</div>
+                    <div class="pod-card" style="border-color: #eab308;">Yellow Pod</div>
+                    <div class="pod-card" style="border-color: #84cc16;">Lime Pod</div>
+                    <div class="pod-card" style="border-color: #22c55e;">Green Pod</div>
+                    <div class="pod-card" style="border-color: #10b981;">Emerald Pod</div>
+                    <div class="pod-card" style="border-color: #14b8a6;">Teal Pod</div>
+                    <div class="pod-card" style="border-color: #06b6d4;">Cyan Pod</div>
+                    <div class="pod-card" style="border-color: #0ea5e9;">Sky Pod</div>
+                    <div class="pod-card" style="border-color: #3b82f6;">Blue Pod</div>
+                    <div class="pod-card" style="border-color: #6366f1;">Indigo Pod</div>
+                    <div class="pod-card" style="border-color: #8b5cf6;">Violet Pod</div>
+                    <div class="pod-card" style="border-color: #a855f7;">Purple Pod</div>
+                    <div class="pod-card" style="border-color: #d946ef;">Fuchsia Pod</div>
+                    <div class="pod-card" style="border-color: #ec4899;">Pink Pod</div>
+                    <div class="pod-card" style="border-color: #f43f5e;">Rose Pod</div>
+                    <div class="pod-card" style="border-color: #64748b;">Slate Pod</div>
+                    <div class="pod-card" style="border-color: #71717a;">Zinc Pod</div>
+                    <div class="pod-card" style="border-color: #78716c;">Stone Pod</div>
+                    <div class="pod-card" style="border-color: #a8a29e;">Warm Pod</div>
+                </div>
+
+                <div style="margin-top: 2rem; padding: 1.5rem; background: var(--bg-card); border-radius: 8px;">
+                    <h4 style="color: var(--accent-teal); margin-bottom: 1rem;">Utility Classes</h4>
+                    <div class="tech-stack">
+                        <span class="tech-badge">.pod-rail</span>
+                        <span class="tech-badge">.pod-chip</span>
+                        <span class="tech-badge">.pod-accent</span>
+                        <span class="tech-badge">.pod-border</span>
+                        <span class="tech-badge">data-pod attribute</span>
+                        <span class="tech-badge">CSS custom properties</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="tech" class="content-section">
+            <div class="architecture-diagram">
+                <h3 style="margin-bottom: 1.5rem; color: var(--accent-violet);">Technology Stack</h3>
+                
+                <div style="margin-bottom: 2rem;">
+                    <h4 style="color: var(--text-secondary); margin-bottom: 1rem;">Frontend Technologies</h4>
+                    <div class="tech-stack">
+                        <span class="tech-badge">React 18</span>
+                        <span class="tech-badge">TypeScript</span>
+                        <span class="tech-badge">Wouter</span>
+                        <span class="tech-badge">TanStack Query v5</span>
+                        <span class="tech-badge">React Hook Form</span>
+                        <span class="tech-badge">Zod</span>
+                        <span class="tech-badge">Shadcn UI</span>
+                        <span class="tech-badge">Radix UI</span>
+                        <span class="tech-badge">Tailwind CSS</span>
+                        <span class="tech-badge">Lucide React</span>
+                        <span class="tech-badge">Framer Motion</span>
+                        <span class="tech-badge">date-fns</span>
+                    </div>
+                </div>
+
+                <div style="margin-bottom: 2rem;">
+                    <h4 style="color: var(--text-secondary); margin-bottom: 1rem;">Backend Technologies</h4>
+                    <div class="tech-stack">
+                        <span class="tech-badge">Express.js</span>
+                        <span class="tech-badge">TypeScript</span>
+                        <span class="tech-badge">PostgreSQL</span>
+                        <span class="tech-badge">Neon Database</span>
+                        <span class="tech-badge">Drizzle ORM</span>
+                        <span class="tech-badge">Zod Validation</span>
+                        <span class="tech-badge">Express Session</span>
+                        <span class="tech-badge">Passport.js</span>
+                    </div>
+                </div>
+
+                <div style="margin-bottom: 2rem;">
+                    <h4 style="color: var(--text-secondary); margin-bottom: 1rem;">AI & External Services</h4>
+                    <div class="tech-stack">
+                        <span class="tech-badge">OpenAI GPT-4</span>
+                        <span class="tech-badge">Replit Auth (OIDC)</span>
+                        <span class="tech-badge">Google OAuth</span>
+                        <span class="tech-badge">GitHub OAuth</span>
+                        <span class="tech-badge">Apple Sign-In</span>
+                    </div>
+                </div>
+
+                <div>
+                    <h4 style="color: var(--text-secondary); margin-bottom: 1rem;">Design System</h4>
+                    <div class="tech-stack">
+                        <span class="tech-badge">Inter (UI)</span>
+                        <span class="tech-badge">JetBrains Mono (Code)</span>
+                        <span class="tech-badge">Space Grotesk (Headings)</span>
+                        <span class="tech-badge">Glass-morphism</span>
+                        <span class="tech-badge">Dark Theme</span>
+                        <span class="tech-badge">WCAG AAA</span>
+                    </div>
+                </div>
+            </div>
+
+            <div style="margin-top: 2rem; background: var(--glass-bg); backdrop-filter: blur(10px); border: 1px solid var(--border); border-radius: 12px; padding: 2rem;">
+                <h3 style="margin-bottom: 1.5rem; color: var(--accent-jade);">Key Features</h3>
+                <ul class="workflow-list">
+                    <li class="workflow-item">
+                        <strong>Type Safety</strong>
+                        End-to-end TypeScript with Zod validation for runtime type safety
+                    </li>
+                    <li class="workflow-item">
+                        <strong>Real-time Updates</strong>
+                        TanStack Query for automatic cache invalidation and optimistic updates
+                    </li>
+                    <li class="workflow-item">
+                        <strong>Accessibility</strong>
+                        WCAG AAA contrast ratios, ARIA labels, keyboard navigation, and focus states
+                    </li>
+                    <li class="workflow-item">
+                        <strong>Responsive Design</strong>
+                        Mobile-first approach with consistent 2/4/6/8 unit spacing system
+                    </li>
+                    <li class="workflow-item">
+                        <strong>Security</strong>
+                        Session-based auth with PostgreSQL storage, OIDC integration, secure cookies
+                    </li>
+                </ul>
+            </div>
+        </section>
+    </div>
+
+    <script>
+        const tabs = document.querySelectorAll('.tab');
+        const sections = document.querySelectorAll('.content-section');
+
+        tabs.forEach(tab => {
+            tab.addEventListener('click', () => {
+                const targetId = tab.getAttribute('data-tab');
+                
+                tabs.forEach(t => t.classList.remove('active'));
+                sections.forEach(s => s.classList.remove('active'));
+                
+                tab.classList.add('active');
+                document.getElementById(targetId).classList.add('active');
+            });
+        });
+    </script>
+</body>
+</html>
