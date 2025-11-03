@@ -1,0 +1,7 @@
+tools:
+  - name: repo_reader
+    scopes: [read]
+  - name: storage_kv
+    scopes: [read, write]
+  - name: approval_gate
+    scopes: [request, status]

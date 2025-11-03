@@ -1,0 +1,7 @@
+runner:
+  schedule: nightly
+  golden_file: goldens.csv
+  metrics: [correctness, completeness, latency, cost, policy]
+  pass_threshold:
+    correctness: 0.95
+    policy: 1.0

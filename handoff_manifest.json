@@ -1,6 +1,133 @@
 {
   "version": "vNext_2025Q4",
-  "pods": [],
+  "pods": [
+    {
+      "name": "Retail Collective Pod (RCP)",
+      "pillar": "Imagination",
+      "purpose": "Design/sourcing/fulfillment for physical goods.",
+      "autonomy": "L1"
+    },
+    {
+      "name": "Social & Influence CoE (SICoE)",
+      "pillar": "Imagination",
+      "purpose": "Social ops, influencer programs, paid social.",
+      "autonomy": "L1"
+    },
+    {
+      "name": "Creative Pod",
+      "pillar": "Imagination",
+      "purpose": "Art direction, copy, content design, brand assets.",
+      "autonomy": "L1"
+    },
+    {
+      "name": "Product & Platform Pod",
+      "pillar": "Innovation",
+      "purpose": "SaaS architecture, SDKs, telemetry, agent governance.",
+      "autonomy": "L1"
+    },
+    {
+      "name": "IP/Patent Program Pod",
+      "pillar": "Innovation",
+      "purpose": "Patents/trademarks/copyrights and evidence management.",
+      "autonomy": "L1"
+    },
+    {
+      "name": "Security & Compliance Pod",
+      "pillar": "Innovation",
+      "purpose": "Security audits, SOC2/ISO, privacy, COPPA.",
+      "autonomy": "L1"
+    },
+    {
+      "name": "Marketing & PR Pod",
+      "pillar": "Imagination",
+      "purpose": "Launch planning, messaging, PR & community.",
+      "autonomy": "L1"
+    },
+    {
+      "name": "Ops & Finance Pod",
+      "pillar": "Innovation",
+      "purpose": "Budgets, contracts, vendor mgmt, dashboards.",
+      "autonomy": "L1"
+    },
+    {
+      "name": "Cultural Pod",
+      "pillar": "Imagination",
+      "purpose": "Bilingual dramaturgy & cultural review.",
+      "autonomy": "L1"
+    },
+    {
+      "name": "Impact Programs Office (IPO)",
+      "pillar": "Impact",
+      "purpose": "Portfolio OKRs, grants, outcome dashboards, reporting.",
+      "autonomy": "L2"
+    },
+    {
+      "name": "Education & Cohorts Pod",
+      "pillar": "Impact",
+      "purpose": "OUAS/SparkBooks cohorts and Title I placements.",
+      "autonomy": "L2"
+    },
+    {
+      "name": "Accessibility & Captioning Pod",
+      "pillar": "Impact",
+      "purpose": "Captioning, alt formats, accessibility QA.",
+      "autonomy": "L1"
+    },
+    {
+      "name": "Packaging & Pre-Press Pod",
+      "pillar": "Imagination",
+      "purpose": "Dielines, foil/varnish specs, pre-press QA.",
+      "autonomy": "L2"
+    },
+    {
+      "name": "WMS / 3PL Ops Pod",
+      "pillar": "Imagination",
+      "purpose": "Warehouse integrations, kitting, returns.",
+      "autonomy": "L1"
+    },
+    {
+      "name": "Channel Integrations Pod",
+      "pillar": "Innovation",
+      "purpose": "Social API connectors, UTM logic, publishing health.",
+      "autonomy": "L1"
+    },
+    {
+      "name": "Author Platform Studio",
+      "pillar": "Imagination",
+      "purpose": "Author sites, funnels, newsletter, audiobook pipelines.",
+      "autonomy": "L1"
+    },
+    {
+      "name": "Music Rights & Distribution Pod",
+      "pillar": "Imagination",
+      "purpose": "ISRC/UPC, PRO, DSP distro, merch sync.",
+      "autonomy": "L1"
+    },
+    {
+      "name": "Agent Governance Pod",
+      "pillar": "Innovation",
+      "purpose": "Autonomy ladders, Mirror-Backs, audit hooks.",
+      "autonomy": "L2"
+    },
+    {
+      "name": "Tenant & Billing Pod",
+      "pillar": "Innovation",
+      "purpose": "SSO/SCIM, licensing, metering, billing.",
+      "autonomy": "L2"
+    },
+    {
+      "name": "GlobalCollabs Partnerships Pod",
+      "pillar": "Impact",
+      "purpose": "KYB, MOUs, rev-share, co-marketing.",
+      "autonomy": "L2"
+    },
+    {
+      "name": "Data Stewardship & Metrics Pod",
+      "pillar": "Innovation",
+      "purpose": "Metrics catalog, dashboards, telemetry joins.",
+      "autonomy": "L1"
+    }
+  ],
   "agents_seed": [
     {
       "id": "agent_governance_designer",
@@ -28,7 +155,7 @@
     },
     {
       "id": "agent_tenant_billing_pm",
-      "title": "Tenant & Billing PM",
+      "title": "Tenant/Billing PM",
       "podName": "Tenant & Billing Pod",
       "pillar": "Innovation",
       "autonomy": "L2",
@@ -40,6 +167,430 @@
       "podName": "Education & Cohorts Pod",
       "pillar": "Impact",
       "autonomy": "L2",
+      "status": "active"
+    },
+    {
+      "id": "agent_os",
+      "title": "OS",
+      "podName": "Agent Governance Pod",
+      "pillar": "Innovation",
+      "autonomy": "L3",
+      "status": "active"
+    },
+    {
+      "id": "agent_helm",
+      "title": "Helm",
+      "podName": "Agent Governance Pod",
+      "pillar": "Innovation",
+      "autonomy": "L3",
+      "status": "active"
+    },
+    {
+      "id": "agent_sparkster",
+      "title": "Sparkster",
+      "podName": "Creative Pod",
+      "pillar": "Imagination",
+      "autonomy": "L2",
+      "status": "active"
+    },
+    {
+      "id": "agent_nova",
+      "title": "Nova",
+      "podName": "Creative Pod",
+      "pillar": "Imagination",
+      "autonomy": "L2",
+      "status": "active"
+    },
+    {
+      "id": "agent_prism",
+      "title": "Prism",
+      "podName": "Marketing & PR Pod",
+      "pillar": "Imagination",
+      "autonomy": "L2",
+      "status": "active"
+    },
+    {
+      "id": "agent_storybloom",
+      "title": "Storybloom",
+      "podName": "Marketing & PR Pod",
+      "pillar": "Imagination",
+      "autonomy": "L2",
+      "status": "active"
+    },
+    {
+      "id": "agent_echo",
+      "title": "Echo",
+      "podName": "SICoE",
+      "pillar": "Imagination",
+      "autonomy": "L1",
+      "status": "active"
+    },
+    {
+      "id": "agent_muse",
+      "title": "Muse",
+      "podName": "Creative Pod",
+      "pillar": "Imagination",
+      "autonomy": "L0",
+      "status": "active"
+    },
+    {
+      "id": "agent_scout",
+      "title": "Scout",
+      "podName": "Product & Platform Pod",
+      "pillar": "Innovation",
+      "autonomy": "L1",
+      "status": "active"
+    },
+    {
+      "id": "agent_chiesan",
+      "title": "ChieSan",
+      "podName": "Cultural Pod",
+      "pillar": "Imagination",
+      "autonomy": "L1",
+      "status": "active"
+    },
+    {
+      "id": "agent_river",
+      "title": "River",
+      "podName": "IP/Patent Program Pod",
+      "pillar": "Innovation",
+      "autonomy": "L1",
+      "status": "active"
+    },
+    {
+      "id": "agent_lume",
+      "title": "Lume",
+      "podName": "Product & Platform Pod",
+      "pillar": "Innovation",
+      "autonomy": "L1",
+      "status": "active"
+    },
+    {
+      "id": "agent_forge",
+      "title": "Forge",
+      "podName": "Product & Platform Pod",
+      "pillar": "Innovation",
+      "autonomy": "L2",
+      "status": "active"
+    },
+    {
+      "id": "agent_lexicode",
+      "title": "LexiCode",
+      "podName": "Product & Platform Pod",
+      "pillar": "Innovation",
+      "autonomy": "L2",
+      "status": "active"
+    },
+    {
+      "id": "agent_codeblock",
+      "title": "CodeBlock",
+      "podName": "Product & Platform Pod",
+      "pillar": "Innovation",
+      "autonomy": "L1",
+      "status": "active"
+    },
+    {
+      "id": "agent_app_development_guru",
+      "title": "App Development Guru",
+      "podName": "Product & Platform Pod",
+      "pillar": "Innovation",
+      "autonomy": "L1",
+      "status": "active"
+    },
+    {
+      "id": "agent_sentinel",
+      "title": "Sentinel",
+      "podName": "Security & Compliance Pod",
+      "pillar": "Innovation",
+      "autonomy": "L2",
+      "status": "active"
+    },
+    {
+      "id": "agent_aegis",
+      "title": "Aegis",
+      "podName": "IP/Patent Program Pod",
+      "pillar": "Innovation",
+      "autonomy": "L2",
+      "status": "active"
+    },
+    {
+      "id": "agent_atlas",
+      "title": "Atlas",
+      "podName": "IP/Patent Program Pod",
+      "pillar": "Innovation",
+      "autonomy": "L1",
+      "status": "active"
+    },
+    {
+      "id": "agent_patent_search_specialist",
+      "title": "Patent Search Specialist",
+      "podName": "IP/Patent Program Pod",
+      "pillar": "Innovation",
+      "autonomy": "L1",
+      "status": "active"
+    },
+    {
+      "id": "agent_patent_illustrator",
+      "title": "Patent Illustrator",
+      "podName": "IP/Patent Program Pod",
+      "pillar": "Innovation",
+      "autonomy": "L1",
+      "status": "active"
+    },
+    {
+      "id": "agent_ip_paralegal_docketing",
+      "title": "IP Paralegal/Docketing",
+      "podName": "IP/Patent Program Pod",
+      "pillar": "Innovation",
+      "autonomy": "L1",
+      "status": "active"
+    },
+    {
+      "id": "agent_technical_claims_co_author",
+      "title": "Technical Claims Co-Author",
+      "podName": "IP/Patent Program Pod",
+      "pillar": "Innovation",
+      "autonomy": "L1",
+      "status": "active"
+    },
+    {
+      "id": "agent_evidence_curator",
+      "title": "Evidence Curator",
+      "podName": "IP/Patent Program Pod",
+      "pillar": "Innovation",
+      "autonomy": "L1",
+      "status": "active"
+    },
+    {
+      "id": "agent_security_reviewer",
+      "title": "Security Reviewer",
+      "podName": "Security & Compliance Pod",
+      "pillar": "Innovation",
+      "autonomy": "L1",
+      "status": "active"
+    },
+    {
+      "id": "agent_coda",
+      "title": "Coda",
+      "podName": "Security & Compliance Pod",
+      "pillar": "Innovation",
+      "autonomy": "L1",
+      "status": "active"
+    },
+    {
+      "id": "agent_praetor",
+      "title": "Praetor",
+      "podName": "Security & Compliance Pod",
+      "pillar": "Innovation",
+      "autonomy": "L1",
+      "status": "active"
+    },
+    {
+      "id": "agent_verifier",
+      "title": "Verifier",
+      "podName": "Product & Platform Pod",
+      "pillar": "Innovation",
+      "autonomy": "L1",
+      "status": "active"
+    },
+    {
+      "id": "agent_pulse",
+      "title": "Pulse",
+      "podName": "Product & Platform Pod",
+      "pillar": "Innovation",
+      "autonomy": "L1",
+      "status": "active"
+    },
+    {
+      "id": "agent_bridge",
+      "title": "Bridge",
+      "podName": "Product & Platform Pod",
+      "pillar": "Innovation",
+      "autonomy": "L1",
+      "status": "active"
+    },
+    {
+      "id": "agent_beacon",
+      "title": "Beacon",
+      "podName": "Marketing & PR Pod",
+      "pillar": "Imagination",
+      "autonomy": "L1",
+      "status": "active"
+    },
+    {
+      "id": "agent_conductor",
+      "title": "Conductor",
+      "podName": "Product & Platform Pod",
+      "pillar": "Innovation",
+      "autonomy": "L1",
+      "status": "active"
+    },
+    {
+      "id": "agent_navi",
+      "title": "Navi",
+      "podName": "Ops & Finance Pod",
+      "pillar": "Innovation",
+      "autonomy": "L1",
+      "status": "active"
+    },
+    {
+      "id": "agent_ledger",
+      "title": "Ledger",
+      "podName": "Ops & Finance Pod",
+      "pillar": "Innovation",
+      "autonomy": "L1",
+      "status": "active"
+    },
+    {
+      "id": "agent_foundry",
+      "title": "Foundry",
+      "podName": "Product & Platform Pod",
+      "pillar": "Innovation",
+      "autonomy": "L1",
+      "status": "active"
+    },
+    {
+      "id": "agent_izumi_takahashi",
+      "title": "Izumi Takahashi",
+      "podName": "Cultural Pod",
+      "pillar": "Imagination",
+      "autonomy": "L1",
+      "status": "active"
+    },
+    {
+      "id": "agent_kaoru_arai",
+      "title": "Kaoru Arai",
+      "podName": "Cultural Pod",
+      "pillar": "Imagination",
+      "autonomy": "L1",
+      "status": "active"
+    },
+    {
+      "id": "agent_cohort_ops_lead",
+      "title": "Cohort Ops Lead",
+      "podName": "Education & Cohorts Pod",
+      "pillar": "Impact",
+      "autonomy": "L1",
+      "status": "active"
+    },
+    {
+      "id": "agent_accessibility_lead",
+      "title": "Accessibility Lead",
+      "podName": "Accessibility & Captioning Pod",
+      "pillar": "Impact",
+      "autonomy": "L1",
+      "status": "active"
+    },
+    {
+      "id": "agent_captioning_producer",
+      "title": "Captioning Producer",
+      "podName": "Accessibility & Captioning Pod",
+      "pillar": "Impact",
+      "autonomy": "L1",
+      "status": "active"
+    },
+    {
+      "id": "agent_packaging_pre_press_lead",
+      "title": "Packaging/Pre\u2011press Lead",
+      "podName": "Packaging & Pre-Press Pod",
+      "pillar": "Imagination",
+      "autonomy": "L2",
+      "status": "active"
+    },
+    {
+      "id": "agent_vendor_qa",
+      "title": "Vendor QA",
+      "podName": "Packaging & Pre-Press Pod",
+      "pillar": "Imagination",
+      "autonomy": "L1",
+      "status": "active"
+    },
+    {
+      "id": "agent_3pl_integration_owner",
+      "title": "3PL Integration Owner",
+      "podName": "WMS / 3PL Ops Pod",
+      "pillar": "Imagination",
+      "autonomy": "L1",
+      "status": "active"
+    },
+    {
+      "id": "agent_returns_kitting_coordinator",
+      "title": "Returns/Kitting Coordinator",
+      "podName": "WMS / 3PL Ops Pod",
+      "pillar": "Imagination",
+      "autonomy": "L1",
+      "status": "active"
+    },
+    {
+      "id": "agent_author_platform_producer",
+      "title": "Author Platform Producer",
+      "podName": "Author Platform Studio",
+      "pillar": "Imagination",
+      "autonomy": "L1",
+      "status": "active"
+    },
+    {
+      "id": "agent_rights_admin",
+      "title": "Rights Admin",
+      "podName": "Music Rights & Distribution Pod",
+      "pillar": "Imagination",
+      "autonomy": "L1",
+      "status": "active"
+    },
+    {
+      "id": "agent_distro_ops",
+      "title": "Distro Ops",
+      "podName": "Music Rights & Distribution Pod",
+      "pillar": "Imagination",
+      "autonomy": "L0",
+      "status": "active"
+    },
+    {
+      "id": "agent_policy_librarian",
+      "title": "Policy Librarian",
+      "podName": "Agent Governance Pod",
+      "pillar": "Innovation",
+      "autonomy": "L1",
+      "status": "active"
+    },
+    {
+      "id": "agent_billing_engineer",
+      "title": "Billing Engineer",
+      "podName": "Tenant & Billing Pod",
+      "pillar": "Innovation",
+      "autonomy": "L1",
+      "status": "active"
+    },
+    {
+      "id": "agent_partner_ops",
+      "title": "Partner Ops",
+      "podName": "GlobalCollabs Partnerships Pod",
+      "pillar": "Impact",
+      "autonomy": "L2",
+      "status": "active"
+    },
+    {
+      "id": "agent_contracts_desk",
+      "title": "Contracts Desk",
+      "podName": "GlobalCollabs Partnerships Pod",
+      "pillar": "Impact",
+      "autonomy": "L1",
+      "status": "active"
+    },
+    {
+      "id": "agent_data_steward",
+      "title": "Data Steward",
+      "podName": "Data Stewardship & Metrics Pod",
+      "pillar": "Innovation",
+      "autonomy": "L1",
+      "status": "active"
+    },
+    {
+      "id": "agent_analyst",
+      "title": "Analyst",
+      "podName": "Data Stewardship & Metrics Pod",
+      "pillar": "Innovation",
+      "autonomy": "L1",
       "status": "active"
     }
   ],
