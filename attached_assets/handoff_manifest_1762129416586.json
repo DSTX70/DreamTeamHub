@@ -1,0 +1,47 @@
+{
+  "version": "vNext_2025Q4",
+  "pods": [],
+  "agents_seed": [
+    {
+      "id": "agent_governance_designer",
+      "title": "Governance Designer",
+      "podName": "Agent Governance Pod",
+      "pillar": "Innovation",
+      "autonomy": "L2",
+      "status": "active"
+    },
+    {
+      "id": "agent_packaging_prepress_lead",
+      "title": "Packaging / Pre\u2011press Lead",
+      "podName": "Packaging & Pre-Press Pod",
+      "pillar": "Imagination",
+      "autonomy": "L2",
+      "status": "active"
+    },
+    {
+      "id": "agent_channel_integrations_lead",
+      "title": "Channel Integrations Lead",
+      "podName": "Channel Integrations Pod",
+      "pillar": "Innovation",
+      "autonomy": "L1",
+      "status": "active"
+    },
+    {
+      "id": "agent_tenant_billing_pm",
+      "title": "Tenant & Billing PM",
+      "podName": "Tenant & Billing Pod",
+      "pillar": "Innovation",
+      "autonomy": "L2",
+      "status": "active"
+    },
+    {
+      "id": "agent_education_programs_manager",
+      "title": "Education Programs Manager",
+      "podName": "Education & Cohorts Pod",
+      "pillar": "Impact",
+      "autonomy": "L2",
+      "status": "active"
+    }
+  ],
+  "updated_at": "2025-11-03T00:19:50.729377Z"
+}
