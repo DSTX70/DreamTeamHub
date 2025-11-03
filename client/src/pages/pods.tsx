@@ -88,7 +88,7 @@ export default function Pods() {
             {filteredPods.length} {filteredPods.length === 1 ? 'Pod' : 'Pods'}
           </Badge>
           <Badge variant="outline" data-testid="badge-agent-count">
-            {allAgents?.length || 0} {allAgents?.length === 1 ? 'Agent' : 'Agents'}
+            {allAgents?.length || 0} Pod {allAgents?.length === 1 ? 'Agent' : 'Agents'}
           </Badge>
         </div>
       </div>
