@@ -28,6 +28,7 @@ The platform is structured into several core modules:
 - **Projects**: Comprehensive project management system organized by business pillars (Imagination, Innovation, Impact) with task management, file management with review workflow, agent/pod assignments, status tracking, project messaging, and project-specific Idea Sparks.
 - **Idea Spark**: Quick idea capture feature accessible from all authenticated screens via floating button. Allows users to capture ideas with title, description, file URL, pod assignment, and project linkage. Dashboard shows all recent sparks; Projects page shows only project-related sparks.
 - **Role Cards System**: Manages Dream Team personas with RACI Matrix and bulk import. Features visual pod color coding with 21 unique pod colors displayed via colored rails and badges on agent cards.
+- **Agent Lab Academy**: Interactive landing page displaying Agent Lab roles grouped by autonomy level (Advisory, Collaborative, Autonomous, Strategic) with role details, competencies, and success criteria. Integrated into the main navigation under Foundation section.
 - **Agent Lab Integration**: External role card importer system with CI/CD support via GitHub Actions, handle-based API endpoints, and dual authentication (session + API token).
 - **Brainstorm Studio**: Structured ideation with LLM-assisted clustering and idea scoring.
 - **Audit Engine**: Cross-pod compliance checks with evidence capture.

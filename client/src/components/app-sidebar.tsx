@@ -1,4 +1,4 @@
-import { Home, Users, Lightbulb, Shield, FileText, Inbox, Sparkles, Layers, MessageSquare, Bot, Radio, Settings, RefreshCw, Palette, HelpCircle, FolderKanban, Presentation } from "lucide-react";
+import { Home, Users, Lightbulb, Shield, FileText, Inbox, Sparkles, Layers, MessageSquare, Bot, Radio, Settings, RefreshCw, Palette, HelpCircle, FolderKanban, Presentation, GraduationCap } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import {
   Sidebar,
@@ -53,6 +53,7 @@ const navigation = [
       { title: "Roster Admin", url: "/roster-admin", icon: Settings },
       { title: "Roles ⇄ Specs Sync", url: "/role-agent-sync", icon: RefreshCw },
       { title: "Brand Guide", url: "/brand-guide", icon: Palette },
+      { title: "Agent Lab Academy", url: "/academy", icon: GraduationCap },
     ],
   },
   {
