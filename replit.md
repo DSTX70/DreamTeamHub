@@ -126,11 +126,16 @@ The importer automatically transforms Agent Lab role card structure to DTH schem
 
 #### Import Status
 
-**13 Agent Lab roles successfully imported** (November 2025):
+**13 Agent Lab roles successfully imported and integrated** (November 2025):
 - 2 Senior Advisers: agentic_ai_master, master_agentic_ai_strategist
 - 11 Added Specialists: cost_controller, data_curator, evaluation_architect, experiment_designer, master_agentic_ai_advancement_officer, memory_architect, prompt_policy_systems_engineer, reliability_sre_agentops, safety_red_team_lead, telemetry_tracing_lead, tooling_steward
 
-All roles categorized as "Agent Lab / Senior Advisers + Added Specialists".
+**Integration Details:**
+- All roles categorized as "Agent Lab / Senior Advisers + Added Specialists"
+- Assigned to "Agent Lab Academy" pod with distinctive emerald green color (#10B981)
+- Visible on Role Cards landing page alongside Dream Team agents
+- Accessible via Academy page at `/academy` route
+- Pod color system supports 22 pods (21 original + Agent Lab Academy)
 
 ### Agent Lab & Training Academy
 

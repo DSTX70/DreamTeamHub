@@ -20,6 +20,7 @@
   --pod-tenant-and-billing-pod: #2E86DE;
   --pod-globalcollabs-partnerships-pod: #F45B69;
   --pod-data-stewardship-and-metrics-pod: #2F9E44;
+  --pod-agent-lab-academy: #10B981;
 }
 
 /* Pod-specific data attribute theming */
@@ -45,6 +46,7 @@
 [data-pod='Tenant & Billing Pod'] { --pod-current: #2E86DE; }
 [data-pod='GlobalCollabs Partnerships Pod'] { --pod-current: #F45B69; }
 [data-pod='Data Stewardship & Metrics Pod'] { --pod-current: #2F9E44; }
+[data-pod='Agent Lab Academy'] { --pod-current: #10B981; }
 
 /* Pod utility classes */
 .pod-rail {
