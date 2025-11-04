@@ -1,12 +1,14 @@
+import { useState } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { apiRequest, queryClient } from '@/lib/queryClient';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Lightbulb, Trash2, ExternalLink, FileImage } from 'lucide-react';
+import { Lightbulb, Trash2, ExternalLink, FileImage, Edit } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import type { IdeaSpark } from '@shared/schema';
+import { IdeaSparkEditDialog } from './idea-spark-edit-dialog';
 
 interface IdeaSparksListProps {
   projectId?: number;
@@ -17,6 +19,7 @@ interface IdeaSparksListProps {
 
 export function IdeaSparksList({ projectId, showAll = false, hasProject = false, limit }: IdeaSparksListProps) {
   const { toast } = useToast();
+  const [editingSpark, setEditingSpark] = useState<IdeaSpark | null>(null);
 
   // Build query params
   const queryParams = new URLSearchParams();
@@ -83,60 +86,96 @@ export function IdeaSparksList({ projectId, showAll = false, hasProject = false,
   }
 
   return (
-    <div className="space-y-3" data-testid="idea-sparks-list">
-      {sparks.map((spark) => (
-        <Card key={spark.id} className="hover-elevate" data-testid={`idea-spark-${spark.id}`}>
-          <CardHeader className="pb-3">
-            <div className="flex items-start justify-between gap-2">
-              <div className="flex-1">
-                <CardTitle className="text-base flex items-center gap-2">
-                  <Lightbulb className="h-4 w-4 text-yellow-500" />
-                  {spark.title}
-                </CardTitle>
-                {spark.content && (
-                  <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
-                    {spark.content}
-                  </p>
-                )}
+    <>
+      <div className="space-y-3" data-testid="idea-sparks-list">
+        {sparks.map((spark) => (
+          <Card 
+            key={spark.id} 
+            className="hover-elevate cursor-pointer" 
+            data-testid={`idea-spark-${spark.id}`}
+            onClick={() => setEditingSpark(spark)}
+          >
+            <CardHeader className="pb-3">
+              <div className="flex items-start justify-between gap-2">
+                <div className="flex-1">
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <Lightbulb className="h-4 w-4 text-yellow-500" />
+                    {spark.title}
+                  </CardTitle>
+                  {spark.content && (
+                    <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
+                      {spark.content}
+                    </p>
+                  )}
+                </div>
+                <div className="flex items-center gap-1">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setEditingSpark(spark);
+                    }}
+                    data-testid={`button-edit-spark-${spark.id}`}
+                  >
+                    <Edit className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      deleteMutation.mutate(spark.id);
+                    }}
+                    disabled={deleteMutation.isPending}
+                    data-testid={`button-delete-spark-${spark.id}`}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
               </div>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => deleteMutation.mutate(spark.id)}
-                disabled={deleteMutation.isPending}
-                data-testid={`button-delete-spark-${spark.id}`}
-              >
-                <Trash2 className="h-4 w-4" />
-              </Button>
-            </div>
-          </CardHeader>
-          <CardContent className="pt-0">
-            <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-              {spark.pod && (
-                <Badge variant="outline" data-testid={`spark-pod-${spark.id}`}>
-                  {spark.pod}
-                </Badge>
-              )}
-              {spark.fileUrl && (
-                <a
-                  href={spark.fileUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1 text-blue-500 hover:underline"
-                  data-testid={`spark-file-${spark.id}`}
-                >
-                  <FileImage className="h-3 w-3" />
-                  View attachment
-                  <ExternalLink className="h-3 w-3" />
-                </a>
-              )}
-              <span className="ml-auto">
-                {format(new Date(spark.createdAt), 'MMM d, yyyy')}
-              </span>
-            </div>
-          </CardContent>
-        </Card>
-      ))}
-    </div>
+            </CardHeader>
+            <CardContent className="pt-0">
+              <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                {spark.pod ? (
+                  <Badge variant="outline" data-testid={`spark-pod-${spark.id}`}>
+                    {spark.pod}
+                  </Badge>
+                ) : (
+                  <Badge variant="secondary" data-testid={`spark-unassigned-${spark.id}`}>
+                    Unassigned
+                  </Badge>
+                )}
+                {spark.fileUrl && (
+                  <a
+                    href={spark.fileUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={(e) => e.stopPropagation()}
+                    className="inline-flex items-center gap-1 text-blue-500 hover:underline"
+                    data-testid={`spark-file-${spark.id}`}
+                  >
+                    <FileImage className="h-3 w-3" />
+                    View attachment
+                    <ExternalLink className="h-3 w-3" />
+                  </a>
+                )}
+                <span className="ml-auto">
+                  {format(new Date(spark.createdAt), 'MMM d, yyyy')}
+                </span>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      {editingSpark && (
+        <IdeaSparkEditDialog
+          spark={editingSpark}
+          isOpen={!!editingSpark}
+          onOpenChange={(open) => !open && setEditingSpark(null)}
+        />
+      )}
+    </>
   );
 }

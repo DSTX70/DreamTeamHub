@@ -85,6 +85,7 @@ export interface IStorage {
   getIdeaSparks(filters?: { userId?: string; projectId?: number; pod?: string; hasProject?: boolean }): Promise<IdeaSpark[]>;
   getIdeaSpark(id: number): Promise<IdeaSpark | undefined>;
   createIdeaSpark(spark: InsertIdeaSpark): Promise<IdeaSpark>;
+  updateIdeaSpark(id: number, spark: Partial<InsertIdeaSpark>): Promise<IdeaSpark | undefined>;
   deleteIdeaSpark(id: number): Promise<boolean>;
   
   // Brainstorm Sessions
@@ -472,6 +473,14 @@ export class DatabaseStorage implements IStorage {
   async createIdeaSpark(spark: InsertIdeaSpark): Promise<IdeaSpark> {
     const [created] = await db.insert(ideaSparks).values(spark).returning();
     return created;
+  }
+
+  async updateIdeaSpark(id: number, spark: Partial<InsertIdeaSpark>): Promise<IdeaSpark | undefined> {
+    const [updated] = await db.update(ideaSparks)
+      .set(spark)
+      .where(eq(ideaSparks.id, id))
+      .returning();
+    return updated || undefined;
   }
 
   async deleteIdeaSpark(id: number): Promise<boolean> {

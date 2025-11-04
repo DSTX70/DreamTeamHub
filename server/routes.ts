@@ -1766,6 +1766,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Update idea spark
+  app.patch("/api/idea-sparks/:id", isAuthenticated, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const data = insertIdeaSparkSchema.partial().omit({ userId: true }).parse(req.body);
+      const updated = await storage.updateIdeaSpark(id, data);
+      if (!updated) {
+        return res.status(404).json({ error: 'Idea spark not found' });
+      }
+      res.json(updated);
+    } catch (error: any) {
+      console.error('Error updating idea spark:', error);
+      res.status(400).json({ error: error.message || 'Failed to update idea spark' });
+    }
+  });
+
   // Delete idea spark
   app.delete("/api/idea-sparks/:id", isAuthenticated, async (req, res) => {
     try {
