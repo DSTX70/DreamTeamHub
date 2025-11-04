@@ -434,40 +434,52 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Agent Lab Academy summary endpoint
-  app.get("/api/agents/summary", isAuthenticated, async (req, res) => {
+  // Agent Lab Academy summary endpoint (public for Academy landing page)
+  app.get("/agents/summary", async (req, res) => {
     try {
       const agents = await storage.getAgents({});
       
-      // Transform agents to Academy dashboard format with KPI data
+      // Transform agents to Academy dashboard format with deterministic KPI data
       const summary = agents.map(agent => {
-        // Map autonomy level
-        const autonomyMap: Record<string, string> = {
-          'L0': 'L0',
-          'L1': 'L1',
-          'L2': 'L2',
-          'L3': 'L3'
-        };
-        const autonomy_level = autonomyMap[agent.autonomyLevel] || 'L0';
+        const autonomy_level = agent.autonomyLevel || 'L0';
         
-        // Use evaluation score for task success, or default
-        const task_success = agent.lastEvalScore ? agent.lastEvalScore / 100 : 0.75 + Math.random() * 0.2;
+        // Deterministic task success from lastEvalScore (0-100%), clamped to 0-1 range
+        const task_success = agent.lastEvalScore 
+          ? Math.min(1.0, Math.max(0.0, agent.lastEvalScore / 100))
+          : 0.80; // Default to 80% for agents without eval data
         
-        // Generate reasonable KPIs based on autonomy level
-        const baseLatency = autonomy_level === 'L3' ? 3.0 : autonomy_level === 'L2' ? 4.0 : autonomy_level === 'L1' ? 4.5 : 5.0;
-        const baseCost = autonomy_level === 'L3' ? 0.048 : autonomy_level === 'L2' ? 0.041 : autonomy_level === 'L1' ? 0.035 : 0.028;
+        // Deterministic KPIs based on autonomy level (no random jitter)
+        const latencyMap: Record<string, number> = { 'L3': 3.2, 'L2': 4.1, 'L1': 4.6, 'L0': 4.9 };
+        const costMap: Record<string, number> = { 'L3': 0.047, 'L2': 0.040, 'L1': 0.033, 'L0': 0.025 };
+        
+        // Map status to Academy expected values
+        let status: string;
+        if (agent.status === 'active') status = 'live';
+        else if (agent.status === 'inactive') status = 'pilot';
+        else status = agent.status; // watch, etc.
+        
+        // Calculate next gate (L3 has no next gate)
+        const currentLevel = parseInt(autonomy_level.slice(1));
+        const next_gate = currentLevel >= 3 ? '-' : (currentLevel + 1).toString();
+        
+        // Promotion progress from lastEvalScore, clamped to 0-100
+        // If no eval data, default based on autonomy level progression
+        const progressDefaults: Record<string, number> = { 'L0': 25, 'L1': 50, 'L2': 75, 'L3': 100 };
+        const promotion_progress_pct = agent.lastEvalScore 
+          ? Math.min(100, Math.max(0, agent.lastEvalScore))
+          : progressDefaults[autonomy_level] || 25;
         
         return {
-          name: agent.id,
+          name: agent.id, // agent.id IS the handle (e.g., "agent_os", "agent_helm")
           display_name: agent.title,
           autonomy_level,
-          status: agent.status === 'active' ? 'live' : agent.status === 'inactive' ? 'pilot' : agent.status,
-          next_gate: autonomy_level === 'L3' ? '-' : parseInt(autonomy_level.slice(1)) + 1,
-          promotion_progress_pct: agent.lastEvalScore || Math.floor(Math.random() * 100),
+          status,
+          next_gate,
+          promotion_progress_pct,
           kpis: {
             task_success,
-            latency_p95_s: baseLatency + (Math.random() - 0.5),
-            cost_per_task_usd: baseCost + (Math.random() - 0.5) * 0.01
+            latency_p95_s: latencyMap[autonomy_level] || 4.9,
+            cost_per_task_usd: costMap[autonomy_level] || 0.025
           }
         };
       });
