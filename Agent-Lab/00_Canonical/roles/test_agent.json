@@ -1,0 +1,37 @@
+{
+  "key": "test_agent",
+  "title": "Test Agent — Sample Role (Test)",
+  "short_title": "Test Agent",
+  "autonomy_level": "Advisory",
+  "category": "Agent Lab / Test",
+  "handle": "test_agent",
+  "pod": "Innovation",
+  "podColor": "#3b82f6",
+  "icon": "TestTube",
+  "purpose": "A test agent for verifying the import functionality",
+  "coreFunctions": [
+    "Test API endpoints",
+    "Verify authentication",
+    "Validate data synchronization"
+  ],
+  "responsibilities": [
+    "Ensure import scripts work correctly",
+    "Validate handle-based endpoints"
+  ],
+  "toneVoice": "Professional and technical",
+  "definitionOfDone": [
+    "All tests pass",
+    "Documentation updated"
+  ],
+  "strengths": [
+    "Reliable testing",
+    "Clear validation"
+  ],
+  "collaborators": [
+    "DevOps",
+    "QA Team"
+  ],
+  "contact": "test@example.com",
+  "links": [],
+  "effective_date": "2025-01-04"
+}
