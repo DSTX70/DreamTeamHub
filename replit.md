@@ -142,7 +142,7 @@ The importer automatically transforms Agent Lab role card structure to DTH schem
 The Agent Lab includes a comprehensive training and governance infrastructure:
 
 **Components:**
-- **Academy Dashboard vNext** (`Agent-Lab/academy/`): Standalone static HTML/CSS/JS site with live KPI monitoring, API-driven agent status updates, and color-coded performance indicators. Features autonomy-level filtering (L0/L1/L2/L3), status filtering, search, and real-time KPI visualization with threshold-based color tinting (task success, latency p95, cost per task). Fetches from `/agents/summary` API with fallback to local sample data.
+- **Academy Dashboard v3** (`Agent-Lab/academy/`, accessible at `/Agent-Lab/academy/index.html`): Standalone static HTML/CSS/JS site with clean scannable grid for KPI monitoring. Features clean card-based layout (no calendar on main view), autonomy-level filtering (L0/L1/L2/L3), status filtering, search, and color-coded KPI visualization. Agent cards display level badges, status, next gate, progress bars, and KPIs (task success, latency p95, cost per task) with threshold-based color tinting. Includes "Next review" chip when scheduled and detail modal with Overview tab (KPIs, PR/evidence links) and Promotion tab (review time in UTC + local, Calendar Viewer link, .ics download). Fetches from `/agents/summary` API with fallback to local sample data.
 - **Academy Page** (`/academy` route): React component integrated into main application showing Agent Lab role cards grouped by autonomy level (Advisory, Collaborative, Autonomous, Strategic) with role details, competencies, and success criteria.
 - **Calendar Viewer v2** (`Agent-Lab/calendar-viewer/`): Interactive calendar for viewing promotion board meetings with .ics download, Google Calendar integration, and provider-agnostic calendar webhook support.
 - **Promotion Flow**: End-to-end workflow for promoting agents through autonomy levels (L0→L1→L2→L3) with evidence-based validation across four gates (Safety, Performance, Cost, Auditability).
@@ -150,7 +150,7 @@ The Agent Lab includes a comprehensive training and governance infrastructure:
 - **Playbooks** (`40_Playbooks/`): Templates and policies for promotions, KPI tracking, intake forms, portfolio scoring, and governance metrics.
 
 **API Endpoints:**
-- `GET /agents/summary` - Public endpoint returning agent data with deterministic KPI metrics formatted for Academy Dashboard. Returns autonomy level (L0-L3), status (live/pilot/watch), promotion progress (0-100%), next gate, and KPIs (task_success, latency_p95_s, cost_per_task_usd). Uses autonomy-aware defaults for agents without evaluation data.
+- `GET /agents/summary` - Public endpoint returning agent data with deterministic KPI metrics formatted for Academy Dashboard v3. Returns autonomy level (L0-L3), status (live/pilot/watch), promotion progress (0-100%), next gate, next_review timestamp, KPIs (task_success, latency_p95_s, cost_per_task_usd), and links object (pr, evidence). Uses autonomy-aware defaults for agents without evaluation data.
 
 **CI/CD Workflows:**
 - `ci/academy_deploy.yml` - Deploys Academy Dashboard vNext to GitHub Pages or Replit
