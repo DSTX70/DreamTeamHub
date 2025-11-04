@@ -1,0 +1,45 @@
+name: Deploy Academy (Pages or Replit)
+
+on:
+  push:
+    paths:
+      - 'DreamTeamHub/Agent-Lab/academy/**'
+  workflow_dispatch:
+    inputs:
+      target:
+        description: 'deploy target: pages | replit'
+        required: false
+        default: 'pages'
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+jobs:
+  deploy-pages:
+    if: ${{ github.event_name == 'push' || github.event.inputs.target == 'pages' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: DreamTeamHub/Agent-Lab/academy
+      - name: Deploy to GitHub Pages
+        uses: actions/deploy-pages@v4
+
+  trigger-replit:
+    if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.target == 'replit' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger Replit Deploy Webhook
+        env:
+          REPLIT_WEBHOOK_URL: ${{ secrets.REPLIT_WEBHOOK_URL }}
+          REPLIT_WEBHOOK_TOKEN: ${{ secrets.REPLIT_WEBHOOK_TOKEN }}
+        run: |
+          if [ -z "$REPLIT_WEBHOOK_URL" ]; then
+            echo "Missing REPLIT_WEBHOOK_URL secret"; exit 2;
+          fi
+          curl -X POST "$REPLIT_WEBHOOK_URL"             -H "Content-Type: application/json"             -H "Authorization: Bearer $REPLIT_WEBHOOK_TOKEN"             -d '{"ref":"academy","message":"Deploy Academy dashboard"}'
