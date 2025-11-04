@@ -1,0 +1,54 @@
+[
+  {
+    "name": "agent-reader",
+    "display_name": "Reader",
+    "autonomy_level": "L0",
+    "status": "pilot",
+    "next_gate": 1,
+    "promotion_progress_pct": 30,
+    "kpis": {
+      "task_success": 0.78,
+      "latency_p95_s": 4.8,
+      "cost_per_task_usd": 0.028
+    }
+  },
+  {
+    "name": "agent-router",
+    "display_name": "Router",
+    "autonomy_level": "L1",
+    "status": "pilot",
+    "next_gate": 2,
+    "promotion_progress_pct": 60,
+    "kpis": {
+      "task_success": 0.84,
+      "latency_p95_s": 4.2,
+      "cost_per_task_usd": 0.035
+    }
+  },
+  {
+    "name": "agent-support-exec",
+    "display_name": "Support Exec",
+    "autonomy_level": "L2",
+    "status": "watch",
+    "next_gate": 3,
+    "promotion_progress_pct": 85,
+    "kpis": {
+      "task_success": 0.88,
+      "latency_p95_s": 3.9,
+      "cost_per_task_usd": 0.041
+    }
+  },
+  {
+    "name": "agent-orch",
+    "display_name": "Orchestrator",
+    "autonomy_level": "L3",
+    "status": "live",
+    "next_gate": "-",
+    "promotion_progress_pct": 100,
+    "kpis": {
+      "task_success": 0.91,
+      "latency_p95_s": 3.2,
+      "cost_per_task_usd": 0.048
+    }
+  }
+]

@@ -1,0 +1,22 @@
+*{box-sizing:border-box}body{font-family:Inter,system-ui,Arial,sans-serif;margin:0;background:#0f1220;color:#e9ecf1}
+header{padding:28px 20px 10px;border-bottom:1px solid #24283b;background:linear-gradient(180deg,#151a2e,transparent)}
+h1{margin:0;font-weight:700;font-size:22px}
+.sub{opacity:.8;margin:6px 0 0}
+.summary{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;padding:16px 20px}
+.card{background:#151a2e;border:1px solid #24283b;border-radius:14px;padding:14px}
+.card .num{font-size:26px;font-weight:700}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px;padding:8px 20px 24px}
+.agent{background:#151a2e;border:1px solid #24283b;border-radius:16px;padding:14px;display:flex;flex-direction:column;gap:10px}
+.agent h3{margin:0 0 4px;font-size:16px}
+.badges{display:flex;gap:8px;flex-wrap:wrap}
+.badge{padding:4px 8px;border-radius:999px;font-size:12px;border:1px solid #2b3150}
+.badge.l0{background:#223249}
+.badge.l1{background:#1d3b3b}
+.badge.l2{background:#3b2a1d}
+.badge.l3{background:#3b1d34}
+.progress{height:8px;border-radius:999px;background:#0b0e1a;border:1px solid #2b3150;overflow:hidden}
+.progress > span{display:block;height:100%;background:#3c82f6;width:0%}
+.kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.kpi{background:#101426;border:1px solid #2b3150;border-radius:10px;padding:8px;text-align:center}
+.kpi .v{font-size:14px;font-weight:700}
+footer{padding:10px 20px;border-top:1px solid #24283b;opacity:.7}

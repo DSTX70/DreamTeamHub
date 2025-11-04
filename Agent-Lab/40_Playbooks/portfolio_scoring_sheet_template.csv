@@ -1,0 +1,3 @@
+request_id,use_case,owner,impact_0to1,confidence_0to1,effort_inverse_0to1,risk_reduction_0to1,time_to_signal_0to1,fit_reuse_0to1,priority_score,decision_by
+REQ-001,Support triage L2,BU_Support,,,,,,,,2025-11-17
+REQ-002,Marketing briefs L1,BU_Marketing,,,,,,,,2025-11-10

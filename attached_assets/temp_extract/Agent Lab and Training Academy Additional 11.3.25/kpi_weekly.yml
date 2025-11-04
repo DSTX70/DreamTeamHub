@@ -1,0 +1,46 @@
+name: Agent Lab — Weekly KPI Bot
+
+on:
+  schedule:
+    - cron: '0 15 * * 1' # Mondays 08:00 Phoenix ~ 15:00 UTC
+  workflow_dispatch:
+
+jobs:
+  kpi-bot:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Parse KPIs and post summary
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            function readCSV(p){
+              if (!fs.existsSync(p)) return null;
+              const text = fs.readFileSync(p, 'utf-8').trim();
+              const [head, ...rows] = text.split(/\r?\n/);
+              const cols = head.split(',');
+              return rows.map(r => {
+                const vals = r.split(',');
+                const o = {}; cols.forEach((c,i)=>o[c]=vals[i]); return o;
+              });
+            }
+            const gov = readCSV('DreamTeamHub/Agent-Lab/40_Playbooks/governance_metrics_weekly_template.csv') || [];
+            const last = gov[gov.length-1] || {};
+            const body = [
+              `### Agent Lab — Weekly KPIs`,
+              ``,
+              `**Backlog:** ${last.backlog_size||'-'}  •  **Ready:** ${last.ready_size||'-'}  •  **In Progress:** ${last.in_progress_size||'-'}  •  **Review:** ${last.review_size||'-'}  •  **Promotion Queue:** ${last.promotion_queue||'-'}`,
+              ``,
+              `**Avg Lead (d):** ${last.avg_lead_days||'-'}  •  **Avg Cycle (d):** ${last.avg_cycle_days||'-'}  •  **SLA Breaches:** ${last.sla_breaches||'-'}`,
+              ``,
+              `**Post-Promotion Incidents:** ${last.post_promotion_incidents||'-'}  •  **Cost Variance %:** ${last.cost_variance_pct||'-'}`,
+              ``,
+              `${last.notes? ('Notes: ' + last.notes) : ''}`
+            ].join('\n');
+            const {owner, repo} = context.repo;
+            await github.rest.issues.create({
+              owner, repo, title: `Agent Lab — Weekly KPIs (${new Date().toISOString().slice(0,10)})`, body
+            });

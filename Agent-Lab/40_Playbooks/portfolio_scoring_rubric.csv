@@ -1,0 +1,7 @@
+criterion,weight_0_to_1,scoring_guide,notes
+Impact on KPI/ROI,0.35,0=unclear | 1=material P&L or core KPI,
+Confidence (data/evidence),0.20,0=anecdotal | 1=historical evidence or pilot success,
+Effort (inverse) / Complexity,0.15,"0=heavy multi-team | 1=small, well-defined",use 1-effort in score
+Risk Reduction / Compliance,0.10,0=neutral | 1=reduces safety/privacy/audit risk,
+Time-to-Signal,0.10,0=>30d | 1=<10d to first KPI read,
+Strategic Fit / Reuse,0.10,0=one-off | 1=reusable pattern across BUs,

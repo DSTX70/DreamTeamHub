@@ -1,0 +1,43 @@
+{
+  "version": "1.0",
+  "date": "2025-11-03",
+  "requested_by": "<BU / owner>",
+  "use_case": "<concise title>",
+  "problem_statement": "<what KPI or pain are we addressing>",
+  "proposed_agent_family": [
+    "Reader",
+    "Router",
+    "Executor",
+    "Orchestrator"
+  ],
+  "target_autonomy": "L0|L1|L2|L3",
+  "hypothesis": "<expected measurable improvement>",
+  "success_metrics": [
+    "task_success",
+    "latency_p95_s",
+    "cost_per_task_usd",
+    "tool_error_rate",
+    "safety_incidents"
+  ],
+  "baseline_metrics": {
+    "task_success": null,
+    "latency_p95_s": null,
+    "cost_per_task_usd": null
+  },
+  "budget_cap_usd_per_month": null,
+  "data_constraints": [
+    "PII",
+    "HIPAA",
+    "export_controls",
+    "none"
+  ],
+  "scenario_pack_needed": true,
+  "risk_notes": "<privacy/safety/brand risks>",
+  "timeline": {
+    "decision_by": "<YYYY-MM-DD>",
+    "desired_start": "<YYYY-MM-DD>"
+  },
+  "attachments": [
+    "<links to examples, data, tickets>"
+  ]
+}

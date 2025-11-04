@@ -1,0 +1,122 @@
+name: Promotion Auto-Scheduler
+
+on:
+  pull_request:
+    types: [opened, edited, labeled, ready_for_review, reopened, synchronize]
+    branches: ["**"]
+  workflow_dispatch:
+
+jobs:
+  schedule-promotion:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Parse PR and compute schedule
+        id: sched
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const pr = context.payload.pull_request;
+            if (!pr) { core.setOutput('skipped','true'); return; }
+            const titleOk = pr.title.startsWith('Promotion: ');
+            const labeled = (pr.labels || []).some(l => l.name.toLowerCase().includes('promotion'));
+            if (!titleOk && !labeled) {
+              core.info('Not a promotion PR — skipping'); 
+              core.setOutput('skipped','true'); 
+              return;
+            }
+            // Compute next Tue–Thu 10:00 local (Phoenix) ~ 17:00Z; pick within 3 business days
+            const now = new Date();
+            const msPerDay = 24*60*60*1000;
+            function addDays(d,n){ const x=new Date(d); x.setDate(x.getDate()+n); return x; }
+            function isBiz(d){ const wd=d.getUTCDay(); return wd>=1 && wd<=5; }
+            let candidate = addDays(now,1);
+            let tries=0;
+            while (tries<10){
+              const wd=candidate.getUTCDay();
+              // map to Tue (2), Wed (3), Thu (4)
+              if (wd>=2 && wd<=4 && isBiz(candidate)) break;
+              candidate = addDays(candidate,1);
+              tries++;
+            }
+            // Set time ~ 17:00Z (10:00 Phoenix standard; adjust as needed seasonally)
+            candidate.setUTCHours(17,0,0,0);
+            // Build body & webhook payload
+            const body = {
+              agent: (pr.title.match(/Promotion:\s*(.*)\s+L[0-3]/)||[])[1] || 'unknown-agent',
+              from_to: (pr.title.match(/(L[0-3])\s*→\s*(L[0-3])/ )||[]).slice(1).join(' -> '),
+              pr_number: pr.number,
+              repo: `${context.repo.owner}/${context.repo.repo}`,
+              scheduled_at_iso: candidate.toISOString(),
+              owner: pr.user.login
+            };
+            core.setOutput('scheduled_at', body.scheduled_at_iso);
+            core.setOutput('agent', body.agent);
+            core.setOutput('payload', JSON.stringify(body));
+
+      - name: Post calendar webhook
+        if: steps.sched.outputs.skipped != 'true'
+        env:
+          CALENDAR_WEBHOOK_URL: ${{ secrets.CALENDAR_WEBHOOK_URL }}
+        run: |
+          echo '${{ steps.sched.outputs.payload }}' > schedule.json
+          if [ -n "$CALENDAR_WEBHOOK_URL" ]; then
+            curl -sS -X POST -H "Content-Type: application/json" -d @schedule.json "$CALENDAR_WEBHOOK_URL" || true
+          fi
+
+      - name: Build calendar view link
+        id: cal
+        if: steps.sched.outputs.skipped != 'true'
+        run: |
+          when='${{ steps.sched.outputs.scheduled_at }}'
+          agent='${{ steps.sched.outputs.agent }}'
+          pr_url="${{ github.event.pull_request.html_url }}"
+          base="${{ secrets.CALENDAR_VIEW_URL }}"
+          if [ -n "$base" ]; then
+            # URL-encode minimal params using python
+            enc_when=$(python3 - <<'PY'
+import urllib.parse, os
+print(urllib.parse.quote(os.environ['WHEN']))
+PY
+ WHEN="$when")
+            enc_agent=$(python3 - <<'PY'
+import urllib.parse, os
+print(urllib.parse.quote(os.environ['AGENT']))
+PY
+ AGENT="$agent")
+            enc_pr=$(python3 - <<'PY'
+import urllib.parse, os
+print(urllib.parse.quote(os.environ['PR']))
+PY
+ PR="$pr_url")
+            echo "url=${base}?agent=${enc_agent}&when=${enc_when}&pr=${enc_pr}" >> $GITHUB_OUTPUT
+          else
+            echo "url=" >> $GITHUB_OUTPUT
+          fi
+          else
+            echo "url=" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Comment with scheduled slot
+        if: steps.sched.outputs.skipped != 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const issue_number = context.payload.pull_request.number;
+            const {owner, repo} = context.repo;
+            const when = `${{ steps.sched.outputs.scheduled_at }}`;
+            const agent = `${{ steps.sched.outputs.agent }}` || 'agent';
+            const link = `${{ steps.cal.outputs.url }}`;
+            const body = [
+              "🗓️ **Promotion Board Scheduled**",
+              "",
+              `- Agent: **${agent}**`,
+              `- When: **${when}** (auto-scheduled)`,
+              link ? `- Calendar: [Open event](${link})` : "",
+              "",
+              "_Auto-scheduler based on Policy Locks; SLA: decision within 3 business days._"
+            ].filter(Boolean).join("
+");
+            await github.rest.issues.createComment({ owner, repo, issue_number, body });
