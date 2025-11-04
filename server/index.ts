@@ -2,8 +2,17 @@ import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { initializeCronJobs } from "./cron";
+import { stagingGuard } from "./middleware/stagingGuard";
 
 const app = express();
+
+// Health check endpoint (must be before staging guard)
+app.get("/healthz", (_req, res) => {
+  res.status(200).send("ok");
+});
+
+// Staging environment protection (basic auth or IP allowlist)
+app.use(stagingGuard());
 
 declare module 'http' {
   interface IncomingMessage {

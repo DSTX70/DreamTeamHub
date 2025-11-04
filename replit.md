@@ -43,6 +43,18 @@ The platform is structured into core modules and features:
 - **Authentication Provider**: Replit Auth (OpenID Connect).
 - **Security Architecture**: Dual authentication system with session-based auth for interactive users and API token auth for external integrations/CI/CD.
 
+### Staging Environment
+- **Automated Weekly Refresh**: GitHub Actions workflow refreshes staging database every Monday at 07:00 UTC using Greenmask for PII masking.
+- **Access Control**: Staging guard middleware provides dual authentication - basic auth (username/password) or IP allowlist with CIDR notation support.
+- **Health Monitoring**: `/healthz` endpoint for uptime monitoring, bypasses authentication.
+- **Referential Integrity Validation**: Automated SQL tests after each staging refresh to ensure data consistency.
+- **Configuration**: 
+  - Workflow: `.github/workflows/staging_refresh.yml`
+  - Middleware: `server/middleware/stagingGuard.ts`
+  - Environment activation: `NODE_ENV=staging`
+  - Required secrets: `PROD_DB_URL`, `STAGING_DB_URL` (GitHub Secrets)
+  - Optional IP allowlist: `ALLOWED_IPS` environment variable
+
 ## External Dependencies
 
 - **OpenAI GPT-4**: Powers the AI-driven conversational agents in Dream Team Chat.
