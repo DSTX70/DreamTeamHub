@@ -173,7 +173,28 @@ The importer automatically transforms Agent Lab role card fields to match the DT
 
 ## 4) Replit Deployment
 
-### Academy Dashboard (Static)
+### Academy Dashboard v3 (Static)
+
+The Academy Dashboard provides a clean, scannable interface for monitoring agent status, KPIs, and promotion progress.
+
+**Access in Dream Team Hub**: Navigate to `/Agent-Lab/academy/index.html`
+
+**Key Features:**
+* **Clean Grid Layout**: KPI-focused cards (no calendar widgets on main view)
+* **Summary Metrics**: L0/L1/L2/L3 agent counts at-a-glance
+* **Filter Controls**: By autonomy level, status, or name search
+* **Agent Cards**: Level, status, next gate, progress bar, color-coded KPIs
+  - Success: Green ≥80%, Yellow 70-79%, Red <70%
+  - Latency p95: Green ≤5.0s, Yellow 5.0-6.0s, Red >6.0s
+  - Cost: Green ≤$0.05, Yellow $0.05-0.06, Red >$0.06
+* **"Next review" Chip**: Shows scheduled promotion review when available
+* **Detail Modal**: Two-tab interface (Overview + Promotion)
+  - Overview: KPI visualization, PR/evidence links
+  - Promotion: Review time (UTC + local), Calendar Viewer link, .ics download
+
+**Data Source**: `GET /agents/summary` API (public), fallback to `agents.sample.json`
+
+**Deployment Options:**
 
 **Option A** — GitHub Pages:
 * Push to `academy/**` and the action auto-deploys
