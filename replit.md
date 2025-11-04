@@ -142,16 +142,20 @@ The importer automatically transforms Agent Lab role card structure to DTH schem
 The Agent Lab includes a comprehensive training and governance infrastructure:
 
 **Components:**
-- **Academy Dashboard** (`Agent-Lab/academy/`): Static site showcasing Agent Lab roles, training resources, and capabilities
-- **Calendar Viewer v2** (`Agent-Lab/calendar-viewer/`): Interactive calendar for viewing promotion board meetings and schedules
-- **Promotion Flow**: End-to-end workflow for promoting agents through autonomy levels (L0→L1→L2→L3) with evidence-based validation
-- **Policy Locks** (`00_Canonical/POLICY_LOCKS.md`): Governance policies including weekly portfolio reviews, WIP limits, and promotion SLA (3 business days)
-- **Playbooks** (`40_Playbooks/`): Templates and policies for promotions, KPI tracking, intake forms, portfolio scoring, and governance metrics
+- **Academy Dashboard vNext** (`Agent-Lab/academy/`): Standalone static HTML/CSS/JS site with live KPI monitoring, API-driven agent status updates, and color-coded performance indicators. Features autonomy-level filtering (L0/L1/L2/L3), status filtering, search, and real-time KPI visualization with threshold-based color tinting (task success, latency p95, cost per task). Fetches from `/agents/summary` API with fallback to local sample data.
+- **Academy Page** (`/academy` route): React component integrated into main application showing Agent Lab role cards grouped by autonomy level (Advisory, Collaborative, Autonomous, Strategic) with role details, competencies, and success criteria.
+- **Calendar Viewer v2** (`Agent-Lab/calendar-viewer/`): Interactive calendar for viewing promotion board meetings with .ics download, Google Calendar integration, and provider-agnostic calendar webhook support.
+- **Promotion Flow**: End-to-end workflow for promoting agents through autonomy levels (L0→L1→L2→L3) with evidence-based validation across four gates (Safety, Performance, Cost, Auditability).
+- **Policy Locks** (`00_Canonical/POLICY_LOCKS.md`): Governance policies including weekly portfolio reviews, WIP limits, and promotion SLA (3 business days).
+- **Playbooks** (`40_Playbooks/`): Templates and policies for promotions, KPI tracking, intake forms, portfolio scoring, and governance metrics.
+
+**API Endpoints:**
+- `GET /agents/summary` - Public endpoint returning agent data with deterministic KPI metrics formatted for Academy Dashboard. Returns autonomy level (L0-L3), status (live/pilot/watch), promotion progress (0-100%), next gate, and KPIs (task_success, latency_p95_s, cost_per_task_usd). Uses autonomy-aware defaults for agents without evaluation data.
 
 **CI/CD Workflows:**
-- `ci/academy_deploy.yml` - Deploys Academy Dashboard to GitHub Pages or Replit
+- `ci/academy_deploy.yml` - Deploys Academy Dashboard vNext to GitHub Pages or Replit
 - `ci/deploy_calendar_viewer.yml` - Deploys Calendar Viewer to GitHub Pages
-- `ci/promotion_autoscheduler.yml` - Auto-schedules promotion board meetings for PRs
+- `ci/promotion_autoscheduler.yml` - Auto-schedules promotion board meetings for PRs (Tue-Thu 10:00 Phoenix time within 3 business days SLA)
 - `ci/kpi_weekly.yml` - Weekly KPI bot that posts governance metrics every Monday
 
 **Promotion Workflow:**
@@ -164,5 +168,6 @@ The Agent Lab includes a comprehensive training and governance infrastructure:
 
 **Tools:**
 - `tools/seed_labels.js` - Seeds GitHub labels for priority/gate/level/status/stage tracking
+- `tools/regenerate_roles_manifest.{js,py}` - Auto-regenerates manifest from role JSON files
 
 See `Agent-Lab/README.md` for detailed usage instructions.
