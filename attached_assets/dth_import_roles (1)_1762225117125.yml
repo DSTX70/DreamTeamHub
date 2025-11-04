@@ -1,0 +1,125 @@
+name: Import Agent Lab Roles to DTH
+
+on:
+  push:
+    paths:
+      - 'Agent-Lab/00_Canonical/roles/*.json'
+      - 'Agent-Lab/00_Canonical/roles/roles_manifest.jsonl'
+      - 'Agent-Lab/importers/**'
+      - 'Agent-Lab/ci/**'
+  pull_request:
+    paths:
+      - 'Agent-Lab/00_Canonical/roles/*.json'
+      - 'Agent-Lab/00_Canonical/roles/roles_manifest.jsonl'
+      - 'Agent-Lab/importers/**'
+      - 'Agent-Lab/ci/**'
+  workflow_dispatch:
+    inputs:
+      category:
+        description: 'Category tag for imported roles'
+        required: false
+        default: 'Agent Lab / Added Specialists'
+      dry_run:
+        description: 'Run in dry-run mode (true/false)'
+        required: false
+        default: 'false'
+
+jobs:
+  import-roles:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Regenerate manifest
+        run: |
+          node Agent-Lab/tools/regenerate_roles_manifest.js || true
+
+      - name: Determine run mode
+        id: mode
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            echo "dry=true" >> $GITHUB_OUTPUT
+            echo "category=Agent Lab / Added Specialists (PR Dry-Run)" >> $GITHUB_OUTPUT
+          elif [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            if [ "${{ github.event.inputs.dry_run }}" = "true" ]; then
+              echo "dry=true" >> $GITHUB_OUTPUT
+            else
+              echo "dry=false" >> $GITHUB_OUTPUT
+            fi
+            echo "category=${{ github.event.inputs.category || 'Agent Lab / Added Specialists' }}" >> $GITHUB_OUTPUT
+          else
+            echo "dry=false" >> $GITHUB_OUTPUT
+            echo "category=Agent Lab / Added Specialists" >> $GITHUB_OUTPUT
+          fi
+          echo "event=${{ github.event_name }}" >> $GITHUB_OUTPUT
+
+      - name: Import Roles (Node)
+        id: import
+        env:
+          DTH_API_BASE: ${{ secrets.DTH_API_BASE }}
+          DTH_API_TOKEN: ${{ secrets.DTH_API_TOKEN }}
+        run: |
+          set -o pipefail
+          node Agent-Lab/importers/dth_import_roles.js             --manifest Agent-Lab/00_Canonical/roles/roles_manifest.jsonl             --category "${{ steps.mode.outputs.category }}"             $([ "${{ steps.mode.outputs.dry }}" = "true" ] && echo "--dry-run" || echo "") | tee importer.log
+
+      - name: Summarize results
+        id: summary
+        run: |
+          created=$(grep -c "^Created:" importer.log || true)
+          updated=$(grep -c "^Updated:" importer.log || true)
+          failed=$(grep -c "^Error:" importer.log || true)
+          validated=$(grep -c "^[[]DRY-RUN[]] Validate" importer.log || true)
+          run_url="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          echo "created=$created" >> $GITHUB_OUTPUT
+          echo "updated=$updated" >> $GITHUB_OUTPUT
+          echo "failed=$failed" >> $GITHUB_OUTPUT
+          echo "validated=$validated" >> $GITHUB_OUTPUT
+          echo "run_url=$run_url" >> $GITHUB_OUTPUT
+          echo "body<<'EOF'" >> $GITHUB_OUTPUT
+          echo "### Agent Lab Role Import Summary" >> $GITHUB_OUTPUT
+          echo "" >> $GITHUB_OUTPUT
+          echo "- **Mode:** ${{ steps.mode.outputs.dry == 'true' && 'Dry-Run' || 'Live' }} " >> $GITHUB_OUTPUT
+          echo "- **Category:** ${{ steps.mode.outputs.category }}" >> $GITHUB_OUTPUT
+          echo "" >> $GITHUB_OUTPUT
+          echo "| Created | Updated | Failed | Validated (dry-run) |" >> $GITHUB_OUTPUT
+          echo "|---:|---:|---:|---:|" >> $GITHUB_OUTPUT
+          echo "| ${created} | ${updated} | ${failed} | ${validated} |" >> $GITHUB_OUTPUT
+          echo "" >> $GITHUB_OUTPUT
+          echo "[⬇️ Download Agent-Lab Bundle & Artifacts](${run_url})  ·  [📄 importer.log](${run_url})" >> $GITHUB_OUTPUT
+          echo "" >> $GITHUB_OUTPUT
+          echo "_Open the run page → Artifacts to download the ZIP & logs._" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Upload importer.log
+        uses: actions/upload-artifact@v4
+        with:
+          name: importer_log_${{ github.run_id }}
+          path: importer.log
+          retention-days: 14
+
+      - name: Zip Agent-Lab bundle
+        run: |
+          zip -r agent_lab_bundle_${{ github.run_id }}.zip Agent-Lab
+
+      - name: Upload bundle artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: agent_lab_bundle_${{ github.run_id }}
+          path: agent_lab_bundle_${{ github.run_id }}.zip
+          retention-days: 14
+
+      - name: Post PR summary comment
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const body = `${{ toJSON(steps.summary.outputs.body) }}`;
+            const {owner, repo} = context.repo;
+            const issue_number = context.payload.pull_request.number;
+            await github.rest.issues.createComment({ owner, repo, issue_number, body });

@@ -1,4 +1,4 @@
-import type { Express } from "express";
+import type { Express, RequestHandler } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated } from "./replitAuth";
@@ -14,6 +14,46 @@ import { generatePersonaResponse } from "./openai-service";
 import { buildAgentContext, recordAgentRun, recordFeedback } from "./agent-context";
 import { postSummon, postMirrorBack } from "./comms-service";
 import type { SummonPayload, MirrorBackPayload } from "./comms-service";
+
+// ===========================
+// DUAL AUTHENTICATION MIDDLEWARE
+// ===========================
+
+// API Token authentication (for CI/CD and external integrations)
+const isApiTokenAuthenticated: RequestHandler = async (req, res, next) => {
+  const authHeader = req.headers.authorization;
+  
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return res.status(401).json({ error: 'Missing or invalid Authorization header. Expected: Bearer <token>' });
+  }
+  
+  const token = authHeader.substring(7); // Remove 'Bearer ' prefix
+  const validToken = process.env.DTH_API_TOKEN;
+  
+  if (!validToken) {
+    console.error('DTH_API_TOKEN not configured in environment');
+    return res.status(500).json({ error: 'API token authentication not configured' });
+  }
+  
+  if (token !== validToken) {
+    return res.status(401).json({ error: 'Invalid API token' });
+  }
+  
+  next();
+};
+
+// Dual auth: supports both API token and session authentication
+const isDualAuthenticated: RequestHandler = async (req, res, next) => {
+  const authHeader = req.headers.authorization;
+  
+  // Check for API token authentication first
+  if (authHeader?.startsWith('Bearer ')) {
+    return isApiTokenAuthenticated(req, res, next);
+  }
+  
+  // Fall back to session authentication
+  return isAuthenticated(req, res, next);
+};
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // ===========================
@@ -464,7 +504,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/roles", isAuthenticated, async (req, res) => {
+  app.post("/api/roles", isDualAuthenticated, async (req, res) => {
     try {
       const data = insertRoleCardSchema.parse(req.body);
       const role = await storage.createRoleCard(data);
@@ -514,6 +554,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Error deleting role:', error);
       res.status(500).json({ error: 'Failed to delete role' });
+    }
+  });
+
+  // ===========================
+  // ROLE CARDS - HANDLE-BASED ENDPOINTS (for external importers)
+  // ===========================
+  
+  // GET role by handle (supports both API token and session auth)
+  app.get("/api/roles/by-handle/:handle", isDualAuthenticated, async (req, res) => {
+    try {
+      const roles = await storage.getRoleCards({ handle: req.params.handle });
+      if (!roles || roles.length === 0) {
+        return res.status(404).json({ error: 'Role card not found' });
+      }
+      res.json(roles[0]);
+    } catch (error) {
+      console.error('Error fetching role by handle:', error);
+      res.status(500).json({ error: 'Failed to fetch role' });
+    }
+  });
+
+  // PUT role by handle (supports both API token and session auth)
+  app.put("/api/roles/by-handle/:handle", isDualAuthenticated, async (req, res) => {
+    try {
+      // Find existing role by handle
+      const existing = await storage.getRoleCards({ handle: req.params.handle });
+      if (!existing || existing.length === 0) {
+        return res.status(404).json({ error: 'Role card not found' });
+      }
+      
+      const data = insertRoleCardSchema.partial().parse(req.body);
+      const role = await storage.updateRoleCard(existing[0].id, data);
+      res.json(role);
+    } catch (error: any) {
+      console.error('Error updating role by handle:', error);
+      res.status(400).json({ error: error.message || 'Failed to update role' });
     }
   });
 

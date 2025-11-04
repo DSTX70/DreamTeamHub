@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+# Pre-commit hook: regenerate roles manifest and stage it if changed.
+set -euo pipefail
+
+PROJECT_ROOT="$(git rev-parse --show-toplevel)"
+cd "$PROJECT_ROOT/Agent-Lab"
+
+# Prefer Python regenerator; fallback to Node
+if command -v python3 >/dev/null 2>&1; then
+  python3 tools/regenerate_roles_manifest.py || { echo "Manifest regen failed"; exit 1; }
+elif command -v node >/dev/null 2>&1; then
+  node tools/regenerate_roles_manifest.js || { echo "Manifest regen failed"; exit 1; }
+else
+  echo "Neither python3 nor node found; cannot regenerate manifest"
+  exit 1
+fi
+
+# Stage the manifest if it changed
+git add Agent-Lab/00_Canonical/roles/roles_manifest.jsonl || true
