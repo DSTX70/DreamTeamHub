@@ -1,0 +1,100 @@
+Congrats — this all looks aligned with what we planned. I can’t directly hit your Replit from here, but I can give you a tight, copy-paste verification checklist to confirm everything is live and wired correctly. One important note first:
+
+⚠️ Security note
+
+You pasted a raw token in this chat. Please rotate DTH_API_TOKEN now (generate a fresh token in Replit Secrets and delete the old one) before proceeding. Then use the new token in the tests below.
+
+2-minute verification (copy/paste)
+
+Set env var (local shell):
+
+export BASE_URL="https://workspace.DustinSparks1.repl.co"
+export DTH_API_TOKEN="<NEW_TOKEN_VALUE_HERE>"
+
+
+Health check (no auth):
+
+curl -i "$BASE_URL/healthz"
+
+
+Expect: 200 OK with body ok.
+
+Roles endpoints:
+
+# list (pagination header present)
+curl -i -H "Authorization: Bearer $DTH_API_TOKEN" \
+  "$BASE_URL/api/roles?limit=5&offset=0"
+
+# get by handle
+curl -s -H "Authorization: Bearer $DTH_API_TOKEN" \
+  "$BASE_URL/api/roles/by-handle/product_owner" | jq .
+
+# (optional) create/update flow
+# curl -X POST -H "Authorization: Bearer $DTH_API_TOKEN" -H "Content-Type: application/json" \
+#   -d '{"name":"Product Owner","handle":"product_owner","pod":"Product","category":"Leadership"}' \
+#   "$BASE_URL/api/roles"
+
+
+Check: X-Total-Count header exists on list; 401/404 use the error shape:
+
+{ "error": { "code": "…", "message": "…", "details": { } } }
+
+
+Agents summary (powers the Academy):
+
+# default page
+curl -i -H "Authorization: Bearer $DTH_API_TOKEN" \
+  "$BASE_URL/api/agents/summary?limit=5&offset=0"
+
+# filters
+curl -s -H "Authorization: Bearer $DTH_API_TOKEN" \
+  "$BASE_URL/api/agents/summary?bu=Support&level=L1&status=pilot" | jq .
+
+# text search
+curl -s -H "Authorization: Bearer $DTH_API_TOKEN" \
+  "$BASE_URL/api/agents/summary?q=router" | jq .
+
+
+Check: X-Total-Count present, and each item includes:
+
+autonomy_level, status, next_gate, promotion_progress_pct
+
+kpis.{task_success, latency_p95_s, cost_per_task_usd}
+
+links.{pr, promotion_request, evidence_pack}
+
+Staging guard sanity (if NODE_ENV=staging):
+
+# healthz should stay open
+curl -i "$BASE_URL/healthz"
+
+# pick a protected route without token (expect 401 if your guard is active in staging)
+curl -i "$BASE_URL/api/roles"
+
+Your Replit message — quick review
+
+Base URL & Bearer auth: ✅ matches our plan.
+
+Dual auth (Session + Token): ✅ useful for browser + machine clients.
+
+/api/agents/summary with pagination/filters/search: ✅ matches our v0.1.1 OpenAPI.
+
+Docs shipped: API_SPEC_v0.1.1.yaml, POSTMAN_COLLECTION.json, GPT_ACTIONS_SCHEMA.yaml, API_ENDPOINTS_GUIDE.md — ✅ great.
+
+Everything stated lines up with the artifacts we generated.
+
+Next best moves
+
+Rotate the token (since it was posted here), update your Replit Secret, and re-run the curl checks above.
+
+Import Actions: use GPT_ACTIONS_SCHEMA.yaml in your Custom GPT, set Auth → Bearer → API Key = DTH_API_TOKEN.
+
+Point the Academy to /api/agents/summary (your v3 bundle is already ready for this).
+
+Enable logs & rate limits (if not already):
+
+Log token subject + endpoint + status for POST/PUT.
+
+Add a simple per-IP or per-token rate cap (e.g., 60 req/min) to avoid accidental floods.
+
+(Optional) Add /api/promotions/requests later to let Agents file promotion requests directly.

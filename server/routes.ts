@@ -43,12 +43,19 @@ const isApiTokenAuthenticated: RequestHandler = async (req, res, next) => {
 };
 
 // Dual auth: supports both API token and session authentication
-const isDualAuthenticated: RequestHandler = async (req, res, next) => {
+const isDualAuthenticated: RequestHandler = (req, res, next) => {
   const authHeader = req.headers.authorization;
   
   // Check for API token authentication first
-  if (authHeader?.startsWith('Bearer ')) {
-    return isApiTokenAuthenticated(req, res, next);
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    // Validate token directly inline
+    const token = authHeader.substring(7);
+    const validToken = process.env.DTH_API_TOKEN;
+    
+    if (validToken && token === validToken) {
+      return next(); // Token is valid, proceed
+    }
+    // Invalid token, fall through to session auth
   }
   
   // Fall back to session authentication
