@@ -131,4 +131,32 @@ The importer automatically transforms Agent Lab role card structure to DTH schem
 
 All roles categorized as "Agent Lab / Senior Advisers + Added Specialists".
 
+### Agent Lab & Training Academy
+
+The Agent Lab includes a comprehensive training and governance infrastructure:
+
+**Components:**
+- **Academy Dashboard** (`Agent-Lab/academy/`): Static site showcasing Agent Lab roles, training resources, and capabilities
+- **Calendar Viewer v2** (`Agent-Lab/calendar-viewer/`): Interactive calendar for viewing promotion board meetings and schedules
+- **Promotion Flow**: End-to-end workflow for promoting agents through autonomy levels (L0→L1→L2→L3) with evidence-based validation
+- **Policy Locks** (`00_Canonical/POLICY_LOCKS.md`): Governance policies including weekly portfolio reviews, WIP limits, and promotion SLA (3 business days)
+- **Playbooks** (`40_Playbooks/`): Templates and policies for promotions, KPI tracking, intake forms, portfolio scoring, and governance metrics
+
+**CI/CD Workflows:**
+- `ci/academy_deploy.yml` - Deploys Academy Dashboard to GitHub Pages or Replit
+- `ci/deploy_calendar_viewer.yml` - Deploys Calendar Viewer to GitHub Pages
+- `ci/promotion_autoscheduler.yml` - Auto-schedules promotion board meetings for PRs
+- `ci/kpi_weekly.yml` - Weekly KPI bot that posts governance metrics every Monday
+
+**Promotion Workflow:**
+1. Open PR with title `Promotion: <agent-name> Lx → Ly`
+2. CI validates Gate-1..4 (Safety, Performance, Cost, Auditability) from evidence packs
+3. Auto-scheduler computes next available slot (Tue-Thu 10:00 Phoenix time)
+4. Calendar webhook sends .ics invites (if configured)
+5. Board reviews within 3 business days SLA
+6. Post-promotion 2-week watch phase for rollback monitoring
+
+**Tools:**
+- `tools/seed_labels.js` - Seeds GitHub labels for priority/gate/level/status/stage tracking
+
 See `Agent-Lab/README.md` for detailed usage instructions.
