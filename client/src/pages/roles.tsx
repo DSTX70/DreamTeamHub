@@ -134,7 +134,7 @@ export default function Roles() {
                       size="sm"
                       onClick={() => setSelectedPod(podName)}
                       data-pod={podName}
-                      className={isSelected ? "pod-accent" : ""}
+                      className={isSelected ? "pod-accent" : "pod-border"}
                       data-testid={`filter-pod-${podName.toLowerCase().replace(/\s+/g, '-')}`}
                     >
                       {podName}
