@@ -49,7 +49,12 @@ export function IdeaSparkEditDialog({ spark, isOpen, onOpenChange }: IdeaSparkEd
       return apiRequest('PATCH', `/api/idea-sparks/${spark.id}`, data);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/idea-sparks'], exact: false });
+      queryClient.invalidateQueries({ 
+        predicate: (query) => {
+          const key = query.queryKey[0];
+          return typeof key === 'string' && key.startsWith('/api/idea-sparks');
+        }
+      });
       toast({
         title: 'Idea Spark updated!',
         description: 'Your changes have been saved successfully.',

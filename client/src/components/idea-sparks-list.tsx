@@ -43,7 +43,12 @@ export function IdeaSparksList({ projectId, showAll = false, hasProject = false,
       return apiRequest('DELETE', `/api/idea-sparks/${id}`);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/idea-sparks'], exact: false });
+      queryClient.invalidateQueries({ 
+        predicate: (query) => {
+          const key = query.queryKey[0];
+          return typeof key === 'string' && key.startsWith('/api/idea-sparks');
+        }
+      });
       toast({
         title: 'Idea deleted',
         description: 'The idea spark has been removed.',
