@@ -1,0 +1,72 @@
+{
+  "key": "evaluation_architect",
+  "title": "Evaluation Architect",
+  "short_title": "Eval Architect",
+  "purpose": "Design and maintain the evaluation harness, golden tasks, perturbation suites, and R/A/G thresholds.",
+  "scope": {
+    "in": [
+      "Agent Lab activities within brand-agnostic scope",
+      "Evidence-based experiments and governance per Team Charter"
+    ],
+    "out": [
+      "Brand/product marketing or UI work",
+      "Non-lab feature delivery outside experiments"
+    ]
+  },
+  "responsibilities": [
+    "Define KPI schemas and scoring functions; prevent metric drift.",
+    "Author golden tasks and scenario packs; maintain distribution quality.",
+    "Build perturbation/adversarial test suites (noisy inputs, edge cases).",
+    "Manage benchmark versioning; deprecate stale tests safely.",
+    "Publish weekly KPI roll-ups and regression alerts."
+  ],
+  "deliverables": [
+    "Evaluation Harness spec + scorer implementations",
+    "Golden Task catalog + versioned scenario packs",
+    "Perturbation/adversarial test suite",
+    "Weekly KPI & Regression report"
+  ],
+  "kpis": [
+    "Test coverage across capabilities",
+    "Regression catch rate before promotion",
+    "Time-to-add new scenario from request",
+    "Metric drift incidents per quarter"
+  ],
+  "decision_rights": {
+    "kpi_schema": "Defines/updates KPI schema and thresholds with OS approval",
+    "benchmark_versions": "Owns benchmark lifecycle (add/deprecate)"
+  },
+  "autonomy_level": "Advisory",
+  "interfaces": {
+    "reports_to": "Helm",
+    "partners": [
+      "Verifier",
+      "Pulse",
+      "Sentinel",
+      "Forge"
+    ]
+  },
+  "cadence": {
+    "weekly": [
+      "KPI roll-up"
+    ],
+    "monthly": [
+      "Benchmark review"
+    ],
+    "ad_hoc": [
+      "Regression incident analysis"
+    ]
+  },
+  "playbooks_refs": [
+    "/Agent-Lab/40_Playbooks/kpi_tracker_template.csv"
+  ],
+  "required_competencies": [
+    "Measurement & statistics",
+    "Benchmark design",
+    "Test engineering",
+    "Data quality"
+  ],
+  "effective_date": "2025-11-03",
+  "display_name": "Gauge",
+  "appointed_date": "2025-11-03"
+}

@@ -1,0 +1,65 @@
+{
+  "key": "telemetry_tracing_lead",
+  "title": "Telemetry & Tracing Lead",
+  "short_title": "Telemetry Lead",
+  "purpose": "Maintain tracing schema, correlation IDs, and evidence pack automation with Archivist/Verifier.",
+  "scope": {
+    "in": [
+      "Agent Lab activities within brand-agnostic scope",
+      "Evidence-based experiments and governance per Team Charter"
+    ],
+    "out": [
+      "Brand/product marketing or UI work",
+      "Non-lab feature delivery outside experiments"
+    ]
+  },
+  "responsibilities": [
+    "Define event/tracing schema and correlation ID rules.",
+    "Automate evidence pack assembly (logs/traces/screens).",
+    "Ensure KPI widgets pull from authoritative sources.",
+    "Coordinate with Bridge on SDK emitters and headers.",
+    "Guard against PII leakage in telemetry."
+  ],
+  "deliverables": [
+    "Tracing schema & emitter contracts",
+    "Evidence pack automation scripts",
+    "KPI widget wiring guide",
+    "Telemetry privacy checklist"
+  ],
+  "kpis": [
+    "Trace completeness (% runs with full traces)",
+    "Evidence assembly time",
+    "Telemetry privacy incidents (target zero)",
+    "Widget data freshness"
+  ],
+  "decision_rights": {
+    "schema": "Owns tracing schema and headers",
+    "evidence_automation": "Approves automation rollout"
+  },
+  "autonomy_level": "Advisory",
+  "interfaces": {
+    "reports_to": "Archivist",
+    "partners": [
+      "Verifier",
+      "Bridge",
+      "Pulse"
+    ]
+  },
+  "cadence": {
+    "weekly": [
+      "Trace health check"
+    ]
+  },
+  "playbooks_refs": [
+    "/Agent-Lab/30_EvidencePacks/"
+  ],
+  "required_competencies": [
+    "Observability",
+    "Schema design",
+    "Automation",
+    "Privacy"
+  ],
+  "effective_date": "2025-11-03",
+  "display_name": "Trace",
+  "appointed_date": "2025-11-03"
+}

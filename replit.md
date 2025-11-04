@@ -111,4 +111,24 @@ Husky hook: `.husky/pre-commit`
 - `DTH_API_BASE` - Base URL for DTH API (e.g., `https://your-dth.replit.app/api`)
 - `DTH_API_TOKEN` - Secure authentication token for external integrations
 
+#### Field Transformation
+
+The importer automatically transforms Agent Lab role card structure to DTH schema:
+- `key` → `handle`
+- `deliverables` → `coreFunctions`
+- `kpis` → `definitionOfDone`
+- `required_competencies` → `strengths`
+- `interfaces.partners` → `collaborators`
+- `playbooks_refs` → `links`
+- `interfaces.reports_to` → `pod`
+- `autonomy_level` → `toneVoice`
+
+#### Import Status
+
+**13 Agent Lab roles successfully imported** (November 2025):
+- 2 Senior Advisers: agentic_ai_master, master_agentic_ai_strategist
+- 11 Added Specialists: cost_controller, data_curator, evaluation_architect, experiment_designer, master_agentic_ai_advancement_officer, memory_architect, prompt_policy_systems_engineer, reliability_sre_agentops, safety_red_team_lead, telemetry_tracing_lead, tooling_steward
+
+All roles categorized as "Agent Lab / Senior Advisers + Added Specialists".
+
 See `Agent-Lab/README.md` for detailed usage instructions.

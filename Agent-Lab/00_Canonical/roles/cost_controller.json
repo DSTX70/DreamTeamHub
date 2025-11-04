@@ -1,0 +1,68 @@
+{
+  "key": "cost_controller",
+  "title": "Cost Controller",
+  "short_title": "Cost Controller",
+  "purpose": "Own budget caps, anomaly alerts, and per-agent cost dashboards; partner with Ledger and Pulse.",
+  "scope": {
+    "in": [
+      "Agent Lab activities within brand-agnostic scope",
+      "Evidence-based experiments and governance per Team Charter"
+    ],
+    "out": [
+      "Brand/product marketing or UI work",
+      "Non-lab feature delivery outside experiments"
+    ]
+  },
+  "responsibilities": [
+    "Define budget caps per agent/experiment; track spend vs caps.",
+    "Detect anomalies (cost spikes) and route to owners.",
+    "Build per-agent cost dashboards and weekly roll-ups.",
+    "Model cost/perf trade-offs and recommendations.",
+    "Approve cost-related gates for promotion."
+  ],
+  "deliverables": [
+    "Budget caps registry",
+    "Cost anomaly alert rules",
+    "Cost dashboards & weekly reports",
+    "Cost gate approvals"
+  ],
+  "kpis": [
+    "Budget variance",
+    "Anomaly detection lead time",
+    "Cost-per-success trend",
+    "Gated promotions due to cost noncompliance"
+  ],
+  "decision_rights": {
+    "budget_caps": "Sets/updates caps with Ledger; OS approval for large changes",
+    "gate_checks": "Approves cost gate readiness"
+  },
+  "autonomy_level": "Advisory",
+  "interfaces": {
+    "reports_to": "Ledger",
+    "partners": [
+      "Pulse",
+      "Helm",
+      "reliability_sre_agentops"
+    ]
+  },
+  "cadence": {
+    "weekly": [
+      "Cost roll-up"
+    ],
+    "monthly": [
+      "Budget review"
+    ]
+  },
+  "playbooks_refs": [
+    "/Agent-Lab/40_Playbooks/kpi_tracker_template.csv"
+  ],
+  "required_competencies": [
+    "FinOps",
+    "Metrics analysis",
+    "Dashboards",
+    "Governance"
+  ],
+  "effective_date": "2025-11-03",
+  "display_name": "Tally",
+  "appointed_date": "2025-11-03"
+}

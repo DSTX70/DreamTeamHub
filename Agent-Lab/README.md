@@ -70,12 +70,31 @@ python3 tools/regenerate_roles_manifest.py
 
 ## Importer Behavior
 
-The importer implements **upsert logic**:
+The importer implements **upsert logic** with automatic field transformation:
 
 1. **GET** `/api/roles/by-handle/{key}` to check if role exists
 2. If **404** (not found): **POST** `/api/roles` to create
 3. If **200** (found): **PUT** `/api/roles/by-handle/{key}` to update
 4. Each payload includes the `category` field specified via `--category`
+
+### Field Transformation Mapping
+
+The importer automatically transforms Agent Lab role card fields to match the DTH schema:
+
+| Agent Lab Field | DTH Field | Notes |
+|----------------|-----------|-------|
+| `key` | `handle` | Unique identifier |
+| `title` or `display_name` | `title` | Role title |
+| `interfaces.reports_to` | `pod` | Organizational pod |
+| `purpose` | `purpose` | Role purpose |
+| `deliverables` | `coreFunctions` | Core functions array |
+| `responsibilities` | `responsibilities` | Responsibilities array |
+| `autonomy_level` | `toneVoice` | Tone/voice description |
+| `kpis` | `definitionOfDone` | Success criteria |
+| `required_competencies` | `strengths` | Required skills |
+| `interfaces.partners` | `collaborators` | Collaboration partners |
+| `playbooks_refs` | `links` | Reference links |
+| N/A | `podColor`, `icon`, `contact`, `tags` | Set to null/empty during import |
 
 ## GitHub Actions Integration
 
@@ -144,21 +163,66 @@ Check the importer log for specific error messages. Common issues:
 
 ## Example Role Card Structure
 
+**Agent Lab JSON Format** (source):
 ```json
 {
   "key": "agentic_ai_master",
   "title": "Agentic AI Master — Senior Adviser (Global)",
-  "short_title": "Agentic AI Master",
   "autonomy_level": "Advisory",
-  "category": "Agent Lab / Added Specialists",
-  "handle": "agentic_ai_master",
-  "pod": "Innovation",
   "purpose": "...",
-  "coreFunctions": [...],
+  "deliverables": [...],
   "responsibilities": [...],
+  "kpis": [...],
+  "required_competencies": [...],
+  "interfaces": {
+    "reports_to": "OS (Sponsor)",
+    "partners": [...]
+  },
+  "playbooks_refs": [...],
   "effective_date": "2025-11-03"
 }
 ```
+
+**DTH Format** (after transformation):
+```json
+{
+  "handle": "agentic_ai_master",
+  "title": "Agentic AI Master — Senior Adviser (Global)",
+  "pod": "OS (Sponsor)",
+  "purpose": "...",
+  "coreFunctions": [...],
+  "responsibilities": [...],
+  "toneVoice": "Advisory",
+  "definitionOfDone": [...],
+  "strengths": [...],
+  "collaborators": [...],
+  "links": [...],
+  "category": "Agent Lab / Senior Advisers + Added Specialists"
+}
+```
+
+## Import Status
+
+As of November 2025, **13 Agent Lab roles** have been successfully imported:
+
+**Senior Advisers (2)**:
+- `agentic_ai_master` - Agentic AI Master
+- `master_agentic_ai_strategist` - Master Agentic AI Strategist
+
+**Added Specialists (11)**:
+- `cost_controller` - Cost Controller
+- `data_curator` - Data Curator
+- `evaluation_architect` - Evaluation Architect
+- `experiment_designer` - Experiment Designer
+- `master_agentic_ai_advancement_officer` - Master Agentic AI Advancement Officer
+- `memory_architect` - Memory Architect
+- `prompt_policy_systems_engineer` - Prompt Policy & Systems Engineer
+- `reliability_sre_agentops` - Reliability SRE/AgentOps
+- `safety_red_team_lead` - Safety Red Team Lead
+- `telemetry_tracing_lead` - Telemetry & Tracing Lead
+- `tooling_steward` - Tooling Steward
+
+All roles are categorized as **"Agent Lab / Senior Advisers + Added Specialists"** in the DTH database.
 
 ## License
 

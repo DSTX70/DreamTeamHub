@@ -1,0 +1,68 @@
+{
+  "key": "tooling_steward",
+  "title": "Tooling Steward",
+  "short_title": "Tool Steward",
+  "purpose": "Curate the tool catalog, scopes/permissions, and rate limits; run tool certification and deprecation schedule.",
+  "scope": {
+    "in": [
+      "Agent Lab activities within brand-agnostic scope",
+      "Evidence-based experiments and governance per Team Charter"
+    ],
+    "out": [
+      "Brand/product marketing or UI work",
+      "Non-lab feature delivery outside experiments"
+    ]
+  },
+  "responsibilities": [
+    "Maintain inventory of tools with scopes, rate limits, owners.",
+    "Run tool certification (tests, failure modes, guardrails).",
+    "Define deprecation schedule; manage breaking changes.",
+    "Coordinate with Bridge/LexiCode for adapters/SDK exposure.",
+    "Publish a tool capability map for routing quality."
+  ],
+  "deliverables": [
+    "Tool catalog & certification status",
+    "Tool tests & failure-mode docs",
+    "Deprecation calendar",
+    "Capability map (routing guide)"
+  ],
+  "kpis": [
+    "Tool-related failure rate",
+    "Time-to-certify new tool",
+    "Incidents from deprecated tools",
+    "Routing accuracy when tool available"
+  ],
+  "decision_rights": {
+    "certification": "Approves tool readiness for Lab use",
+    "deprecation": "Owns deprecation timelines"
+  },
+  "autonomy_level": "Advisory",
+  "interfaces": {
+    "reports_to": "Bridge",
+    "partners": [
+      "LexiCode",
+      "Forge",
+      "Verifier"
+    ]
+  },
+  "cadence": {
+    "weekly": [
+      "Catalog update"
+    ],
+    "monthly": [
+      "Certification review"
+    ]
+  },
+  "playbooks_refs": [
+    "/Agent-Lab/40_Playbooks/promotion_request_template.md"
+  ],
+  "required_competencies": [
+    "API design",
+    "Reliability testing",
+    "Change management",
+    "Documentation"
+  ],
+  "effective_date": "2025-11-03",
+  "display_name": "Toolsmith",
+  "appointed_date": "2025-11-03"
+}

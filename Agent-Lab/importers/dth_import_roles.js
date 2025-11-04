@@ -56,8 +56,30 @@ function loadRoleJson(entry, manifestPath) {
   throw new Error(`Role JSON not found for key=${entry.key}: tried ${tryPaths.join(', ')}`);
 }
 
+function transformAgentLabToDTH(agentLabRole) {
+  return {
+    handle: agentLabRole.key,
+    title: agentLabRole.title || agentLabRole.display_name || 'Untitled Role',
+    pod: agentLabRole.interfaces?.reports_to || 'Innovation',
+    podColor: null,
+    icon: null,
+    purpose: agentLabRole.purpose || '',
+    coreFunctions: agentLabRole.deliverables || [],
+    responsibilities: agentLabRole.responsibilities || [],
+    toneVoice: agentLabRole.autonomy_level || 'Advisory',
+    definitionOfDone: agentLabRole.kpis || [],
+    strengths: agentLabRole.required_competencies || [],
+    collaborators: agentLabRole.interfaces?.partners || [],
+    contact: null,
+    links: agentLabRole.playbooks_refs || [],
+    tags: [],
+    category: null,
+  };
+}
+
 async function upsertRole(entry, manifestPath, apiBase, apiToken, category, dryRun) {
-  const role = loadRoleJson(entry, manifestPath);
+  const agentLabRole = loadRoleJson(entry, manifestPath);
+  const role = transformAgentLabToDTH(agentLabRole);
   role.category = category;
 
   const getUrl = `${apiBase}/roles/by-handle/${entry.key}`;

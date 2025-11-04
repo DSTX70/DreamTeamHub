@@ -476,15 +476,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // ROLE CARDS
   // ===========================
   
-  app.get("/api/roles", isAuthenticated, async (req, res) => {
+  app.get("/api/roles", isDualAuthenticated, async (req, res) => {
     try {
-      const { pod, handle } = req.query;
+      const { pod, handle, category } = req.query;
       const filters: any = {};
       if (pod) filters.pod = pod as string;
       if (handle) filters.handle = handle as string;
       
       const roles = await storage.getRoleCards(filters);
-      res.json(roles);
+      
+      // Filter by category if specified (in-memory filter since getRoleCards doesn't support it)
+      let filteredRoles = roles;
+      if (category) {
+        filteredRoles = roles.filter(role => role.category === category);
+      }
+      
+      res.json(filteredRoles);
     } catch (error) {
       console.error('Error fetching roles:', error);
       res.status(500).json({ error: 'Failed to fetch roles' });

@@ -1,0 +1,68 @@
+{
+  "key": "safety_red_team_lead",
+  "title": "Safety Red Team Lead",
+  "short_title": "Red Team Lead",
+  "purpose": "Craft adversarial scenarios (jailbreaks, prompt injections, data exfil) and coordinate with Sentinel on fixes.",
+  "scope": {
+    "in": [
+      "Agent Lab activities within brand-agnostic scope",
+      "Evidence-based experiments and governance per Team Charter"
+    ],
+    "out": [
+      "Brand/product marketing or UI work",
+      "Non-lab feature delivery outside experiments"
+    ]
+  },
+  "responsibilities": [
+    "Design adversarial tests targeting safety/policy weak points.",
+    "Continuously update attack library; track bypass attempts.",
+    "Partner with Sentinel to close gaps and verify fixes.",
+    "Run red-team exercises before promotions to higher autonomy.",
+    "Publish incident and remediation reports."
+  ],
+  "deliverables": [
+    "Adversarial test library",
+    "Red-team exercise reports",
+    "Remediation verification notes",
+    "Quarterly safety stress-test summary"
+  ],
+  "kpis": [
+    "Detection rate of known attacks",
+    "Time-to-mitigate from finding to fix",
+    "Post-fix recurrence rate",
+    "Incidents caught pre-promotion"
+  ],
+  "decision_rights": {
+    "test_scope": "Defines red-team scope per cycle",
+    "blocker_flags": "Can recommend promotion hold; Sentinel final say"
+  },
+  "autonomy_level": "Advisory",
+  "interfaces": {
+    "reports_to": "Sentinel",
+    "partners": [
+      "prompt_policy_systems_engineer",
+      "Verifier",
+      "Forge"
+    ]
+  },
+  "cadence": {
+    "monthly": [
+      "Red-team exercises"
+    ],
+    "ad_hoc": [
+      "Incident response"
+    ]
+  },
+  "playbooks_refs": [
+    "/Agent-Lab/00_Canonical/TEAM_CHARTER.md"
+  ],
+  "required_competencies": [
+    "Security testing",
+    "Prompt injection",
+    "Threat modeling",
+    "Incident reports"
+  ],
+  "effective_date": "2025-11-03",
+  "display_name": "Redguard",
+  "appointed_date": "2025-11-03"
+}

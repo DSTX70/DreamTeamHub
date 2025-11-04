@@ -1,0 +1,69 @@
+{
+  "key": "reliability_sre_agentops",
+  "title": "Reliability SRE (AgentOps)",
+  "short_title": "AgentOps SRE",
+  "purpose": "Build runbooks, monitors, auto-retries/backoff, and circuit-breakers for agent operations.",
+  "scope": {
+    "in": [
+      "Agent Lab activities within brand-agnostic scope",
+      "Evidence-based experiments and governance per Team Charter"
+    ],
+    "out": [
+      "Brand/product marketing or UI work",
+      "Non-lab feature delivery outside experiments"
+    ]
+  },
+  "responsibilities": [
+    "Define SLOs and error budgets per agent class.",
+    "Implement monitors/alerts for KPIs and failure modes.",
+    "Engineer retries/backoff and circuit-breakers for tools and kernel calls.",
+    "Own incident response runbooks and on-call rotations (if any).",
+    "Run postmortems and track action items."
+  ],
+  "deliverables": [
+    "AgentOps runbooks",
+    "Monitoring & alerting rules",
+    "Circuit-breaker configs",
+    "Postmortem reports"
+  ],
+  "kpis": [
+    "MTTR (mean time to recovery)",
+    "SLO attainment rate",
+    "Incident recurrence rate",
+    "False-alert rate"
+  ],
+  "decision_rights": {
+    "operational_controls": "Can deploy circuit-breakers and rollback configs",
+    "oncall": "Owns incident handling procedures"
+  },
+  "autonomy_level": "Advisory",
+  "interfaces": {
+    "reports_to": "Helm",
+    "partners": [
+      "Pulse",
+      "Verifier",
+      "Bridge",
+      "tooling_steward"
+    ]
+  },
+  "cadence": {
+    "weekly": [
+      "Ops review"
+    ],
+    "ad_hoc": [
+      "Incident handling"
+    ]
+  },
+  "playbooks_refs": [
+    "/Agent-Lab/40_Playbooks/kpi_tracker_template.csv"
+  ],
+  "required_competencies": [
+    "SRE practices",
+    "Monitoring & telemetry",
+    "Resilience patterns",
+    "Postmortems"
+  ],
+  "effective_date": "2025-11-03",
+  "display_name": "Uptime",
+  "appointed_date": "2025-11-03"
+}
