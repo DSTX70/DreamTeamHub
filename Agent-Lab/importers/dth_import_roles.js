@@ -128,7 +128,8 @@ async function main() {
     process.exit(2);
   }
 
-  const manifestPath = path.resolve(__dirname, args.manifest);
+  // Resolve manifest path relative to current working directory
+  const manifestPath = path.resolve(process.cwd(), args.manifest);
 
   if (!fs.existsSync(manifestPath)) {
     console.error(`Manifest file not found: ${manifestPath}`);

@@ -135,6 +135,7 @@ export const roleCards = pgTable("role_cards", {
   contact: text("contact"),
   links: jsonb("links").$type<string[]>().notNull().default(sql`'[]'`),
   tags: jsonb("tags").$type<string[]>().notNull().default(sql`'[]'`),
+  category: text("category"),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
