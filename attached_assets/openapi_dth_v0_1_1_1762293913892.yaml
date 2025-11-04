@@ -1,0 +1,228 @@
+openapi: 3.0.3
+info:
+  title: Dream Team Hub API
+  version: "0.1.1"
+  description: |
+    Token-authenticated endpoints for role cards and agent summaries.
+    Conventions:
+      - Bearer token auth (Authorization: Bearer <token>)
+      - Pagination: limit (1..200), offset (>=0)
+      - Error shape: { "error": { "code": "string", "message": "string", "details": {} } }
+servers:
+  - url: https://workspace.DustinSparks1.repl.co
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+  schemas:
+    Error:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: object
+          required: [code, message]
+          properties:
+            code: { type: string, example: "not_found" }
+            message: { type: string, example: "Role not found" }
+            details: { type: object, additionalProperties: true }
+    Role:
+      type: object
+      required: [name, handle]
+      properties:
+        id: { type: integer, example: 1 }
+        name: { type: string, example: "Product Owner" }
+        handle: { type: string, example: "product_owner" }
+        pod: { type: string, example: "Product" }
+        category: { type: string, example: "Leadership" }
+        display_name: { type: string, example: "Sage" }
+        autonomy_level: { type: string, example: "Advisory" }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+    AgentSummary:
+      type: object
+      required: [name, autonomy_level, status]
+      properties:
+        name: { type: string, example: "agent-router" }
+        display_name: { type: string, example: "Router" }
+        autonomy_level: { type: string, enum: [L0, L1, L2, L3], example: "L1" }
+        status: { type: string, enum: [pilot, live, watch, rollback], example: "pilot" }
+        next_gate: { type: integer, minimum: 1, maximum: 4, nullable: true, example: 2 }
+        promotion_progress_pct: { type: integer, minimum: 0, maximum: 100, example: 60 }
+        business_unit: { type: string, example: "Support" }
+        kpis:
+          type: object
+          properties:
+            task_success: { type: number, format: float, example: 0.84 }
+            latency_p95_s: { type: number, format: float, example: 4.2 }
+            cost_per_task_usd: { type: number, format: float, example: 0.035 }
+        links:
+          type: object
+          properties:
+            pr: { type: string, format: uri, example: "https://github.com/org/repo/pull/123" }
+            promotion_request: { type: string, example: "/Agent-Lab/40_Playbooks/promotion_request_template.md" }
+            evidence_pack: { type: string, example: "/Agent-Lab/30_EvidencePacks/exp_2025-11-03_tool-routing-accuracy/" }
+paths:
+  /healthz:
+    get:
+      summary: Health check
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: ok
+  /api/roles:
+    get:
+      summary: List roles
+      security: [ { BearerAuth: [] } ]
+      parameters:
+        - in: query
+          name: limit
+          schema: { type: integer, minimum: 1, maximum: 200, default: 50 }
+        - in: query
+          name: offset
+          schema: { type: integer, minimum: 0, default: 0 }
+      responses:
+        '200':
+          description: Array of roles
+          headers:
+            X-Total-Count:
+              description: Total number of items (for pagination)
+              schema: { type: integer, example: 137 }
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Role' }
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+    post:
+      summary: Create role
+      security: [ { BearerAuth: [] } ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/Role' }
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Role' }
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+  /api/roles/by-handle/{handle}:
+    parameters:
+      - in: path
+        name: handle
+        required: true
+        schema: { type: string }
+    get:
+      summary: Get role by handle
+      security: [ { BearerAuth: [] } ]
+      responses:
+        '200':
+          description: Role
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Role' }
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+    put:
+      summary: Update role by handle
+      security: [ { BearerAuth: [] } ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/Role' }
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Role' }
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+  /api/agents/summary:
+    get:
+      summary: List agent summaries (for Academy dashboard)
+      description: Returns a paginated list of agents with status, gates, KPIs, and links used by the Academy UI.
+      security: [ { BearerAuth: [] } ]
+      parameters:
+        - in: query
+          name: limit
+          schema: { type: integer, minimum: 1, maximum: 200, default: 50 }
+        - in: query
+          name: offset
+          schema: { type: integer, minimum: 0, default: 0 }
+        - in: query
+          name: bu
+          schema: { type: string, description: "Business Unit filter" }
+        - in: query
+          name: level
+          schema:
+            type: string
+            enum: [L0, L1, L2, L3]
+        - in: query
+          name: status
+          schema:
+            type: string
+            enum: [pilot, live, watch, rollback]
+        - in: query
+          name: q
+          schema: { type: string, description: "Text search on name/display_name" }
+      responses:
+        '200':
+          description: Array of agent summaries
+          headers:
+            X-Total-Count:
+              description: Total number of items (for pagination)
+              schema: { type: integer, example: 42 }
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/AgentSummary' }
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }

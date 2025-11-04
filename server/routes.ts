@@ -434,13 +434,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Agent Lab Academy summary endpoint (public for Academy landing page)
-  app.get("/agents/summary", async (req, res) => {
+  // Agent Lab Academy summary endpoint (with dual authentication and filtering)
+  app.get("/api/agents/summary", isDualAuthenticated, async (req, res) => {
     try {
+      // Parse pagination parameters
+      const limit = Math.max(1, Math.min(200, parseInt(req.query.limit as string, 10) || 50));
+      const offset = Math.max(0, parseInt(req.query.offset as string, 10) || 0);
+      
+      // Parse filter parameters
+      const { bu, level, status, q } = req.query;
+      
       const agents = await storage.getAgents({});
       
       // Transform agents to Academy dashboard format with deterministic KPI data
-      const summary = agents.map(agent => {
+      let summary = agents.map(agent => {
         const autonomy_level = agent.autonomyLevel || 'L0';
         
         // Deterministic task success from lastEvalScore (0-100%), clamped to 0-1 range
@@ -453,14 +460,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const costMap: Record<string, number> = { 'L3': 0.047, 'L2': 0.040, 'L1': 0.033, 'L0': 0.025 };
         
         // Map status to Academy expected values
-        let status: string;
-        if (agent.status === 'active') status = 'live';
-        else if (agent.status === 'inactive') status = 'pilot';
-        else status = agent.status; // watch, etc.
+        let mappedStatus: string;
+        if (agent.status === 'active') mappedStatus = 'live';
+        else if (agent.status === 'inactive') mappedStatus = 'pilot';
+        else mappedStatus = agent.status; // watch, etc.
         
         // Calculate next gate (L3 has no next gate)
         const currentLevel = parseInt(autonomy_level.slice(1));
-        const next_gate = currentLevel >= 3 ? '-' : (currentLevel + 1).toString();
+        const next_gate = currentLevel >= 3 ? null : (currentLevel + 1);
         
         // Promotion progress from lastEvalScore, clamped to 0-100
         // If no eval data, default based on autonomy level progression
@@ -469,28 +476,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
           ? Math.min(100, Math.max(0, agent.lastEvalScore))
           : progressDefaults[autonomy_level] || 25;
         
-        // Next scheduled promotion review (if lastEvalAt exists and agent is not L3)
-        // Simulate next review 14 days after last eval for non-L3 agents
-        const next_review = agent.lastEvalAt && currentLevel < 3
-          ? new Date(new Date(agent.lastEvalAt).getTime() + 14 * 24 * 60 * 60 * 1000).toISOString()
-          : null;
+        // Business unit from podName (default to General if not assigned)
+        const business_unit = agent.podName || 'General';
         
         // Links to PR and evidence (use threadId or skillPackPath as proxy)
         const links = {
-          pr: `https://github.com/example/dream-team/pull/${Math.floor(Math.random() * 100) + 1}`,
-          evidence: agent.skillPackPath 
-            ? `https://github.com/example/dream-team/tree/main/${agent.skillPackPath}#evidence`
-            : `https://github.com/example/dream-team/wiki/${agent.id}-evidence`
+          pr: agent.skillPackPath 
+            ? `https://github.com/example/dream-team/pull/${Math.abs(agent.id.split('').reduce((a, b) => a + b.charCodeAt(0), 0)) % 100 + 1}`
+            : undefined,
+          promotion_request: agent.autonomyLevel && parseInt(agent.autonomyLevel.slice(1)) < 3
+            ? `/Agent-Lab/40_Playbooks/promotion_request_template.md`
+            : undefined,
+          evidence_pack: agent.skillPackPath 
+            ? `/Agent-Lab/30_EvidencePacks/exp_${new Date().toISOString().split('T')[0]}_${agent.id}/`
+            : undefined
         };
         
         return {
           name: agent.id, // agent.id IS the handle (e.g., "agent_os", "agent_helm")
           display_name: agent.title,
           autonomy_level,
-          status,
+          status: mappedStatus,
           next_gate,
           promotion_progress_pct,
-          next_review,
+          business_unit,
           kpis: {
             task_success,
             latency_p95_s: latencyMap[autonomy_level] || 4.9,
@@ -500,7 +509,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
         };
       });
       
-      res.json(summary);
+      // Apply filters
+      if (bu) {
+        summary = summary.filter(a => 
+          a.business_unit?.toLowerCase() === String(bu).toLowerCase()
+        );
+      }
+      if (level) {
+        summary = summary.filter(a => a.autonomy_level === level);
+      }
+      if (status) {
+        summary = summary.filter(a => a.status === status);
+      }
+      if (q) {
+        const query = String(q).toLowerCase();
+        summary = summary.filter(a => 
+          a.display_name?.toLowerCase().includes(query) || 
+          a.name.toLowerCase().includes(query)
+        );
+      }
+      
+      // Get total count before pagination
+      const total = summary.length;
+      
+      // Apply pagination
+      const paginated = summary.slice(offset, offset + limit);
+      
+      // Set X-Total-Count header for pagination
+      res.set('X-Total-Count', String(total));
+      res.json(paginated);
     } catch (error: any) {
       console.error('Error fetching agents summary:', error);
       res.status(500).json({ error: error.message || 'Failed to fetch agents summary' });
@@ -1770,8 +1807,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.patch("/api/idea-sparks/:id", isAuthenticated, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
-      const data = insertIdeaSparkSchema.partial().omit({ userId: true }).parse(req.body);
-      const updated = await storage.updateIdeaSpark(id, data);
+      // Parse update data (all fields optional, excluding userId)
+      const { userId, ...updateData } = req.body;
+      const updated = await storage.updateIdeaSpark(id, updateData);
       if (!updated) {
         return res.status(404).json({ error: 'Idea spark not found' });
       }

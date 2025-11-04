@@ -1,0 +1,147 @@
+{
+  "info": {
+    "name": "Dream Team Hub - Roles API",
+    "_postman_id": "dth-roles-collection-0001",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Health",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base}}/healthz",
+          "host": [
+            "{{base}}"
+          ],
+          "path": [
+            "healthz"
+          ]
+        }
+      }
+    },
+    {
+      "name": "List roles",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{DTH_API_TOKEN}}"
+          }
+        ],
+        "url": {
+          "raw": "{{base}}/api/roles",
+          "host": [
+            "{{base}}"
+          ],
+          "path": [
+            "api",
+            "roles"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Get role by handle",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{DTH_API_TOKEN}}"
+          }
+        ],
+        "url": {
+          "raw": "{{base}}/api/roles/by-handle/{{handle}}",
+          "host": [
+            "{{base}}"
+          ],
+          "path": [
+            "api",
+            "roles",
+            "by-handle",
+            "{{handle}}"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Create role",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{DTH_API_TOKEN}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"Product Owner\",\n  \"handle\": \"product_owner\",\n  \"pod\": \"Product\",\n  \"category\": \"Leadership\"\n}"
+        },
+        "url": {
+          "raw": "{{base}}/api/roles",
+          "host": [
+            "{{base}}"
+          ],
+          "path": [
+            "api",
+            "roles"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Update role by handle",
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{DTH_API_TOKEN}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"Product Owner\",\n  \"handle\": \"product_owner\",\n  \"pod\": \"Product\",\n  \"category\": \"Leadership\",\n  \"display_name\": \"Sage\"\n}"
+        },
+        "url": {
+          "raw": "{{base}}/api/roles/by-handle/{{handle}}",
+          "host": [
+            "{{base}}"
+          ],
+          "path": [
+            "api",
+            "roles",
+            "by-handle",
+            "{{handle}}"
+          ]
+        }
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "base",
+      "value": "https://workspace.DustinSparks1.repl.co"
+    },
+    {
+      "key": "DTH_API_TOKEN",
+      "value": ""
+    },
+    {
+      "key": "handle",
+      "value": "product_owner"
+    }
+  ]
+}

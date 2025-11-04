@@ -1,0 +1,36 @@
+openapi: 3.0.1
+info:
+  title: DTH Roles API (Actions)
+  version: "0.1.0"
+servers:
+  - url: https://workspace.DustinSparks1.repl.co
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+paths:
+  /api/roles:
+    get:
+      operationId: getRoles
+      summary: Get all role cards
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: List of role cards
+  /api/roles/by-handle/{handle}:
+    get:
+      operationId: getRoleByHandle
+      summary: Get a specific role by handle
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: handle
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Role details

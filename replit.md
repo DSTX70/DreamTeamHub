@@ -55,6 +55,36 @@ The platform is structured into core modules and features:
   - Required secrets: `PROD_DB_URL`, `STAGING_DB_URL` (GitHub Secrets)
   - Optional IP allowlist: `ALLOWED_IPS` environment variable
 
+## API Endpoints
+
+Dream Team Hub exposes a RESTful API with dual authentication support:
+
+### Public Endpoints
+- `GET /healthz` - Health check for uptime monitoring (no auth required)
+
+### Role Cards API (Dual Authentication)
+- `GET /api/roles` - List all role cards with pagination
+- `GET /api/roles/by-handle/{handle}` - Get role by handle
+- `POST /api/roles` - Create new role card
+- `PUT /api/roles/by-handle/{handle}` - Update role by handle
+
+### Agents API (Dual Authentication)
+- `GET /api/agents/summary` - List agent summaries for Academy dashboard
+  - Supports filtering by business unit, autonomy level, status
+  - Includes pagination (limit/offset) and text search
+  - Returns KPIs (task_success, latency_p95_s, cost_per_task_usd)
+  - Includes promotion progress and links to evidence packs
+
+### Authentication Methods
+1. **Session Auth**: Replit Auth login (for web UI)
+2. **API Token**: Bearer token in Authorization header (for external integrations, ChatGPT agents, CI/CD)
+
+### Documentation
+- Full OpenAPI spec: `docs/API_SPEC_v0.1.1.yaml`
+- Postman collection: `docs/POSTMAN_COLLECTION.json`
+- GPT Actions schema: `docs/GPT_ACTIONS_SCHEMA.yaml`
+- Comprehensive guide: `docs/API_ENDPOINTS_GUIDE.md`
+
 ## External Dependencies
 
 - **OpenAI GPT-4**: Powers the AI-driven conversational agents in Dream Team Chat.

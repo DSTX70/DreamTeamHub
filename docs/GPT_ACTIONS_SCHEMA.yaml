@@ -1,0 +1,71 @@
+openapi: 3.0.1
+info:
+  title: DTH API (Actions) — v0.1.1
+  version: "0.1.1"
+servers:
+  - url: https://workspace.DustinSparks1.repl.co
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+paths:
+  /api/roles:
+    get:
+      operationId: getRoles
+      summary: Get all role cards (paginated)
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: query
+          name: limit
+          schema: { type: integer, minimum: 1, maximum: 200, default: 50 }
+        - in: query
+          name: offset
+          schema: { type: integer, minimum: 0, default: 0 }
+      responses:
+        '200':
+          description: List of role cards
+  /api/roles/by-handle/{handle}:
+    get:
+      operationId: getRoleByHandle
+      summary: Get a specific role by handle
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: handle
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Role details
+  /api/agents/summary:
+    get:
+      operationId: getAgentSummaries
+      summary: Get agent summaries for the Academy dashboard (paginated)
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: query
+          name: limit
+          schema: { type: integer, minimum: 1, maximum: 200, default: 50 }
+        - in: query
+          name: offset
+          schema: { type: integer, minimum: 0, default: 0 }
+        - in: query
+          name: bu
+          schema: { type: string }
+        - in: query
+          name: level
+          schema: { type: string, enum: [L0, L1, L2, L3] }
+        - in: query
+          name: status
+          schema: { type: string, enum: [pilot, live, watch, rollback] }
+        - in: query
+          name: q
+          schema: { type: string }
+      responses:
+        '200':
+          description: List of agent summaries

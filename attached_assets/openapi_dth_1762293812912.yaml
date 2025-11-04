@@ -1,0 +1,104 @@
+openapi: 3.0.3
+info:
+  title: Dream Team Hub API
+  version: "0.1.0"
+  description: Token-authenticated endpoints for role cards. Health check is open.
+servers:
+  - url: https://workspace.DustinSparks1.repl.co
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+  schemas:
+    Role:
+      type: object
+      required: [name, handle]
+      properties:
+        id: { type: integer, example: 1 }
+        name: { type: string, example: "Product Owner" }
+        handle: { type: string, example: "product_owner" }
+        pod: { type: string, example: "Product" }
+        category: { type: string, example: "Leadership" }
+        display_name: { type: string, example: "Sage" }
+        autonomy_level: { type: string, example: "Advisory" }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+paths:
+  /healthz:
+    get:
+      summary: Health check
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: ok
+  /api/roles:
+    get:
+      summary: List roles
+      security: [ { BearerAuth: [] } ]
+      parameters:
+        - in: query
+          name: limit
+          schema: { type: integer, minimum: 1, maximum: 200 }
+        - in: query
+          name: offset
+          schema: { type: integer, minimum: 0 }
+      responses:
+        '200':
+          description: Array of roles
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Role' }
+    post:
+      summary: Create role
+      security: [ { BearerAuth: [] } ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/Role' }
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Role' }
+  /api/roles/by-handle/{handle}:
+    parameters:
+      - in: path
+        name: handle
+        required: true
+        schema: { type: string }
+    get:
+      summary: Get role by handle
+      security: [ { BearerAuth: [] } ]
+      responses:
+        '200':
+          description: Role
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Role' }
+        '404':
+          description: Not found
+    put:
+      summary: Update role by handle
+      security: [ { BearerAuth: [] } ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/Role' }
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Role' }
+        '404':
+          description: Not found
