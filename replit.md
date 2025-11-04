@@ -28,6 +28,7 @@ The platform is structured into several core modules:
 - **Projects**: Comprehensive project management system organized by business pillars (Imagination, Innovation, Impact) with task management, file management with review workflow, agent/pod assignments, status tracking, project messaging, and project-specific Idea Sparks.
 - **Idea Spark**: Quick idea capture feature accessible from all authenticated screens via floating button. Allows users to capture ideas with title, description, file URL, pod assignment, and project linkage. Dashboard shows all recent sparks; Projects page shows only project-related sparks.
 - **Role Cards System**: Manages Dream Team personas with RACI Matrix and bulk import. Features visual pod color coding with 21 unique pod colors displayed via colored rails and badges on agent cards.
+- **Agent Lab Integration**: External role card importer system with CI/CD support via GitHub Actions, handle-based API endpoints, and dual authentication (session + API token).
 - **Brainstorm Studio**: Structured ideation with LLM-assisted clustering and idea scoring.
 - **Audit Engine**: Cross-pod compliance checks with evidence capture.
 - **Decision Log**: Immutable record of key decisions.
@@ -50,7 +51,9 @@ The platform is structured into several core modules:
 
 ### Authentication & Security
 - **Authentication Provider**: Replit Auth (OpenID Connect) supporting Google, GitHub, Apple, X, and email/password.
-- **Security Architecture**: All API routes protected with `isAuthenticated` middleware; session-based authentication stored in PostgreSQL; secure cookie configuration.
+- **Security Architecture**: Dual authentication system - session-based auth for interactive users, API token auth for external integrations/CI/CD.
+  - Session Auth: All web API routes protected with `isAuthenticated` middleware; stored in PostgreSQL with secure cookie configuration.
+  - API Token Auth: Bearer token authentication for external importers and GitHub Actions workflows via `DTH_API_TOKEN` environment variable.
 - **Database Schema**: `users` and `sessions` tables manage user data and session information.
 
 ### Master Brand System
@@ -63,3 +66,49 @@ The platform is structured into several core modules:
 - **OpenAI GPT-4**: Powers the AI-driven conversational agents in Dream Team Chat.
 - **PostgreSQL (Neon-backed)**: Primary database for persistent storage.
 - **Replit Auth**: Provides secure user authentication via OpenID Connect.
+
+## API Integration & CI/CD
+
+### Agent Lab Role Card Importers
+
+Dream Team Hub supports external role card imports from the Agent Lab collection through a dual authentication API system:
+
+#### API Endpoints
+
+**Handle-Based Endpoints** (for external integrations):
+- `GET /api/roles/by-handle/:handle` - Fetch role by handle/key
+- `PUT /api/roles/by-handle/:handle` - Update role by handle/key
+- `POST /api/roles` - Create new role card
+
+**Authentication Methods**:
+1. **API Token** (for CI/CD): `Authorization: Bearer <DTH_API_TOKEN>` header
+2. **Session Auth** (for manual testing): Replit Auth login session
+
+#### Importer Workflow
+
+Located in `Agent-Lab/` directory:
+- **Manifest**: `00_Canonical/roles/roles_manifest.jsonl` - JSONL file listing all role cards
+- **Importer Script**: `importers/dth_import_roles.js` - Node.js script implementing upsert logic (GET → 404 → POST, or 200 → PUT)
+- **Manifest Regeneration**: `tools/regenerate_roles_manifest.{js,py}` - Auto-generates manifest from role JSON files
+
+#### GitHub Actions Integration
+
+Workflow: `.github/workflows/dth_import_roles.yml`
+- **Triggers**: Push to role files, PR reviews, manual dispatch
+- **Modes**: Dry-run for PRs, live import for main branch pushes
+- **Artifacts**: Importer logs and Agent-Lab bundle ZIP
+- **Secrets Required**: `DTH_API_BASE`, `DTH_API_TOKEN`
+
+#### Pre-Commit Hook
+
+Husky hook: `.husky/pre-commit`
+- Auto-regenerates manifest when role JSON files change
+- Stages updated manifest automatically
+- Supports both Python and Node.js regenerators
+
+#### Environment Variables
+
+- `DTH_API_BASE` - Base URL for DTH API (e.g., `https://your-dth.replit.app/api`)
+- `DTH_API_TOKEN` - Secure authentication token for external integrations
+
+See `Agent-Lab/README.md` for detailed usage instructions.
