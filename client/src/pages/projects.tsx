@@ -292,29 +292,30 @@ export default function Projects() {
               const priorityConfig = PRIORITY_CONFIG[(project.priority || 'medium') as keyof typeof PRIORITY_CONFIG];
               
               return (
-                <Card key={project.id} className="hover-elevate cursor-pointer" data-testid={`card-project-${project.id}`}>
-                  <CardHeader>
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="flex-1">
-                        <CardTitle className="text-lg flex items-center gap-2">
-                          <PillarIcon className="h-4 w-4" />
-                          {project.title}
-                        </CardTitle>
-                        <CardDescription className="mt-1">{project.description}</CardDescription>
+                <Link key={project.id} href={`/project/${project.id}`}>
+                  <Card className="hover-elevate cursor-pointer" data-testid={`card-project-${project.id}`}>
+                    <CardHeader>
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex-1">
+                          <CardTitle className="text-lg flex items-center gap-2">
+                            <PillarIcon className="h-4 w-4" />
+                            {project.title}
+                          </CardTitle>
+                          <CardDescription className="mt-1">{project.description}</CardDescription>
+                        </div>
                       </div>
-                    </div>
-                    <div className="flex flex-wrap gap-2 mt-3">
-                      <Badge className={statusConfig.color} data-testid={`badge-status-${project.id}`}>
-                        {statusConfig.label}
-                      </Badge>
-                      <Badge className={priorityConfig.color} data-testid={`badge-priority-${project.id}`}>
-                        {priorityConfig.label}
-                      </Badge>
-                      <Badge variant="outline" data-testid={`badge-category-${project.id}`}>
-                        {project.category}
-                      </Badge>
-                    </div>
-                  </CardHeader>
+                      <div className="flex flex-wrap gap-2 mt-3">
+                        <Badge className={statusConfig.color} data-testid={`badge-status-${project.id}`}>
+                          {statusConfig.label}
+                        </Badge>
+                        <Badge className={priorityConfig.color} data-testid={`badge-priority-${project.id}`}>
+                          {priorityConfig.label}
+                        </Badge>
+                        <Badge variant="outline" data-testid={`badge-category-${project.id}`}>
+                          {project.category}
+                        </Badge>
+                      </div>
+                    </CardHeader>
                   <CardContent className="space-y-2 text-sm">
                     {project.dueDate && (
                       <div className="flex items-center gap-2 text-muted-foreground">
@@ -327,6 +328,7 @@ export default function Projects() {
                     Updated {new Date(project.updatedAt).toLocaleDateString()}
                   </CardFooter>
                 </Card>
+                </Link>
               );
             })}
           </div>

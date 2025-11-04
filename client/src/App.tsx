@@ -24,6 +24,7 @@ import BrandGuidePage from "@/pages/brand-guide";
 import HelpPage from "@/pages/help";
 import Projects from "@/pages/projects";
 import ProjectCreate from "@/pages/project-create";
+import ProjectDetail from "@/pages/project-detail";
 import AgentCreate from "@/pages/agent-create";
 import Demo from "@/pages/demo";
 import Academy from "@/pages/academy";
@@ -45,6 +46,7 @@ function AuthenticatedRoutes() {
       <Route path="/intake" component={Intake} />
       <Route path="/pods" component={Pods} />
       <Route path="/projects/new" component={ProjectCreate} />
+      <Route path="/project/:id" component={ProjectDetail} />
       <Route path="/projects" component={Projects} />
       <Route path="/projects/:category" component={Projects} />
       <Route path="/chat" component={ChatPage} />
