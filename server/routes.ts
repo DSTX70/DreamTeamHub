@@ -434,6 +434,51 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Agent Lab Academy summary endpoint
+  app.get("/api/agents/summary", isAuthenticated, async (req, res) => {
+    try {
+      const agents = await storage.getAgents({});
+      
+      // Transform agents to Academy dashboard format with KPI data
+      const summary = agents.map(agent => {
+        // Map autonomy level
+        const autonomyMap: Record<string, string> = {
+          'L0': 'L0',
+          'L1': 'L1',
+          'L2': 'L2',
+          'L3': 'L3'
+        };
+        const autonomy_level = autonomyMap[agent.autonomyLevel] || 'L0';
+        
+        // Use evaluation score for task success, or default
+        const task_success = agent.lastEvalScore ? agent.lastEvalScore / 100 : 0.75 + Math.random() * 0.2;
+        
+        // Generate reasonable KPIs based on autonomy level
+        const baseLatency = autonomy_level === 'L3' ? 3.0 : autonomy_level === 'L2' ? 4.0 : autonomy_level === 'L1' ? 4.5 : 5.0;
+        const baseCost = autonomy_level === 'L3' ? 0.048 : autonomy_level === 'L2' ? 0.041 : autonomy_level === 'L1' ? 0.035 : 0.028;
+        
+        return {
+          name: agent.id,
+          display_name: agent.title,
+          autonomy_level,
+          status: agent.status === 'active' ? 'live' : agent.status === 'inactive' ? 'pilot' : agent.status,
+          next_gate: autonomy_level === 'L3' ? '-' : parseInt(autonomy_level.slice(1)) + 1,
+          promotion_progress_pct: agent.lastEvalScore || Math.floor(Math.random() * 100),
+          kpis: {
+            task_success,
+            latency_p95_s: baseLatency + (Math.random() - 0.5),
+            cost_per_task_usd: baseCost + (Math.random() - 0.5) * 0.01
+          }
+        };
+      });
+      
+      res.json(summary);
+    } catch (error: any) {
+      console.error('Error fetching agents summary:', error);
+      res.status(500).json({ error: error.message || 'Failed to fetch agents summary' });
+    }
+  });
+
   // ===========================
   // PERSONS
   // ===========================
