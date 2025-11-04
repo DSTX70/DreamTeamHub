@@ -6,15 +6,10 @@
     "status": "pilot",
     "next_gate": 1,
     "promotion_progress_pct": 30,
-    "next_review": "2025-11-12T17:00:00Z",
     "kpis": {
       "task_success": 0.78,
       "latency_p95_s": 4.8,
       "cost_per_task_usd": 0.028
-    },
-    "links": {
-      "pr": "https://github.com/example/agent-lab/pull/42",
-      "evidence": "https://github.com/example/agent-lab/wiki/Reader-Evidence"
     }
   },
   {
@@ -28,10 +23,6 @@
       "task_success": 0.84,
       "latency_p95_s": 4.2,
       "cost_per_task_usd": 0.035
-    },
-    "links": {
-      "pr": "https://github.com/example/agent-lab/pull/38",
-      "evidence": "https://github.com/example/agent-lab/wiki/Router-Evidence"
     }
   },
   {
@@ -41,15 +32,10 @@
     "status": "watch",
     "next_gate": 3,
     "promotion_progress_pct": 85,
-    "next_review": "2025-11-14T17:00:00Z",
     "kpis": {
       "task_success": 0.88,
       "latency_p95_s": 3.9,
       "cost_per_task_usd": 0.041
-    },
-    "links": {
-      "pr": "https://github.com/example/agent-lab/pull/51",
-      "evidence": "https://github.com/example/agent-lab/wiki/Support-Exec-Evidence"
     }
   },
   {
@@ -63,10 +49,6 @@
       "task_success": 0.91,
       "latency_p95_s": 3.2,
       "cost_per_task_usd": 0.048
-    },
-    "links": {
-      "pr": "https://github.com/example/agent-lab/pull/33",
-      "evidence": "https://github.com/example/agent-lab/wiki/Orchestrator-Evidence"
     }
   }
 ]

@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Agent Lab — Calendar Viewer</title>
+  <link rel="stylesheet" href="styles.css">
+  <script defer src="app.js"></script>
+</head>
+<body>
+  <main class="wrap">
+    <header class="head">
+      <h1>Promotion Review — Calendar</h1>
+      <p class="sub">Agentic AI Lab & Training Academy</p>
+    </header>
+
+    <section id="details" class="card">
+      <div class="row"><span>Agent</span><strong id="agent">—</strong></div>
+      <div class="row"><span>When (UTC)</span><strong id="when">—</strong></div>
+      <div class="row"><span>Local Time</span><strong id="local">—</strong></div>
+      <div class="row"><span>Status</span><strong id="status" class="badge live">Scheduled</strong></div>
+    </section>
+
+    <section class="actions">
+      <a id="ics" class="btn" href="#">Download .ics</a>
+      <a id="provider" class="btn secondary" href="#" target="_blank" rel="noopener">Open in Provider</a>
+    </section>
+
+    <section class="card copy">
+      <label for="prurl">PR link</label>
+      <div class="copyrow">
+        <input id="prurl" type="text" readonly value="">
+        <button id="copyBtn" class="btn small">Copy</button>
+      </div>
+      <p class="hint">Pass <code>?pr=http(s)://github.com/&lt;owner&gt;/&lt;repo&gt;/pull/&lt;num&gt;</code> to prefill.</p>
+    </section>
+
+    <footer>
+      <small>Dream Team Hub · Agent Lab</small>
+    </footer>
+  </main>
+</body>
+</html>

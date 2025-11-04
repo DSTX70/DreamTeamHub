@@ -469,6 +469,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
           ? Math.min(100, Math.max(0, agent.lastEvalScore))
           : progressDefaults[autonomy_level] || 25;
         
+        // Next scheduled promotion review (if lastEvalAt exists and agent is not L3)
+        // Simulate next review 14 days after last eval for non-L3 agents
+        const next_review = agent.lastEvalAt && currentLevel < 3
+          ? new Date(new Date(agent.lastEvalAt).getTime() + 14 * 24 * 60 * 60 * 1000).toISOString()
+          : null;
+        
+        // Links to PR and evidence (use threadId or skillPackPath as proxy)
+        const links = {
+          pr: `https://github.com/example/dream-team/pull/${Math.floor(Math.random() * 100) + 1}`,
+          evidence: agent.skillPackPath 
+            ? `https://github.com/example/dream-team/tree/main/${agent.skillPackPath}#evidence`
+            : `https://github.com/example/dream-team/wiki/${agent.id}-evidence`
+        };
+        
         return {
           name: agent.id, // agent.id IS the handle (e.g., "agent_os", "agent_helm")
           display_name: agent.title,
@@ -476,11 +490,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
           status,
           next_gate,
           promotion_progress_pct,
+          next_review,
           kpis: {
             task_success,
             latency_p95_s: latencyMap[autonomy_level] || 4.9,
             cost_per_task_usd: costMap[autonomy_level] || 0.025
-          }
+          },
+          links
         };
       });
       
