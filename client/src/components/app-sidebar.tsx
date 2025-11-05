@@ -1,4 +1,4 @@
-import { Home, Users, Lightbulb, Shield, FileText, Inbox, Sparkles, Layers, MessageSquare, Bot, Radio, Settings, RefreshCw, Palette, HelpCircle, FolderKanban, Presentation, GraduationCap, Cpu, Plug, ClipboardList } from "lucide-react";
+import { Home, Users, Lightbulb, Shield, FileText, Inbox, Sparkles, Layers, MessageSquare, Bot, Radio, Settings, RefreshCw, Palette, HelpCircle, FolderKanban, Presentation, GraduationCap, Cpu, Plug, ClipboardList, Building2 } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import {
   Sidebar,
@@ -17,6 +17,14 @@ const navigation = [
     title: "Dream Team Hub by i³ collective",
     items: [
       { title: "Dashboard", url: "/", icon: Home },
+    ],
+  },
+  {
+    title: "Business Units",
+    items: [
+      { title: "IMAGINATION", url: "/bu/imagination", icon: Sparkles },
+      { title: "INNOVATION", url: "/bu/innovation", icon: Lightbulb },
+      { title: "IMPACT", url: "/bu/impact", icon: Shield },
     ],
   },
   {
