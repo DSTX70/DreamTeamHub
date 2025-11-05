@@ -1934,46 +1934,54 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // If Word format requested, convert to docx
       if (format === 'docx') {
-        const yaml = await import('yaml');
+        const { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType } = await import('docx');
         
-        // Parse content
-        let parsedContent: any;
-        if (filename.endsWith('.json')) {
-          parsedContent = JSON.parse(content);
-        } else if (filename.endsWith('.yaml') || filename.endsWith('.yml')) {
-          parsedContent = yaml.parse(content);
+        // Create document title
+        const title = new Paragraph({
+          text: filename,
+          heading: HeadingLevel.HEADING_1,
+          spacing: { after: 300 }
+        });
+        
+        // Split content into lines for better formatting
+        const lines = content.split('\n');
+        const paragraphs: any[] = [title];
+        
+        // Add a section heading
+        paragraphs.push(new Paragraph({
+          text: "Document Content",
+          heading: HeadingLevel.HEADING_2,
+          spacing: { before: 200, after: 200 }
+        }));
+        
+        // Add content as code-like paragraphs with line breaks preserved
+        for (const line of lines) {
+          paragraphs.push(new Paragraph({
+            children: [
+              new TextRun({
+                text: line || " ", // Empty line becomes space
+                font: "Courier New",
+                size: 20 // 10pt
+              })
+            ],
+            spacing: { after: 0 }
+          }));
         }
         
-        // Create simple HTML representation
-        const htmlContent = `
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="UTF-8">
-  <title>${filename}</title>
-  <style>
-    body { font-family: 'Calibri', 'Arial', sans-serif; margin: 2cm; }
-    h1 { color: #2563eb; border-bottom: 2px solid #2563eb; padding-bottom: 8px; }
-    h2 { color: #1e40af; margin-top: 24px; }
-    h3 { color: #1e3a8a; margin-top: 16px; }
-    pre { background: #f1f5f9; padding: 12px; border-left: 4px solid #2563eb; overflow-x: auto; }
-    code { background: #f1f5f9; padding: 2px 6px; border-radius: 3px; }
-    table { border-collapse: collapse; width: 100%; margin: 16px 0; }
-    th, td { border: 1px solid #cbd5e1; padding: 8px; text-align: left; }
-    th { background: #e2e8f0; font-weight: bold; }
-  </style>
-</head>
-<body>
-  <h1>${filename}</h1>
-  <pre>${content}</pre>
-</body>
-</html>`;
+        // Create document
+        const doc = new Document({
+          sections: [{
+            properties: {},
+            children: paragraphs
+          }]
+        });
         
-        // For now, send HTML that can be saved as Word
-        // In production, you might use a library like docx or officegen
+        // Generate buffer
+        const buffer = await Packer.toBuffer(doc);
+        
         res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
         res.setHeader('Content-Disposition', `attachment; filename="${filename.replace(/\.(yaml|yml|json)$/, '.docx')}"`);
-        res.send(htmlContent);
+        res.send(buffer);
       } else {
         // Original format
         const contentType = filename.endsWith('.json') 
