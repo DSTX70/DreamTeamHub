@@ -1,4 +1,4 @@
-import { Home, Users, Lightbulb, Shield, FileText, Inbox, Sparkles, Layers, MessageSquare, Bot, Radio, Settings, RefreshCw, Palette, HelpCircle, FolderKanban, Presentation, GraduationCap } from "lucide-react";
+import { Home, Users, Lightbulb, Shield, FileText, Inbox, Sparkles, Layers, MessageSquare, Bot, Radio, Settings, RefreshCw, Palette, HelpCircle, FolderKanban, Presentation, GraduationCap, Cpu } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import {
   Sidebar,
@@ -40,6 +40,7 @@ const navigation = [
     items: [
       { title: "Dream Team Chat", url: "/chat", icon: MessageSquare },
       { title: "Agent Console", url: "/agent-console", icon: Bot },
+      { title: "Copilot Assistant", url: "/copilot", icon: Cpu },
       { title: "Summon & Mirror", url: "/summon-mirror", icon: Radio },
       { title: "Brainstorm Studio", url: "/brainstorm", icon: Lightbulb },
       { title: "Audit Engine", url: "/audits", icon: Shield },

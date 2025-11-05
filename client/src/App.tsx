@@ -28,6 +28,7 @@ import ProjectDetail from "@/pages/project-detail";
 import AgentCreate from "@/pages/agent-create";
 import Demo from "@/pages/demo";
 import Academy from "@/pages/academy";
+import CopilotPage from "@/pages/copilot";
 import { Button } from "@/components/ui/button";
 import { LogOut, User as UserIcon } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -56,6 +57,7 @@ function AuthenticatedRoutes() {
       <Route path="/role-agent-sync" component={RoleAgentSyncPage} />
       <Route path="/brand-guide" component={BrandGuidePage} />
       <Route path="/academy" component={Academy} />
+      <Route path="/copilot" component={CopilotPage} />
       <Route path="/help" component={HelpPage} />
       <Route path="/demo" component={Demo} />
       <Route component={NotFound} />
