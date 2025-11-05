@@ -194,12 +194,15 @@ function fmtAgents(items: any[], total: string | null, { limit, offset }: { limi
 
 // POST /copilot/ask - main endpoint (supports both direct tool calling and chat)
 router.post("/ask", async (req: Request, res: Response) => {
+  const startTime = Date.now();
   try {
     const userId = (req as any).user?.id || "anon";
     
     // Rate limiting
     const throttled = throttle(userId);
     if (throttled.over) {
+      const ms = Date.now() - startTime;
+      console.log(JSON.stringify({ user_id: userId, path: "/ask", status: 429, ms }));
       return res.status(429).json({
         error: {
           code: "rate_limited",
@@ -212,7 +215,10 @@ router.post("/ask", async (req: Request, res: Response) => {
     // Direct tool calling mode (tool + params provided)
     const { tool, params } = req.body;
     if (tool && typeof tool === "string") {
-      return handleDirectToolCall(tool, params || {}, res);
+      const result = await handleDirectToolCall(tool, params || {}, res);
+      const ms = Date.now() - startTime;
+      console.log(JSON.stringify({ user_id: userId, path: "/ask", tool, status: res.statusCode || 200, ms }));
+      return result;
     }
 
     // Chat-based mode (message provided)
@@ -413,7 +419,10 @@ router.post("/ask", async (req: Request, res: Response) => {
     return res.json({ reply: "I can only list roles, show a role by handle, or list agent summaries." });
 
   } catch (e: any) {
+    const ms = Date.now() - startTime;
+    const userId = (req as any).user?.id || "anon";
     console.error("Copilot error:", e);
+    console.log(JSON.stringify({ user_id: userId, path: "/ask", status: 500, ms, error: e.message }));
     return res.status(500).json({
       error: {
         code: "copilot_error",
