@@ -466,10 +466,16 @@ async function handleDirectToolCall(tool: string, params: any, res: Response) {
         diagnostics.push(`❌ Agents API: ${error.message || "Unknown error"}`);
       }
 
-      const statusIcon = status === "Green" ? "🟢" : status === "Amber" ? "🟡" : "🔴";
-      const text = `<strong>DTH API Smoke Test: ${statusIcon} ${status}</strong><br/><br/>${diagnostics.join("<br/>")}<br/><br/><em>Test completed at ${new Date().toISOString()}</em>`;
-      
-      return res.json({ type: "text", text });
+      return res.json({
+        result: status,
+        diagnostics: {
+          roles: diagnostics.find(d => d.includes("Roles")) || "",
+          agents: diagnostics.find(d => d.includes("Agents")) || ""
+        },
+        summary: diagnostics.every(d => d.includes("✅")) 
+          ? "PASS - All APIs responding normally" 
+          : "FAIL - One or more APIs reported errors"
+      });
     }
 
     // List Roles
@@ -534,6 +540,29 @@ async function handleDirectToolCall(tool: string, params: any, res: Response) {
       
       const paginated = summary.slice(offset, offset + limit);
       
+      // Generate summary statistics
+      const successPcts = summary.map(a => a.kpis.task_success * 100);
+      const latencies = summary.map(a => a.kpis.latency_p95_s);
+      const costs = summary.map(a => a.kpis.cost_per_task_usd);
+      
+      const avgSuccess = successPcts.reduce((a, b) => a + b, 0) / successPcts.length;
+      const avgLatency = latencies.reduce((a, b) => a + b, 0) / latencies.length;
+      const medianCost = [...costs].sort((a, b) => a - b)[Math.floor(costs.length / 2)];
+      
+      // Risk categorization based on success rate
+      const lowRisk = summary.filter(a => a.kpis.task_success >= 0.95).length;
+      const mediumRisk = summary.filter(a => a.kpis.task_success >= 0.85 && a.kpis.task_success < 0.95).length;
+      const highRisk = summary.filter(a => a.kpis.task_success < 0.85).length;
+      
+      // Top risks (agents with lowest success rates)
+      const topRisks = [...summary]
+        .sort((a, b) => a.kpis.task_success - b.kpis.task_success)
+        .slice(0, 5)
+        .map(a => ({
+          name: a.display_name || a.name,
+          why: `${Math.round(a.kpis.task_success * 100)}% success rate - below target`
+        }));
+      
       // Format for table display
       const columns = ["name", "level", "status", "next_gate", "success_pct", "p95_s", "cost_usd"];
       const rows = paginated.map(a => [
@@ -541,7 +570,7 @@ async function handleDirectToolCall(tool: string, params: any, res: Response) {
         a.autonomy_level,
         a.status,
         a.next_gate,
-        a.kpis.task_success * 100, // Convert to percentage
+        a.kpis.task_success * 100,
         a.kpis.latency_p95_s,
         a.kpis.cost_per_task_usd
       ]);
@@ -555,7 +584,26 @@ async function handleDirectToolCall(tool: string, params: any, res: Response) {
           count: paginated.length,
           limit,
           offset,
-          isAgentSummary: true
+          isAgentSummary: true,
+          summary: {
+            overall: `${summary.length} agents across ${new Set(summary.map(a => a.autonomy_level)).size} autonomy levels`,
+            stats: {
+              avg_success_pct: Math.round(avgSuccess),
+              avg_p95_s: avgLatency.toFixed(2),
+              median_cost_usd: medianCost.toFixed(3)
+            },
+            buckets: {
+              low: lowRisk,
+              medium: mediumRisk,
+              high: highRisk
+            },
+            top_risks: topRisks,
+            next_actions: [
+              highRisk > 0 ? `Investigate ${highRisk} high-risk agents with <85% success` : null,
+              avgLatency > 2.0 ? "Optimize latency - average P95 exceeds 2.0s" : null,
+              "Review evidence packs for agents awaiting promotion"
+            ].filter(Boolean) as string[]
+          }
         }
       });
     }
