@@ -1,0 +1,200 @@
+import React from "react";
+
+/**
+ * BUHomePage
+ * Wireframe for Business Unit Home under i³ Collective.
+ * Sections: Header • Brands • Roster/Pods • Knowledge • Dashboards • Activity
+ * Tailwind only; replace mock data fetchers with real API calls.
+ */
+
+type Brand = { name: string; products: number; projects: number; dueThisWeek: number; slug: string };
+type AgentChip = { name: string; level: "L0"|"L1"|"L2"|"L3"; status: "pilot"|"live"|"watch"|"rollback" };
+type KnowledgeLink = { label: string; role: "read"|"draft"|"publish"; driveFolderId: string };
+type Activity = { when: string; text: string };
+
+const mockBrands: Brand[] = [
+  { name: "dreamshitter.com", products: 12, projects: 4, dueThisWeek: 3, slug: "dreamshitter" },
+  { name: "OUAS (Children’s Books)", products: 6, projects: 5, dueThisWeek: 2, slug: "ouas" },
+  { name: "SparkBooks (Adult)", products: 10, projects: 3, dueThisWeek: 1, slug: "sparkbooks" },
+  { name: "Studio DS Creative", products: 1, projects: 1, dueThisWeek: 0, slug: "studio-ds" },
+  { name: "Live Stage Projects", products: 1, projects: 2, dueThisWeek: 1, slug: "live-stage" },
+  { name: "TV/Film Projects", products: 0, projects: 1, dueThisWeek: 0, slug: "tv-film" },
+  { name: "Business Projects", products: 0, projects: 2, dueThisWeek: 0, slug: "business-projects" },
+  { name: "Memoirs of a Geisha (MOAG)", products: 0, projects: 1, dueThisWeek: 0, slug: "moag" },
+];
+
+const mockRoster: AgentChip[] = [
+  { name: "Support L1 — Router", level: "L1", status: "live" },
+  { name: "Aegis", level: "L2", status: "live" },
+  { name: "Lume", level: "L1", status: "live" },
+  { name: "ChieSan", level: "L1", status: "live" },
+  { name: "App Development Guru", level: "L1", status: "watch" },
+];
+
+const mockKnowledge: KnowledgeLink[] = [
+  { label: "IMAGINATION — Knowledge Base (Read)", role: "read", driveFolderId: "FOLDER_READ_123" },
+  { label: "IMAGINATION — Drafts (Write)", role: "draft", driveFolderId: "FOLDER_DRAFT_123" },
+  { label: "IMAGINATION — Publish (Gated)", role: "publish", driveFolderId: "FOLDER_PUBLISH_123" },
+];
+
+const mockActivity: Activity[] = [
+  { when: "Today 10:14", text: "WO started: Marketing L1 — 7-Day Calendar → /drafts/calendar/week-45.csv" },
+  { when: "Today 09:20", text: "Agent promoted: Support L1 — Router → gate 2" },
+  { when: "Yesterday", text: "Drafts posted: OUAS — The Mirror Pond A+ content" },
+];
+
+function Badge({ children, tone = "default" }: { children: React.ReactNode; tone?: "default"|"green"|"amber"|"red"|"blue" }) {
+  const tones: Record<string,string> = {
+    default: "border text-gray-700 bg-white",
+    green:   "border-green-300 text-green-800 bg-green-50",
+    amber:   "border-amber-300 text-amber-800 bg-amber-50",
+    red:     "border-rose-300 text-rose-800 bg-rose-50",
+    blue:    "border-blue-300 text-blue-800 bg-blue-50",
+  };
+  return <span className={`px-2 py-0.5 rounded-full text-xs border ${tones[tone]}`}>{children}</span>;
+}
+
+export default function BUHomePage() {
+  const buName = "IMAGINATION";
+  const buMission = "Create, publish, and amplify stories and experiences that move people.";
+  const owners = ["Lume (UX)", "AI Lab & Academy", "App Dev"];
+  const cadence = "Weekly reviews — Fridays";
+
+  return (
+    <div className="max-w-7xl mx-auto p-6 space-y-6">
+      {/* Breadcrumb */}
+      <div className="text-sm text-gray-600">
+        <a className="underline" href="/i3">i³ Collective</a> <span className="mx-1">›</span> {buName}
+      </div>
+
+      {/* Header */}
+      <header className="rounded-2xl border p-5 bg-white/60 backdrop-blur">
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-bold">{buName}</h1>
+            <p className="text-gray-700 mt-1">{buMission}</p>
+            <div className="mt-2 flex flex-wrap gap-2 text-sm text-gray-600">
+              <span><b>Owners:</b> {owners.join(", ")}</span>
+              <span>•</span>
+              <span><b>Cadence:</b> {cadence}</span>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <a href="/work-orders/new" className="px-3 py-1 border rounded">+ New Work Order</a>
+            <a href="/projects/new" className="px-3 py-1 border rounded">+ New Project</a>
+            <a href="/copilot" className="px-3 py-1 border rounded">Open Copilot</a>
+          </div>
+        </div>
+      </header>
+
+      {/* Brands grid */}
+      <section className="space-y-3">
+        <div className="flex items-center justify-between">
+          <h2 className="text-lg font-semibold">Brands</h2>
+          <input className="border rounded px-2 py-1 text-sm" placeholder="Filter brands…" />
+        </div>
+        <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+          {mockBrands.map((b) => (
+            <a key={b.slug} href={`/brand/${b.slug}`} className="rounded-xl border p-4 hover:shadow-sm transition">
+              <div className="font-medium">{b.name}</div>
+              <div className="mt-2 text-sm text-gray-700">
+                <div>Products: <b>{b.products}</b></div>
+                <div>Active projects: <b>{b.projects}</b></div>
+                <div>Due this week: <b>{b.dueThisWeek}</b></div>
+              </div>
+            </a>
+          ))}
+        </div>
+      </section>
+
+      <div className="grid lg:grid-cols-3 gap-6">
+        {/* Roster & Pods */}
+        <section className="lg:col-span-2 rounded-2xl border p-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-semibold">Roster & Pods</h2>
+            <a className="text-sm underline" href="/academy">Open Academy</a>
+          </div>
+          <div className="mt-3 flex flex-wrap gap-2">
+            {mockRoster.map((r, i) => (
+              <div key={i} className="flex items-center gap-2 px-3 py-1.5 rounded-full border bg-white">
+                <span className="text-sm">{r.name}</span>
+                <Badge tone="blue">{r.level}</Badge>
+                <Badge tone={r.status==="live"?"green":r.status==="pilot"?"amber":r.status==="watch"?"amber":"red"}>
+                  {r.status}
+                </Badge>
+              </div>
+            ))}
+          </div>
+          <div className="mt-4">
+            <a href="/academy/promotions" className="px-3 py-1 border rounded">Promotion Board</a>
+          </div>
+        </section>
+
+        {/* Knowledge */}
+        <section className="rounded-2xl border p-4">
+          <h2 className="text-lg font-semibold">Knowledge</h2>
+          <p className="text-sm text-gray-700">Google Drive: <b>Read • Draft • Publish (gated)</b></p>
+          <div className="mt-3 space-y-2">
+            {mockKnowledge.map((k, i) => (
+              <div key={i} className="flex items-center justify-between rounded-xl border p-3">
+                <div>
+                  <div className="font-medium">{k.label}</div>
+                  <div className="text-xs text-gray-600">Folder ID: {k.driveFolderId}</div>
+                </div>
+                <Badge tone={k.role==="read"?"blue":k.role==="draft"?"amber":"green"}>{k.role}</Badge>
+              </div>
+            ))}
+          </div>
+          <div className="mt-3 flex gap-2">
+            <a href="/knowledge/search?scope=IMAGINATION" className="px-3 py-1 border rounded">Search</a>
+            <a href="/knowledge/drafts/new?scope=IMAGINATION" className="px-3 py-1 border rounded">Send to Drafts</a>
+            <a href="/knowledge/publish?scope=IMAGINATION" className="px-3 py-1 border rounded">Promote to Publish</a>
+          </div>
+        </section>
+      </div>
+
+      {/* Dashboards */}
+      <section className="rounded-2xl border p-4">
+        <h2 className="text-lg font-semibold">Dashboards</h2>
+        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-3">
+          <div className="rounded-xl border p-4">
+            <div className="text-sm text-gray-600">Avg success%</div>
+            <div className="text-2xl font-semibold">86%</div>
+          </div>
+          <div className="rounded-xl border p-4">
+            <div className="text-sm text-gray-600">p95 (s)</div>
+            <div className="text-2xl font-semibold">4.2</div>
+          </div>
+          <div className="rounded-xl border p-4">
+            <div className="text-sm text-gray-600">Median cost ($)</div>
+            <div className="text-2xl font-semibold">$0.022</div>
+          </div>
+          <div className="rounded-xl border p-4">
+            <div className="text-sm text-gray-600">Attention</div>
+            <div className="mt-2 flex gap-2">
+              <Badge tone="green">Low 18</Badge>
+              <Badge tone="amber">Medium 9</Badge>
+              <Badge tone="red">High 5</Badge>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Activity */}
+      <section className="rounded-2xl border p-4">
+        <div className="flex items-center justify-between">
+          <h2 className="text-lg font-semibold">Recent Activity</h2>
+          <a className="text-sm underline" href="/ops/logs">View all logs</a>
+        </div>
+        <div className="mt-3 divide-y">
+          {mockActivity.map((a,i)=>(
+            <div key={i} className="py-2 text-sm">
+              <span className="text-gray-500 mr-2">{a.when}</span>
+              <span>{a.text}</span>
+            </div>
+          ))}
+        </div>
+      </section>
+    </div>
+  );
+}
