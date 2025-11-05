@@ -23,6 +23,7 @@ Dream Team Hub is a full-stack application emphasizing a professional and usable
 ### Technical Implementations
 The platform is structured into core modules and features:
 - **Control Tower**: Dashboard for operational oversight.
+- **Business Unit Home Pages**: Dedicated landing pages for IMAGINATION, INNOVATION, and IMPACT with real-time brand portfolios, agent rosters, knowledge links (Google Drive integration), dashboard analytics, and recent activity feeds.
 - **Projects**: Comprehensive project management with detail pages, task/file management, agent assignments, and project-specific Idea Sparks.
 - **Idea Spark**: Quick idea capture (CRUD) accessible globally, with smart filtering and pod/project assignments.
 - **Role Cards System**: Manages Dream Team personas with RACI Matrix, bulk import, and visual pod color coding.
