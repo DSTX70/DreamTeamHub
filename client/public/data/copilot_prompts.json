@@ -12,6 +12,12 @@
     "description": "Show first 5 L1 Support agents with KPIs in table format"
   },
   {
+    "id": "list-l1-marketing",
+    "label": "List L1 Marketing (5)",
+    "utterance": "List L1 Marketing agents (limit 5)",
+    "description": "Show first 5 L1 Marketing agents with KPIs in table format"
+  },
+  {
     "id": "search-router",
     "label": "Search 'router'",
     "utterance": "Search 'router' in agent names",

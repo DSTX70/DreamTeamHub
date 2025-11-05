@@ -1,0 +1,132 @@
+0) Set env + restart server
+
+Add/update these, then restart:
+
+DTH_API_BASE=https://workspace.DustinSparks1.repl.co
+DTH_API_TOKEN=***           # scopes: roles:read,agents:read
+COPILOT_REQS_PER_MIN=30
+OPENAI_API_KEY=***          # server-side only
+OPENAI_MODEL=gpt-4o-mini
+NODE_ENV=staging            # if you want the staging guard on
+
+1) Mount the Copilot API
+
+Drop in /server/copilot.ts and mount app.use("/copilot", copilotRouter) (code I gave you).
+
+Commit & run.
+
+2) Add the Copilot UI
+
+Create data/copilot_prompts.json (the “Prompt Pack”).
+
+Add <CopilotPanel /> to /integrations (or Academy).
+
+Optional: set NEXT_PUBLIC_CUSTOM_GPT_URL for the admin deep-link copy button.
+
+3) Pin prompts in the Custom GPT
+
+In your GPT’s Instructions: paste the “Pinned Operator Prompts” + Validation Rules.
+
+Ensure the Actions expose only: listRoles, getRoleByHandle, getAgentSummaries.
+
+4) Smoke Test (required)
+
+CLI (quick check):
+
+curl -i "$DTH_API_BASE/api/roles?limit=1" -H "Authorization: Bearer $DTH_API_TOKEN"
+curl -i "$DTH_API_BASE/api/agents/summary?limit=1" -H "Authorization: Bearer $DTH_API_TOKEN"
+
+
+UI:
+
+Open /integrations → click Smoke Test.
+GPT:
+
+In the Custom GPT, send: Smoke Test — run getRoles(1) and getAgentSummaries(1); report Green/Amber/Red + brief diagnostic.
+
+You should see:
+
+HTTP 200 on both
+
+JSON arrays
+
+X-Total-Count present on both responses
+
+5) Post the certification reply in-thread
+
+Copy/paste and fill blanks:
+
+Smoke Test result (Copilot & GPT)
+• Copilot: Green | roles_http=200 agents_http=200 | roles_is_array=true agents_is_array=true | X-Total-Count roles=___ agents=___
+• GPT (Actions): Green | roles_http=200 agents_http=200 | X-Total-Count roles=___ agents=___
+
+First headers from /api/agents/summary (limit=1)
+• Content-Type: application/json; charset=utf-8
+• X-Total-Count: <number>
+• X-Request-Id: <id>
+
+One agent JSON row (redact if needed)
+{ ...single agent object... }
+
+6) Log + rate-limit verification
+
+Check your server logs for { user_id, path, status, ms } on each /copilot/ask call.
+
+Trigger a quick burst (e.g., hit Agents (limit 5) repeatedly) to confirm 429s respect COPILOT_REQS_PER_MIN.
+
+7) Integrations page polish (fast)
+
+Add a “Pinned Links” card with:
+
+OpenAPI (v0.1.1)
+
+Actions Schema (v0.1.1)
+
+Postman (v0.1.1)
+
+(Admin) Custom GPT deep-link + Copy
+
+Add a short “Validation Rules” blurb (hard stops, identity checks, numeric “—”, error messages).
+
+8) Decision Log entry
+
+Paste this into your Decision Log now (today’s date):
+
+Date: 2025-11-04
+Decision: DTH Copilot (in-app) is the canonical NL interface; Custom GPT remains read-only client.
+Scope: Read-only endpoints; on-rails validation; tokens with scopes + rate limits.
+Owners: OS (sponsor), Sage (architecture), Stratēga (portfolio), Ascend (APP), Helm (ops)
+Rationale: Keep DTH as control plane; GPT as interface; governance via tokens/logs/limits.
+Effective: today
+
+9) Gate to pilots (Support L1, Marketing L1)
+
+After Green on both Copilot & GPT:
+
+Tag the first two agents with status: pilot, level: L1, gate: 1, stage: promotion-board.
+
+On Academy, show “Next review” chips for these two.
+
+Create two operator buttons:
+
+List L1 Support (5)
+
+List L1 Marketing (5) (if you have a query tag, e.g., q=marketing L1)
+
+10) Definition of Done (kickoff)
+
+/copilot/ask returns tables with diagnostics footer when identity fields are missing.
+
+Copilot + GPT Smoke Tests: Green with X-Total-Count on both endpoints.
+
+Academy lists live agents with “Next review” chips.
+
+Logs show status/latency; 429 honored; headers present.
+
+If you hit a blocker (401/403/404/shape mismatch), use the built-in messages:
+
+401/403 → “Auth failed… check DTH_API_TOKEN”
+
+404 (single) → “Not found: …”
+
+≥500/shape mismatch → “Upstream error/shape mismatch — stopped.”
