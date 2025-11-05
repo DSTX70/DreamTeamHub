@@ -1,0 +1,199 @@
+drop-in toggle so Admins can expose a “Open DTH Copilot (ChatGPT)” deep-link alongside the in-app Copilot.
+
+1) Config: where the link lives
+
+Use whichever you prefer:
+
+ENV (simple): CUSTOM_GPT_URL=https://chat.openai.com/g/gpt-xxxx
+
+DB (editable in UI): store { customGptUrl, showCustomGptLink } in a small table.
+
+Below I include both: ENV fallback + optional Admin API to persist.
+
+2) Backend (Express): Admin config API (optional, if you want to edit in UI)
+
+server/routes/adminIntegrations.js
+
+import express from "express";
+import { requireAdmin } from "../middleware/requireAdmin.js"; // your auth
+// Replace with your DB if you want to persist. Here we keep in-memory for demo.
+let INTEGRATIONS_CFG = {
+  customGptUrl: process.env.CUSTOM_GPT_URL || "",
+  showCustomGptLink: !!process.env.CUSTOM_GPT_URL
+};
+
+const router = express.Router();
+router.get("/integrations/config", requireAdmin, (req,res) => res.json(INTEGRATIONS_CFG));
+router.put("/integrations/config", requireAdmin, (req,res) => {
+  const { customGptUrl = "", showCustomGptLink = false } = req.body || {};
+  INTEGRATIONS_CFG = { customGptUrl, showCustomGptLink: !!showCustomGptLink };
+  return res.json(INTEGRATIONS_CFG);
+});
+
+export default router;
+
+
+Mount it:
+
+// server.js
+import adminIntegrations from "./routes/adminIntegrations.js";
+app.use(express.json());
+app.use("/admin", adminIntegrations);
+
+
+Don’t want persistence yet? Skip the PUT; just use CUSTOM_GPT_URL and show the toggle only when ENV is present.
+
+3) Frontend (React): Admin toggle + copy button
+
+Drop this panel into your Integrations page (visible only to admins).
+
+web/components/CustomGptLinkCard.jsx
+
+import { useEffect, useState, useRef } from "react";
+
+export default function CustomGptLinkCard({ isAdmin }) {
+  const [loading, setLoading] = useState(true);
+  const [cfg, setCfg] = useState({ customGptUrl: "", showCustomGptLink: false });
+  const inputRef = useRef(null);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const r = await fetch("/admin/integrations/config");
+        if (r.ok) setCfg(await r.json());
+      } finally { setLoading(false); }
+    })();
+  }, []);
+
+  async function save() {
+    const body = {
+      customGptUrl: inputRef.current?.value || "",
+      showCustomGptLink: cfg.showCustomGptLink
+    };
+    const r = await fetch("/admin/integrations/config", {
+      method: "PUT", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body)
+    });
+    if (r.ok) setCfg(await r.json());
+  }
+
+  function copy() {
+    if (!cfg.customGptUrl) return;
+    navigator.clipboard.writeText(cfg.customGptUrl);
+  }
+
+  if (!isAdmin) return null;
+  if (loading) return <div className="card">Loading…</div>;
+
+  return (
+    <div className="card">
+      <h3>Custom GPT Link (ChatGPT)</h3>
+      <p>Share your ChatGPT-based DTH Copilot via a deep link.</p>
+
+      <label>Custom GPT URL</label>
+      <div className="row">
+        <input
+          ref={inputRef}
+          defaultValue={cfg.customGptUrl}
+          placeholder="https://chat.openai.com/g/gpt-XXXX..."
+          style={{ flex: 1 }}
+        />
+        <button onClick={copy} disabled={!cfg.customGptUrl}>Copy</button>
+      </div>
+
+      <label className="toggle">
+        <input
+          type="checkbox"
+          checked={!!cfg.showCustomGptLink}
+          onChange={e => setCfg(v => ({ ...v, showCustomGptLink: e.target.checked }))}
+        />
+        <span>Show “Open DTH Copilot (ChatGPT)” button to stakeholders</span>
+      </label>
+
+      <div className="actions">
+        <button onClick={save}>Save</button>
+      </div>
+
+      <style jsx>{`
+        .card { border:1px solid #2b3150; border-radius:12px; padding:12px; background:#151a2e; color:#e9ecf1 }
+        .row { display:flex; gap:8px; margin:8px 0 }
+        input { background:#101426; border:1px solid #2b3150; color:#e9ecf1; border-radius:10px; padding:8px }
+        button { background:#3c82f6; border:0; color:#fff; padding:8px 12px; border-radius:10px; cursor:pointer }
+        button:disabled { opacity:.6; cursor:not-allowed }
+        .toggle { display:flex; align-items:center; gap:8px; margin-top:8px }
+        .actions { margin-top:10px }
+      `}</style>
+    </div>
+  );
+}
+
+
+Use it in /integrations:
+
+import CustomGptLinkCard from "../components/CustomGptLinkCard";
+import CopilotPanel from "../components/CopilotPanel"; // your in-app copilot
+
+export default function IntegrationsPage({ user }) {
+  const isAdmin = user?.role === "admin";
+  return (
+    <div className="stack">
+      <h1>Integrations</h1>
+
+      {/* In-app copilot */}
+      <section>
+        <h2>DTH Copilot (In-App)</h2>
+        <CopilotPanel />
+      </section>
+
+      {/* Toggle + copy deep-link */}
+      <section>
+        <h2>ChatGPT (Custom GPT) Link</h2>
+        <CustomGptLinkCard isAdmin={isAdmin} />
+      </section>
+
+      {/* Stakeholder-facing button (respect the toggle) */}
+      <StakeholderButton />
+
+      <style jsx>{`.stack { display: grid; gap: 16px }`}</style>
+    </div>
+  );
+}
+
+function StakeholderButton() {
+  const [cfg, setCfg] = React.useState(null);
+  React.useEffect(() => {
+    (async () => {
+      const r = await fetch("/admin/integrations/config");
+      if (r.ok) setCfg(await r.json());
+    })();
+  }, []);
+  if (!cfg?.showCustomGptLink || !cfg?.customGptUrl) return null;
+  return (
+    <a className="btn" href={cfg.customGptUrl} target="_blank" rel="noopener">
+      Open DTH Copilot (ChatGPT)
+      <style jsx>{`.btn{display:inline-block;background:#3c82f6;color:#fff;padding:10px 14px;border-radius:10px;text-decoration:none}`}</style>
+    </a>
+  );
+}
+
+
+If you skipped the Admin API and are using ENV only, replace the fetch calls with a small /public/integrations.json that your server renders from ENV values.
+
+UX tips
+
+Show a small “Last updated” and who updated next to the toggle (from your Admin API).
+
+Add a QR code icon for the deep link (handy for meetings).
+You can generate client-side with a tiny QR library or server-side.
+
+Keep the ChatGPT link off by default; require Admin explicit opt-in.
+
+Acceptance criteria
+
+Admin can paste a Custom GPT link, toggle visibility, and copy it.
+
+Non-admin stakeholders see a single “Open DTH Copilot (ChatGPT)” button only when enabled.
+
+No secrets are exposed; it’s just a link.
+
+In-app Copilot continues to work regardless of this toggle.

@@ -1909,6 +1909,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Copilot - AI assistant for querying DTH API (requires authentication)
+  const copilot = await import("./copilot");
+  app.use("/copilot", isAuthenticated, copilot.default);
+
   const httpServer = createServer(app);
   return httpServer;
 }

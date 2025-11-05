@@ -1,0 +1,403 @@
+Backend (Express)
+/copilot/ask — accepts a user message, asks OpenAI to choose one of 3 allowed tools, calls your DTH API server-side, and returns a pre-formatted reply.
+
+DTH client — tiny fetch wrapper that sends Bearer token from the server.
+
+Front-end (React)
+<CopilotPanel /> — minimal chat UI you can drop into any page (e.g., Academy, Integrations).
+
+On-rails System Prompt — embedded, with validation rules (tolerant per-field, strict envelope).
+
+Rate-limit & audit — simple per-user throttle and request logging hooks.
+
+Read-only, scoped to: /api/roles, /api/roles/by-handle/{handle}, /api/agents/summary.
+
+1) Environment variables
+
+Create .env entries (server side only):
+
+OPENAI_API_KEY=sk-...
+OPENAI_MODEL=gpt-4o-mini   # or your chosen model
+DTH_API_BASE=https://workspace.DustinSparks1.repl.co
+DTH_API_TOKEN=*****        # scoped: roles:read, agents:read
+COPILOT_REQS_PER_MIN=30    # per-user soft limiter
+
+2) Server: DTH client (server-side Bearer)
+
+server/lib/dthClient.js
+
+import fetch from "node-fetch";
+
+const BASE = process.env.DTH_API_BASE;
+const TOKEN = process.env.DTH_API_TOKEN;
+
+if (!BASE || !TOKEN) {
+  throw new Error("DTH_API_BASE and DTH_API_TOKEN must be set.");
+}
+
+export async function dthGET(path, query = {}) {
+  const url = new URL(path, BASE);
+  Object.entries(query).forEach(([k, v]) => {
+    if (v !== undefined && v !== "") url.searchParams.set(k, String(v));
+  });
+
+  const res = await fetch(url.toString(), {
+    headers: {
+      Authorization: `Bearer ${TOKEN}`,
+      "Content-Type": "application/json",
+    },
+  });
+
+  const text = await res.text();
+  let json;
+  try { json = text ? JSON.parse(text) : null; } catch { /* keep as text */ }
+
+  const total = res.headers.get("X-Total-Count");
+  return { status: res.status, json, text, headers: { total } };
+}
+
+3) Server: Copilot route (OpenAI tool-calling)
+
+server/routes/copilot.js
+
+import express from "express";
+import { dthGET } from "../lib/dthClient.js";
+import OpenAI from "openai";
+
+const router = express.Router();
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+const MODEL = process.env.OPENAI_MODEL || "gpt-4o-mini";
+
+// simple per-user throttle (swap for Redis in prod)
+const BUCKET = new Map();
+function throttle(userId, limit = Number(process.env.COPILOT_REQS_PER_MIN || 30)) {
+  const now = Date.now(), win = 60_000;
+  const slot = BUCKET.get(userId) || { count:0, reset: now + win };
+  if (now > slot.reset) Object.assign(slot, { count:0, reset: now + win });
+  slot.count++; BUCKET.set(userId, slot);
+  if (slot.count > limit) return { over:true, reset: Math.ceil((slot.reset-now)/1000) };
+  return { over:false, reset: Math.ceil((slot.reset-now)/1000) };
+}
+
+// on-rails System Prompt (final)
+const SYSTEM_PROMPT = `
+You are Agent Lab — DTH Ops. Use the tools to call DTH (read-only).
+Default views: lists → concise tables; singles → compact key-value blocks.
+
+Agent summaries table columns:
+display_name | level | status | next_gate | success% | p95(s) | cost($)
+- kpis.task_success ∈ [0,1] → percent (0-dec), else "—"
+- kpis.latency_p95_s finite → 1-dec, else "—"
+- kpis.cost_per_task_usd finite → 3-dec, else "—"
+- next_gate 1–4 else "—"
+- promotion_progress_pct 0–100 else "—"
+Footer: count (X-Total-Count), limit, offset
+
+Validation & errors (tolerant per-field, strict envelope):
+- Stop if HTTP ≠ 200, not JSON, or wrong top-level type (array for lists, object for singles).
+- Required identity fields:
+  Roles: name, handle
+  Agents: name, autonomy_level, status
+  If missing, skip item; note "skipped 1 item (missing required fields)".
+- Optional/malformed numeric fields → "—" + a diagnostic footer list.
+- 401/403 → "Auth failed... check DTH_API_TOKEN"
+- 404 single → "Not found: ..."
+- ≥500/network/shape mismatch → "DTH API error / unexpected response shape; stopping"
+Never fabricate. Read-only only.
+`;
+
+// tools schema (3 safe operations)
+const TOOLS = [
+  {
+    type: "function",
+    function: {
+      name: "listRoles",
+      description: "List roles (paginated)",
+      parameters: {
+        type: "object",
+        properties: {
+          limit: { type: "integer", minimum: 1, maximum: 200, default: 10 },
+          offset: { type: "integer", minimum: 0, default: 0 }
+        }
+      }
+    }
+  },
+  {
+    type: "function",
+    function: {
+      name: "getRoleByHandle",
+      description: "Get a role by handle",
+      parameters: {
+        type: "object",
+        properties: {
+          handle: { type: "string" }
+        },
+        required: ["handle"]
+      }
+    }
+  },
+  {
+    type: "function",
+    function: {
+      name: "getAgentSummaries",
+      description: "List agent summaries (paginated, optional filters)",
+      parameters: {
+        type: "object",
+        properties: {
+          limit: { type: "integer", minimum:1, maximum:200, default: 10 },
+          offset:{ type: "integer", minimum:0,  default: 0 },
+          bu:    { type: "string" },
+          level: { type: "string", enum: ["L0","L1","L2","L3"] },
+          status:{ type: "string", enum: ["pilot","live","watch","rollback"] },
+          q:     { type: "string" }
+        }
+      }
+    }
+  }
+];
+
+// simple formatter helpers
+function fmtAgents(items, total, {limit, offset}) {
+  const rows = [];
+  items.forEach((a, i) => {
+    const s = (v)=> (Number.isFinite(v)? v: null);
+    const pct = s(a?.kpis?.task_success); const p95 = s(a?.kpis?.latency_p95_s);
+    const cost= s(a?.kpis?.cost_per_task_usd);
+    const pctStr = (pct>=0 && pct<=1) ? `${Math.round(pct*100)}%` : "—";
+    const p95Str = Number.isFinite(p95) ? `${p95.toFixed(1)}` : "—";
+    const costStr= Number.isFinite(cost)? `${cost.toFixed(3)}` : "—";
+    const gate = Number.isInteger(a?.next_gate) && a.next_gate>=1 && a.next_gate<=4 ? a.next_gate : "—";
+    rows.push([
+      a.display_name || a.name || "—",
+      a.autonomy_level || "—",
+      a.status || "—",
+      gate,
+      pctStr, p95Str, costStr
+    ]);
+  });
+
+  // render markdown
+  const head = `| display_name | level | status | next_gate | success% | p95(s) | cost($) |
+|---|---|---|---:|---:|---:|---:|`;
+  const body = rows.map(r => `| ${r[0]} | ${r[1]} | ${r[2]} | ${r[3]} | ${r[4]} | ${r[5]} | ${r[6]} |`).join("\n");
+  const footer = `\n\n_count:_ **${total ?? "?"}**, _limit:_ **${limit ?? "?"}**, _offset:_ **${offset ?? "?"}**`;
+  return `${head}\n${body}${footer}`;
+}
+
+router.post("/ask", async (req, res) => {
+  try {
+    const userId = req.user?.id || "anon";              // bind to your session/JWT
+    const throttled = throttle(userId);
+    if (throttled.over) {
+      return res.status(429).json({ error: { code:"rate_limited", message:"Too many requests", details:{ reset_in_s: throttled.reset } }});
+    }
+
+    const userMsg = String(req.body?.message || "").trim();
+    if (!userMsg) return res.status(400).json({ error:{ code:"bad_request", message:"Missing message" } });
+
+    // Ask OpenAI to pick a single tool call
+    const rsp = await openai.responses.create({
+      model: MODEL,
+      input: [
+        { role:"system", content: SYSTEM_PROMPT },
+        { role:"user", content: userMsg }
+      ],
+      tools: TOOLS,
+      tool_choice: "auto"
+    });
+
+    // Parse tool selection (one tool call expected)
+    const toolCalls = rsp?.output?.[0]?.content?.filter?.(c => c.type === "tool_call") || [];
+    if (!toolCalls.length) {
+      // fallback: default to agent summaries page 1
+      const { status, json, headers } = await dthGET("/api/agents/summary", { limit:10, offset:0 });
+      if (status !== 200 || !Array.isArray(json)) {
+        return res.status(502).json({ error:{ code:"upstream_error", message:"DTH API error / unexpected response shape; stopping" } });
+      }
+      const reply = fmtAgents(json, headers.total, { limit:10, offset:0 });
+      return res.json({ reply });
+    }
+
+    const call = toolCalls[0];
+    const name = call.name;
+    const args = call.arguments || {};
+
+    if (name === "listRoles") {
+      const { limit=10, offset=0 } = args;
+      const { status, json, headers } = await dthGET("/api/roles", { limit, offset });
+      if (status !== 200 || !Array.isArray(json)) {
+        const code = status===401||status===403?"unauthorized":"upstream_error";
+        const message = status===401||status===403 ? "Auth failed… check DTH_API_TOKEN" : "DTH API error / unexpected response shape; stopping";
+        return res.status(status===200?502:status).json({ error:{ code, message } });
+      }
+      // simple role view
+      const head = `| name | handle | pod | category |
+|---|---|---|---|`;
+      const body = json.map(r => `| ${r.name||"—"} | ${r.handle||"—"} | ${r.pod||"—"} | ${r.category||"—"} |`).join("\n");
+      const reply = `${head}\n${body}\n\n_count:_ **${headers.total ?? "?"}**, _limit:_ **${limit}**, _offset:_ **${offset}**`;
+      return res.json({ reply });
+    }
+
+    if (name === "getRoleByHandle") {
+      const { handle } = args;
+      const { status, json } = await dthGET(`/api/roles/by-handle/${encodeURIComponent(handle)}`);
+      if (status === 404) return res.json({ reply: `Not found: **${handle}**` });
+      if (status !== 200 || !json || typeof json !== "object") {
+        const code = status===401||status===403?"unauthorized":"upstream_error";
+        const message = status===401||status===403 ? "Auth failed… check DTH_API_TOKEN" : "DTH API error / unexpected response shape; stopping";
+        return res.status(status===200?502:status).json({ error:{ code, message } });
+      }
+      const fields = [
+        ["name", json.name], ["handle", json.handle], ["pod", json.pod],
+        ["category", json.category], ["display_name", json.display_name],
+        ["autonomy_level", json.autonomy_level]
+      ];
+      const reply = fields.map(([k,v])=>`**${k}:** ${v ?? "—"}`).join("\n");
+      return res.json({ reply });
+    }
+
+    if (name === "getAgentSummaries") {
+      const { limit=10, offset=0, bu, level, status, q } = args;
+      const { status: s, json, headers } = await dthGET("/api/agents/summary", { limit, offset, bu, level, status, q });
+      if (s !== 200 || !Array.isArray(json)) {
+        const code = s===401||s===403?"unauthorized":"upstream_error";
+        const message = s===401||s===403 ? "Auth failed… check DTH_API_TOKEN" : "DTH API error / unexpected response shape; stopping";
+        return res.status(s===200?502:s).json({ error:{ code, message } });
+      }
+      const reply = fmtAgents(json, headers.total, { limit, offset });
+      return res.json({ reply });
+    }
+
+    // fallthrough
+    return res.json({ reply: "I can only list roles, show a role by handle, or list agent summaries." });
+
+  } catch (e) {
+    console.error("Copilot error:", e);
+    return res.status(500).json({ error:{ code:"copilot_error", message:"Internal failure", details:{ msg:e.message } }});
+  }
+});
+
+export default router;
+
+
+Mount it in your server (after auth/session):
+
+// server.js
+import express from "express";
+import copilot from "./routes/copilot.js";
+const app = express();
+
+app.use(express.json());
+app.get("/healthz", (req,res)=>res.send("ok"));
+
+/** attach your session middleware that sets req.user **/
+/** app.use(sessionMiddleware); **/
+
+app.use("/copilot", copilot);
+
+
+Audit hook: wrap res.on('finish') to store user_id, path, status, dur_ms in your api_call_logs table (like we outlined earlier).
+
+4) Front-end: Copilot panel (React)
+
+web/components/CopilotPanel.jsx
+
+import { useState, useRef, useEffect } from "react";
+
+export default function CopilotPanel() {
+  const [msgs, setMsgs] = useState([{ role:"assistant", text:"Hi! Ask me about roles or agents. Try: “List L1 Support agents (limit 5)”." }]);
+  const [busy, setBusy] = useState(false);
+  const inputRef = useRef(null);
+
+  async function send(text) {
+    if (!text.trim()) return;
+    setMsgs(m => [...m, { role:"user", text }]);
+    setBusy(true);
+    try {
+      const r = await fetch("/copilot/ask", {
+        method:"POST",
+        headers:{ "Content-Type": "application/json" },
+        body: JSON.stringify({ message: text })
+      });
+      const body = await r.json();
+      if (!r.ok) {
+        const err = body?.error?.message || `HTTP ${r.status}`;
+        setMsgs(m => [...m, { role:"assistant", text:`⚠️ ${err}` }]);
+      } else {
+        setMsgs(m => [...m, { role:"assistant", text:body.reply }]);
+      }
+    } catch (e) {
+      setMsgs(m => [...m, { role:"assistant", text:`⚠️ Network error: ${e.message}` }]);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  function onSubmit(e) {
+    e.preventDefault();
+    const v = inputRef.current.value;
+    inputRef.current.value = "";
+    send(v);
+  }
+
+  return (
+    <div className="copilot">
+      <div className="stream">
+        {msgs.map((m,i)=>(
+          <div key={i} className={`msg ${m.role}`}>
+            {m.text.split("\n").map((ln,j)=> <div key={j} dangerouslySetInnerHTML={{__html: ln.replace(/\*\*(.+?)\*\*/g,"<b>$1</b>")}} />)}
+          </div>
+        ))}
+      </div>
+      <form onSubmit={onSubmit} className="composer">
+        <input ref={inputRef} placeholder="Ask about roles or agent summaries…" disabled={busy}/>
+        <button disabled={busy}>{busy ? "…" : "Send"}</button>
+      </form>
+      <style jsx>{`
+        .copilot{display:flex;flex-direction:column;gap:8px;border:1px solid #2b3150;border-radius:12px;padding:12px;background:#151a2e;color:#e9ecf1}
+        .stream{display:flex;flex-direction:column;gap:8px;max-height:420px;overflow:auto}
+        .msg.user{align-self:flex-end;background:#1a2140;padding:8px 10px;border-radius:10px}
+        .msg.assistant{align-self:flex-start;background:#101426;padding:8px 10px;border-radius:10px}
+        .composer{display:flex;gap:8px}
+        input{flex:1;background:#101426;border:1px solid #2b3150;border-radius:10px;color:#e9ecf1;padding:8px}
+        button{background:#3c82f6;border:0;color:#fff;padding:8px 12px;border-radius:10px;cursor:pointer}
+        button:disabled{opacity:.6;cursor:not-allowed}
+      `}</style>
+    </div>
+  );
+}
+
+
+Render it anywhere (e.g., /integrations or /academy page):
+
+import CopilotPanel from "../components/CopilotPanel";
+export default function IntegrationsPage() {
+  return (
+    <div>
+      <h1>Integrations</h1>
+      <CopilotPanel />
+    </div>
+  );
+}
+
+5) Security & governance
+
+No secrets in the browser. All DTH calls happen server-side using DTH_API_TOKEN.
+
+Scopes: Use the scope middleware you added earlier. The Copilot route itself doesn’t need to pass a token to the browser.
+
+Rate limit: The COPILOT_REQS_PER_MIN throttle prevents abuse. For multi-instance, move to Redis.
+
+Audit: Log (user_id, tool, query, status, ms) per call in api_call_logs.
+
+6) Test flow (5 minutes)
+
+curl -i https://.../healthz → OK
+
+In DTH, open the page with <CopilotPanel />
+
+Ask: “Run a DTH API smoke test.”
+
+Ask: “List L1 Support agents (limit 5).”
+
+Ask: “Show role by handle product_owner.”
