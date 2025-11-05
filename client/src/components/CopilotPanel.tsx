@@ -138,7 +138,7 @@ export default function CopilotPanel({ admin = false, customGptUrl }: CopilotPan
             </div>
           )}
         </div>
-        <CardDescription>
+        <CardDescription className="text-muted-foreground">
           Ask questions about roles and agents using natural language or quick actions
         </CardDescription>
       </CardHeader>
@@ -197,11 +197,11 @@ export default function CopilotPanel({ admin = false, customGptUrl }: CopilotPan
                   }`}
                 >
                   {m.role === "assistant" ? (
-                    <div className="prose prose-sm dark:prose-invert max-w-none">
+                    <div className="prose prose-sm dark:prose-invert max-w-none [&_table]:text-foreground [&_th]:text-foreground [&_td]:text-foreground">
                       <ReactMarkdown>{m.text}</ReactMarkdown>
                     </div>
                   ) : (
-                    <p className="text-sm">{m.text}</p>
+                    <p className="text-sm text-primary-foreground">{m.text}</p>
                   )}
                 </div>
               </div>
@@ -209,8 +209,8 @@ export default function CopilotPanel({ admin = false, customGptUrl }: CopilotPan
             {busy && (
               <div className="flex justify-start">
                 <div className="bg-muted rounded-lg p-3 flex items-center gap-2">
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  <span className="text-sm text-muted-foreground">Thinking...</span>
+                  <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                  <span className="text-sm text-foreground">Thinking...</span>
                 </div>
               </div>
             )}
