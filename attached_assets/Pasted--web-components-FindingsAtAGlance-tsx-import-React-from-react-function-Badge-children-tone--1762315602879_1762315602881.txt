@@ -1,0 +1,72 @@
+// web/components/FindingsAtAGlance.tsx
+import React from "react";
+
+function Badge({ children, tone = "default" }: { children: React.ReactNode; tone?: "default"|"green"|"amber"|"red" }) {
+  const tones: Record<string,string> = {
+    default: "border text-gray-700 bg-white",
+    green:   "border-green-300 text-green-800 bg-green-50",
+    amber:   "border-amber-300 text-amber-800 bg-amber-50",
+    red:     "border-rose-300 text-rose-800 bg-rose-50",
+  };
+  return <span className={`px-2 py-0.5 rounded-full text-xs border ${tones[tone]}`}>{children}</span>;
+}
+
+export default function FindingsAtAGlance({ meta }: {
+  meta?: {
+    diagnostics?: string[];
+    summary?: {
+      overall?: string;
+      buckets?: { low?: number; medium?: number; high?: number };
+      top_risks?: { name: string; why: string }[];
+      next_actions?: string[];
+    }
+  }
+}) {
+  const s = meta?.summary;
+  if (!s) return null;
+
+  const low = s.buckets?.low ?? 0;
+  const med = s.buckets?.medium ?? 0;
+  const high = s.buckets?.high ?? 0;
+
+  return (
+    <div className="mt-3 rounded-xl border p-3">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <strong>Findings at a glance</strong>
+        <div className="flex items-center gap-1">
+          <Badge tone="green">Low {low}</Badge>
+          <Badge tone="amber">Medium {med}</Badge>
+          <Badge tone="red">High {high}</Badge>
+        </div>
+      </div>
+
+      {s.overall ? <div className="text-sm text-gray-800 mt-1">{s.overall}</div> : null}
+
+      {!!(s.top_risks?.length) && (
+        <div className="text-sm mt-2">
+          <b>Top risks</b>
+          <ul className="list-disc pl-5 mt-1">
+            {s.top_risks.slice(0,5).map((r,i)=>(
+              <li key={i}><span className="font-medium">{r.name}</span> — {r.why || "needs review"}</li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {!!(s.next_actions?.length) && (
+        <div className="text-sm mt-2">
+          <b>Next actions</b>
+          <ul className="list-disc pl-5 mt-1">
+            {s.next_actions.map((a,i)=>(<li key={i}>{a}</li>))}
+          </ul>
+        </div>
+      )}
+
+      {!!(meta?.diagnostics?.length) && (
+        <div className="text-xs text-amber-700 mt-2">
+          Diagnostics: {meta.diagnostics.join("; ")}
+        </div>
+      )}
+    </div>
+  );
+}

@@ -33,11 +33,14 @@ The platform is structured into core modules and features:
 - **Decision Log**: Immutable record of key decisions.
 - **Dream Team Chat**: AI-powered conversational interface using OpenAI GPT-4 with 32 role-based personas, context awareness, and agent memory.
 - **Roles ⇄ Agent Specs Sync**: Synchronizes Agent Specifications from Role Cards with two-way diff views and smart suggestions.
-- **DTH Copilot**: AI-powered assistant using OpenAI tool-calling to query roles and agents via natural language, with quick action buttons for common queries (smoke test, L1 Support agents, search, role lookup). Supports both in-app chat interface and optional Custom GPT integration via deep link.
+- **DTH Copilot**: AI-powered assistant using OpenAI tool-calling with dual-mode architecture (direct tool calling for instant responses + chat-based for Custom GPT). Features quick action buttons, paginated table views with formatted KPIs, and the **Findings at a Glance** analytics card that automatically calculates risk distribution (low/medium/high), identifies top at-risk agents, and suggests actionable next steps.
 
 ### Technology Stack
 - **Frontend**: React 18, TypeScript, Wouter, TanStack Query v5, React Hook Form, Zod, Shadcn UI, Tailwind CSS.
+  - **Reusable Components**: `FindingsAtAGlance` - Analytics summary card for agent performance metrics
 - **Backend**: Express.js, TypeScript, Drizzle ORM.
+  - **Copilot**: Dual-mode endpoint supporting direct tool calling (instant) and chat-based queries (Custom GPT)
+  - **Analytics**: Real-time calculation of agent KPIs, risk categorization, and actionable insights
 - **Database**: PostgreSQL (Neon-backed) with a comprehensive relational model (25 tables).
 
 ### Authentication & Security
