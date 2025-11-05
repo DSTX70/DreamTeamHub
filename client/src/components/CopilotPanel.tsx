@@ -197,11 +197,11 @@ export default function CopilotPanel({ admin = false, customGptUrl }: CopilotPan
                   }`}
                 >
                   {m.role === "assistant" ? (
-                    <div className="prose prose-sm dark:prose-invert max-w-none [&_table]:text-foreground [&_th]:text-foreground [&_td]:text-foreground">
+                    <div className="prose prose-sm dark:prose-invert max-w-none text-white dark:text-gray-100 [&_table]:text-white [&_th]:text-white [&_td]:text-white [&_p]:text-white [&_strong]:text-white [&_em]:text-gray-200">
                       <ReactMarkdown>{m.text}</ReactMarkdown>
                     </div>
                   ) : (
-                    <p className="text-sm text-primary-foreground">{m.text}</p>
+                    <p className="text-sm text-white">{m.text}</p>
                   )}
                 </div>
               </div>
@@ -209,8 +209,8 @@ export default function CopilotPanel({ admin = false, customGptUrl }: CopilotPan
             {busy && (
               <div className="flex justify-start">
                 <div className="bg-muted rounded-lg p-3 flex items-center gap-2">
-                  <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-                  <span className="text-sm text-foreground">Thinking...</span>
+                  <Loader2 className="h-4 w-4 animate-spin text-gray-400" />
+                  <span className="text-sm text-white dark:text-gray-100">Thinking...</span>
                 </div>
               </div>
             )}
