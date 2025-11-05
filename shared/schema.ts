@@ -902,3 +902,40 @@ export const workOrders = pgTable("work_orders", {
 export const insertWorkOrderSchema = createInsertSchema(workOrders).omit({ id: true, createdAt: true });
 export type InsertWorkOrder = z.infer<typeof insertWorkOrderSchema>;
 export type WorkOrder = typeof workOrders.$inferSelect;
+
+// ===========================
+// BRANDS
+// ===========================
+
+export const brands = pgTable("brands", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  name: text("name").notNull(),
+  slug: text("slug").notNull().unique(),
+  businessUnit: text("business_unit").notNull(), // IMAGINATION, INNOVATION, IMPACT
+  products: integer("products").notNull().default(0),
+  projects: integer("projects").notNull().default(0),
+  dueThisWeek: integer("due_this_week").notNull().default(0),
+  description: text("description"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const insertBrandSchema = createInsertSchema(brands).omit({ id: true, createdAt: true });
+export type InsertBrand = z.infer<typeof insertBrandSchema>;
+export type Brand = typeof brands.$inferSelect;
+
+// ===========================
+// KNOWLEDGE LINKS (Google Drive)
+// ===========================
+
+export const knowledgeLinks = pgTable("knowledge_links", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  label: text("label").notNull(),
+  role: text("role").notNull(), // read, draft, publish
+  businessUnit: text("business_unit").notNull(), // scope owner
+  driveFolderId: text("drive_folder_id").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const insertKnowledgeLinkSchema = createInsertSchema(knowledgeLinks).omit({ id: true, createdAt: true });
+export type InsertKnowledgeLink = z.infer<typeof insertKnowledgeLinkSchema>;
+export type KnowledgeLink = typeof knowledgeLinks.$inferSelect;

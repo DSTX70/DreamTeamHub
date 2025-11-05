@@ -5,20 +5,20 @@ import {
   audits, auditChecks, auditFindings, auditArtifacts, events,
   conversations, messages, agentMemories, agentRuns,
   projects, projectFiles, projectAgents, projectTasks, projectMessages,
-  agentGoldens, workOrders,
+  agentGoldens, workOrders, brands, knowledgeLinks,
   type User, type UpsertUser,
   type Pod, type PodAgent, type Agent, type Person, type RoleCard, type RoleRaci, type AgentSpec, type WorkItem, type Decision, type IdeaSpark,
   type BrainstormSession, type BrainstormParticipant, type BrainstormIdea, type BrainstormCluster, type BrainstormArtifact,
   type Audit, type AuditCheck, type AuditFinding, type AuditArtifact, type Event,
   type Conversation, type Message, type AgentMemory, type AgentRun,
   type Project, type ProjectFile, type ProjectAgent, type ProjectTask, type ProjectMessage,
-  type AgentGolden, type WorkOrder,
+  type AgentGolden, type WorkOrder, type Brand, type KnowledgeLink,
   type InsertPod, type InsertPodAgent, type InsertAgent, type InsertPerson, type InsertRoleCard, type InsertRoleRaci, type InsertAgentSpec, type InsertWorkItem, type InsertDecision, type InsertIdeaSpark,
   type InsertBrainstormSession, type InsertBrainstormParticipant, type InsertBrainstormIdea, type InsertBrainstormCluster, type InsertBrainstormArtifact,
   type InsertAudit, type InsertAuditCheck, type InsertAuditFinding, type InsertAuditArtifact, type InsertEvent,
   type InsertConversation, type InsertMessage, type InsertAgentMemory, type InsertAgentRun,
   type InsertProject, type InsertProjectFile, type InsertProjectAgent, type InsertProjectTask, type InsertProjectMessage,
-  type InsertAgentGolden, type InsertWorkOrder,
+  type InsertAgentGolden, type InsertWorkOrder, type InsertBrand, type InsertKnowledgeLink,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, or, sql, inArray, isNotNull } from "drizzle-orm";
@@ -181,6 +181,14 @@ export interface IStorage {
   // Work Orders
   getWorkOrders(): Promise<WorkOrder[]>;
   createWorkOrder(order: InsertWorkOrder): Promise<WorkOrder>;
+  
+  // Brands
+  getBrands(filters?: { businessUnit?: string }): Promise<Brand[]>;
+  createBrand(brand: InsertBrand): Promise<Brand>;
+  
+  // Knowledge Links
+  getKnowledgeLinks(filters?: { businessUnit?: string }): Promise<KnowledgeLink[]>;
+  createKnowledgeLink(link: InsertKnowledgeLink): Promise<KnowledgeLink>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -854,6 +862,40 @@ export class DatabaseStorage implements IStorage {
 
   async createWorkOrder(order: InsertWorkOrder): Promise<WorkOrder> {
     const [created] = await db.insert(workOrders).values(order).returning();
+    return created;
+  }
+
+  // ===== BRANDS =====
+  async getBrands(filters?: { businessUnit?: string }): Promise<Brand[]> {
+    let query = db.select().from(brands).orderBy(brands.name);
+    
+    if (filters?.businessUnit) {
+      const filtered = await query;
+      return filtered.filter(b => b.businessUnit === filters.businessUnit);
+    }
+    
+    return await query;
+  }
+
+  async createBrand(brand: InsertBrand): Promise<Brand> {
+    const [created] = await db.insert(brands).values(brand).returning();
+    return created;
+  }
+
+  // ===== KNOWLEDGE LINKS =====
+  async getKnowledgeLinks(filters?: { businessUnit?: string }): Promise<KnowledgeLink[]> {
+    let query = db.select().from(knowledgeLinks).orderBy(knowledgeLinks.label);
+    
+    if (filters?.businessUnit) {
+      const filtered = await query;
+      return filtered.filter(k => k.businessUnit === filters.businessUnit);
+    }
+    
+    return await query;
+  }
+
+  async createKnowledgeLink(link: InsertKnowledgeLink): Promise<KnowledgeLink> {
+    const [created] = await db.insert(knowledgeLinks).values(link).returning();
     return created;
   }
 }

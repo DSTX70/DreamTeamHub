@@ -2008,6 +2008,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
   const { workOrders } = await import("./work_orders");
   app.use("/api/work-orders", isAuthenticated, workOrders);
 
+  // Brands - Business Unit brands and products
+  app.get("/api/brands", isAuthenticated, async (req, res) => {
+    try {
+      const bu = req.query.bu as string | undefined;
+      const brands = await storage.getBrands(bu ? { businessUnit: bu } : undefined);
+      res.json(brands);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Knowledge Links - Google Drive folders by BU
+  app.get("/api/knowledge/links", isAuthenticated, async (req, res) => {
+    try {
+      const ownerId = req.query.id as string | undefined;
+      const filters = ownerId ? { businessUnit: ownerId } : undefined;
+      const links = await storage.getKnowledgeLinks(filters);
+      res.json(links);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
