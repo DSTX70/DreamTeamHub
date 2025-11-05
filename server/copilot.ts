@@ -192,7 +192,7 @@ function fmtAgents(items: any[], total: string | null, { limit, offset }: { limi
   return `${head}\n${body}${footer}`;
 }
 
-// POST /copilot/ask - main endpoint
+// POST /copilot/ask - main endpoint (supports both direct tool calling and chat)
 router.post("/ask", async (req: Request, res: Response) => {
   try {
     const userId = (req as any).user?.id || "anon";
@@ -209,10 +209,17 @@ router.post("/ask", async (req: Request, res: Response) => {
       });
     }
 
+    // Direct tool calling mode (tool + params provided)
+    const { tool, params } = req.body;
+    if (tool && typeof tool === "string") {
+      return handleDirectToolCall(tool, params || {}, res);
+    }
+
+    // Chat-based mode (message provided)
     const userMsg = String(req.body?.message || "").trim();
     if (!userMsg) {
       return res.status(400).json({
-        error: { code: "bad_request", message: "Missing message" }
+        error: { code: "bad_request", message: "Missing 'message' or 'tool' field" }
       });
     }
 
@@ -348,9 +355,7 @@ router.post("/ask", async (req: Request, res: Response) => {
           ["name", role.title],
           ["handle", role.handle],
           ["pod", role.pod],
-          ["category", role.category],
-          ["display_name", role.displayName],
-          ["autonomy_level", role.autonomyLevel]
+          ["category", role.category]
         ];
         
         const reply = fields.map(([k, v]) => `**${k}:** ${v ?? "—"}`).join("\n");
@@ -418,5 +423,153 @@ router.post("/ask", async (req: Request, res: Response) => {
     });
   }
 });
+
+// Direct tool calling handler (bypasses OpenAI, returns structured data)
+async function handleDirectToolCall(tool: string, params: any, res: Response) {
+  try {
+    // Smoke Test
+    if (tool === "smokeTest") {
+      const diagnostics: string[] = [];
+      let status: "Green" | "Amber" | "Red" = "Green";
+
+      // Test roles
+      try {
+        const roles = await storage.getRoleCards();
+        if (!Array.isArray(roles)) {
+          status = "Red";
+          diagnostics.push("❌ Roles API: Invalid response shape");
+        } else if (roles.length === 0) {
+          status = "Amber";
+          diagnostics.push("⚠️ Roles API: No data returned");
+        } else {
+          diagnostics.push(`✅ Roles API: OK (${roles.length} total)`);
+        }
+      } catch (error: any) {
+        status = "Red";
+        diagnostics.push(`❌ Roles API: ${error.message || "Unknown error"}`);
+      }
+
+      // Test agents
+      try {
+        const agents = await storage.getAgents({});
+        if (!Array.isArray(agents)) {
+          status = "Red";
+          diagnostics.push("❌ Agents API: Invalid response shape");
+        } else if (agents.length === 0) {
+          status = "Amber";
+          diagnostics.push("⚠️ Agents API: No data returned");
+        } else {
+          diagnostics.push(`✅ Agents API: OK (${agents.length} total)`);
+        }
+      } catch (error: any) {
+        status = "Red";
+        diagnostics.push(`❌ Agents API: ${error.message || "Unknown error"}`);
+      }
+
+      const statusIcon = status === "Green" ? "🟢" : status === "Amber" ? "🟡" : "🔴";
+      const text = `<strong>DTH API Smoke Test: ${statusIcon} ${status}</strong><br/><br/>${diagnostics.join("<br/>")}<br/><br/><em>Test completed at ${new Date().toISOString()}</em>`;
+      
+      return res.json({ type: "text", text });
+    }
+
+    // List Roles
+    if (tool === "listRoles") {
+      const { limit = 10, offset = 0 } = params;
+      const allRoles = await storage.getRoleCards();
+      
+      if (!Array.isArray(allRoles)) {
+        return res.status(502).json({
+          error: { code: "upstream_error", message: "Invalid response from storage" }
+        });
+      }
+      
+      const paginated = allRoles.slice(offset, offset + limit);
+      const columns = ["name", "handle", "pod", "category"];
+      const rows = paginated.map(r => [r.title || "—", r.handle || "—", r.pod || "—", r.category || "—"]);
+      
+      return res.json({
+        type: "table",
+        columns,
+        rows,
+        meta: {
+          total: allRoles.length,
+          count: paginated.length,
+          limit,
+          offset,
+          isAgentSummary: false
+        }
+      });
+    }
+
+    // Get Agent Summaries
+    if (tool === "getAgentSummaries") {
+      const { limit = 10, offset = 0, bu, level, status: statusFilter, q } = params;
+      const agents = await storage.getAgents({});
+      
+      if (!Array.isArray(agents)) {
+        return res.status(502).json({
+          error: { code: "upstream_error", message: "Invalid response from storage" }
+        });
+      }
+      
+      // Transform and filter
+      let summary = transformToSummary(agents);
+      
+      if (bu) {
+        summary = summary.filter(a => a.business_unit?.toLowerCase() === String(bu).toLowerCase());
+      }
+      if (level) {
+        summary = summary.filter(a => a.autonomy_level === level);
+      }
+      if (statusFilter) {
+        summary = summary.filter(a => a.status === statusFilter);
+      }
+      if (q) {
+        const query = String(q).toLowerCase();
+        summary = summary.filter(a => 
+          a.display_name?.toLowerCase().includes(query) || 
+          a.name.toLowerCase().includes(query)
+        );
+      }
+      
+      const paginated = summary.slice(offset, offset + limit);
+      
+      // Format for table display
+      const columns = ["name", "level", "status", "next_gate", "success_pct", "p95_s", "cost_usd"];
+      const rows = paginated.map(a => [
+        a.display_name || a.name,
+        a.autonomy_level,
+        a.status,
+        a.next_gate,
+        a.kpis.task_success * 100, // Convert to percentage
+        a.kpis.latency_p95_s,
+        a.kpis.cost_per_task_usd
+      ]);
+      
+      return res.json({
+        type: "table",
+        columns,
+        rows,
+        meta: {
+          total: summary.length,
+          count: paginated.length,
+          limit,
+          offset,
+          isAgentSummary: true
+        }
+      });
+    }
+
+    // Unknown tool
+    return res.status(400).json({
+      error: { code: "invalid_tool", message: `Unknown tool: ${tool}` }
+    });
+  } catch (error: any) {
+    console.error("Direct tool call error:", error);
+    return res.status(500).json({
+      error: { code: "internal_error", message: error.message || "Unknown error" }
+    });
+  }
+}
 
 export default router;

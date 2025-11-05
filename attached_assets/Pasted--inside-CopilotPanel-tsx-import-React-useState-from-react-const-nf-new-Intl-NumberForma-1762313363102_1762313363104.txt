@@ -1,0 +1,138 @@
+// inside CopilotPanel.tsx
+import React, { useState } from "react";
+
+const nf = new Intl.NumberFormat(undefined, { maximumFractionDigits: 3 });
+const pf = new Intl.NumberFormat(undefined, { style: "percent", maximumFractionDigits: 0 });
+
+function fmtNum(v: any) {
+  if (v === "—" || v === null || v === undefined || Number.isNaN(Number(v))) return "—";
+  return nf.format(Number(v));
+}
+
+export default function CopilotPanel(...) {
+  const [out, setOut] = useState<any>(null);
+  const [err, setErr] = useState<string | null>(null);
+  const [limit, setLimit] = useState<number>(10);
+  const [offset, setOffset] = useState<number>(0);
+
+  async function run(tool: string, params: any = {}) {
+    const r = await fetch("/copilot/ask", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ tool, params }),
+    });
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    const data = await r.json();
+    setOut(data);
+    return data;
+  }
+
+  const fetchAgents = (nextOffset = offset, nextLimit = limit, extra: any = {}) =>
+    run("getAgentSummaries", { limit: nextLimit, offset: nextOffset, ...extra }).then(() => {
+      setLimit(nextLimit);
+      setOffset(nextOffset);
+    });
+
+  const fetchRoles = (nextOffset = offset, nextLimit = limit) =>
+    run("listRoles", { limit: nextLimit, offset: nextOffset }).then(() => {
+      setLimit(nextLimit);
+      setOffset(nextOffset);
+    });
+
+  const total = Number(out?.meta?.total ?? 0);
+  const canPrev = offset > 0;
+  const canNext = offset + limit < total;
+
+  return (
+    <div className="rounded-2xl border p-4 space-y-3">
+      {/* Controls */}
+      <div className="flex flex-wrap items-center gap-2">
+        <button className="px-3 py-1 border rounded" onClick={() => run("smokeTest")}>Smoke Test</button>
+        <button className="px-3 py-1 border rounded" onClick={() => fetchAgents(0, limit)}>Agents</button>
+        <button className="px-3 py-1 border rounded" onClick={() => fetchAgents(0, 25)}>Agents (25)</button>
+        <button className="px-3 py-1 border rounded" onClick={() => fetchAgents(0, 50)}>Agents (50)</button>
+        <button className="px-3 py-1 border rounded" onClick={() => fetchAgents(0, limit, { q: "router" })}>Search “router”</button>
+        <button className="px-3 py-1 border rounded" onClick={() => fetchRoles(0, limit)}>Roles</button>
+
+        {/* Pagination */}
+        {out?.type === "table" && (
+          <div className="ml-auto flex items-center gap-2">
+            <span className="text-sm text-gray-600">
+              count: {total || (out.meta?.count ?? 0)} • limit:
+            </span>
+            <select
+              className="border rounded px-2 py-1"
+              value={limit}
+              onChange={(e) => {
+                const next = Number(e.target.value);
+                fetchAgents(0, next);
+              }}
+            >
+              <option value={10}>10</option>
+              <option value={25}>25</option>
+              <option value={50}>50</option>
+            </select>
+            <button
+              className="px-2 py-1 border rounded disabled:opacity-50"
+              disabled={!canPrev}
+              onClick={() => fetchAgents(Math.max(0, offset - limit), limit)}
+            >
+              ← Prev
+            </button>
+            <button
+              className="px-2 py-1 border rounded disabled:opacity-50"
+              disabled={!canNext}
+              onClick={() => fetchAgents(offset + limit, limit)}
+            >
+              Next →
+            </button>
+          </div>
+        )}
+      </div>
+
+      {err && <div className="text-red-600 text-sm">{err}</div>}
+
+      {/* Table */}
+      {out?.type === "table" && (
+        <div className="overflow-auto">
+          <table className="min-w-full text-sm">
+            <thead>
+              <tr>
+                {out.columns.map((c: string) => (
+                  <th key={c} className={`p-2 border-b ${["success_pct","p95_s","cost_usd","next_gate"].includes(c) ? "text-right" : "text-left"}`}>{c}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {out.rows.map((row: any[], i: number) => {
+                const [name, level, status, next_gate, success_pct, p95_s, cost_usd] = row;
+                return (
+                  <tr key={i} className="align-middle">
+                    <td className="p-2 border-b">{name}</td>
+                    <td className="p-2 border-b">
+                      <span className="px-2 py-0.5 rounded-full text-xs border">{level}</span>
+                    </td>
+                    <td className="p-2 border-b">
+                      <span className={`px-2 py-0.5 rounded-full text-xs border ${status==="live"?"bg-green-50":status==="pilot"?"bg-amber-50":"bg-gray-50"}`}>{status}</span>
+                    </td>
+                    <td className="p-2 border-b text-right">{fmtNum(next_gate)}</td>
+                    <td className="p-2 border-b text-right">{typeof success_pct==="number" ? `${Math.round(success_pct)}%` : "—"}</td>
+                    <td className="p-2 border-b text-right">{fmtNum(p95_s)}</td>
+                    <td className="p-2 border-b text-right">{typeof cost_usd==="number" ? `$${nf.format(cost_usd)}` : "—"}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+
+          {/* Diagnostics footer */}
+          {out.meta?.diagnostics?.length ? (
+            <div className="text-xs text-amber-700 mt-2">
+              Diagnostics: {out.meta.diagnostics.join("; ")}
+            </div>
+          ) : null}
+        </div>
+      )}
+    </div>
+  );
+}

@@ -1,23 +1,15 @@
-import { useState, useRef, useEffect } from "react";
+import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Loader2, Send, Sparkles, Copy, CheckCircle2, Zap, ExternalLink, Info } from "lucide-react";
-import ReactMarkdown from "react-markdown";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Loader2, Sparkles, ExternalLink, ChevronLeft, ChevronRight } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
-interface Message {
-  role: "user" | "assistant";
-  text: string;
-}
+const nf = new Intl.NumberFormat(undefined, { maximumFractionDigits: 3 });
 
-interface QuickAction {
-  id: string;
-  label: string;
-  utterance: string;
-  description: string;
+function fmtNum(v: any) {
+  if (v === "—" || v === null || v === undefined || Number.isNaN(Number(v))) return "—";
+  return nf.format(Number(v));
 }
 
 interface CopilotPanelProps {
@@ -26,78 +18,53 @@ interface CopilotPanelProps {
 }
 
 export default function CopilotPanel({ admin = false, customGptUrl }: CopilotPanelProps) {
-  const [msgs, setMsgs] = useState<Message[]>([
-    {
-      role: "assistant",
-      text: "Hi! I'm your Agent Lab Copilot. Use quick actions below or ask me anything about roles and agents."
-    }
-  ]);
+  const [out, setOut] = useState<any>(null);
+  const [err, setErr] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const [input, setInput] = useState("");
-  const [quickActions, setQuickActions] = useState<QuickAction[]>([]);
-  const [copiedLink, setCopiedLink] = useState(false);
-  const scrollRef = useRef<HTMLDivElement>(null);
+  const [limit, setLimit] = useState<number>(10);
+  const [offset, setOffset] = useState<number>(0);
 
-  // Load quick actions
-  useEffect(() => {
-    fetch("/data/copilot_prompts.json")
-      .then(r => r.json())
-      .then(data => setQuickActions(data))
-      .catch(console.error);
-  }, []);
-
-  // Auto-scroll to bottom when new messages arrive
-  useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-    }
-  }, [msgs]);
-
-  async function send(text: string) {
-    if (!text.trim() || busy) return;
-
-    setMsgs(m => [...m, { role: "user", text }]);
-    setInput("");
+  async function run(tool: string, params: any = {}) {
     setBusy(true);
-
+    setErr(null);
     try {
       const r = await fetch("/copilot/ask", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: text })
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ tool, params }),
       });
-
-      const body = await r.json();
-
+      
       if (!r.ok) {
-        const err = body?.error?.message || `HTTP ${r.status}`;
-        setMsgs(m => [...m, { role: "assistant", text: `⚠️ ${err}` }]);
-      } else {
-        setMsgs(m => [...m, { role: "assistant", text: body.reply }]);
+        const errorData = await r.json();
+        throw new Error(errorData?.error?.message || `HTTP ${r.status}`);
       }
-    } catch (e: any) {
-      setMsgs(m => [...m, { role: "assistant", text: `⚠️ Network error: ${e.message}` }]);
+      
+      const data = await r.json();
+      setOut(data);
+      return data;
+    } catch (error: any) {
+      setErr(error.message);
+      setOut(null);
     } finally {
       setBusy(false);
     }
   }
 
-  function onSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    send(input);
-  }
+  const fetchAgents = (nextOffset = offset, nextLimit = limit, extra: any = {}) =>
+    run("getAgentSummaries", { limit: nextLimit, offset: nextOffset, ...extra }).then(() => {
+      setLimit(nextLimit);
+      setOffset(nextOffset);
+    });
 
-  function handleQuickAction(action: QuickAction) {
-    send(action.utterance);
-  }
+  const fetchRoles = (nextOffset = offset, nextLimit = limit) =>
+    run("listRoles", { limit: nextLimit, offset: nextOffset }).then(() => {
+      setLimit(nextLimit);
+      setOffset(nextOffset);
+    });
 
-  function copyGptLink() {
-    if (customGptUrl) {
-      navigator.clipboard.writeText(customGptUrl);
-      setCopiedLink(true);
-      setTimeout(() => setCopiedLink(false), 2000);
-    }
-  }
+  const total = Number(out?.meta?.total ?? 0);
+  const canPrev = offset > 0;
+  const canNext = offset + limit < total;
 
   return (
     <Card className="w-full max-w-5xl mx-auto">
@@ -108,135 +75,252 @@ export default function CopilotPanel({ admin = false, customGptUrl }: CopilotPan
             <CardTitle>Agent Lab Copilot</CardTitle>
           </div>
           {admin && customGptUrl && (
-            <div className="flex items-center gap-2">
-              <Input
-                readOnly
-                value={customGptUrl}
-                className="w-72 text-xs"
-                data-testid="input-custom-gpt-url"
-              />
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => window.open(customGptUrl, "_blank")}
+              data-testid="button-open-custom-gpt"
+            >
+              <ExternalLink className="h-4 w-4 mr-2" />
+              Open Custom GPT
+            </Button>
+          )}
+        </div>
+        <CardDescription className="text-muted-foreground">
+          Quick actions to explore roles and agents
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {/* Quick Action Buttons */}
+        <div className="flex flex-wrap items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => run("smokeTest")}
+            disabled={busy}
+            data-testid="button-smoke-test"
+          >
+            Smoke Test
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => fetchAgents(0, limit)}
+            disabled={busy}
+            data-testid="button-agents"
+          >
+            Agents
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => fetchAgents(0, 25)}
+            disabled={busy}
+            data-testid="button-agents-25"
+          >
+            Agents (25)
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => fetchAgents(0, 50)}
+            disabled={busy}
+            data-testid="button-agents-50"
+          >
+            Agents (50)
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => fetchAgents(0, limit, { q: "router" })}
+            disabled={busy}
+            data-testid="button-search-router"
+          >
+            Search "router"
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => fetchRoles(0, limit)}
+            disabled={busy}
+            data-testid="button-roles"
+          >
+            Roles
+          </Button>
+
+          {/* Pagination Controls */}
+          {out?.type === "table" && (
+            <div className="ml-auto flex items-center gap-2">
+              <span className="text-sm text-muted-foreground">
+                count: {total || (out.meta?.count ?? 0)} • limit:
+              </span>
+              <Select
+                value={String(limit)}
+                onValueChange={(value) => {
+                  const next = Number(value);
+                  if (out.meta?.isAgentSummary) {
+                    fetchAgents(0, next);
+                  } else {
+                    fetchRoles(0, next);
+                  }
+                }}
+                disabled={busy}
+              >
+                <SelectTrigger className="w-20 h-8" data-testid="select-limit">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="10">10</SelectItem>
+                  <SelectItem value="25">25</SelectItem>
+                  <SelectItem value="50">50</SelectItem>
+                </SelectContent>
+              </Select>
               <Button
                 variant="outline"
                 size="sm"
-                onClick={copyGptLink}
-                data-testid="button-copy-gpt-link"
+                disabled={!canPrev || busy}
+                onClick={() => {
+                  const newOffset = Math.max(0, offset - limit);
+                  if (out.meta?.isAgentSummary) {
+                    fetchAgents(newOffset, limit);
+                  } else {
+                    fetchRoles(newOffset, limit);
+                  }
+                }}
+                data-testid="button-prev"
               >
-                {copiedLink ? (
-                  <CheckCircle2 className="h-4 w-4 text-green-500" />
-                ) : (
-                  <Copy className="h-4 w-4" />
-                )}
+                <ChevronLeft className="h-4 w-4 mr-1" />
+                Prev
               </Button>
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => window.open(customGptUrl, "_blank")}
-                data-testid="button-open-custom-gpt"
+                disabled={!canNext || busy}
+                onClick={() => {
+                  const newOffset = offset + limit;
+                  if (out.meta?.isAgentSummary) {
+                    fetchAgents(newOffset, limit);
+                  } else {
+                    fetchRoles(newOffset, limit);
+                  }
+                }}
+                data-testid="button-next"
               >
-                <ExternalLink className="h-4 w-4" />
+                Next
+                <ChevronRight className="h-4 w-4 ml-1" />
               </Button>
             </div>
           )}
         </div>
-        <CardDescription className="text-muted-foreground">
-          Ask questions about roles and agents using natural language or quick actions
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        {/* Quick Actions */}
-        {quickActions.length > 0 && (
-          <div className="space-y-2">
-            <div className="flex items-center gap-2">
-              <Zap className="h-4 w-4 text-primary" />
-              <span className="text-sm font-medium">Quick Actions</span>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              {quickActions.map((action) => (
-                <TooltipProvider key={action.id}>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleQuickAction(action)}
-                        disabled={busy}
-                        className="gap-1"
-                        data-testid={`button-quick-${action.id}`}
-                      >
-                        {action.label}
-                        <Info className="h-3 w-3 text-muted-foreground" />
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p className="text-xs max-w-xs">{action.description}</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-              ))}
+
+        {/* Loading State */}
+        {busy && (
+          <div className="flex items-center justify-center py-8">
+            <Loader2 className="h-6 w-6 animate-spin text-primary" />
+          </div>
+        )}
+
+        {/* Error Message */}
+        {err && !busy && (
+          <div className="rounded-lg border border-destructive bg-destructive/10 p-3 text-sm text-destructive">
+            {err}
+          </div>
+        )}
+
+        {/* Smoke Test Results */}
+        {out?.type === "text" && !busy && (
+          <div className="rounded-lg border bg-card p-4">
+            <div className="prose prose-sm dark:prose-invert max-w-none text-white [&_p]:text-white [&_strong]:text-white [&_em]:text-gray-300">
+              <div dangerouslySetInnerHTML={{ __html: out.text.replace(/\n/g, '<br />') }} />
             </div>
           </div>
         )}
 
-        {/* Chat Messages */}
-        <ScrollArea 
-          ref={scrollRef}
-          className="h-[400px] pr-4 border rounded-md"
-        >
-          <div className="space-y-4 p-4">
-            {msgs.map((m, i) => (
-              <div
-                key={i}
-                className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}
-                data-testid={`message-${m.role}-${i}`}
-              >
-                <div
-                  className={`max-w-[85%] rounded-lg p-3 ${
-                    m.role === "user"
-                      ? "bg-primary text-primary-foreground"
-                      : "bg-muted"
-                  }`}
-                >
-                  {m.role === "assistant" ? (
-                    <div className="prose prose-sm dark:prose-invert max-w-none text-white dark:text-gray-100 [&_table]:text-white [&_th]:text-white [&_td]:text-white [&_p]:text-white [&_strong]:text-white [&_em]:text-gray-200">
-                      <ReactMarkdown>{m.text}</ReactMarkdown>
-                    </div>
-                  ) : (
-                    <p className="text-sm text-white">{m.text}</p>
-                  )}
-                </div>
-              </div>
-            ))}
-            {busy && (
-              <div className="flex justify-start">
-                <div className="bg-muted rounded-lg p-3 flex items-center gap-2">
-                  <Loader2 className="h-4 w-4 animate-spin text-gray-400" />
-                  <span className="text-sm text-white dark:text-gray-100">Thinking...</span>
-                </div>
-              </div>
-            )}
-          </div>
-        </ScrollArea>
+        {/* Table Results */}
+        {out?.type === "table" && !busy && (
+          <div className="space-y-3">
+            <div className="overflow-auto rounded-lg border">
+              <table className="min-w-full text-sm">
+                <thead className="bg-muted">
+                  <tr>
+                    {out.columns.map((c: string) => (
+                      <th
+                        key={c}
+                        className={`p-2 border-b text-xs font-medium ${
+                          ["success_pct", "p95_s", "cost_usd", "next_gate"].includes(c)
+                            ? "text-right"
+                            : "text-left"
+                        }`}
+                      >
+                        {c}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {out.rows.map((row: any[], i: number) => {
+                    if (out.meta?.isAgentSummary) {
+                      const [name, level, status, next_gate, success_pct, p95_s, cost_usd] = row;
+                      return (
+                        <tr key={i} className="hover-elevate" data-testid={`row-agent-${i}`}>
+                          <td className="p-2 border-b text-xs">{name}</td>
+                          <td className="p-2 border-b">
+                            <Badge variant="outline" className="text-xs">
+                              {level}
+                            </Badge>
+                          </td>
+                          <td className="p-2 border-b">
+                            <Badge
+                              variant="outline"
+                              className={`text-xs ${
+                                status === "live"
+                                  ? "bg-green-50 dark:bg-green-950 border-green-200 dark:border-green-800"
+                                  : status === "pilot"
+                                  ? "bg-amber-50 dark:bg-amber-950 border-amber-200 dark:border-amber-800"
+                                  : "bg-muted"
+                              }`}
+                            >
+                              {status}
+                            </Badge>
+                          </td>
+                          <td className="p-2 border-b text-right text-xs">{fmtNum(next_gate)}</td>
+                          <td className="p-2 border-b text-right text-xs">
+                            {typeof success_pct === "number" ? `${Math.round(success_pct)}%` : "—"}
+                          </td>
+                          <td className="p-2 border-b text-right text-xs">{fmtNum(p95_s)}</td>
+                          <td className="p-2 border-b text-right text-xs">
+                            {typeof cost_usd === "number" ? `$${nf.format(cost_usd)}` : "—"}
+                          </td>
+                        </tr>
+                      );
+                    } else {
+                      // Roles table
+                      return (
+                        <tr key={i} className="hover-elevate" data-testid={`row-role-${i}`}>
+                          {row.map((cell: any, j: number) => (
+                            <td key={j} className="p-2 border-b text-xs">
+                              {cell ?? "—"}
+                            </td>
+                          ))}
+                        </tr>
+                      );
+                    }
+                  })}
+                </tbody>
+              </table>
+            </div>
 
-        {/* Input Form */}
-        <form onSubmit={onSubmit} className="flex gap-2">
-          <Input
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            placeholder="Ask about roles or agent summaries..."
-            disabled={busy}
-            data-testid="input-copilot-message"
-          />
-          <Button 
-            type="submit" 
-            disabled={busy || !input.trim()}
-            data-testid="button-send-message"
-          >
-            {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-          </Button>
-        </form>
+            {/* Diagnostics Footer */}
+            {out.meta?.diagnostics?.length ? (
+              <div className="text-xs text-amber-600 dark:text-amber-500 rounded-lg border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-950 p-2">
+                <strong>Diagnostics:</strong> {out.meta.diagnostics.join("; ")}
+              </div>
+            ) : null}
+          </div>
+        )}
 
         {/* Status Footer */}
-        <div className="flex items-center justify-between text-xs text-muted-foreground">
+        <div className="flex items-center justify-between text-xs text-muted-foreground pt-2 border-t">
           <div className="flex items-center gap-2">
             <Badge variant="outline" className="text-xs">
               Read-only
@@ -244,16 +328,14 @@ export default function CopilotPanel({ admin = false, customGptUrl }: CopilotPan
             <span>Powered by OpenAI</span>
           </div>
           {customGptUrl && !admin && (
-            <Button
-              variant="link"
-              size="sm"
+            <button
               onClick={() => window.open(customGptUrl, "_blank")}
-              className="h-auto p-0 text-xs"
+              className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1 transition-colors"
               data-testid="link-open-chatgpt"
             >
-              <ExternalLink className="h-3 w-3 mr-1" />
+              <ExternalLink className="h-3 w-3" />
               Open in ChatGPT
-            </Button>
+            </button>
           )}
         </div>
       </CardContent>
