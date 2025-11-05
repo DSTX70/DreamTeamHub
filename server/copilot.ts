@@ -171,6 +171,47 @@ router.post("/ask", async (req: Request, res: Response) => {
       });
     }
 
+    // Handle smoke test directly (bypass OpenAI for speed)
+    if (userMsg.toLowerCase().includes("smoke test")) {
+      const diagnostics: string[] = [];
+      let status: "Green" | "Amber" | "Red" = "Green";
+
+      // Test 1: Get Roles
+      const rolesTest = await dthGET("/api/roles", { limit: 1 });
+      if (rolesTest.status !== 200) {
+        status = "Red";
+        diagnostics.push(`❌ Roles API: HTTP ${rolesTest.status}`);
+      } else if (!Array.isArray(rolesTest.json)) {
+        status = "Red";
+        diagnostics.push("❌ Roles API: Invalid response shape");
+      } else if (rolesTest.json.length === 0) {
+        status = "Amber";
+        diagnostics.push("⚠️ Roles API: No data returned");
+      } else {
+        diagnostics.push(`✅ Roles API: OK (${rolesTest.headers.total || "?"} total)`);
+      }
+
+      // Test 2: Get Agent Summaries
+      const agentsTest = await dthGET("/api/agents/summary", { limit: 1 });
+      if (agentsTest.status !== 200) {
+        status = "Red";
+        diagnostics.push(`❌ Agents API: HTTP ${agentsTest.status}`);
+      } else if (!Array.isArray(agentsTest.json)) {
+        status = "Red";
+        diagnostics.push("❌ Agents API: Invalid response shape");
+      } else if (agentsTest.json.length === 0) {
+        status = "Amber";
+        diagnostics.push("⚠️ Agents API: No data returned");
+      } else {
+        diagnostics.push(`✅ Agents API: OK (${agentsTest.headers.total || "?"} total)`);
+      }
+
+      const statusIcon = status === "Green" ? "🟢" : status === "Amber" ? "🟡" : "🔴";
+      const reply = `**DTH API Smoke Test: ${statusIcon} ${status}**\n\n${diagnostics.join("\n")}\n\n_Test completed at ${new Date().toISOString()}_`;
+      
+      return res.json({ reply });
+    }
+
     // Ask OpenAI to choose tool
     const completion = await openai.chat.completions.create({
       model: MODEL,

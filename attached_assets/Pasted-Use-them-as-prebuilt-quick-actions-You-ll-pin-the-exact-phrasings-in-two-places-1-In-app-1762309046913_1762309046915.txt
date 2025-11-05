@@ -1,0 +1,122 @@
+Use them as **prebuilt “quick actions.”** You’ll pin the exact phrasings in two places:
+
+1. **In-app Copilot (UI) — buttons + help text**
+2. **Custom GPT (Actions) — pinned prompts in the GPT’s system/instructions + examples**
+
+Here’s the fastest way to do both.
+
+---
+
+# 1) In-app Copilot (UI)
+
+**a) Add a Prompt Pack (seed file)**
+Create `data/copilot_prompts.json`:
+
+```json
+[
+  {
+    "id": "smoke-test",
+    "label": "Smoke Test",
+    "utterance": "Smoke Test — run getRoles(1) and getAgentSummaries(1); report Green/Amber/Red + brief diagnostic.",
+    "tool": "smokeTest",
+    "params": {}
+  },
+  {
+    "id": "list-l1-support",
+    "label": "List L1 Support (5)",
+    "utterance": "List L1 Support agents (limit 5) — table: display_name | level | status | next_gate | success% | p95(s) | cost($) + count/limit/offset.",
+    "tool": "getAgentSummaries",
+    "params": { "q": "support L1", "limit": 5 }
+  },
+  {
+    "id": "search-router",
+    "label": "Search “router”",
+    "utterance": "Search “router” — getAgentSummaries(q=\"router\", limit=5).",
+    "tool": "getAgentSummaries",
+    "params": { "q": "router", "limit": 5 }
+  },
+  {
+    "id": "role-by-handle",
+    "label": "Role by handle…",
+    "utterance": "Role by handle — getRoleByHandle(\"product_owner\").",
+    "tool": "getRoleByHandle",
+    "params": { "handle": "product_owner" }
+  }
+]
+```
+
+**b) Render them as Quick-Action buttons**
+Update your `CopilotPanel` to read and render this pack (pseudo-diff):
+
+```tsx
+// load once (or fetch from /api/config)
+import prompts from "@/data/copilot_prompts.json";
+
+{prompts.map(p => (
+  <button
+    key={p.id}
+    className="px-3 py-1 border rounded"
+    onClick={() => run(p.tool, p.params).then(setOut).catch(e=>setErr(e.message))}
+    title={p.utterance}
+  >
+    {p.label}
+  </button>
+))}
+```
+
+**c) Show the utterance in a help popover (optional)**
+Add a small ℹ️ icon that reveals `p.utterance` so operators know exactly what the action does.
+
+**d) Enforce your validation rules in the handler**
+(You already have these in `/copilot/ask` — nothing else to do.)
+
+---
+
+# 2) Custom GPT (Actions)
+
+**a) Pin them in the GPT’s system instructions**
+Add a “Pinned Prompts” block in the GPT instructions (top of the “Instructions” field):
+
+```
+Pinned Operator Prompts (use these verbatim):
+1) Smoke Test — “run getRoles(1) and getAgentSummaries(1); report Green/Amber/Red + brief diagnostic.”
+2) List L1 Support agents (limit 5) — “table: display_name | level | status | next_gate | success% | p95(s) | cost($) + count/limit/offset.”
+3) Search “router” — “getAgentSummaries(q='router', limit=5).”
+4) Role by handle — “getRoleByHandle('product_owner').”
+Validation Rules (HARD STOP on HTTP≠200 or non-JSON; identity checks; numeric ‘—’; 401/403/404/5xx messages).
+```
+
+**b) Add them as canonical examples (improves reliability)**
+In the GPT “Conversation starters” or “Examples,” add one starter per prompt:
+
+* “Smoke Test — run getRoles(1)…”
+* “List L1 Support agents (limit 5)…”
+* “Search ‘router’…”
+* “Role by handle — getRoleByHandle(‘product_owner’)…”
+
+**c) Map to Actions**
+Ensure your Actions schema exposes three read-only tools: `listRoles`, `getRoleByHandle`, `getAgentSummaries`. The pinned prompts should call only these.
+
+---
+
+# 3) Postman & Docs (nice to have)
+
+* **Postman “Examples”**: create four saved requests mirroring the prompts (with `limit`, `q`, etc.).
+* **Integrations page**: “Pinned Prompts” card listing each label + short description + copy button for the utterance.
+
+---
+
+# 4) Ops tips (polish)
+
+* **Keyboard shortcuts**: bind 1–4 to the first four quick actions.
+* **Role gating**: show “Role by handle…” only to admins.
+* **Analytics**: log `prompt_id`, `user_id`, `status`, `ms` with each call to `/copilot/ask`.
+* **Rate-limit hint**: if 429, surface “Try again in ~X seconds” using `Retry-After`.
+
+---
+
+# TL;DR
+
+* **UI**: turn them into quick-action buttons sourced from a small `copilot_prompts.json` and pass their params to `/copilot/ask`.
+* **GPT**: pin the exact phrasings in the GPT’s instructions + examples so it consistently calls your read-only Actions.
+* **Docs**: mirror the same four as Postman examples and an Integrations page “Pinned Prompts” card.
