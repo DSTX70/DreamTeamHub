@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
-import { useQuery, useMutation } from "@tanstack/react-query";
-import { apiRequest, queryClient } from "@/lib/queryClient";
+import { useQuery } from "@tanstack/react-query";
+import { queryClient } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -8,9 +8,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2 } from "lucide-react";
+import { Loader2, Play } from "lucide-react";
 
-type WorkOrder = {
+type WO = {
   id: string;
   title: string;
   owner: string;
@@ -22,10 +22,21 @@ type WorkOrder = {
   playbook: string;
   stop: string;
   status: string;
-  createdAt: string;
+  created_at: string;
 };
 
-const templates: Record<string, Partial<WorkOrder>> = {
+type RunRow = {
+  agent: string;
+  wo_id: string;
+  status: string;
+  ms: number;
+  cost: number;
+  started_at: string;
+  finished_at: string;
+  mirror?: string;
+};
+
+const templates: Record<string, Partial<WO>> = {
   "Support L1 — Router": {
     autonomy: "L1",
     inputs: "/inbox/support/YY-MM-DD/*.md",
@@ -59,27 +70,77 @@ export default function WorkOrdersPage() {
     kpiSuccess: "90",
     kpiP95: "3.0",
     playbook: "",
-    stop: "",
-    status: "active"
+    stop: ""
   });
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const { data: workOrders = [], isLoading } = useQuery<WorkOrder[]>({
+  const { data: workOrders = [], isLoading } = useQuery<WO[]>({
     queryKey: ["/api/work-orders"],
+    refetchInterval: 5000,
   });
 
-  const createMutation = useMutation({
-    mutationFn: async (data: any) => {
-      return await apiRequest("/api/work-orders", {
+  const { data: runs = [] } = useQuery<RunRow[]>({
+    queryKey: ["/api/work-orders/runs"],
+    refetchInterval: 8000,
+  });
+
+  const applyTemplate = (key: string) => {
+    const t = templates[key];
+    if (!t) return;
+
+    setForm({
+      title: key,
+      owner: form.owner,
+      autonomy: t.autonomy ?? "L1",
+      inputs: t.inputs ?? "",
+      output: t.output ?? "",
+      capsRuns: String(t.caps?.runsPerDay ?? 100),
+      capsUsd: String(t.caps?.usdPerDay ?? 2),
+      kpiSuccess: String(t.kpis?.successMin ?? 90),
+      kpiP95: String(t.kpis?.p95Max ?? 3.0),
+      playbook: t.playbook ?? "",
+      stop: t.stop ?? ""
+    });
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+
+    try {
+      const body = {
+        title: form.title,
+        owner: form.owner,
+        autonomy: form.autonomy,
+        inputs: form.inputs,
+        output: form.output,
+        caps: {
+          runsPerDay: Number(form.capsRuns),
+          usdPerDay: Number(form.capsUsd)
+        },
+        kpis: {
+          successMin: Number(form.kpiSuccess),
+          p95Max: Number(form.kpiP95)
+        },
+        playbook: form.playbook,
+        stop: form.stop
+      };
+
+      const res = await fetch("/api/work-orders", {
         method: "POST",
-        body: JSON.stringify(data),
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body)
       });
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/work-orders"] });
+
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
       toast({
         title: "Work Order Created",
         description: "The work order has been created successfully.",
       });
+
+      queryClient.invalidateQueries({ queryKey: ["/api/work-orders"] });
+
       setForm({
         title: "",
         owner: "",
@@ -91,65 +152,50 @@ export default function WorkOrdersPage() {
         kpiSuccess: "90",
         kpiP95: "3.0",
         playbook: "",
-        stop: "",
-        status: "active"
+        stop: ""
       });
-    },
-    onError: (error: any) => {
+    } catch (error: any) {
       toast({
         variant: "destructive",
         title: "Error",
         description: error.message || "Failed to create work order",
       });
-    },
-  });
-
-  const applyTemplate = (key: string) => {
-    const t = templates[key];
-    if (!t) return;
-    
-    setForm((f) => ({
-      ...f,
-      title: key,
-      autonomy: t.autonomy ?? "L1",
-      inputs: t.inputs ?? "",
-      output: t.output ?? "",
-      capsRuns: String(t.caps?.runsPerDay ?? 100),
-      capsUsd: String(t.caps?.usdPerDay ?? 2),
-      kpiSuccess: String(t.kpis?.successMin ?? 90),
-      kpiP95: String(t.kpis?.p95Max ?? 3.0),
-      playbook: t.playbook ?? "",
-      stop: t.stop ?? ""
-    }));
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    const body = {
-      title: form.title,
-      owner: form.owner,
-      autonomy: form.autonomy,
-      inputs: form.inputs,
-      output: form.output,
-      caps: {
-        runsPerDay: Number(form.capsRuns),
-        usdPerDay: Number(form.capsUsd)
-      },
-      kpis: {
-        successMin: Number(form.kpiSuccess),
-        p95Max: Number(form.kpiP95)
-      },
-      playbook: form.playbook,
-      stop: form.stop,
-      status: form.status
-    };
-    
-    createMutation.mutate(body);
+  const startRun = async (woId: string) => {
+    const agent = prompt("Agent name (e.g., Support L1 — Router)")?.trim();
+    if (!agent) return;
+
+    try {
+      const res = await fetch(`/api/work-orders/${woId}/start`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ agent })
+      });
+
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+      toast({
+        title: "Run Started",
+        description: `Work order execution started for agent: ${agent}`,
+      });
+
+      queryClient.invalidateQueries({ queryKey: ["/api/work-orders"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/work-orders/runs"] });
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: error.message || "Failed to start run",
+      });
+    }
   };
 
   return (
-    <div className="container max-w-5xl py-8 space-y-8">
+    <div className="container max-w-6xl py-8 space-y-8">
       <div>
         <h1 className="text-3xl font-bold tracking-tight">Work Orders</h1>
         <p className="text-muted-foreground mt-2">
@@ -284,14 +330,8 @@ export default function WorkOrdersPage() {
               data-testid="textarea-stop"
             />
 
-            <Button
-              type="submit"
-              disabled={createMutation.isPending}
-              data-testid="button-create"
-            >
-              {createMutation.isPending && (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              )}
+            <Button type="submit" disabled={isSubmitting} data-testid="button-create">
+              {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Create Work Order
             </Button>
           </form>
@@ -302,7 +342,7 @@ export default function WorkOrdersPage() {
         <CardHeader>
           <CardTitle>Recent Work Orders</CardTitle>
           <CardDescription>
-            View all work orders sorted by creation date
+            View and execute work orders sorted by creation date
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -319,7 +359,7 @@ export default function WorkOrdersPage() {
               {workOrders.map((order) => (
                 <div
                   key={order.id}
-                  className="border rounded-lg p-4 space-y-2"
+                  className="border rounded-lg p-4 space-y-3"
                   data-testid={`card-work-order-${order.id}`}
                 >
                   <div className="flex flex-wrap items-center gap-2">
@@ -336,7 +376,7 @@ export default function WorkOrdersPage() {
                       owner: {order.owner}
                     </span>
                     <span className="ml-auto text-xs text-muted-foreground">
-                      {new Date(order.createdAt).toLocaleString()}
+                      {new Date(order.created_at).toLocaleString()}
                     </span>
                   </div>
                   <div className="text-sm">
@@ -359,10 +399,75 @@ export default function WorkOrdersPage() {
                       <span className="text-xs">{order.playbook}</span>
                     </div>
                   )}
+                  <div className="pt-2">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => startRun(order.id)}
+                      data-testid={`button-start-${order.id}`}
+                    >
+                      <Play className="mr-2 h-3 w-3" />
+                      Start Run
+                    </Button>
+                  </div>
                 </div>
               ))}
             </div>
           )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Recent Runs (last 50)</CardTitle>
+          <CardDescription>
+            Execution history showing simulated work order runs
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="overflow-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b">
+                  <th className="text-left p-2 font-medium">Agent</th>
+                  <th className="text-left p-2 font-medium">WO ID</th>
+                  <th className="text-left p-2 font-medium">Status</th>
+                  <th className="text-right p-2 font-medium">ms</th>
+                  <th className="text-right p-2 font-medium">Cost ($)</th>
+                  <th className="text-left p-2 font-medium">Started</th>
+                  <th className="text-left p-2 font-medium">Finished</th>
+                  <th className="text-left p-2 font-medium">Mirror</th>
+                </tr>
+              </thead>
+              <tbody>
+                {runs.map((r, i) => (
+                  <tr key={i} className="border-b">
+                    <td className="p-2">{r.agent}</td>
+                    <td className="p-2">
+                      <code className="text-xs bg-muted px-1 py-0.5 rounded">{r.wo_id}</code>
+                    </td>
+                    <td className="p-2">
+                      <Badge variant="outline" className="text-xs">
+                        {r.status}
+                      </Badge>
+                    </td>
+                    <td className="p-2 text-right">{r.ms}</td>
+                    <td className="p-2 text-right">{r.cost.toFixed(3)}</td>
+                    <td className="p-2 text-xs">{new Date(r.started_at).toLocaleTimeString()}</td>
+                    <td className="p-2 text-xs">{new Date(r.finished_at).toLocaleTimeString()}</td>
+                    <td className="p-2 text-xs text-muted-foreground">{r.mirror || ""}</td>
+                  </tr>
+                ))}
+                {runs.length === 0 && (
+                  <tr>
+                    <td className="p-4 text-center text-muted-foreground" colSpan={8}>
+                      No runs yet. Click "Start Run" on a work order to begin.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
         </CardContent>
       </Card>
     </div>
