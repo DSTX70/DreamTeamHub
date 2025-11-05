@@ -879,3 +879,26 @@ export type ProjectMessage = typeof projectMessages.$inferSelect;
 export const insertAgentGoldenSchema = createInsertSchema(agentGoldens).omit({ id: true, createdAt: true });
 export type InsertAgentGolden = z.infer<typeof insertAgentGoldenSchema>;
 export type AgentGolden = typeof agentGoldens.$inferSelect;
+
+// ===========================
+// WORK ORDERS
+// ===========================
+
+export const workOrders = pgTable("work_orders", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  title: text("title").notNull(),
+  owner: text("owner").notNull(),
+  autonomy: text("autonomy").notNull(), // L0, L1, L2, L3
+  inputs: text("inputs").notNull(), // input paths or query
+  output: text("output").notNull(), // output folder path
+  caps: jsonb("caps").$type<{ runsPerDay: number; usdPerDay: number }>().notNull(),
+  kpis: jsonb("kpis").$type<{ successMin: number; p95Max: number }>().notNull(),
+  playbook: text("playbook").notNull(),
+  stop: text("stop").notNull(), // stop conditions
+  status: text("status").notNull().default("active"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const insertWorkOrderSchema = createInsertSchema(workOrders).omit({ id: true, createdAt: true });
+export type InsertWorkOrder = z.infer<typeof insertWorkOrderSchema>;
+export type WorkOrder = typeof workOrders.$inferSelect;

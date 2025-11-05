@@ -2004,6 +2004,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   const copilot = await import("./copilot");
   app.use("/copilot", isAuthenticated, copilot.default);
 
+  // Work Orders - Agent task definitions and automation specs
+  const { workOrders } = await import("./work_orders");
+  app.use("/api/work-orders", isAuthenticated, workOrders);
+
   const httpServer = createServer(app);
   return httpServer;
 }

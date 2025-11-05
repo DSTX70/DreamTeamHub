@@ -1,0 +1,207 @@
+import React, { useEffect, useState } from "react";
+
+type WO = {
+  id:string; title:string; owner:string; autonomy:"L0"|"L1"|"L2"|"L3";
+  inputs:string; output:string;
+  caps:{ runsPerDay:number; usdPerDay:number };
+  kpis:{ successMin:number; p95Max:number };
+  playbook:string; stop:string; status:string; created_at:string;
+};
+
+type RunRow = {
+  agent:string; wo_id:string; status:string; ms:number; cost:number;
+  started_at:string; finished_at:string; mirror?:string;
+};
+
+const templates: Record<string, Partial<WO>> = {
+  "Support L1 — Router": {
+    autonomy:"L1", inputs:"/inbox/support/YY-MM-DD/*.md", output:"/drafts/support/replies/YY-MM-DD/",
+    caps:{ runsPerDay:100, usdPerDay:2 }, kpis:{ successMin:90, p95Max:3.0 },
+    playbook:"classify → draft reply → cite 2 KB links", stop:"PII, low context, conflicts"
+  },
+  "Marketing L1 — 7-Day Calendar": {
+    autonomy:"L1", inputs:"/briefs/marketing/week-XX.md", output:"/drafts/calendar/week-XX.csv",
+    caps:{ runsPerDay:50, usdPerDay:1 }, kpis:{ successMin:90, p95Max:3.0 },
+    playbook:"per day {hook, caption, CTA, 3 hashtags}", stop:"missing brief, brand-lock mismatch"
+  }
+};
+
+export default function WorkOrdersPage() {
+  const [rows, setRows] = useState<WO[]>([]);
+  const [runs, setRuns] = useState<RunRow[]>([]);
+  const [form, setForm] = useState<any>({
+    title:"", owner:"", autonomy:"L1",
+    inputs:"", output:"",
+    capsRuns:100, capsUsd:2, kpiSuccess:90, kpiP95:3.0,
+    playbook:"", stop:""
+  });
+  const [err, setErr] = useState<string>("");
+
+  const headers = { "authorization":"Basic staging" };
+
+  const loadWOs = async () => {
+    const r = await fetch("/api/work-orders", { headers });
+    if (!r.ok) return setErr(`HTTP ${r.status}`);
+    setRows(await r.json());
+  };
+  const loadRuns = async () => {
+    const r = await fetch("/api/work-orders/runs?limit=50", { headers });
+    if (!r.ok) return; // soft
+    setRuns(await r.json());
+  };
+
+  useEffect(()=>{ loadWOs(); loadRuns(); },[]);
+  // light polling for runs (every 8s)
+  useEffect(()=>{
+    const t = setInterval(()=>loadRuns(), 8000);
+    return ()=>clearInterval(t);
+  },[]);
+
+  const applyTemplate = (key:string) => {
+    const t = templates[key];
+    setForm((f:any)=>({
+      ...f,
+      title:key, autonomy:t.autonomy ?? "L1",
+      inputs:t.inputs ?? "", output:t.output ?? "",
+      capsRuns:t.caps?.runsPerDay ?? 100, capsUsd:t.caps?.usdPerDay ?? 2,
+      kpiSuccess:t.kpis?.successMin ?? 90, kpiP95:t.kpis?.p95Max ?? 3.0,
+      playbook:t.playbook ?? "", stop:t.stop ?? ""
+    }));
+  };
+
+  const submit = async (e:any) => {
+    e.preventDefault(); setErr("");
+    const body = {
+      title:form.title, owner:form.owner, autonomy:form.autonomy,
+      inputs:form.inputs, output:form.output,
+      caps:{ runsPerDay:Number(form.capsRuns), usdPerDay:Number(form.capsUsd) },
+      kpis:{ successMin:Number(form.kpiSuccess), p95Max:Number(form.kpiP95) },
+      playbook:form.playbook, stop:form.stop
+    };
+    const r = await fetch("/api/work-orders", {
+      method:"POST",
+      headers: { ...headers, "content-type":"application/json" },
+      body: JSON.stringify(body)
+    });
+    if (!r.ok) return setErr(`Create failed: HTTP ${r.status}`);
+    await loadWOs();
+  };
+
+  const startRun = async (woId:string) => {
+    const agent = prompt("Agent name (e.g., Support L1 — Router)")?.trim();
+    if (!agent) return;
+    const r = await fetch(`/api/work-orders/${woId}/start`, {
+      method:"POST",
+      headers: { ...headers, "content-type":"application/json" },
+      body: JSON.stringify({ agent })
+    });
+    if (!r.ok) return setErr(`Start failed: HTTP ${r.status}`);
+    await Promise.all([loadRuns(), loadWOs()]);
+  };
+
+  return (
+    <div className="max-w-5xl mx-auto p-6 space-y-6">
+      <h1 className="text-2xl font-semibold">Work Orders</h1>
+
+      {/* Create form */}
+      <form onSubmit={submit} className="rounded-xl border p-4 space-y-3">
+        <div className="flex flex-wrap items-center gap-2">
+          <label className="text-sm">Template:</label>
+          <select className="border rounded px-2 py-1" onChange={(e)=>applyTemplate(e.target.value)}>
+            <option value="">— choose —</option>
+            {Object.keys(templates).map(k=><option key={k} value={k}>{k}</option>)}
+          </select>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <input className="border rounded px-2 py-1" placeholder="Title" value={form.title} onChange={e=>setForm({...form, title:e.target.value})}/>
+          <input className="border rounded px-2 py-1" placeholder="Owner" value={form.owner} onChange={e=>setForm({...form, owner:e.target.value})}/>
+          <select className="border rounded px-2 py-1" value={form.autonomy} onChange={e=>setForm({...form, autonomy:e.target.value})}>
+            <option>L0</option><option>L1</option><option>L2</option><option>L3</option>
+          </select>
+          <input className="border rounded px-2 py-1" placeholder="Output folder" value={form.output} onChange={e=>setForm({...form, output:e.target.value})}/>
+          <input className="border rounded px-2 py-1 md:col-span-2" placeholder="Inputs (paths or query)" value={form.inputs} onChange={e=>setForm({...form, inputs:e.target.value})}/>
+        </div>
+
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <input className="border rounded px-2 py-1" type="number" step="1" placeholder="Runs/day" value={form.capsRuns} onChange={e=>setForm({...form, capsRuns:e.target.value})}/>
+          <input className="border rounded px-2 py-1" type="number" step="0.01" placeholder="$ per day" value={form.capsUsd} onChange={e=>setForm({...form, capsUsd:e.target.value})}/>
+          <input className="border rounded px-2 py-1" type="number" step="1" placeholder="Success ≥ %" value={form.kpiSuccess} onChange={e=>setForm({...form, kpiSuccess:e.target.value})}/>
+          <input className="border rounded px-2 py-1" type="number" step="0.1" placeholder="p95 ≤ s" value={form.kpiP95} onChange={e=>setForm({...form, kpiP95:e.target.value})}/>
+        </div>
+
+        <textarea className="border rounded px-2 py-1 w-full" rows={3} placeholder="Playbook" value={form.playbook} onChange={e=>setForm({...form, playbook:e.target.value})}/>
+        <textarea className="border rounded px-2 py-1 w-full" rows={2} placeholder="Stop conditions" value={form.stop} onChange={e=>setForm({...form, stop:e.target.value})}/>
+
+        {err && <div className="text-sm text-rose-700">{err}</div>}
+        <button className="px-3 py-1 border rounded">Create Work Order</button>
+      </form>
+
+      {/* List WOs with Start button */}
+      <div className="rounded-xl border">
+        <div className="p-3 border-b font-medium">Recent Work Orders</div>
+        <div className="divide-y">
+          {rows.map(r=>(
+            <div key={r.id} className="p-3 text-sm">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="font-semibold">{r.title}</span>
+                <span className="px-2 py-0.5 rounded-full text-xs border">{r.autonomy}</span>
+                <span className="px-2 py-0.5 rounded-full text-xs border">{r.status}</span>
+                <span className="text-gray-500">owner: {r.owner}</span>
+                <span className="ml-auto text-gray-500">{new Date(r.created_at).toLocaleString()}</span>
+              </div>
+              <div className="text-gray-700 mt-1">Inputs: <code>{r.inputs}</code></div>
+              <div className="text-gray-700">Output: <code>{r.output}</code></div>
+              <div className="mt-2">
+                <button className="px-2 py-1 border rounded" onClick={()=>startRun(r.id)}>
+                  Start
+                </button>
+              </div>
+            </div>
+          ))}
+          {!rows.length && <div className="p-3 text-sm text-gray-500">No work orders yet.</div>}
+        </div>
+      </div>
+
+      {/* Runs panel */}
+      <div className="rounded-xl border">
+        <div className="p-3 border-b font-medium">Recent Runs (last 50)</div>
+        <div className="overflow-auto">
+          <table className="min-w-full text-sm">
+            <thead>
+              <tr>
+                <th className="text-left p-2 border-b">agent</th>
+                <th className="text-left p-2 border-b">wo_id</th>
+                <th className="text-left p-2 border-b">status</th>
+                <th className="text-right p-2 border-b">ms</th>
+                <th className="text-right p-2 border-b">cost ($)</th>
+                <th className="text-left p-2 border-b">started</th>
+                <th className="text-left p-2 border-b">finished</th>
+                <th className="text-left p-2 border-b">mirror</th>
+              </tr>
+            </thead>
+            <tbody>
+              {runs.map((r, i)=>(
+                <tr key={i}>
+                  <td className="p-2 border-b">{r.agent}</td>
+                  <td className="p-2 border-b">{r.wo_id}</td>
+                  <td className="p-2 border-b">
+                    <span className="px-2 py-0.5 rounded-full text-xs border">{r.status}</span>
+                  </td>
+                  <td className="p-2 border-b text-right">{r.ms}</td>
+                  <td className="p-2 border-b text-right">{r.cost.toFixed(3)}</td>
+                  <td className="p-2 border-b">{new Date(r.started_at).toLocaleTimeString()}</td>
+                  <td className="p-2 border-b">{new Date(r.finished_at).toLocaleTimeString()}</td>
+                  <td className="p-2 border-b">{r.mirror || ""}</td>
+                </tr>
+              ))}
+              {!runs.length && (
+                <tr><td className="p-2 text-gray-500" colSpan={8}>No runs yet.</td></tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+}
