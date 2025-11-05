@@ -15,23 +15,42 @@ export default function IntegrationsPage() {
   const pinnedLinks = [
     {
       title: "OpenAPI Spec (v0.1.1)",
-      path: "/docs/API_SPEC_v0.1.1.yaml",
+      filename: "API_SPEC_v0.1.1.yaml",
       icon: FileCode,
       description: "Complete OpenAPI 3.0 specification for DTH API endpoints"
     },
     {
       title: "GPT Actions Schema (v0.1.1)",
-      path: "/docs/GPT_ACTIONS_SCHEMA.yaml",
+      filename: "GPT_ACTIONS_SCHEMA.yaml",
       icon: Book,
       description: "ChatGPT Actions configuration for Custom GPT integration"
     },
     {
       title: "Postman Collection (v0.1.1)",
-      path: "/docs/POSTMAN_COLLECTION.json",
+      filename: "POSTMAN_COLLECTION.json",
       icon: Download,
       description: "Import into Postman for API testing and exploration"
     }
   ];
+
+  const handleDownloadDoc = async (filename: string) => {
+    try {
+      const response = await fetch(`/api/docs/${filename}`);
+      if (!response.ok) throw new Error('Failed to download');
+      
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch (error) {
+      console.error('Download failed:', error);
+    }
+  };
 
   return (
     <div className="container max-w-6xl py-8 space-y-8">
@@ -113,7 +132,7 @@ export default function IntegrationsPage() {
             {pinnedLinks.map((link) => {
               const Icon = link.icon;
               return (
-                <Card key={link.path} className="hover-elevate">
+                <Card key={link.filename} className="hover-elevate">
                   <CardHeader className="pb-3">
                     <div className="flex items-center gap-2">
                       <Icon className="h-4 w-4 text-primary" />
@@ -128,11 +147,11 @@ export default function IntegrationsPage() {
                       variant="outline"
                       size="sm"
                       className="w-full gap-2"
-                      onClick={() => window.open(link.path, "_blank")}
-                      data-testid={`button-doc-${link.path.split('/').pop()?.split('.')[0]}`}
+                      onClick={() => handleDownloadDoc(link.filename)}
+                      data-testid={`button-doc-${link.filename.split('.')[0]}`}
                     >
-                      <ExternalLink className="h-3 w-3" />
-                      Open
+                      <Download className="h-3 w-3" />
+                      Download
                     </Button>
                   </CardContent>
                 </Card>

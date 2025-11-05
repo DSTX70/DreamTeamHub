@@ -1909,6 +1909,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Documentation files endpoint
+  app.get("/api/docs/:filename", isAuthenticated, async (req, res) => {
+    try {
+      const { filename } = req.params;
+      
+      // Whitelist allowed files for security
+      const allowedFiles = [
+        'API_SPEC_v0.1.1.yaml',
+        'GPT_ACTIONS_SCHEMA.yaml',
+        'POSTMAN_COLLECTION.json'
+      ];
+      
+      if (!allowedFiles.includes(filename)) {
+        return res.status(404).json({ error: 'File not found' });
+      }
+      
+      const fs = await import('fs/promises');
+      const path = await import('path');
+      const filePath = path.join(process.cwd(), 'docs', filename);
+      
+      const content = await fs.readFile(filePath, 'utf-8');
+      
+      // Set appropriate content type
+      const contentType = filename.endsWith('.json') 
+        ? 'application/json'
+        : filename.endsWith('.yaml') || filename.endsWith('.yml')
+        ? 'application/x-yaml'
+        : 'text/plain';
+      
+      res.setHeader('Content-Type', contentType);
+      res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+      res.send(content);
+    } catch (error: any) {
+      console.error('Error serving doc file:', error);
+      res.status(500).json({ error: 'Failed to serve documentation file' });
+    }
+  });
+
   // Copilot - AI assistant for querying DTH API (requires authentication)
   const copilot = await import("./copilot");
   app.use("/copilot", isAuthenticated, copilot.default);
