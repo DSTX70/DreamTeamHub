@@ -2,7 +2,7 @@ import CopilotPanel from "@/components/CopilotPanel";
 import { useAuth } from "@/hooks/useAuth";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ExternalLink, FileCode, Book, Download, Shield } from "lucide-react";
+import { ExternalLink, FileCode, Book, Download, Shield, FileText } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
 export default function IntegrationsPage() {
@@ -33,19 +33,30 @@ export default function IntegrationsPage() {
     }
   ];
 
-  const handleDownloadDoc = async (filename: string) => {
+  const handleDownloadDoc = async (filename: string, format: 'original' | 'docx' = 'original') => {
     try {
-      const response = await fetch(`/api/docs/${filename}`);
+      const url = format === 'docx' 
+        ? `/api/docs/${filename}?format=docx`
+        : `/api/docs/${filename}`;
+      
+      const response = await fetch(url);
       if (!response.ok) throw new Error('Failed to download');
       
       const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
+      const blobUrl = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
-      a.href = url;
-      a.download = filename;
+      a.href = blobUrl;
+      
+      // Adjust filename for Word docs
+      if (format === 'docx') {
+        a.download = filename.replace(/\.(yaml|yml|json)$/, '.docx');
+      } else {
+        a.download = filename;
+      }
+      
       document.body.appendChild(a);
       a.click();
-      window.URL.revokeObjectURL(url);
+      window.URL.revokeObjectURL(blobUrl);
       document.body.removeChild(a);
     } catch (error) {
       console.error('Download failed:', error);
@@ -143,16 +154,28 @@ export default function IntegrationsPage() {
                     <p className="text-xs text-muted-foreground">
                       {link.description}
                     </p>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="w-full gap-2"
-                      onClick={() => handleDownloadDoc(link.filename)}
-                      data-testid={`button-doc-${link.filename.split('.')[0]}`}
-                    >
-                      <Download className="h-3 w-3" />
-                      Download
-                    </Button>
+                    <div className="flex gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="flex-1 gap-2"
+                        onClick={() => handleDownloadDoc(link.filename, 'original')}
+                        data-testid={`button-doc-${link.filename.split('.')[0]}`}
+                      >
+                        <Download className="h-3 w-3" />
+                        Original
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="flex-1 gap-2"
+                        onClick={() => handleDownloadDoc(link.filename, 'docx')}
+                        data-testid={`button-doc-${link.filename.split('.')[0]}-docx`}
+                      >
+                        <FileText className="h-3 w-3" />
+                        Word
+                      </Button>
+                    </div>
                   </CardContent>
                 </Card>
               );

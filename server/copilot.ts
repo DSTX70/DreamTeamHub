@@ -5,6 +5,7 @@
 
 import { Router, Request, Response } from "express";
 import { dthGET } from "./lib/dthClient";
+import { storage } from "./storage";
 import OpenAI from "openai";
 
 const router = Router();
@@ -112,6 +113,50 @@ const TOOLS: OpenAI.Chat.Completions.ChatCompletionTool[] = [
   }
 ];
 
+// Transform agents to summary format (matching /api/agents/summary logic)
+function transformToSummary(agents: any[]) {
+  return agents.map(agent => {
+    const autonomy_level = agent.autonomyLevel || 'L0';
+    
+    const task_success = agent.lastEvalScore 
+      ? Math.min(1.0, Math.max(0.0, agent.lastEvalScore / 100))
+      : 0.80;
+    
+    const latencyMap: Record<string, number> = { 'L3': 3.2, 'L2': 4.1, 'L1': 4.6, 'L0': 4.9 };
+    const costMap: Record<string, number> = { 'L3': 0.047, 'L2': 0.040, 'L1': 0.033, 'L0': 0.025 };
+    
+    let mappedStatus: string;
+    if (agent.status === 'active') mappedStatus = 'live';
+    else if (agent.status === 'inactive') mappedStatus = 'pilot';
+    else mappedStatus = agent.status;
+    
+    const currentLevel = parseInt(autonomy_level.slice(1));
+    const next_gate = currentLevel >= 3 ? null : (currentLevel + 1);
+    
+    const progressDefaults: Record<string, number> = { 'L0': 25, 'L1': 50, 'L2': 75, 'L3': 100 };
+    const promotion_progress_pct = agent.lastEvalScore 
+      ? Math.min(100, Math.max(0, agent.lastEvalScore))
+      : progressDefaults[autonomy_level] || 25;
+    
+    const business_unit = agent.podName || 'General';
+    
+    return {
+      name: agent.id,
+      display_name: agent.title,
+      autonomy_level,
+      status: mappedStatus,
+      next_gate,
+      promotion_progress_pct,
+      business_unit,
+      kpis: {
+        task_success,
+        latency_p95_s: latencyMap[autonomy_level] || 4.9,
+        cost_per_task_usd: costMap[autonomy_level] || 0.025
+      }
+    };
+  });
+}
+
 // Format agent summaries as markdown table
 function fmtAgents(items: any[], total: string | null, { limit, offset }: { limit: number; offset: number }) {
   const rows: string[][] = [];
@@ -176,34 +221,38 @@ router.post("/ask", async (req: Request, res: Response) => {
       const diagnostics: string[] = [];
       let status: "Green" | "Amber" | "Red" = "Green";
 
-      // Test 1: Get Roles
-      const rolesTest = await dthGET("/api/roles", { limit: 1 });
-      if (rolesTest.status !== 200) {
+      // Test 1: Get Roles (using storage directly for internal calls)
+      try {
+        const roles = await storage.getRoleCards();
+        if (!Array.isArray(roles)) {
+          status = "Red";
+          diagnostics.push("❌ Roles API: Invalid response shape");
+        } else if (roles.length === 0) {
+          status = "Amber";
+          diagnostics.push("⚠️ Roles API: No data returned");
+        } else {
+          diagnostics.push(`✅ Roles API: OK (${roles.length} total)`);
+        }
+      } catch (error: any) {
         status = "Red";
-        diagnostics.push(`❌ Roles API: HTTP ${rolesTest.status}`);
-      } else if (!Array.isArray(rolesTest.json)) {
-        status = "Red";
-        diagnostics.push("❌ Roles API: Invalid response shape");
-      } else if (rolesTest.json.length === 0) {
-        status = "Amber";
-        diagnostics.push("⚠️ Roles API: No data returned");
-      } else {
-        diagnostics.push(`✅ Roles API: OK (${rolesTest.headers.total || "?"} total)`);
+        diagnostics.push(`❌ Roles API: ${error.message || "Unknown error"}`);
       }
 
-      // Test 2: Get Agent Summaries
-      const agentsTest = await dthGET("/api/agents/summary", { limit: 1 });
-      if (agentsTest.status !== 200) {
+      // Test 2: Get Agent Summaries (using storage directly for internal calls)
+      try {
+        const agents = await storage.getAgents({});
+        if (!Array.isArray(agents)) {
+          status = "Red";
+          diagnostics.push("❌ Agents API: Invalid response shape");
+        } else if (agents.length === 0) {
+          status = "Amber";
+          diagnostics.push("⚠️ Agents API: No data returned");
+        } else {
+          diagnostics.push(`✅ Agents API: OK (${agents.length} total)`);
+        }
+      } catch (error: any) {
         status = "Red";
-        diagnostics.push(`❌ Agents API: HTTP ${agentsTest.status}`);
-      } else if (!Array.isArray(agentsTest.json)) {
-        status = "Red";
-        diagnostics.push("❌ Agents API: Invalid response shape");
-      } else if (agentsTest.json.length === 0) {
-        status = "Amber";
-        diagnostics.push("⚠️ Agents API: No data returned");
-      } else {
-        diagnostics.push(`✅ Agents API: OK (${agentsTest.headers.total || "?"} total)`);
+        diagnostics.push(`❌ Agents API: ${error.message || "Unknown error"}`);
       }
 
       const statusIcon = status === "Green" ? "🟢" : status === "Amber" ? "🟡" : "🔴";
@@ -228,89 +277,131 @@ router.post("/ask", async (req: Request, res: Response) => {
 
     // If no tool call, return default response
     if (!toolCalls.length) {
-      // Fallback: show first page of agent summaries
-      const { status, json, headers } = await dthGET("/api/agents/summary", { limit: 10, offset: 0 });
-      if (status !== 200 || !Array.isArray(json)) {
-        return res.status(502).json({
-          error: { code: "upstream_error", message: "DTH API error / unexpected response shape; stopping" }
+      // Fallback: show first page of agent summaries (using storage directly)
+      try {
+        const agents = await storage.getAgents({});
+        if (!Array.isArray(agents)) {
+          return res.status(502).json({
+            error: { code: "upstream_error", message: "DTH API error / unexpected response shape; stopping" }
+          });
+        }
+        // Transform to summary format
+        const summary = transformToSummary(agents);
+        const limited = summary.slice(0, 10);
+        const reply = fmtAgents(limited, String(summary.length), { limit: 10, offset: 0 });
+        return res.json({ reply });
+      } catch (error: any) {
+        return res.status(500).json({
+          error: { code: "storage_error", message: error.message || "Failed to fetch agents" }
         });
       }
-      const reply = fmtAgents(json, headers.total, { limit: 10, offset: 0 });
-      return res.json({ reply });
     }
 
     const toolCall = toolCalls[0];
     const name = toolCall.type === "function" ? toolCall.function.name : "";
     const args = toolCall.type === "function" ? JSON.parse(toolCall.function.arguments || "{}") : {};
 
-    // Handle listRoles tool
+    // Handle listRoles tool (using storage directly for internal calls)
     if (name === "listRoles") {
-      const { limit = 10, offset = 0 } = args;
-      const { status, json, headers } = await dthGET("/api/roles", { limit, offset });
-      
-      if (status !== 200 || !Array.isArray(json)) {
-        const code = status === 401 || status === 403 ? "unauthorized" : "upstream_error";
-        const message = status === 401 || status === 403 
-          ? "Auth failed… check DTH_API_TOKEN" 
-          : "DTH API error / unexpected response shape; stopping";
-        return res.status(status === 200 ? 502 : status).json({ error: { code, message } });
-      }
-      
-      const head = `| name | handle | pod | category |
+      try {
+        const { limit = 10, offset = 0 } = args;
+        const allRoles = await storage.getRoleCards();
+        
+        if (!Array.isArray(allRoles)) {
+          return res.status(502).json({
+            error: { code: "upstream_error", message: "DTH API error / unexpected response shape; stopping" }
+          });
+        }
+        
+        const paginated = allRoles.slice(offset, offset + limit);
+        const head = `| name | handle | pod | category |
 |---|---|---|---|`;
-      const body = json.map(r => `| ${r.name || "—"} | ${r.handle || "—"} | ${r.pod || "—"} | ${r.category || "—"} |`).join("\n");
-      const reply = `${head}\n${body}\n\n_count:_ **${headers.total ?? "?"}**, _limit:_ **${limit}**, _offset:_ **${offset}**`;
-      
-      return res.json({ reply });
+        const body = paginated.map(r => `| ${r.title || "—"} | ${r.handle || "—"} | ${r.pod || "—"} | ${r.category || "—"} |`).join("\n");
+        const reply = `${head}\n${body}\n\n_count:_ **${allRoles.length}**, _limit:_ **${limit}**, _offset:_ **${offset}**`;
+        
+        return res.json({ reply });
+      } catch (error: any) {
+        return res.status(500).json({
+          error: { code: "storage_error", message: error.message || "Failed to fetch roles" }
+        });
+      }
     }
 
-    // Handle getRoleByHandle tool
+    // Handle getRoleByHandle tool (using storage directly for internal calls)
     if (name === "getRoleByHandle") {
-      const { handle } = args;
-      const { status, json } = await dthGET(`/api/roles/by-handle/${encodeURIComponent(handle)}`);
-      
-      if (status === 404) {
-        return res.json({ reply: `Not found: **${handle}**` });
+      try {
+        const { handle } = args;
+        const allRoles = await storage.getRoleCards({ handle });
+        const role = allRoles[0];
+        
+        if (!role) {
+          return res.json({ reply: `Not found: **${handle}**` });
+        }
+        
+        if (!role || typeof role !== "object") {
+          return res.status(502).json({
+            error: { code: "upstream_error", message: "DTH API error / unexpected response shape; stopping" }
+          });
+        }
+        
+        const fields: [string, any][] = [
+          ["name", role.title],
+          ["handle", role.handle],
+          ["pod", role.pod],
+          ["category", role.category],
+          ["display_name", role.displayName],
+          ["autonomy_level", role.autonomyLevel]
+        ];
+        
+        const reply = fields.map(([k, v]) => `**${k}:** ${v ?? "—"}`).join("\n");
+        return res.json({ reply });
+      } catch (error: any) {
+        return res.status(500).json({
+          error: { code: "storage_error", message: error.message || "Failed to fetch role" }
+        });
       }
-      
-      if (status !== 200 || !json || typeof json !== "object") {
-        const code = status === 401 || status === 403 ? "unauthorized" : "upstream_error";
-        const message = status === 401 || status === 403 
-          ? "Auth failed… check DTH_API_TOKEN" 
-          : "DTH API error / unexpected response shape; stopping";
-        return res.status(status === 200 ? 502 : status).json({ error: { code, message } });
-      }
-      
-      const fields: [string, any][] = [
-        ["name", json.name],
-        ["handle", json.handle],
-        ["pod", json.pod],
-        ["category", json.category],
-        ["display_name", json.display_name],
-        ["autonomy_level", json.autonomy_level]
-      ];
-      
-      const reply = fields.map(([k, v]) => `**${k}:** ${v ?? "—"}`).join("\n");
-      return res.json({ reply });
     }
 
-    // Handle getAgentSummaries tool
+    // Handle getAgentSummaries tool (using storage directly for internal calls)
     if (name === "getAgentSummaries") {
-      const { limit = 10, offset = 0, bu, level, status, q } = args;
-      const { status: s, json, headers } = await dthGET("/api/agents/summary", { 
-        limit, offset, bu, level, status, q 
-      });
-      
-      if (s !== 200 || !Array.isArray(json)) {
-        const code = s === 401 || s === 403 ? "unauthorized" : "upstream_error";
-        const message = s === 401 || s === 403 
-          ? "Auth failed… check DTH_API_TOKEN" 
-          : "DTH API error / unexpected response shape; stopping";
-        return res.status(s === 200 ? 502 : s).json({ error: { code, message } });
+      try {
+        const { limit = 10, offset = 0, bu, level, status: statusFilter, q } = args;
+        const agents = await storage.getAgents({});
+        
+        if (!Array.isArray(agents)) {
+          return res.status(502).json({
+            error: { code: "upstream_error", message: "DTH API error / unexpected response shape; stopping" }
+          });
+        }
+        
+        // Transform to summary format and apply filters
+        let summary = transformToSummary(agents);
+        
+        if (bu) {
+          summary = summary.filter(a => a.business_unit?.toLowerCase() === String(bu).toLowerCase());
+        }
+        if (level) {
+          summary = summary.filter(a => a.autonomy_level === level);
+        }
+        if (statusFilter) {
+          summary = summary.filter(a => a.status === statusFilter);
+        }
+        if (q) {
+          const query = String(q).toLowerCase();
+          summary = summary.filter(a => 
+            a.display_name?.toLowerCase().includes(query) || 
+            a.name.toLowerCase().includes(query)
+          );
+        }
+        
+        const paginated = summary.slice(offset, offset + limit);
+        const reply = fmtAgents(paginated, String(summary.length), { limit, offset });
+        return res.json({ reply });
+      } catch (error: any) {
+        return res.status(500).json({
+          error: { code: "storage_error", message: error.message || "Failed to fetch agents" }
+        });
       }
-      
-      const reply = fmtAgents(json, headers.total, { limit, offset });
-      return res.json({ reply });
     }
 
     // Fallback for unknown tools

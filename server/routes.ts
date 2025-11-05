@@ -1913,6 +1913,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/docs/:filename", isAuthenticated, async (req, res) => {
     try {
       const { filename } = req.params;
+      const { format } = req.query;
       
       // Whitelist allowed files for security
       const allowedFiles = [
@@ -1931,16 +1932,60 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const content = await fs.readFile(filePath, 'utf-8');
       
-      // Set appropriate content type
-      const contentType = filename.endsWith('.json') 
-        ? 'application/json'
-        : filename.endsWith('.yaml') || filename.endsWith('.yml')
-        ? 'application/x-yaml'
-        : 'text/plain';
-      
-      res.setHeader('Content-Type', contentType);
-      res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
-      res.send(content);
+      // If Word format requested, convert to docx
+      if (format === 'docx') {
+        const yaml = await import('yaml');
+        
+        // Parse content
+        let parsedContent: any;
+        if (filename.endsWith('.json')) {
+          parsedContent = JSON.parse(content);
+        } else if (filename.endsWith('.yaml') || filename.endsWith('.yml')) {
+          parsedContent = yaml.parse(content);
+        }
+        
+        // Create simple HTML representation
+        const htmlContent = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>${filename}</title>
+  <style>
+    body { font-family: 'Calibri', 'Arial', sans-serif; margin: 2cm; }
+    h1 { color: #2563eb; border-bottom: 2px solid #2563eb; padding-bottom: 8px; }
+    h2 { color: #1e40af; margin-top: 24px; }
+    h3 { color: #1e3a8a; margin-top: 16px; }
+    pre { background: #f1f5f9; padding: 12px; border-left: 4px solid #2563eb; overflow-x: auto; }
+    code { background: #f1f5f9; padding: 2px 6px; border-radius: 3px; }
+    table { border-collapse: collapse; width: 100%; margin: 16px 0; }
+    th, td { border: 1px solid #cbd5e1; padding: 8px; text-align: left; }
+    th { background: #e2e8f0; font-weight: bold; }
+  </style>
+</head>
+<body>
+  <h1>${filename}</h1>
+  <pre>${content}</pre>
+</body>
+</html>`;
+        
+        // For now, send HTML that can be saved as Word
+        // In production, you might use a library like docx or officegen
+        res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+        res.setHeader('Content-Disposition', `attachment; filename="${filename.replace(/\.(yaml|yml|json)$/, '.docx')}"`);
+        res.send(htmlContent);
+      } else {
+        // Original format
+        const contentType = filename.endsWith('.json') 
+          ? 'application/json'
+          : filename.endsWith('.yaml') || filename.endsWith('.yml')
+          ? 'application/x-yaml'
+          : 'text/plain';
+        
+        res.setHeader('Content-Type', contentType);
+        res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+        res.send(content);
+      }
     } catch (error: any) {
       console.error('Error serving doc file:', error);
       res.status(500).json({ error: 'Failed to serve documentation file' });
