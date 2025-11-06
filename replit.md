@@ -42,6 +42,7 @@ The platform is structured into core modules and features:
 - **Work Orders System**: Database-backed work order execution with budget caps enforcement (runs/day and $/day limits), featuring rate limiting and automatic cap validation.
 - **Academy Sidebar**: Interactive agent training and promotion interface integrated into Academy page, Business Unit home pages, and Project detail pages. Displays promotion progress, evidence pack links, and allows one-click agent advancement.
 - **Two-Reviewer Publish Workflow**: Modal-based publish approval system with custom React hook (usePublishDialog) supporting idempotency via Idempotency-Key header.
+- **Ops Dashboard & Observability**: Real-time operational metrics dashboard displaying 24-hour counts for PUBLISH events, draft uploads, work order runs, error rates, and 429 rate limits. Features lightweight alert rules for PUBLISH errors (>2 in 10min), 5xx errors (>1%), and rate limit spikes, with auto-refresh every 30 seconds and visual alert indicators.
 
 ### Technology Stack
 - **Frontend**: React 18, TypeScript, Wouter, TanStack Query v5, React Hook Form, Zod, Shadcn UI, Tailwind CSS.

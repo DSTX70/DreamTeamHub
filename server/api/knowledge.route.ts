@@ -77,6 +77,7 @@ export async function uploadDraft(req: Request, res: Response) {
         fileName,
         mimeType: mimeType ?? "text/markdown",
         driveUrl: file.webViewLink,
+        path: req.path,
       },
     });
     
@@ -134,7 +135,8 @@ export async function publishFile(req: Request, res: Response) {
         driveUrl: out.webViewLink,
         approverName: approver.name,
         approverEmail: approver.email,
-        note
+        note,
+        path: req.path,
       }
     }).returning();
 

@@ -139,6 +139,7 @@ export async function startWorkOrderRun(req: Request, res: Response) {
       runsToday: runsToday + 1,
       costToday: costToday + Number(cost),
       caps,
+      path: req.path,
     },
   });
 

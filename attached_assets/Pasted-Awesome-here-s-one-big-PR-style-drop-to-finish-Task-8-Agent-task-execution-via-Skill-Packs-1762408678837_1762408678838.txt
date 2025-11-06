@@ -1,0 +1,588 @@
+Awesome — here’s **one big, PR-style drop** to finish **Task 8: Agent task execution via Skill Packs**.
+It includes: **SQL migration**, **Drizzle schema**, **Zod/Ajv validators**, **Execution engine helper**, **Next.js API routes** (create/list skills; start WO executes skill), and a **UI patch** to add Skill selection + inputs on the Work Order form.
+
+> Apply each block in order with:
+>
+> ```bash
+> git apply -p0 <<'PATCH'
+> …diff…
+> PATCH
+> ```
+>
+> Then run the migration and restart.
+
+---
+
+## 0) SQL — Skill Packs + WO fields
+
+```diff
+diff --git a/migrations/2025-11-06_task8_skill_packs.sql b/migrations/2025-11-06_task8_skill_packs.sql
+new file mode 100644
+--- /dev/null
++++ b/migrations/2025-11-06_task8_skill_packs.sql
+@@
++-- Skill Packs + Work Order execution fields
++create extension if not exists pgcrypto;
++
++create table if not exists skill_pack (
++  handle text primary key,
++  title text not null,
++  description text,
++  prompt_sys text not null,
++  prompt_user text not null,
++  input_schema jsonb not null,   -- JSON Schema for inputs
++  output_schema jsonb not null,  -- JSON Schema for outputs
++  tools_allowed text[] not null default '{}',
++  caps_runs_per_day int not null default 100,
++  caps_usd_per_day numeric(8,3) not null default 2.000,
++  playbook_handle text,
++  created_at timestamptz not null default now()
++);
++
++create table if not exists skill_to_role (
++  role_handle text not null,
++  skill_handle text not null references skill_pack(handle) on delete cascade,
++  primary key (role_handle, skill_handle)
++);
++
++alter table work_order
++  add column if not exists skill_handle text references skill_pack(handle),
++  add column if not exists input_json jsonb,          -- validated against input_schema at run
++  alter column playbook set default null;
++
++alter table work_order_run
++  add column if not exists output_ref text,           -- a path/url/id to the output artifact
++  add column if not exists output_json jsonb;         -- optional structured result
++
++create index if not exists idx_wo_skill on work_order(skill_handle);
++create index if not exists idx_wor_woid_started on work_order_run(wo_id, started_at desc);
+```
+
+Run it:
+
+```bash
+psql "$DATABASE_URL" -f migrations/2025-11-06_task8_skill_packs.sql
+```
+
+---
+
+## 1) Drizzle schema
+
+```diff
+diff --git a/drizzle/schema.ts b/drizzle/schema.ts
+--- a/drizzle/schema.ts
++++ b/drizzle/schema.ts
+@@
+ import { pgEnum, pgTable, uuid, text, timestamp, integer, numeric, jsonb } from "drizzle-orm/pg-core";
+@@
+ export const workOrder = pgTable("work_order", {
+   id: uuid("id").defaultRandom().primaryKey(),
+   title: text("title").notNull(),
+   owner: text("owner").notNull(),
+   autonomy: autonomyLevel("autonomy").notNull().default("L1"),
+   inputs: text("inputs").notNull(),
+   output: text("output").notNull(),
+   playbookHandle: text("playbook_handle"),
++  skillHandle: text("skill_handle"),
++  inputJson: jsonb("input_json"),
+   capsRunsPerDay: integer("caps_runs_per_day").notNull().default(100),
+   capsUsdPerDay: numeric("caps_usd_per_day", { precision: 8, scale: 3 }).notNull().default("2.000"),
+   kpiSuccessMin: integer("kpi_success_min").notNull().default(90),
+   kpiP95Max: numeric("kpi_p95_max", { precision: 6, scale: 2 }).notNull().default("3.00"),
+   playbook: text("playbook"),
+   stop: text("stop"),
+   status: text("status").notNull().default("draft"),
+   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+ });
+@@
+ export const workOrderRun = pgTable("work_order_run", {
+   id: uuid("id").defaultRandom().primaryKey(),
+   woId: uuid("wo_id").notNull().references(() => workOrder.id, { onDelete: "cascade" }),
+   agentName: text("agent_name").notNull(),
+   status: text("status").notNull(),  // queued|running|done|failed
+   ms: integer("ms").notNull(),
+   cost: numeric("cost", { precision: 8, scale: 3 }).notNull(),
+   startedAt: timestamp("started_at", { withTimezone: true }).notNull().defaultNow(),
+   finishedAt: timestamp("finished_at", { withTimezone: true }),
+   mirror: text("mirror"),
++  outputRef: text("output_ref"),
++  outputJson: jsonb("output_json"),
+ });
+@@
+ export const playbook = pgTable("playbook", {
+   id: uuid("id").defaultRandom().primaryKey(),
+   handle: text("handle").notNull().unique(),
+   title: text("title").notNull(),
+   bodyMd: text("body_md").notNull(),
+   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+ });
++
++// Skill Packs
++export const skillPack = pgTable("skill_pack", {
++  handle: text("handle").primaryKey(),
++  title: text("title").notNull(),
++  description: text("description"),
++  promptSys: text("prompt_sys").notNull(),
++  promptUser: text("prompt_user").notNull(),
++  inputSchema: jsonb("input_schema").notNull(),
++  outputSchema: jsonb("output_schema").notNull(),
++  toolsAllowed: text("tools_allowed").array().notNull().default([]),
++  capsRunsPerDay: integer("caps_runs_per_day").notNull().default(100),
++  capsUsdPerDay: numeric("caps_usd_per_day", { precision: 8, scale: 3 }).notNull().default("2.000"),
++  playbookHandle: text("playbook_handle"),
++  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
++});
+```
+
+---
+
+## 2) Validators (Zod + Ajv JSON-Schema compile)
+
+```diff
+diff --git a/lib/validators/skills.ts b/lib/validators/skills.ts
+new file mode 100644
+--- /dev/null
++++ b/lib/validators/skills.ts
+@@
++import { z } from "zod";
++
++export const SkillPackBody = z.object({
++  handle: z.string().min(3),
++  title: z.string().min(3),
++  description: z.string().optional(),
++  prompt_sys: z.string().min(1),
++  prompt_user: z.string().min(1),
++  input_schema: z.record(z.any()),    // JSON Schema
++  output_schema: z.record(z.any()),   // JSON Schema
++  tools_allowed: z.array(z.string()).default([]).optional(),
++  caps_runs_per_day: z.number().int().min(1).max(100000).default(100).optional(),
++  caps_usd_per_day: z.number().min(0).max(1_000_000).default(2.0).optional(),
++  playbook_handle: z.string().optional()
++});
++export type SkillPackBody = z.infer<typeof SkillPackBody>;
+```
+
+```diff
+diff --git a/server/lib/engine/jsonSchema.ts b/server/lib/engine/jsonSchema.ts
+new file mode 100644
+--- /dev/null
++++ b/server/lib/engine/jsonSchema.ts
+@@
++import Ajv from "ajv";
++const ajv = new Ajv({ allErrors: true, strict: false });
++export function compileSchema(schema: any) {
++  try { return ajv.compile(schema); } catch { return null; }
++}
++export function validateWith(validate: Ajv.ValidateFunction | null, data: any) {
++  if (!validate) return { ok: true, errors: [] };
++  const ok = validate(data);
++  return { ok: !!ok, errors: (validate.errors||[]).map(e=>`${e.instancePath||"/"} ${e.message||""}`) };
++}
+```
+
+---
+
+## 3) Execution engine helper
+
+```diff
+diff --git a/server/lib/engine/runSkill.ts b/server/lib/engine/runSkill.ts
+new file mode 100644
+--- /dev/null
++++ b/server/lib/engine/runSkill.ts
+@@
++import { db } from "@/drizzle/db";
++import { workOrderRun, opsEvent } from "@/drizzle/schema";
++import { compileSchema, validateWith } from "./jsonSchema";
++
++type RunArgs = {
++  woId: string;
++  agentName: string;
++  skill: {
++    handle: string;
++    promptSys: string;
++    promptUser: string;
++    inputSchema: any;
++    outputSchema: any;
++    toolsAllowed: string[];
++    capsRunsPerDay: number;
++    capsUsdPerDay: number;
++    playbookHandle?: string | null;
++  };
++  inputs: any;
++  context: { outputPath: string }; // e.g., /drafts/...
++};
++
++function expand(tpl: string, vars: Record<string,any>) {
++  return tpl.replace(/\{\{\s*([\w.]+)\s*\}\}/g, (_,key) => {
++    const parts = key.split("."); let v:any = vars;
++    for (const p of parts) v = v?.[p];
++    return (v===undefined || v===null) ? "" : String(v);
++  });
++}
++
++export async function runSkill(args: RunArgs) {
++  const { woId, agentName, skill, inputs, context } = args;
++  const started = Date.now();
++  // Validate inputs
++  const vIn = compileSchema(skill.inputSchema);
++  const inRes = validateWith(vIn, inputs);
++  if (!inRes.ok) {
++    const [run] = await db.insert(workOrderRun).values({
++      woId, agentName, status: "failed", ms: 0, cost: 0,
++      mirror: `Invalid inputs: ${inRes.errors.join("; ")}`
++    }).returning();
++    await db.insert(opsEvent).values({ kind: "ERROR", message: `WO_RUN input invalid ${woId}`, meta: { errors: inRes.errors }});
++    return { status: "failed", ms: 0, cost: 0, output_ref: null };
++  }
++
++  // Build prompts
++  const sys = expand(skill.promptSys, { inputs, context });
++  const usr = expand(skill.promptUser, { inputs, context });
++
++  // === EXECUTE ===
++  // TODO: Replace with your model/tooling execution. For now, we simulate a draft artifact.
++  const simulatedMs = Math.floor(500 + Math.random()*1500);
++  const simulatedCost = Number((0.002 + Math.random()*0.006).toFixed(3));
++  const outputRef = `${context.outputPath}/skill_${skill.handle}_${Date.now()}.txt`;
++  const outputJson = { summary: "Simulated result", inputs };
++
++  // Validate outputJson against outputSchema
++  const vOut = compileSchema(skill.outputSchema);
++  const outRes = validateWith(vOut, outputJson);
++  const status = outRes.ok ? "done" : "failed";
++
++  const finished = started + simulatedMs;
++  const [run] = await db.insert(workOrderRun).values({
++    woId, agentName, status, ms: simulatedMs, cost: simulatedCost,
++    mirror: `Drafts ready → ${context.outputPath}`,
++    outputRef, outputJson
++  }).returning();
++
++  await db.insert(opsEvent).values({
++    kind: "WO_RUN",
++    message: `WO ${woId} skill ${skill.handle} ${status}`,
++    meta: { outputRef, cost: simulatedCost, ms: simulatedMs }
++  });
++
++  return { status, ms: simulatedMs, cost: simulatedCost, output_ref: outputRef, output_json: outputJson };
++}
+```
+
+---
+
+## 4) API — Skills (create/list/get) + WO start (execute skill)
+
+```diff
+diff --git a/app/api/skills/route.ts b/app/api/skills/route.ts
+new file mode 100644
+--- /dev/null
++++ b/app/api/skills/route.ts
+@@
++import { NextRequest } from "next/server";
++import { db } from "@/drizzle/db";
++import { skillPack } from "@/drizzle/schema";
++import { json } from "@/lib/next/response";
++import { SkillPackBody } from "@/lib/validators/skills";
++import { like } from "drizzle-orm";
++
++export async function GET(req: NextRequest) {
++  const q = (req.nextUrl.searchParams.get("query") || "").trim();
++  const rows = q
++    ? await db.select().from(skillPack).where(like(skillPack.title, `%${q}%`))
++    : await db.select({ handle: skillPack.handle, title: skillPack.title }).from(skillPack).limit(100);
++  return json(rows, { status: 200, headers: { "X-Total-Count": String(rows.length) } });
++}
++
++export async function POST(req: NextRequest) {
++  const body = await req.json().catch(()=> ({}));
++  const parsed = SkillPackBody.safeParse(body);
++  if (!parsed.success) return json({ error: parsed.error.errors.map(e=>e.message).join("; ") }, 422);
++  const b = parsed.data;
++  const [row] = await db.insert(skillPack).values({
++    handle: b.handle, title: b.title, description: b.description || null,
++    promptSys: b.prompt_sys, promptUser: b.prompt_user,
++    inputSchema: b.input_schema, outputSchema: b.output_schema,
++    toolsAllowed: b.tools_allowed || [],
++    capsRunsPerDay: b.caps_runs_per_day ?? 100,
++    capsUsdPerDay: b.caps_usd_per_day ?? 2.0,
++    playbookHandle: b.playbook_handle || null
++  }).onConflictDoUpdate({
++    target: skillPack.handle,
++    set: {
++      title: b.title, description: b.description || null,
++      promptSys: b.prompt_sys, promptUser: b.prompt_user,
++      inputSchema: b.input_schema, outputSchema: b.output_schema,
++      toolsAllowed: b.tools_allowed || [],
++      capsRunsPerDay: b.caps_runs_per_day ?? 100,
++      capsUsdPerDay: b.caps_usd_per_day ?? 2.0,
++      playbookHandle: b.playbook_handle || null
++    }
++  }).returning();
++  return json(row, 201);
++}
+```
+
+```diff
+diff --git a/app/api/skills/[handle]/route.ts b/app/api/skills/[handle]/route.ts
+new file mode 100644
+--- /dev/null
++++ b/app/api/skills/[handle]/route.ts
+@@
++import { NextRequest } from "next/server";
++import { db } from "@/drizzle/db";
++import { skillPack } from "@/drizzle/schema";
++import { eq } from "drizzle-orm";
++import { json } from "@/lib/next/response";
++
++export async function GET(_req: NextRequest, ctx: { params: { handle: string } }) {
++  const rows = await db.select().from(skillPack).where(eq(skillPack.handle, ctx.params.handle));
++  if (!rows.length) return json({ error: "not found" }, 404);
++  return json(rows[0]);
++}
+```
+
+**Work Orders (create: accept `skill_handle` + `input_json`)**
+
+```diff
+diff --git a/app/api/work-orders/route.ts b/app/api/work-orders/route.ts
+--- a/app/api/work-orders/route.ts
++++ b/app/api/work-orders/route.ts
+@@
+ export async function POST(req: NextRequest) {
+   const body = await req.json().catch(()=> ({}));
+   const parsed = WorkOrderCreateBody.safeParse(body);
+   if (!parsed.success) {
+     const msg = parsed.error.errors.map(e=>e.message).join("; ");
+     return json({ error: msg }, 422);
+   }
+   const b = parsed.data;
+   const [row] = await db.insert(workOrder).values({
+     title: b.title, owner: b.owner, autonomy: b.autonomy ?? "L1",
+     inputs: b.inputs, output: b.output,
+     playbookHandle: (body?.playbook_handle ?? null),
++    skillHandle: (body?.skill_handle ?? null),
++    inputJson: (body?.input_json ?? null),
+     capsRunsPerDay: b.caps?.runsPerDay ?? 100,
+     capsUsdPerDay: b.caps?.usdPerDay ?? 2.0,
+     kpiSuccessMin: b.kpis?.successMin ?? 90,
+     kpiP95Max: b.kpis?.p95Max ?? 3.0,
+     playbook: (body?.playbook ?? b.playbook) ?? null, stop: b.stop, status: "draft",
+   }).returning();
+   return json(row, 201);
+ }
+```
+
+**Work Orders (start: if skill → runSkill)**
+
+```diff
+diff --git a/app/api/work-orders/[woId]/start/route.ts b/app/api/work-orders/[woId]/start/route.ts
+--- a/app/api/work-orders/[woId]/start/route.ts
++++ b/app/api/work-orders/[woId]/start/route.ts
+@@
+ import { db } from "@/drizzle/db";
+-import { workOrder, workOrderRun } from "@/drizzle/schema";
++import { workOrder, workOrderRun, skillPack } from "@/drizzle/schema";
+ import { and, eq, gte } from "drizzle-orm";
+ import { json } from "@/lib/next/response";
+ import { WorkOrderStartBody } from "@/lib/validators/workOrders";
++import { runSkill } from "@/server/lib/engine/runSkill";
+ 
+ export async function POST(req: NextRequest, ctx: { params: { woId: string } }) {
+   const body = await req.json().catch(()=> ({}));
+   const parsed = WorkOrderStartBody.safeParse(body);
+   if (!parsed.success) return json({ error: parsed.error.errors.map(e=>e.message).join("; ") }, 422);
+ 
+   const woId = ctx.params.woId;
+   const [wo] = await db.select().from(workOrder).where(eq(workOrder.id, woId));
+   if (!wo) return json({ error: "work order not found" }, 404);
+@@
+   if (runsToday >= wo.capsRunsPerDay) {
+     return new Response(JSON.stringify({ error: "runs/day cap reached" }), { status: 429, headers: { "Retry-After": "86400", "content-type":"application/json" }});
+   }
+   if (costToday >= Number(wo.capsUsdPerDay)) {
+     return new Response(JSON.stringify({ error: "budget cap reached" }), { status: 429, headers: { "Retry-After": "86400", "content-type":"application/json" }});
+   }
+ 
+-  // Simulate draft-only job
+-  const ms = Math.floor(400 + Math.random()*1600);
+-  const cost = Number((0.002 + Math.random()*0.004).toFixed(3));
+-  const [run] = await db.insert(workOrderRun).values({
+-    woId, agentName: parsed.data.agent, status: "done", ms, cost, mirror: `Drafts ready → ${wo.output}`
+-  }).returning();
+-
+-  return json({ agent: parsed.data.agent, wo_id: woId, status: run.status, ms: run.ms, cost: run.cost,
+-    started_at: run.startedAt, finished_at: run.finishedAt, mirror: run.mirror }, 201);
++  // If skill_handle is present, execute the skill via engine
++  if (wo.skillHandle) {
++    const [sp] = await db.select().from(skillPack).where(eq(skillPack.handle, wo.skillHandle));
++    if (!sp) return json({ error: "skill not found" }, 404);
++    const res = await runSkill({
++      woId,
++      agentName: parsed.data.agent,
++      skill: {
++        handle: sp.handle,
++        promptSys: sp.promptSys,
++        promptUser: sp.promptUser,
++        inputSchema: sp.inputSchema,
++        outputSchema: sp.outputSchema,
++        toolsAllowed: sp.toolsAllowed || [],
++        capsRunsPerDay: Number(sp.capsRunsPerDay || 100),
++        capsUsdPerDay: Number(sp.capsUsdPerDay || 2.0),
++        playbookHandle: sp.playbookHandle || null
++      },
++      inputs: wo.inputJson || {},
++      context: { outputPath: wo.output }
++    });
++    return json({
++      agent: parsed.data.agent, wo_id: woId, status: res.status, ms: res.ms, cost: res.cost,
++      mirror: `Drafts ready → ${wo.output}`, output_ref: res.output_ref, output_json: res.output_json
++    }, 201);
++  }
++
++  // Fallback: legacy draft-only job (no skill)
++  const ms = Math.floor(400 + Math.random()*1600);
++  const cost = Number((0.002 + Math.random()*0.004).toFixed(3));
++  const [run] = await db.insert(workOrderRun).values({
++    woId, agentName: parsed.data.agent, status: "done", ms, cost, mirror: `Drafts ready → ${wo.output}`
++  }).returning();
++  return json({ agent: parsed.data.agent, wo_id: woId, status: run.status, ms: run.ms, cost: run.cost,
++    started_at: run.startedAt, finished_at: run.finishedAt, mirror: run.mirror }, 201);
+ }
+```
+
+---
+
+## 5) UI — Skill select + inputs (JSON) on WO form
+
+```diff
+diff --git a/web/components/WorkOrderForm.tsx b/web/components/WorkOrderForm.tsx
+--- a/web/components/WorkOrderForm.tsx
++++ b/web/components/WorkOrderForm.tsx
+@@
+-  const [playbookHandle,setPlaybookHandle]=useState<string>("");
++  const [playbookHandle,setPlaybookHandle]=useState<string>("");
++  const [skillHandle,setSkillHandle]=useState<string>("");
++  const [skills,setSkills]=useState<Array<{handle:string; title:string}>>([]);
++  const [inputJson,setInputJson]=useState<string>("{\n  \n}");
+@@
+   useEffect(()=>{
+     let mounted = true;
+     (async ()=>{
+       try{
+         setLoadingPB(true);
+         const r = await fetch("/api/playbooks?query=");
+         const data = await r.json();
+         if(mounted) setPlaybooks(Array.isArray(data)? data : []);
+       } finally { setLoadingPB(false); }
+     })();
++    (async ()=>{
++      const r = await fetch("/api/skills?query=");
++      const data = await r.json();
++      if(mounted) setSkills(Array.isArray(data)? data : []);
++    })();
+     return ()=>{ mounted=false; };
+   },[]);
+@@
+   async function submit(){
+     setMsg("");
+-    const body:any = { title, owner, inputs, output };
++    const body:any = { title, owner, inputs, output };
+     if (playbookHandle) body.playbook_handle = playbookHandle; // bind by handle
++    if (skillHandle) body.skill_handle = skillHandle;
++    try {
++      if (inputJson && inputJson.trim().length) body.input_json = JSON.parse(inputJson);
++    } catch { setMsg("Invalid JSON in inputs"); return; }
+     const r = await fetch("/api/work-orders", {
+       method:"POST",
+       headers:{ "content-type":"application/json" },
+       body: JSON.stringify(body)
+     });
+     if(!r.ok){ setMsg("Create failed"); return; }
+     const data = await r.json();
+     onCreated?.(data);
+     setMsg("Created ✔");
+   }
+@@
+-          <label className="text-sm block">Playbook</label>
++          <label className="text-sm block">Playbook</label>
+           <select
+             className="border rounded px-2 py-1 w-full"
+             value={playbookHandle}
+             onChange={(e)=>setPlaybookHandle(e.target.value)}
+           >
+             <option value="">{loadingPB ? "Loading..." : "— Select a playbook (optional) —"}</option>
+             {playbooks.map(pb=>(
+               <option key={pb.handle} value={pb.handle}>{pb.title} — {pb.handle}</option>
+             ))}
+           </select>
++          <label className="text-sm block mt-3">Skill (enables execution)</label>
++          <select
++            className="border rounded px-2 py-1 w-full"
++            value={skillHandle}
++            onChange={(e)=>setSkillHandle(e.target.value)}
++          >
++            <option value="">— Select a skill (optional) —</option>
++            {skills.map(s=>(
++              <option key={s.handle} value={s.handle}>{s.title} — {s.handle}</option>
++            ))}
++          </select>
++          <label className="text-sm block mt-3">Skill Inputs (JSON)</label>
++          <textarea className="border rounded px-2 py-1 w-full" rows={6} value={inputJson} onChange={e=>setInputJson(e.target.value)} />
+           <div className="text-xs text-gray-600">
+             Tip: manage playbooks at <a className="underline" href="/playbooks" target="_blank" rel="noreferrer">/playbooks</a>.
+           </div>
+```
+
+---
+
+## 6) Quick smoke checklist
+
+* Create a Skill Pack:
+
+```bash
+curl -XPOST /api/skills -H "content-type: application/json" -d '{
+  "handle":"router_triage_v1",
+  "title":"Support Router Triage",
+  "description":"Classify ticket and draft reply",
+  "prompt_sys":"You are a helpful agent. Inputs: {{inputs}}",
+  "prompt_user":"Please triage the ticket: {{inputs.ticket_text}}",
+  "input_schema":{"type":"object","properties":{"ticket_text":{"type":"string"}},"required":["ticket_text"]},
+  "output_schema":{"type":"object","properties":{"summary":{"type":"string"}},"required":["summary"]},
+  "tools_allowed":["knowledge:read","drafts:write"],
+  "caps_runs_per_day":50,
+  "caps_usd_per_day":1.0
+}'
+```
+
+* Create a WO with skill + inputs:
+
+```bash
+curl -XPOST /api/work-orders -H "content-type: application/json" -d '{
+  "title":"Router L1 Wk1",
+  "owner":"Lume",
+  "inputs":"/inbox/support/*",
+  "output":"/drafts/support/replies/2025-11-06/",
+  "skill_handle":"router_triage_v1",
+  "input_json":{"ticket_text":"My shipment is delayed—please help!"}
+}'
+```
+
+* Start the WO (executes skill):
+
+```bash
+curl -XPOST /api/work-orders/<WO_ID>/start -H "content-type: application/json" -d '{"agent":"Support L1 — Router"}'
+```
+
+→ expect `201` with `{ status:"done", ms, cost, mirror, output_ref, output_json }`
+and an `ops_event(kind:"WO_RUN")` row.
+
+---
+
+## Definition of Done (Task 8)
+
+* ✅ Skill Packs can be created/updated/listed/fetched.
+* ✅ Work Orders accept `skill_handle` + `input_json`.
+* ✅ Starting a WO with a skill **executes** via `runSkill` (validates inputs/outputs, respects caps, logs `WO_RUN`).
+* ✅ UI lets operators pick a Skill and provide inputs (JSON).
+
+If you want, I can follow up with a **generated form** for inputs (auto-build from JSON Schema instead of raw JSON) and a **real LLM call** pluggable point in `runSkill` (OpenAI/Vertex) — just say the word and I’ll drop the patches.
