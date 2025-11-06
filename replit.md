@@ -36,8 +36,10 @@ The platform is structured into core modules and features:
 - **Roles ⇄ Agent Specs Sync**: Synchronizes Agent Specifications from Role Cards with two-way diff views and smart suggestions.
 - **DTH Copilot**: AI-powered assistant using OpenAI tool-calling with dual-mode architecture (direct tool calling for instant responses + chat-based for Custom GPT). Features quick action buttons, paginated table views with formatted KPIs, and the **Findings at a Glance** analytics card that automatically calculates risk distribution (low/medium/high), identifies top at-risk agents, and suggests actionable next steps.
 - **Universal Search**: Cmd+K powered search modal that searches across brands, products, projects, agents, and pods with relevance-based sorting, keyboard navigation, and paginated results. Features visible search button in header and comprehensive API with X-Total-Count headers for accurate pagination.
-- **Breadcrumb Navigation**: Auto-generating breadcrumb component displays contextual hierarchy (i³ → BU → Brand → Product → Project → Task) across major pages including Control Tower, Projects, Roles, Academy, Copilot, Work Orders, and Business Unit home pages.
-- **Operations Events Logging**: Fire-and-forget telemetry system tracks user interactions across the platform (BU views, knowledge actions, etc.) with automatic actor inference, request correlation IDs, and metadata enrichment for analytics and audit trails.
+- **Breadcrumb Navigation**: Auto-generating breadcrumb component displays contextual hierarchy (i³ → BU → Brand → Product → Project → Task) across major pages including Control Tower, Projects, Roles, Academy, Copilot, Work Orders, Business Unit home pages, and Operations Logs.
+- **Operations Events Logging**: Fire-and-forget telemetry system tracks user interactions across the platform (BU views, knowledge actions, PUBLISH events, etc.) with automatic actor inference, request correlation IDs, and metadata enrichment for analytics and audit trails.
+- **Operations Logs Admin Page**: Full-featured admin interface for viewing and filtering operational events with real-time updates, CSV export, auto-refresh (5s interval), and comprehensive filtering by event kind, owner type, and owner ID. Accessible via `/ops-logs` in the Support navigation section.
+- **Knowledge Publishing System**: File publishing API with database-level idempotency protection. Uses PostgreSQL partial unique index on `(kind, owner_type, owner_id, meta->>'fileId')` to prevent duplicate PUBLISH events. Gracefully handles duplicate submissions with `alreadyPublished` flag without creating duplicate database records.
 
 ### Technology Stack
 - **Frontend**: React 18, TypeScript, Wouter, TanStack Query v5, React Hook Form, Zod, Shadcn UI, Tailwind CSS.
@@ -89,6 +91,21 @@ Dream Team Hub exposes a RESTful API with dual authentication support:
   - Searches across brands, products, projects, agents, and pods
   - Returns relevance-sorted results with X-Total-Count header for pagination
   - Response includes type, id, title, subtitle, url, and context for each result
+
+### Operations Events API (Session Auth)
+- `GET /api/ops/events` - Retrieve operational events with filtering and pagination
+  - Query parameters: `kind`, `owner_type`, `owner_id`, `from`, `to`, `limit` (default: 100), `offset` (default: 0)
+  - Returns events array with X-Total-Count header for pagination
+- `POST /api/ops/events` - Create a new operational event (fire-and-forget telemetry)
+
+### Knowledge/Publishing API (Session Auth)
+- `POST /api/knowledge/publish` - Publish a file with idempotency protection
+  - Request body: `fileId`, `fileName`, `fileUrl`, `ownerType`, `ownerId`, `meta` (optional)
+  - Returns: `{success: true, alreadyPublished: boolean, eventId: number, message: string}`
+  - Idempotency: Duplicate fileId submissions return success without creating duplicate events
+- `GET /api/knowledge/published` - Retrieve published files
+  - Query parameters: `owner_type` (optional), `owner_id` (optional)
+  - Returns array of published file records with metadata
 
 ### Authentication Methods
 1. **Session Auth**: Replit Auth login (for web UI)
