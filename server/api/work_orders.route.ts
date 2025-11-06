@@ -53,9 +53,9 @@ export async function startWorkOrderRun(req: Request, res: Response) {
   const [wo] = await db.select().from(workOrders).where(eq(workOrders.id, woId));
   if (!wo) return res.status(404).json({ error: "work order not found" });
 
-  // Budget enforcement (today)
+  // Budget enforcement (today, UTC)
   const startOfDay = new Date();
-  startOfDay.setHours(0, 0, 0, 0);
+  startOfDay.setUTCHours(0, 0, 0, 0);
   const runs = await db.select().from(workOrderRuns)
     .where(and(eq(workOrderRuns.woId, woId), gte(workOrderRuns.startedAt, startOfDay)));
   const runsToday = runs.length;

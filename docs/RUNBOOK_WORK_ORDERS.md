@@ -46,9 +46,9 @@ Each work order has two caps stored in database:
 **Enforcement Window:** Calendar day (midnight to midnight UTC)
 
 **How it works:**
-- Code checks: `startOfDay.setHours(0, 0, 0, 0)` (line 57-58)
-- Counts all runs with `started_at >= midnight today`
-- Resets automatically at midnight UTC
+- Code explicitly uses UTC: `startOfDay.setUTCHours(0, 0, 0, 0)` (line 61)
+- Counts all runs with `started_at >= midnight today UTC`
+- Resets automatically at midnight UTC regardless of server timezone
 
 **Example:**
 - Caps: 100 runs/day, $5.00/day
