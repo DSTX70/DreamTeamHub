@@ -4,6 +4,7 @@ import { db } from "../db";
 import { knowledgeLinks, opsEvent } from "@shared/schema";
 import { eq, and } from "drizzle-orm";
 import { getDriveClient } from "../integrations/googleDrive_real";
+import { SearchQuery, DraftUploadBody, PublishBody } from "../../lib/validators/knowledge";
 
 function required(v: any, msg: string) {
   if (!v) throw Object.assign(new Error(msg), { status: 400 });
@@ -22,12 +23,17 @@ export async function searchKnowledge(req: Request, res: Response) {
   try {
     const owner = String(req.params.owner).toUpperCase();
     const id = String(req.params.id);
-    const q = String(req.query.q || "");
-    required(q && q.length >= 2, "q required (min 2 chars)");
+    
+    const parsed = SearchQuery.safeParse({ q: req.query.q, limit: req.query.limit });
+    if (!parsed.success) {
+      const msg = parsed.error.errors.map(e => e.message).join("; ");
+      return res.status(422).json({ error: msg });
+    }
+    
     const { read } = await resolveFolders(owner, id);
     required(read, "KB read folder not linked");
     const drive = getDriveClient();
-    const out = await drive.search(read!, q, Number(req.query.limit ?? 20));
+    const out = await drive.search(read!, parsed.data.q || "", parsed.data.limit ?? 20);
     return res.json(out);
   } catch (e: any) {
     return res.status(e.status || 500).json({ error: e.message || "search failed" });
@@ -38,15 +44,18 @@ export async function uploadDraft(req: Request, res: Response) {
   try {
     const owner = String(req.params.owner).toUpperCase();
     const id = String(req.params.id);
+    
+    const parsed = DraftUploadBody.safeParse(req.body);
+    if (!parsed.success) {
+      const msg = parsed.error.errors.map(e => e.message).join("; ");
+      return res.status(422).json({ error: msg });
+    }
+    
     const { draft } = await resolveFolders(owner, id);
     required(draft, "Drafts folder not linked");
     const drive = getDriveClient();
 
-    // Accept simple text body for stub; replace with multipart parser for files
-    const text = (req.body && typeof req.body === "object" && "text" in req.body) ? (req.body as any).text : "# draft";
-    const name = (req.body && typeof req.body === "object" && "fileName" in req.body) ? (req.body as any).fileName : `draft-${Date.now()}.md`;
-
-    const file = await drive.upload(draft!, { text, fileName: name, mimeType: "text/markdown" });
+    const file = await drive.upload(draft!, { text: parsed.data.content, fileName: parsed.data.fileName, mimeType: "text/markdown" });
     return res.status(201).json({ ok: true, file });
   } catch (e: any) {
     return res.status(e.status || 500).json({ error: e.message || "upload failed" });
