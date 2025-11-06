@@ -10,13 +10,13 @@ export type DriveFile = {
   parents?: string[];
 };
 
-export type DriveSearchResult = { items: DriveFile[] };
+export type DriveSearchResult = { items: DriveFile[]; nextPageToken?: string | null };
 export type UploadInput =
   | { buffer: ArrayBuffer | Buffer; fileName: string; mimeType?: string }
   | { text: string; fileName: string; mimeType?: string };
 
 export interface GoogleDriveClient {
-  search(folderId: string, q: string, limit?: number): Promise<DriveSearchResult>;
+  search(folderId: string, q: string, limit?: number, pageToken?: string | null): Promise<DriveSearchResult>;
   upload(folderId: string, file: UploadInput): Promise<DriveFile>;
   copyOrMove(fileId: string, targetFolderId: string, mode?: "copy" | "move"): Promise<DriveFile>;
 }
@@ -40,10 +40,15 @@ export class RealDriveClient implements GoogleDriveClient {
     this.drive = google.drive({ version: "v3", auth });
   }
 
-  async search(folderId: string, q: string, limit = 20): Promise<DriveSearchResult> {
+  async search(folderId: string, q: string, limit = 20, pageToken?: string | null): Promise<DriveSearchResult> {
     const query = `name contains '${q.replace(/'/g, "\\'")}' and '${folderId}' in parents and trashed = false`;
-    const r = await this.drive.files.list({ q: query, pageSize: limit, fields: "files(id,name,mimeType,webViewLink,createdTime,modifiedTime,parents)" });
-    return { items: (r.data.files || []) as DriveFile[] };
+    const r = await this.drive.files.list({
+      q: query,
+      pageSize: limit,
+      pageToken: pageToken || undefined,
+      fields: "files(id,name,mimeType,webViewLink,createdTime,modifiedTime,parents),nextPageToken"
+    });
+    return { items: (r.data.files || []) as DriveFile[], nextPageToken: r.data.nextPageToken ?? null };
   }
 
   async upload(folderId: string, file: UploadInput): Promise<DriveFile> {

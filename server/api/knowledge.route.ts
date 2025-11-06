@@ -6,6 +6,7 @@ import { eq, and } from "drizzle-orm";
 import { getDriveClient } from "../integrations/googleDrive_real";
 import { SearchQuery, DraftUploadBody } from "../../lib/validators/knowledge";
 import { PublishHeaders, PublishBody } from "../../lib/validators/publish";
+import { sanitizeFilename } from "../lib/utils/sanitizeFilename";
 
 function required(v: any, msg: string) {
   if (!v) throw Object.assign(new Error(msg), { status: 400 });
@@ -34,8 +35,10 @@ export async function searchKnowledge(req: Request, res: Response) {
     const { q, limit } = parsed.data;
     const { read } = await resolveFolders(owner, id);
     required(read, "KB read folder not linked");
-    const drive = getDriveClient();
-    const out = await drive.search(read!, q, limit ?? 20);
+    const pageToken = String(req.query.pageToken || "") || null;
+    const out = await getDriveClient().search(read!, q, limit ?? 20, pageToken);
+    res.setHeader("X-Total-Count", String(out.items.length)); // page count (Drive doesn't expose grand total)
+    if (out.nextPageToken) res.setHeader("X-Next-Page-Token", out.nextPageToken);
     return res.json(out);
   } catch (e: any) {
     return res.status(e.status || 500).json({ error: e.message || "search failed" });
@@ -53,7 +56,8 @@ export async function uploadDraft(req: Request, res: Response) {
       return res.status(422).json({ error: msg });
     }
     
-    const { text, fileName, mimeType } = parsed.data;
+    const { text, mimeType } = parsed.data;
+    const fileName = sanitizeFilename(parsed.data.fileName);
     const { draft } = await resolveFolders(owner, id);
     required(draft, "Drafts folder not linked");
     const drive = getDriveClient();

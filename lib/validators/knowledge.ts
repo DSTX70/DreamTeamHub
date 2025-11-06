@@ -12,10 +12,7 @@ export type SearchQuery = z.infer<typeof SearchQuery>;
 
 export const DraftUploadBody = z.object({
   text: z.string().min(1, "text required"),
-  fileName: z.string()
-    .min(1)
-    .max(255)
-    .regex(/^[^\/\\:*?"<>|]+$/, "invalid filename"),
+  fileName: z.string().min(1).max(255), // allow anything; we sanitize in route
   mimeType: z.string().min(3).max(255).optional(),
 });
 
