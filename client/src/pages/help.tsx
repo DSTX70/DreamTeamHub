@@ -15,7 +15,7 @@ export default function HelpPage() {
       </div>
 
       <Tabs defaultValue="overview" className="space-y-6">
-        <div className="sticky top-0 bg-background z-50 pb-4">
+        <div className="sticky top-0 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 z-50 pb-4 pt-2 -mt-2 border-b mb-6">
           <TabsList className="grid w-full grid-cols-5 lg:w-auto lg:inline-grid bg-muted">
             <TabsTrigger value="overview" data-testid="tab-overview">Overview</TabsTrigger>
             <TabsTrigger value="features" data-testid="tab-features">Features</TabsTrigger>
@@ -168,6 +168,81 @@ export default function HelpPage() {
                 "Workload balancing visibility"
               ]}
               bestFor="Managing support requests, feature requests, internal service requests, and fair work distribution."
+            />
+
+            <FeatureCard
+              icon={<Zap className="h-5 w-5" />}
+              title="Universal Search (Cmd+K)"
+              description="Lightning-fast search across your entire organization."
+              features={[
+                "Search brands, products, projects, agents, and pods",
+                "Two-zone keyboard navigation (Quick Actions + Results)",
+                "Recent searches memory (last 8 searches)",
+                "Infinite scroll pagination for large result sets",
+                "Quick action shortcuts for common tasks",
+                "Relevance-based sorting"
+              ]}
+              bestFor="Finding anything quickly, navigating between features, accessing common actions, and discovering content across your organization."
+            />
+
+            <FeatureCard
+              icon={<Rocket className="h-5 w-5" />}
+              title="Work Orders & Playbooks"
+              description="Automated task execution with reusable templates."
+              features={[
+                "Budget caps enforcement (runs/day and $/day limits)",
+                "Reusable playbooks (handle-based references)",
+                "Database-backed execution tracking",
+                "Rate limiting with 429 status codes",
+                "Complete audit trail via operations events",
+                "Integration with AI agents for execution"
+              ]}
+              bestFor="Automating repetitive tasks, standardizing operational procedures, managing budget constraints, and tracking execution history."
+            />
+
+            <FeatureCard
+              icon={<Target className="h-5 w-5" />}
+              title="Coverage Analytics"
+              description="Role staffing analysis and agent distribution insights."
+              features={[
+                "Unstaffed roles detection (no agents assigned)",
+                "Over-replication analysis (configurable thresholds)",
+                "Complete coverage table with agent counts",
+                "Dynamic threshold adjustment",
+                "Role drill-through for detailed agent lists",
+                "Real-time staffing metrics"
+              ]}
+              bestFor="Workforce planning, identifying gaps in coverage, balancing agent distribution, and ensuring all roles are adequately staffed."
+            />
+
+            <FeatureCard
+              icon={<BookOpen className="h-5 w-5" />}
+              title="Business Unit Analytics"
+              description="Real-time operational metrics with visual trends."
+              features={[
+                "24-hour hourly sparkline charts",
+                "Track publishes, draft uploads, and work order runs",
+                "Interactive tooltips with exact counts and timestamps",
+                "Brand portfolios and agent rosters",
+                "Knowledge links with Google Drive integration",
+                "Recent activity feeds"
+              ]}
+              bestFor="Monitoring operational health, identifying trends, tracking team productivity, and making data-driven decisions."
+            />
+
+            <FeatureCard
+              icon={<Users className="h-5 w-5" />}
+              title="Onboarding Wizard"
+              description="Streamlined brand and product creation workflow."
+              features={[
+                "Multi-step wizard for brand creation",
+                "Google Drive folder link integration",
+                "Optional product creation with Drive setup",
+                "URL format validation",
+                "Complete brand/product hierarchy in one workflow",
+                "Direct links to created entities"
+              ]}
+              bestFor="Onboarding new brands, setting up product portfolios, integrating with Google Drive, and ensuring consistent setup processes."
             />
           </div>
         </TabsContent>
