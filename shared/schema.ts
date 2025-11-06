@@ -889,6 +889,18 @@ export type AgentGolden = typeof agentGoldens.$inferSelect;
 // WORK ORDERS
 // ===========================
 
+export const playbooks = pgTable("playbooks", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  handle: text("handle").notNull().unique(),
+  title: text("title").notNull(),
+  bodyMd: text("body_md").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const insertPlaybookSchema = createInsertSchema(playbooks).omit({ id: true, createdAt: true });
+export type InsertPlaybook = z.infer<typeof insertPlaybookSchema>;
+export type Playbook = typeof playbooks.$inferSelect;
+
 export const workOrders = pgTable("work_orders", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   title: text("title").notNull(),
@@ -896,6 +908,7 @@ export const workOrders = pgTable("work_orders", {
   autonomy: text("autonomy").notNull(), // L0, L1, L2, L3
   inputs: text("inputs").notNull(), // input paths or query
   output: text("output").notNull(), // output folder path
+  playbookHandle: text("playbook_handle"), // Optional reference to playbooks table
   caps: jsonb("caps").$type<{ runsPerDay: number; usdPerDay: number }>().notNull(),
   kpis: jsonb("kpis").$type<{ successMin: number; p95Max: number }>().notNull(),
   playbook: text("playbook").notNull(),

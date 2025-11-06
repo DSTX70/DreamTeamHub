@@ -9,6 +9,9 @@ import { get24hMetrics, getAlertStatus, getEventTimeline } from "./api/ops_metri
 import { publishFile, getPublishedFiles, searchKnowledge, uploadDraft } from "./api/knowledge.route";
 import { listWorkOrders, createWorkOrder, startWorkOrderRun } from "./api/work_orders.route";
 import { promoteAgent } from "./api/agents_promote.route";
+import { createBrand, createProduct } from "./api/onboarding.route";
+import { getRoleCoverage, getAgentsByRole } from "./api/coverage.route";
+import { listPlaybooks, createOrUpdatePlaybook, getPlaybookByHandle } from "./api/playbooks.route";
 import { 
   insertPodSchema, insertPodAgentSchema, insertAgentSchema, insertPersonSchema, insertRoleCardSchema, insertRoleRaciSchema, insertAgentSpecSchema,
   insertWorkItemSchema, insertDecisionSchema, insertIdeaSparkSchema, insertBrainstormSessionSchema,
@@ -135,6 +138,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/work-orders", isAuthenticated, listWorkOrders);
   app.post("/api/work-orders", isAuthenticated, createWorkOrder);
   app.post("/api/work-orders/:woId/start", isAuthenticated, startWorkOrderRun);
+
+  // ===========================
+  // PHASE-2 FEATURES: ONBOARDING, COVERAGE, PLAYBOOKS
+  // ===========================
+  
+  // Onboarding wizard (Brand/Product + Drive links)
+  app.post("/api/onboarding/brand", isAuthenticated, createBrand);
+  app.post("/api/onboarding/product", isAuthenticated, createProduct);
+  
+  // Coverage views (Agent↔Role linkage, unstaffed/over-replicated)
+  app.get("/api/coverage/roles", isAuthenticated, getRoleCoverage);
+  app.get("/api/coverage/agents", isAuthenticated, getAgentsByRole);
+  
+  // Playbooks registry (ID-based; Work Orders reference by handle)
+  app.get("/api/playbooks", isAuthenticated, listPlaybooks);
+  app.post("/api/playbooks", isAuthenticated, createOrUpdatePlaybook);
+  app.get("/api/playbooks/:handle", isAuthenticated, getPlaybookByHandle);
 
   // ===========================
   // CONTROL TOWER

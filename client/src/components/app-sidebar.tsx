@@ -1,4 +1,4 @@
-import { Home, Users, Lightbulb, Shield, FileText, Inbox, Sparkles, Layers, MessageSquare, Bot, Radio, Settings, RefreshCw, Palette, HelpCircle, FolderKanban, Presentation, GraduationCap, Cpu, Plug, ClipboardList, Building2, FileBarChart, Activity } from "lucide-react";
+import { Home, Users, Lightbulb, Shield, FileText, Inbox, Sparkles, Layers, MessageSquare, Bot, Radio, Settings, RefreshCw, Palette, HelpCircle, FolderKanban, Presentation, GraduationCap, Cpu, Plug, ClipboardList, Building2, FileBarChart, Activity, BookOpen } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import {
   Sidebar,
@@ -32,6 +32,8 @@ const navigation = [
     items: [
       { title: "Intake & Routing", url: "/intake", icon: Inbox },
       { title: "Work Orders (Drafts)", url: "/work-orders", icon: ClipboardList },
+      { title: "Playbooks Registry", url: "/playbooks", icon: BookOpen },
+      { title: "Coverage", url: "/coverage", icon: Users },
       { title: "Decision Log", url: "/decisions", icon: FileText },
     ],
   },

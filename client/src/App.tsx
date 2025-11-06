@@ -34,6 +34,9 @@ import WorkOrdersPage from "@/pages/work-orders";
 import BUHomePage from "@/pages/bu-home";
 import OpsLogsPage from "@/pages/ops-logs";
 import OpsDashboardPage from "@/pages/ops-dashboard";
+import CoveragePage from "@/pages/coverage";
+import PlaybooksPage from "@/pages/playbooks";
+import PlaybooksEditPage from "@/pages/playbooks-edit";
 import { Button } from "@/components/ui/button";
 import { LogOut, User as UserIcon, Search } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -69,6 +72,9 @@ function AuthenticatedRoutes() {
       <Route path="/work-orders" component={WorkOrdersPage} />
       <Route path="/ops-dashboard" component={OpsDashboardPage} />
       <Route path="/ops-logs" component={OpsLogsPage} />
+      <Route path="/coverage" component={CoveragePage} />
+      <Route path="/playbooks" component={PlaybooksPage} />
+      <Route path="/playbooks/:handle" component={PlaybooksEditPage} />
       <Route path="/bu/:slug" component={BUHomePage} />
       <Route path="/help" component={HelpPage} />
       <Route path="/demo" component={Demo} />
