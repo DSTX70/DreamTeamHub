@@ -1,0 +1,91 @@
+Here’s a clean, branch-ready drop for the next five features plus the quick follow-ups.
+
+Download: priority_feature_bundle.zip
+
+What you got (by branch)
+
+1) feature/saved-addresses
+
+Server: server/routes/address.route.ts (CRUD + seed)
+
+Client: client/src/pages/account/Addresses.tsx (list/add/edit + set default)
+
+Shared: shared/schema.ts (Address)
+
+Tests: tests/saved_addresses.test.ts (seed, list, default uniqueness)
+
+2) feature/delivery-estimator
+
+Server: server/routes/estimator.route.ts (ETA stub: days + ISO date + confidence)
+
+Client: client/src/pages/orders/Order.tsx (shows ETA)
+
+Gate: ETA visible on order page; ready to inject into tx-emails
+
+3) feature/low-stock-alerts
+
+Server:
+
+server/routes/low_stock.route.ts (set inventory, CSV of low items; decrement hook export)
+
+server/jobs/nightly_low_stock.job.ts (fetch CSV nightly → fan-out to /api/ops/alert)
+
+Shared: shared/schema.ts (ProductInventory)
+
+Gate: CSV shows items at/below threshold; alert posted
+
+4) feature/responsive-images
+
+Server: server/routes/img.route.ts (/img transformer stub; redirect + cache headers, TODO: plug sharp)
+
+Shared: shared/img/helpers.ts (buildSrcSet, sizesForProductCard)
+
+Client: client/src/components/ProductImage.tsx (swap-in pattern)
+
+Gate: ready to clear Lighthouse img warnings once sharp is wired
+
+5) feature/affiliates (MVP)
+
+Server: server/routes/affiliate.route.ts
+
+POST /api/affiliates/code (create code)
+
+GET /r/:code (drops cookie)
+
+POST /api/affiliates/attribute (cookie/referrer → order attribution)
+
+GET /api/affiliates/report.csv (payout report)
+
+Shared: shared/schema.ts (AffiliateCode, OrderAttribution)
+
+Client: client/src/pages/ops/AffiliatesReport.tsx (CSV link)
+
+Gate: E2E tracked + CSV; simple ip/email hash for fraud-guard
+
+Quick follow-ups included
+
+LLM expectJson: server/routes/llm_infer.expectJson.patch.ts uses shared/utils/json.extractJson() and returns 422 on invalid JSON.
+
+Prompt-Linter UI: client/src/pages/llm/PromptLinter.tsx + server route server/routes/prompt_lint.route.ts.
+
+Onboarding deep-link note: NOTES/onboarding_success_deeplink.txt (use /brands/${brandId}).
+
+Snapshot tests: tests/ui_snapshots.test.tsx for Breadcrumbs/LeftRail.
+
+Wire-up notes
+
+Mount routes (e.g., in your server bootstrap):
+
+app.use(require("./server/routes/address.route").router);
+app.use(require("./server/routes/estimator.route").router);
+app.use(require("./server/routes/low_stock.route").router);
+app.use(require("./server/routes/img.route").router);
+app.use(require("./server/routes/affiliate.route").router);
+app.use(require("./server/routes/prompt_lint.route").router);
+
+
+Client router: add paths for /account/addresses, /orders/:id, /ops/affiliates, /llm/prompt-linter.
+
+Cron: call runNightlyLowStockCheck() from your scheduler.
+
+Images: once you add sharp, replace the /img stub to actually resize/convert (keep the same query API).
