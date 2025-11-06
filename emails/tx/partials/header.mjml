@@ -1,0 +1,5 @@
+<mj-section background-color="#f4f4f4" padding="20px">
+  <mj-column>
+    <mj-image src="{{{brandHeaderUrl}}}" alt="{{brandName}}" width="200px" padding="0" />
+  </mj-column>
+</mj-section>

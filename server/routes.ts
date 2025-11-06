@@ -2135,6 +2135,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Image Transformation - Responsive image resizing and format conversion (public)
+  const imgRoute = await import("./routes/img.route");
+  app.use(imgRoute.router);
+
   // Copilot - AI assistant for querying DTH API (requires authentication)
   const copilot = await import("./copilot");
   app.use("/copilot", isAuthenticated, copilot.default);

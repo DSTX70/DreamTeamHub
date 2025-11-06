@@ -1,0 +1,85 @@
+What’s inside
+1) /img transformer wired with sharp
+
+server/routes/img.route.ts — real resize + format conversion (webp|avif|jpeg|png) and long-cache headers. Secured to /public root by default.
+
+Usage: /img?src=/static/products/p1.jpg&w=640&fmt=webp
+
+Install: npm i sharp
+
+2) Transactional emails with ETA placeholders
+
+server/lib/mailer.ts — renderTxEmail(mjml, vars) helper (MJML→HTML).
+Install: npm i mjml nodemailer
+
+emails/tx/partials/header.mjml — OG-style header block
+
+emails/tx/partials/line_item.mjml — thumbnail + qty + price
+
+emails/tx/order_shipped.mjml — includes {{etaDate}}, {{orderId}}, {{orderLink}}
+
+emails/tx/order_update.mjml — includes {{etaDate}}, {{statusCopy}}
+
+Pattern: fetch ETA from /api/estimator/eta at ship/update time, format date, inject into renderTxEmail.
+
+3) Affiliate cookie middleware for checkout flow
+
+server/middleware/affiliateCookie.ts
+
+captureAffiliateFromQuery — sets aff_code cookie from ?aff=PRISM10
+
+resolveAffiliateCode(req) — reads cookie or explicit affCode
+
+server/routes/checkout.example.ts — sample checkout complete handler that resolves the affiliate code and returns it (or forward to your existing /api/affiliates/attribute).
+
+Wire-up snippets
+
+Server bootstrap
+
+import cookieParser from "cookie-parser";
+import { captureAffiliateFromQuery } from "./server/middleware/affiliateCookie";
+
+app.use(cookieParser());
+app.use(captureAffiliateFromQuery);
+
+app.use(require("./server/routes/img.route").router);
+app.use(require("./server/routes/checkout.example").router);
+// (Your existing mounts continue here…)
+
+
+Ship/update email with ETA
+
+import { renderTxEmail } from "./server/lib/mailer";
+import fs from "fs";
+
+const shippedMjml = fs.readFileSync("./emails/tx/order_shipped.mjml", "utf-8");
+const eta = await (await fetch(baseUrl + "/api/estimator/eta", {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({ postalFrom, postalTo, shipSpeed })
+})).json();
+
+const html = renderTxEmail(shippedMjml, {
+  orderId,
+  etaDate: new Date(eta.etaDate).toLocaleDateString(),
+  orderLink: `${appUrl}/orders/${orderId}`,
+  brandHeaderUrl,
+  brandName
+});
+
+// send with your transporter
+
+
+Responsive image swap (product grid)
+
+<img
+  src={`/img?src=${encodeURIComponent(src)}&w=640&fmt=webp`}
+  srcSet={[
+    `/img?src=${encodeURIComponent(src)}&w=320&fmt=webp 320w`,
+    `/img?src=${encodeURIComponent(src)}&w=640&fmt=webp 640w`,
+    `/img?src=${encodeURIComponent(src)}&w=960&fmt=webp 960w`,
+    `/img?src=${encodeURIComponent(src)}&w=1280&fmt=webp 1280w`
+  ].join(", ")}
+  sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 400px"
+  alt={alt}
+/>

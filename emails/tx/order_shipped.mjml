@@ -1,0 +1,59 @@
+<mjml>
+  <mj-head>
+    <mj-title>Your Order Has Shipped</mj-title>
+    <mj-preview>Track your order #{{orderId}}</mj-preview>
+    <mj-attributes>
+      <mj-all font-family="Arial, sans-serif" />
+      <mj-text font-size="14px" color="#333333" line-height="1.6" />
+    </mj-attributes>
+  </mj-head>
+  <mj-body background-color="#e0e0e0">
+    {{> header}}
+    
+    <mj-section background-color="#ffffff" padding="40px 20px">
+      <mj-column>
+        <mj-text font-size="24px" font-weight="bold" color="#2c3e50" align="center">
+          Your Order Has Shipped! 📦
+        </mj-text>
+        
+        <mj-text font-size="16px" color="#666666" align="center" padding-top="10px">
+          Order #{{orderId}}
+        </mj-text>
+        
+        <mj-divider border-color="#e0e0e0" border-width="1px" padding="20px 0" />
+        
+        <mj-text font-size="16px" color="#333333">
+          Great news! Your order is on its way.
+        </mj-text>
+        
+        <mj-text font-size="14px" color="#666666" padding-top="10px">
+          <strong>Estimated Delivery:</strong> {{etaDate}}
+        </mj-text>
+        
+        <mj-button background-color="#3498db" color="#ffffff" href="{{{orderLink}}}" padding-top="20px">
+          Track Your Order
+        </mj-button>
+      </mj-column>
+    </mj-section>
+    
+    <mj-section background-color="#ffffff" padding="20px">
+      <mj-column>
+        <mj-text font-size="18px" font-weight="bold" color="#2c3e50">
+          Order Details
+        </mj-text>
+      </mj-column>
+    </mj-section>
+    
+    {{#each lineItems}}
+    {{> line_item}}
+    {{/each}}
+    
+    <mj-section background-color="#f4f4f4" padding="20px">
+      <mj-column>
+        <mj-text font-size="12px" color="#999999" align="center">
+          © {{brandName}}. All rights reserved.
+        </mj-text>
+      </mj-column>
+    </mj-section>
+  </mj-body>
+</mjml>

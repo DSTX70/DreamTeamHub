@@ -1,0 +1,20 @@
+<mj-section padding="10px 0">
+  <mj-column width="20%">
+    <mj:image src="{{{thumbUrl}}}" alt="Product" width="80px" />
+  </mj-column>
+  <mj-column width="50%">
+    <mj-text font-size="14px" color="#333333">
+      {{title}}
+    </mj-text>
+  </mj-column>
+  <mj-column width="15%">
+    <mj-text font-size="14px" color="#666666" align="center">
+      Qty: {{qty}}
+    </mj-text>
+  </mj-column>
+  <mj-column width="15%">
+    <mj-text font-size="14px" color="#333333" align="right" font-weight="bold">
+      {{price}}
+    </mj-text>
+  </mj-column>
+</mj-section>
