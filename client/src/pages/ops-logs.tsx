@@ -69,8 +69,10 @@ export default function OpsLogsPage() {
   if (ownerIdFilter) queryParams.set("owner_id", ownerIdFilter);
   queryParams.set("limit", "100");
 
+  const queryUrl = `/api/ops/events?${queryParams.toString()}`;
+
   const { data: events = [], refetch, isLoading } = useQuery<OpsEvent[]>({
-    queryKey: ["/api/ops/events", queryParams.toString()],
+    queryKey: [queryUrl],
     refetchInterval: autoRefresh ? 5000 : false,
   });
 
@@ -85,9 +87,14 @@ export default function OpsLogsPage() {
   const kindTypes = Array.from(new Set(events.map(e => e.kind))).filter(Boolean).sort();
   const ownerTypes = Array.from(new Set(events.map(e => e.ownerType))).filter(Boolean).sort();
 
+  const breadcrumbSegments = [
+    { label: "i³ Collective", href: "/" },
+    { label: "Operations Logs" },
+  ];
+
   return (
     <div className="space-y-6">
-      <PageBreadcrumb />
+      <PageBreadcrumb segments={breadcrumbSegments} />
       
       <div>
         <h1 className="text-3xl font-bold">Operations Event Logs</h1>
@@ -139,12 +146,12 @@ export default function OpsLogsPage() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="space-y-2">
               <label className="text-sm font-medium">Event Kind</label>
-              <Select value={kindFilter} onValueChange={setKindFilter}>
+              <Select value={kindFilter || "all"} onValueChange={(v) => setKindFilter(v === "all" ? "" : v)}>
                 <SelectTrigger data-testid="select-kind-filter">
                   <SelectValue placeholder="All kinds" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All kinds</SelectItem>
+                  <SelectItem value="all">All kinds</SelectItem>
                   {kindTypes.map((kind) => (
                     <SelectItem key={kind} value={kind}>
                       {kind}
@@ -156,12 +163,12 @@ export default function OpsLogsPage() {
             
             <div className="space-y-2">
               <label className="text-sm font-medium">Owner Type</label>
-              <Select value={ownerTypeFilter} onValueChange={setOwnerTypeFilter}>
+              <Select value={ownerTypeFilter || "all"} onValueChange={(v) => setOwnerTypeFilter(v === "all" ? "" : v)}>
                 <SelectTrigger data-testid="select-owner-type-filter">
                   <SelectValue placeholder="All types" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All types</SelectItem>
+                  <SelectItem value="all">All types</SelectItem>
                   {ownerTypes.map((type) => (
                     <SelectItem key={type} value={type}>
                       {type}

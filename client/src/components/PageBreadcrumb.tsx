@@ -14,11 +14,11 @@ export interface BreadcrumbSegment {
 }
 
 interface PageBreadcrumbProps {
-  segments: BreadcrumbSegment[];
+  segments?: BreadcrumbSegment[];
 }
 
 export function PageBreadcrumb({ segments }: PageBreadcrumbProps) {
-  if (segments.length === 0) return null;
+  if (!segments || segments.length === 0) return null;
 
   return (
     <Breadcrumb>
