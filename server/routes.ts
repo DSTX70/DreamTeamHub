@@ -2031,6 +2031,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Products - Brand products
+  app.get("/api/products", isAuthenticated, async (req, res) => {
+    try {
+      const brandId = req.query.brandId ? parseInt(req.query.brandId as string) : undefined;
+      const products = await storage.getProducts(brandId ? { brandId } : undefined);
+      res.json(products);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

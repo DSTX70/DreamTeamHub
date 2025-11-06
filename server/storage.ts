@@ -5,20 +5,20 @@ import {
   audits, auditChecks, auditFindings, auditArtifacts, events,
   conversations, messages, agentMemories, agentRuns,
   projects, projectFiles, projectAgents, projectTasks, projectMessages,
-  agentGoldens, workOrders, brands, knowledgeLinks,
+  agentGoldens, workOrders, brands, knowledgeLinks, products,
   type User, type UpsertUser,
   type Pod, type PodAgent, type Agent, type Person, type RoleCard, type RoleRaci, type AgentSpec, type WorkItem, type Decision, type IdeaSpark,
   type BrainstormSession, type BrainstormParticipant, type BrainstormIdea, type BrainstormCluster, type BrainstormArtifact,
   type Audit, type AuditCheck, type AuditFinding, type AuditArtifact, type Event,
   type Conversation, type Message, type AgentMemory, type AgentRun,
   type Project, type ProjectFile, type ProjectAgent, type ProjectTask, type ProjectMessage,
-  type AgentGolden, type WorkOrder, type Brand, type KnowledgeLink,
+  type AgentGolden, type WorkOrder, type Brand, type KnowledgeLink, type Product,
   type InsertPod, type InsertPodAgent, type InsertAgent, type InsertPerson, type InsertRoleCard, type InsertRoleRaci, type InsertAgentSpec, type InsertWorkItem, type InsertDecision, type InsertIdeaSpark,
   type InsertBrainstormSession, type InsertBrainstormParticipant, type InsertBrainstormIdea, type InsertBrainstormCluster, type InsertBrainstormArtifact,
   type InsertAudit, type InsertAuditCheck, type InsertAuditFinding, type InsertAuditArtifact, type InsertEvent,
   type InsertConversation, type InsertMessage, type InsertAgentMemory, type InsertAgentRun,
   type InsertProject, type InsertProjectFile, type InsertProjectAgent, type InsertProjectTask, type InsertProjectMessage,
-  type InsertAgentGolden, type InsertWorkOrder, type InsertBrand, type InsertKnowledgeLink,
+  type InsertAgentGolden, type InsertWorkOrder, type InsertBrand, type InsertKnowledgeLink, type InsertProduct,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, or, sql, inArray, isNotNull } from "drizzle-orm";
@@ -189,6 +189,10 @@ export interface IStorage {
   // Knowledge Links
   getKnowledgeLinks(filters?: { businessUnit?: string }): Promise<KnowledgeLink[]>;
   createKnowledgeLink(link: InsertKnowledgeLink): Promise<KnowledgeLink>;
+  
+  // Products
+  getProducts(filters?: { brandId?: number }): Promise<Product[]>;
+  createProduct(product: InsertProduct): Promise<Product>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -896,6 +900,23 @@ export class DatabaseStorage implements IStorage {
 
   async createKnowledgeLink(link: InsertKnowledgeLink): Promise<KnowledgeLink> {
     const [created] = await db.insert(knowledgeLinks).values(link).returning();
+    return created;
+  }
+
+  // ===== PRODUCTS =====
+  async getProducts(filters?: { brandId?: number }): Promise<Product[]> {
+    let query = db.select().from(products).orderBy(products.name);
+    
+    if (filters?.brandId) {
+      const filtered = await query;
+      return filtered.filter(p => p.brandId === filters.brandId);
+    }
+    
+    return await query;
+  }
+
+  async createProduct(product: InsertProduct): Promise<Product> {
+    const [created] = await db.insert(products).values(product).returning();
     return created;
   }
 }
