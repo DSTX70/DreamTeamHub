@@ -1,7 +1,15 @@
 import React from "react";
+import StatusBadge from "./components/StatusBadge";
 
 type AllowItem = { sku: string; baseKey: string };
 type UploadResp = { ok: boolean; items: any[] };
+type Status = {
+  bucket: string;
+  region: string;
+  defaultCacheControl: string;
+  hasBucketEnv: boolean;
+  probeOk: boolean;
+};
 
 function bytes(n: number) {
   if (n < 1024) return n + " B";
@@ -18,13 +26,25 @@ const ImagesAdmin: React.FC = () => {
   const [summary, setSummary] = React.useState<{ count: number; total: number } | null>(null);
   const [variants, setVariants] = React.useState<any[]>([]);
   const [cacheControl, setCacheControl] = React.useState("public, max-age=31536000, immutable");
+  const [status, setStatus] = React.useState<Status | null>(null);
 
   const load = async () => {
     const r = await fetch("/api/ops/images/allowlist");
     const j = await r.json();
     setAllowlist(j.items || []);
   };
-  React.useEffect(()=>{ load(); }, []);
+  
+  const loadStatus = async () => {
+    try {
+      const r = await fetch("/api/ops/images/status");
+      const j = await r.json();
+      setStatus(j);
+    } catch {
+      setStatus(null);
+    }
+  };
+  
+  React.useEffect(()=>{ load(); loadStatus(); }, []);
 
   const addAllow = async () => {
     await fetch("/api/ops/images/allowlist", { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({ items:[{ sku, baseKey }] }) });
@@ -62,9 +82,27 @@ const ImagesAdmin: React.FC = () => {
     setVariants(list.items || []);
   };
 
+  const s3State: "ok"|"warn"|"err" =
+    status ? (status.hasBucketEnv ? (status.probeOk ? "ok" : "warn") : "err") : "warn";
+  const ccState: "ok"|"warn"|"err" =
+    status ? (status.defaultCacheControl ? "ok" : "warn") : "warn";
+
   return (
     <div className="p-4 space-y-6">
-      <h1 className="text-xl font-semibold">Responsive Images — Allowlist & Upload</h1>
+      <div className="flex items-center justify-between">
+        <h1 className="text-xl font-semibold">Responsive Images — Allowlist & Upload</h1>
+        <div className="flex items-center gap-2">
+          <StatusBadge
+            label={status ? `S3: ${status.bucket || "(unset)"}` : "S3: (loading)"}
+            state={s3State}
+          />
+          <StatusBadge
+            label={status ? `Cache-Control: ${status.defaultCacheControl || "(unset)"}` : "Cache-Control: (loading)"}
+            state={ccState}
+          />
+          <a className="text-xs underline text-gray-600" href="/ops/settings">Settings</a>
+        </div>
+      </div>
 
       <section className="space-y-3">
         <div className="font-semibold">Allowlist</div>

@@ -2143,6 +2143,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   const imagesRoute = await import("./routes/images.route");
   app.use(imagesRoute.router);
 
+  // Images Status - S3 + Cache-Control health check (public for demo)
+  const imagesStatusRoute = await import("./routes/images.status.route");
+  app.use(imagesStatusRoute.router);
+
   // Image CDN - Optional app-based passthrough with cache headers (public)
   const imgCdnRoute = await import("./routes/img_cdn.route");
   app.use(imgCdnRoute.router);
