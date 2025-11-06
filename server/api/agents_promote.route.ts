@@ -2,15 +2,15 @@ import type { Request, Response } from "express";
 import { db } from "../db";
 import { agents } from "@shared/schema";
 import { eq } from "drizzle-orm";
-import { AgentPromoteBody, UUID } from "../../lib/validators/agents";
+import { AgentPromoteBody, AgentId } from "../../lib/validators/agents";
 
 export async function promoteAgent(req: Request, res: Response) {
   const id = String(req.params.id);
   
-  // Validate ID is UUID
-  const idParsed = UUID.safeParse(id);
+  // Validate agent ID (text handle)
+  const idParsed = AgentId.safeParse(id);
   if (!idParsed.success) {
-    return res.status(422).json({ error: "invalid UUID" });
+    return res.status(422).json({ error: "invalid agent ID" });
   }
   
   // Validate body

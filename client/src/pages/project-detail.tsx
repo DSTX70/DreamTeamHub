@@ -8,8 +8,19 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Separator } from '@/components/ui/separator';
 import { IdeaSparksList } from '@/components/idea-sparks-list';
 import { PageBreadcrumb, buildBreadcrumbs } from '@/components/PageBreadcrumb';
+import AcademySidebar from '@/components/AcademySidebar';
+import { queryClient } from '@/lib/queryClient';
+import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import type { Project, ProjectAgent, ProjectTask, ProjectMessage, ProjectFile, Brand } from '@shared/schema';
+
+type AgentDetails = {
+  id: string;
+  title: string;
+  autonomy: "L0" | "L1" | "L2" | "L3";
+  status: "pilot" | "live" | "watch" | "rollback";
+  nextGate: number | null;
+};
 
 const PILLAR_ICONS = {
   Imagination: Sparkles,
@@ -34,7 +45,9 @@ const PRIORITY_CONFIG = {
 
 export default function ProjectDetail() {
   const [, params] = useRoute('/project/:id');
+  const [, setLocation] = useLocation();
   const projectId = params?.id ? parseInt(params.id) : undefined;
+  const { toast } = useToast();
 
   // Fetch project details
   const { data: project, isLoading: projectLoading } = useQuery<Project>({
@@ -76,6 +89,53 @@ export default function ProjectDetail() {
     queryKey: ['/api/projects', projectId, 'messages'],
     enabled: !!projectId,
   });
+
+  // Fetch full details for first agent (for Academy Sidebar)
+  const firstAgentId = agents.length > 0 ? agents[0].agentId : null;
+  const { data: featuredAgent } = useQuery<AgentDetails>({
+    queryKey: ['/api/agents', firstAgentId],
+    enabled: !!firstAgentId,
+    queryFn: async () => {
+      const res = await fetch(`/api/agents/${firstAgentId}`);
+      if (!res.ok) throw new Error('Failed to fetch agent details');
+      return res.json();
+    },
+  });
+
+  // Academy Sidebar handlers
+  const handleTrainClick = (agentId: string) => {
+    setLocation(`/academy/train?agent=${agentId}`);
+  };
+
+  const handlePromote = async (agentId: string) => {
+    try {
+      const res = await fetch(`/api/agents/${agentId}/promote`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ advance: 1 }),
+      });
+      
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.error || "Failed to promote agent");
+      }
+      
+      // Invalidate queries to refresh data
+      await queryClient.invalidateQueries({ queryKey: ['/api/agents', agentId] });
+      await queryClient.invalidateQueries({ queryKey: ['/api/projects', projectId, 'agents'] });
+      
+      toast({
+        title: "Agent promoted",
+        description: "The agent has been successfully promoted to the next gate.",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Promotion failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  };
 
   if (projectLoading) {
     return (
@@ -131,9 +191,16 @@ export default function ProjectDetail() {
 
   return (
     <div className="min-h-screen bg-background p-6">
-      <div className="max-w-6xl mx-auto space-y-6">
+      <div className="max-w-7xl mx-auto">
         {/* Breadcrumb */}
-        <PageBreadcrumb segments={breadcrumbs} />
+        <div className="mb-6">
+          <PageBreadcrumb segments={breadcrumbs} />
+        </div>
+
+        {/* Two-column layout: Main content + Academy Sidebar */}
+        <div className="flex flex-col lg:flex-row gap-6">
+          {/* Main content */}
+          <div className="flex-1 space-y-6">
         
         {/* Header */}
         <div className="flex items-start justify-between gap-4">
@@ -394,6 +461,26 @@ export default function ProjectDetail() {
             )}
           </TabsContent>
         </Tabs>
+          </div>
+          {/* End Main content */}
+
+          {/* Academy Sidebar */}
+          {featuredAgent && (
+            <aside className="lg:w-80 flex-shrink-0">
+              <AcademySidebar
+                agent={{
+                  id: featuredAgent.id,
+                  name: featuredAgent.title,
+                  autonomy: featuredAgent.autonomy,
+                  status: featuredAgent.status,
+                  nextGate: featuredAgent.nextGate,
+                }}
+                onTrainClick={handleTrainClick}
+                onPromote={handlePromote}
+              />
+            </aside>
+          )}
+        </div>
       </div>
     </div>
   );

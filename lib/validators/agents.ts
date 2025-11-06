@@ -1,6 +1,7 @@
 import { z } from "zod";
 
-export const UUID = z.string().uuid("invalid UUID");
+// Agent IDs are text handles like 'agent_os', 'agent_helm', NOT UUIDs
+export const AgentId = z.string().min(1, "agent ID required").max(255, "agent ID too long");
 
 export const AgentPromoteBody = z.object({
   advance: z.number().int().min(1).max(3).optional().default(1),

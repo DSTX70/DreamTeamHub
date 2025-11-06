@@ -1,0 +1,563 @@
+here’s a single, PR-style drop with everything Replit needs to implement the three Phase-2 features you picked:
+
+Onboarding wizard (Brand/Product + Drive links + guardrails)
+
+Coverage views (Agent↔Role linkage, unstaffed/over-replicated roles)
+
+Playbooks registry (ID-based; Work Orders reference by handle)
+
+Each section below is a unified diff you can git apply. I also include the SQL migration, Zod validators, Next.js App Router endpoints, Drizzle schema updates, and React components/pages.
+
+Apply each block in order:
+
+git apply -p0 <<'PATCH'
+…diff block…
+PATCH
+
+0) SQL migration — Playbooks table + WO column and helpful views
+diff --git a/migrations/2025-11-05_playbooks_and_coverage.sql b/migrations/2025-11-05_playbooks_and_coverage.sql
+new file mode 100644
+--- /dev/null
++++ b/migrations/2025-11-05_playbooks_and_coverage.sql
+@@
++-- Playbooks table + work_order.playbook_handle and basic coverage views
++create extension if not exists pgcrypto;
++
++create table if not exists playbook (
++  id uuid primary key default gen_random_uuid(),
++  handle text unique not null,
++  title text not null,
++  body_md text not null,
++  created_at timestamptz not null default now()
++);
++
++alter table work_order
++  add column if not exists playbook_handle text references playbook(handle);
++
++-- Optional: coverage helpers (views)
++create or replace view v_role_coverage as
++select
++  r.handle as role_handle,
++  r.name   as role_name,
++  count(a.id) as agent_count
++from role_def r
++left join agent a on a.role_handle = r.handle
++group by r.handle, r.name
++order by role_name;
++
++create or replace view v_agent_by_role as
++select
++  a.role_handle,
++  count(*) filter (where a.status='live')  as live_count,
++  count(*) filter (where a.status='pilot') as pilot_count,
++  count(*)                                  as total
++from agent a
++group by a.role_handle;
+
+1) Drizzle schema updates (playbooks + WO column)
+diff --git a/drizzle/schema.ts b/drizzle/schema.ts
+--- a/drizzle/schema.ts
++++ b/drizzle/schema.ts
+@@
+ import { pgEnum, pgTable, uuid, text, timestamp, integer, numeric, jsonb } from "drizzle-orm/pg-core";
+@@
+ export const workOrder = pgTable("work_order", {
+   id: uuid("id").defaultRandom().primaryKey(),
+   title: text("title").notNull(),
+   owner: text("owner").notNull(),
+   autonomy: autonomyLevel("autonomy").notNull().default("L1"),
+   inputs: text("inputs").notNull(),
+   output: text("output").notNull(),
++  playbookHandle: text("playbook_handle"), // FK to playbook(handle)
+   capsRunsPerDay: integer("caps_runs_per_day").notNull().default(100),
+   capsUsdPerDay: numeric("caps_usd_per_day", { precision: 8, scale: 3 }).notNull().default("2.000"),
+   kpiSuccessMin: integer("kpi_success_min").notNull().default(90),
+   kpiP95Max: numeric("kpi_p95_max", { precision: 6, scale: 2 }).notNull().default("3.00"),
+   playbook: text("playbook"),
+   stop: text("stop"),
+   status: text("status").notNull().default("draft"),
+   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+ });
+@@
+ export const opsEvent = pgTable("ops_event", {
+   id: uuid("id").defaultRandom().primaryKey(),
+   at: timestamp("at", { withTimezone: true }).notNull().defaultNow(),
+   actor: text("actor"),
+   kind: text("kind").notNull(),
+   ownerType: text("owner_type"),
+   ownerId: uuid("owner_id"),
+   message: text("message"),
+   meta: jsonb("meta"),
+ });
++
++// Playbooks registry
++export const playbook = pgTable("playbook", {
++  id: uuid("id").defaultRandom().primaryKey(),
++  handle: text("handle").notNull().unique(),
++  title: text("title").notNull(),
++  bodyMd: text("body_md").notNull(),
++  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
++});
+
+2) Zod validators (Onboarding, Coverage, Playbooks)
+diff --git a/lib/validators/onboarding.ts b/lib/validators/onboarding.ts
+new file mode 100644
+--- /dev/null
++++ b/lib/validators/onboarding.ts
+@@
++import { z } from "zod";
++export const UUID = z.string().uuid("invalid UUID");
++export const Slug = z.string().min(2).max(80).regex(/^[a-z0-9-]+$/,"slug must be kebab-case");
++
++export const DriveTriplet = z.object({
++  readFolderId: z.string().min(3),
++  draftFolderId: z.string().min(3),
++  publishFolderId: z.string().min(3),
++});
++
++export const CreateBrandBody = z.object({
++  buId: UUID,
++  name: z.string().min(2),
++  slug: Slug,
++  drive: DriveTriplet
++});
++export type CreateBrandBody = z.infer<typeof CreateBrandBody>;
++
++export const CreateProductBody = z.object({
++  brandId: UUID,
++  name: z.string().min(2),
++  type: z.string().optional(),
++  slug: Slug,
++  drive: DriveTriplet.optional()
++});
++export type CreateProductBody = z.infer<typeof CreateProductBody>;
+
+diff --git a/lib/validators/coverage.ts b/lib/validators/coverage.ts
+new file mode 100644
+--- /dev/null
++++ b/lib/validators/coverage.ts
+@@
++import { z } from "zod";
++export const UUID = z.string().uuid("invalid UUID");
++export const CoverageQuery = z.object({
++  bu: UUID.optional(),
++  brand: UUID.optional(),
++  threshold: z.coerce.number().int().min(1).max(50).default(3)
++});
+
+diff --git a/lib/validators/playbooks.ts b/lib/validators/playbooks.ts
+new file mode 100644
+--- /dev/null
++++ b/lib/validators/playbooks.ts
+@@
++import { z } from "zod";
++export const PlaybookBody = z.object({
++  handle: z.string().min(3).max(100).regex(/^[a-z0-9_-]+$/i,"alphanumeric/underscore/hyphen only"),
++  title: z.string().min(3).max(160),
++  body_md: z.string().min(10)
++});
++export type PlaybookBody = z.infer<typeof PlaybookBody>;
+
+3) API — Onboarding (Brand/Product + Drive links)
+diff --git a/app/api/onboarding/brand/route.ts b/app/api/onboarding/brand/route.ts
+new file mode 100644
+--- /dev/null
++++ b/app/api/onboarding/brand/route.ts
+@@
++import { NextRequest } from "next/server";
++import { db } from "@/drizzle/db";
++import { brand, knowledgeLink } from "@/drizzle/schema";
++import { json } from "@/lib/next/response";
++import { CreateBrandBody } from "@/lib/validators/onboarding";
++
++export async function POST(req: NextRequest) {
++  const body = await req.json().catch(()=> ({}));
++  const parsed = CreateBrandBody.safeParse(body);
++  if (!parsed.success) return json({ error: parsed.error.errors.map(e=>e.message).join("; ") }, 422);
++  const { buId, name, slug, drive } = parsed.data;
++  const [b] = await db.insert(brand).values({ buId, name, slug }).returning();
++  // Drive links
++  await db.insert(knowledgeLink).values([
++    { ownerType:"BRAND", ownerId: b.id, role:"read",    driveFolderId: drive.readFolderId },
++    { ownerType:"BRAND", ownerId: b.id, role:"draft",   driveFolderId: drive.draftFolderId },
++    { ownerType:"BRAND", ownerId: b.id, role:"publish", driveFolderId: drive.publishFolderId },
++  ]);
++  return json({ ok:true, brand:b }, 201);
++}
+
+diff --git a/app/api/onboarding/product/route.ts b/app/api/onboarding/product/route.ts
+new file mode 100644
+--- /dev/null
++++ b/app/api/onboarding/product/route.ts
+@@
++import { NextRequest } from "next/server";
++import { db } from "@/drizzle/db";
++import { product, knowledgeLink } from "@/drizzle/schema";
++import { json } from "@/lib/next/response";
++import { CreateProductBody } from "@/lib/validators/onboarding";
++
++export async function POST(req: NextRequest) {
++  const body = await req.json().catch(()=> ({}));
++  const parsed = CreateProductBody.safeParse(body);
++  if (!parsed.success) return json({ error: parsed.error.errors.map(e=>e.message).join("; ") }, 422);
++  const { brandId, name, type, slug, drive } = parsed.data;
++  const [p] = await db.insert(product).values({ brandId, name, slug, type: type ?? null }).returning();
++  if (drive) {
++    await db.insert(knowledgeLink).values([
++      { ownerType:"PRODUCT", ownerId: p.id, role:"read",    driveFolderId: drive.readFolderId },
++      { ownerType:"PRODUCT", ownerId: p.id, role:"draft",   driveFolderId: drive.draftFolderId },
++      { ownerType:"PRODUCT", ownerId: p.id, role:"publish", driveFolderId: drive.publishFolderId },
++    ]);
++  }
++  return json({ ok:true, product:p }, 201);
++}
+
+4) API — Coverage views (roles & agents)
+diff --git a/app/api/coverage/roles/route.ts b/app/api/coverage/roles/route.ts
+new file mode 100644
+--- /dev/null
++++ b/app/api/coverage/roles/route.ts
+@@
++import { NextRequest } from "next/server";
++import { db } from "@/drizzle/db";
++import { roleDef, agent } from "@/drizzle/schema";
++import { json } from "@/lib/next/response";
++import { CoverageQuery } from "@/lib/validators/coverage";
++import { eq, sql } from "drizzle-orm";
++
++export async function GET(req: NextRequest) {
++  const qp = Object.fromEntries(req.nextUrl.searchParams.entries());
++  const parsed = CoverageQuery.safeParse(qp);
++  if (!parsed.success) return json({ error: parsed.error.errors.map(e=>e.message).join("; ") }, 422);
++  const { threshold } = parsed.data;
++
++  const rows = await db.execute(sql`
++    select r.handle as role_handle, r.name as role_name, count(a.id) as agent_count
++    from role_def r
++    left join agent a on a.role_handle = r.handle
++    group by r.handle, r.name
++    order by role_name
++  `);
++  const data = rows.rows as Array<{ role_handle:string; role_name:string; agent_count:string }>;
++  const withNum = data.map(d=> ({ ...d, agent_count: Number(d.agent_count) }));
++  const unstaffed = withNum.filter(d => d.agent_count === 0);
++  const over = withNum.filter(d => d.agent_count >= threshold);
++  return json({ unstaffed, over, all: withNum }, { status: 200, headers: { "X-Total-Count": String(withNum.length) } });
++}
+
+diff --git a/app/api/coverage/agents/route.ts b/app/api/coverage/agents/route.ts
+new file mode 100644
+--- /dev/null
++++ b/app/api/coverage/agents/route.ts
+@@
++import { NextRequest } from "next/server";
++import { db } from "@/drizzle/db";
++import { agent } from "@/drizzle/schema";
++import { eq } from "drizzle-orm";
++import { json } from "@/lib/next/response";
++
++export async function GET(req: NextRequest) {
++  const handle = req.nextUrl.searchParams.get("role_handle");
++  if (!handle) return json({ error: "role_handle required" }, 422);
++  const rows = await db.select().from(agent).where(eq(agent.roleHandle, handle));
++  return json({ agents: rows }, { status: 200, headers: { "X-Total-Count": String(rows.length) } });
++}
+
+5) API — Playbooks registry
+diff --git a/app/api/playbooks/route.ts b/app/api/playbooks/route.ts
+new file mode 100644
+--- /dev/null
++++ b/app/api/playbooks/route.ts
+@@
++import { NextRequest } from "next/server";
++import { db } from "@/drizzle/db";
++import { playbook } from "@/drizzle/schema";
++import { json } from "@/lib/next/response";
++import { PlaybookBody } from "@/lib/validators/playbooks";
++import { like } from "drizzle-orm";
++
++export async function GET(req: NextRequest) {
++  const q = (req.nextUrl.searchParams.get("query") || "").trim();
++  const rows = q
++    ? await db.select().from(playbook).where(like(playbook.title, `%${q}%`))
++    : await db.select().from(playbook).limit(50);
++  return json(rows, { status: 200, headers: { "X-Total-Count": String(rows.length) } });
++}
++
++export async function POST(req: NextRequest) {
++  const body = await req.json().catch(()=> ({}));
++  const parsed = PlaybookBody.safeParse(body);
++  if (!parsed.success) return json({ error: parsed.error.errors.map(e=>e.message).join("; ") }, 422);
++  const { handle, title, body_md } = parsed.data;
++  const [row] = await db
++    .insert(playbook)
++    .values({ handle, title, bodyMd: body_md })
++    .onConflictDoUpdate({ target: playbook.handle, set: { title, bodyMd: body_md } })
++    .returning();
++  return json(row, 201);
++}
+
+diff --git a/app/api/playbooks/[handle]/route.ts b/app/api/playbooks/[handle]/route.ts
+new file mode 100644
+--- /dev/null
++++ b/app/api/playbooks/[handle]/route.ts
+@@
++import { NextRequest } from "next/server";
++import { db } from "@/drizzle/db";
++import { playbook } from "@/drizzle/schema";
++import { eq } from "drizzle-orm";
++import { json } from "@/lib/next/response";
++
++export async function GET(_req: NextRequest, ctx: { params: { handle: string } }) {
++  const handle = ctx.params.handle;
++  const rows = await db.select().from(playbook).where(eq(playbook.handle, handle));
++  if (!rows.length) return json({ error: "not found" }, 404);
++  return json(rows[0]);
++}
+
+6) UI — Onboarding wizard, Coverage page, Playbooks pages
+diff --git a/web/components/OnboardingWizard.tsx b/web/components/OnboardingWizard.tsx
+new file mode 100644
+--- /dev/null
++++ b/web/components/OnboardingWizard.tsx
+@@
++import React, { useState } from "react";
++
++export default function OnboardingWizard({ buId }:{ buId: string }) {
++  const [step,setStep]=useState(1);
++  const [brand,setBrand]=useState({ name:"", slug:"" });
++  const [product,setProduct]=useState({ name:"", slug:"", type:"" });
++  const [drive,setDrive]=useState({ readFolderId:"", draftFolderId:"", publishFolderId:"" });
++  const [created,setCreated]=useState<{brandId?:string; productId?:string}|null>(null);
++  const next=()=>setStep(s=>s+1); const back=()=>setStep(s=>Math.max(1,s-1));
++
++  async function createBrand() {
++    const r = await fetch("/api/onboarding/brand", { method:"POST", headers:{ "content-type":"application/json" },
++      body: JSON.stringify({ buId, name:brand.name, slug:brand.slug, drive })});
++    if (!r.ok) throw new Error("brand create failed");
++    const data = await r.json(); setCreated({ brandId: data.brand.id }); next();
++  }
++  async function createProduct() {
++    if (!created?.brandId || !product.name) return next();
++    const r = await fetch("/api/onboarding/product", { method:"POST", headers:{ "content-type":"application/json" },
++      body: JSON.stringify({ brandId: created.brandId, name:product.name, slug:product.slug, type:product.type, drive })});
++    if (!r.ok) throw new Error("product create failed");
++    const data = await r.json(); setCreated({ ...created, productId: data.product.id }); next();
++  }
++
++  return (
++    <div className="rounded-2xl border p-4 space-y-4">
++      <h3 className="text-lg font-semibold">Onboarding Wizard</h3>
++      {step===1 && (
++        <div className="space-y-2">
++          <div className="text-sm text-gray-700">Step 1 — Brand details</div>
++          <input className="border rounded px-2 py-1 w-full" placeholder="Brand name" value={brand.name} onChange={e=>setBrand({...brand, name:e.target.value})}/>
++          <input className="border rounded px-2 py-1 w-full" placeholder="brand-slug" value={brand.slug} onChange={e=>setBrand({...brand, slug:e.target.value})}/>
++          <div className="flex gap-2">
++            <button className="px-3 py-1 border rounded" onClick={next}>Next</button>
++          </div>
++        </div>
++      )}
++      {step===2 && (
++        <div className="space-y-2">
++          <div className="text-sm text-gray-700">Step 2 — Drive folders (Read/Draft/Publish)</div>
++          <input className="border rounded px-2 py-1 w-full" placeholder="Read folder ID" value={drive.readFolderId} onChange={e=>setDrive({...drive, readFolderId:e.target.value})}/>
++          <input className="border rounded px-2 py-1 w-full" placeholder="Draft folder ID" value={drive.draftFolderId} onChange={e=>setDrive({...drive, draftFolderId:e.target.value})}/>
++          <input className="border rounded px-2 py-1 w-full" placeholder="Publish folder ID" value={drive.publishFolderId} onChange={e=>setDrive({...drive, publishFolderId:e.target.value})}/>
++          <div className="flex gap-2">
++            <button className="px-3 py-1 border rounded" onClick={back}>Back</button>
++            <button className="px-3 py-1 border rounded bg-black text-white" onClick={createBrand}>Create Brand</button>
++          </div>
++        </div>
++      )}
++      {step===3 && (
++        <div className="space-y-2">
++          <div className="text-sm text-gray-700">Step 3 — (Optional) first Product</div>
++          <input className="border rounded px-2 py-1 w-full" placeholder="Product name" value={product.name} onChange={e=>setProduct({...product, name:e.target.value})}/>
++          <input className="border rounded px-2 py-1 w-full" placeholder="product-slug" value={product.slug} onChange={e=>setProduct({...product, slug:e.target.value})}/>
++          <input className="border rounded px-2 py-1 w-full" placeholder="type (optional)" value={product.type} onChange={e=>setProduct({...product, type:e.target.value})}/>
++          <div className="flex gap-2">
++            <button className="px-3 py-1 border rounded" onClick={back}>Back</button>
++            <button className="px-3 py-1 border rounded bg-black text-white" onClick={createProduct}>Finish</button>
++          </div>
++        </div>
++      )}
++      {step===4 && (
++        <div className="space-y-2 text-sm">
++          <div className="text-green-700 font-medium">Done!</div>
++          {created?.brandId && <div>Brand created.</div>}
++          {created?.productId ? <div>Product created.</div> : <div>(No product created)</div>}
++        </div>
++      )}
++    </div>
++  );
++}
+
+diff --git a/web/pages/coverage.tsx b/web/pages/coverage.tsx
+new file mode 100644
+--- /dev/null
++++ b/web/pages/coverage.tsx
+@@
++import React, { useEffect, useState } from "react";
++
++export default function CoveragePage() {
++  const [rows,setRows]=useState<any[]>([]);
++  const [unstaffed,setUnstaffed]=useState<any[]>([]);
++  const [over,setOver]=useState<any[]>([]);
++  const [threshold,setThreshold]=useState(3);
++  const load=async()=>{
++    const r = await fetch(`/api/coverage/roles?threshold=${threshold}`);
++    const j = await r.json();
++    setRows(j.all||[]); setUnstaffed(j.unstaffed||[]); setOver(j.over||[]);
++  };
++  useEffect(()=>{ load(); },[threshold]);
++
++  return (
++    <div className="max-w-5xl mx-auto p-6 space-y-6">
++      <h1 className="text-2xl font-semibold">Coverage</h1>
++      <div className="rounded-2xl border p-4">
++        <div className="flex items-center gap-2 text-sm">
++          <label>Over-replicated threshold</label>
++          <input className="border rounded px-2 py-1 w-20" type="number" min={1} max={50} value={threshold} onChange={e=>setThreshold(Number(e.target.value))}/>
++          <button className="px-3 py-1 border rounded" onClick={load}>Refresh</button>
++        </div>
++        <div className="grid md:grid-cols-2 gap-4 mt-3">
++          <div className="rounded-xl border p-3">
++            <div className="font-medium">Unstaffed roles</div>
++            <ul className="mt-2 text-sm list-disc pl-5">
++              {unstaffed.map((r:any)=>(<li key={r.role_handle}>{r.role_name} <span className="text-gray-500">({r.role_handle})</span></li>))}
++              {!unstaffed.length && <li className="text-gray-500">None</li>}
++            </ul>
++          </div>
++          <div className="rounded-xl border p-3">
++            <div className="font-medium">Over-replicated</div>
++            <ul className="mt-2 text-sm list-disc pl-5">
++              {over.map((r:any)=>(<li key={r.role_handle}>{r.role_name} — <b>{r.agent_count}</b></li>))}
++              {!over.length && <li className="text-gray-500">None</li>}
++            </ul>
++          </div>
++        </div>
++      </div>
++      <div className="rounded-2xl border p-4">
++        <div className="font-medium">All roles</div>
++        <table className="min-w-full text-sm mt-2">
++          <thead><tr><th className="text-left p-2 border-b">Role</th><th className="text-left p-2 border-b">Handle</th><th className="text-right p-2 border-b">Agents</th></tr></thead>
++          <tbody>
++            {rows.map((r:any)=>(
++              <tr key={r.role_handle}>
++                <td className="p-2 border-b">{r.role_name}</td>
++                <td className="p-2 border-b">{r.role_handle}</td>
++                <td className="p-2 border-b text-right">{r.agent_count}</td>
++              </tr>
++            ))}
++            {!rows.length && (<tr><td className="p-2" colSpan={3}>No roles</td></tr>)}
++          </tbody>
++        </table>
++      </div>
++    </div>
++  );
++}
+
+diff --git a/web/pages/playbooks/index.tsx b/web/pages/playbooks/index.tsx
+new file mode 100644
+--- /dev/null
++++ b/web/pages/playbooks/index.tsx
+@@
++import React, { useEffect, useState } from "react";
++export default function PlaybooksIndex(){
++  const [q,setQ]=useState(""); const [rows,setRows]=useState<any[]>([]);
++  const load=async()=>{ const r=await fetch(`/api/playbooks?query=${encodeURIComponent(q)}`); setRows(await r.json());};
++  useEffect(()=>{ load(); },[]);
++  return (
++    <div className="max-w-4xl mx-auto p-6 space-y-4">
++      <h1 className="text-2xl font-semibold">Playbooks</h1>
++      <div className="flex gap-2">
++        <input className="border rounded px-2 py-1" placeholder="Search…" value={q} onChange={e=>setQ(e.target.value)}/>
++        <button className="px-3 py-1 border rounded" onClick={load}>Search</button>
++        <a className="px-3 py-1 border rounded" href="/playbooks/new">+ New</a>
++      </div>
++      <ul className="divide-y">
++        {rows.map((p:any)=>(
++          <li key={p.handle} className="py-2">
++            <a className="underline" href={`/api/playbooks/${p.handle}`} target="_blank">{p.title}</a>
++            <div className="text-xs text-gray-600">{p.handle}</div>
++          </li>
++        ))}
++        {!rows.length && <li className="py-2 text-gray-500">No playbooks yet.</li>}
++      </ul>
++    </div>
++  );
++}
+
+diff --git a/web/pages/playbooks/new.tsx b/web/pages/playbooks/new.tsx
+new file mode 100644
+--- /dev/null
++++ b/web/pages/playbooks/new.tsx
+@@
++import React, { useState } from "react";
++export default function NewPlaybook(){
++  const [handle,setHandle]=useState(""); const [title,setTitle]=useState(""); const [body,setBody]=useState("### Steps\n");
++  const [msg,setMsg]=useState("");
++  const save=async()=>{
++    const r = await fetch("/api/playbooks", { method:"POST", headers:{ "content-type":"application/json" }, body: JSON.stringify({ handle, title, body_md: body })});
++    if (!r.ok){ setMsg("Save failed"); return; }
++    setMsg("Saved ✔");
++  };
++  return (
++    <div className="max-w-3xl mx-auto p-6 space-y-4">
++      <h1 className="text-2xl font-semibold">New Playbook</h1>
++      <input className="border rounded px-2 py-1 w-full" placeholder="handle (e.g., support_router_v1)" value={handle} onChange={e=>setHandle(e.target.value)}/>
++      <input className="border rounded px-2 py-1 w-full" placeholder="Title" value={title} onChange={e=>setTitle(e.target.value)}/>
++      <textarea className="border rounded px-2 py-1 w-full" rows={12} value={body} onChange={e=>setBody(e.target.value)}/>
++      <div className="flex items-center gap-2">
++        <button className="px-3 py-1 border rounded bg-black text-white" onClick={save}>Save</button>
++        <span className="text-sm text-gray-600">{msg}</span>
++      </div>
++    </div>
++  );
++}
+
+7) After applying
+
+Run migration
+
+psql "$DATABASE_URL" -f migrations/2025-11-05_playbooks_and_coverage.sql
+
+
+Smoke tests
+
+# Onboarding (Brand)
+curl -s -XPOST /api/onboarding/brand -H "content-type: application/json" \
+  -d '{"buId":"<BU_UUID>","name":"Brand X","slug":"brand-x","drive":{"readFolderId":"F1","draftFolderId":"F2","publishFolderId":"F3"}}'
+
+# Onboarding (Product)
+curl -s -XPOST /api/onboarding/product -H "content-type: application/json" \
+  -d '{"brandId":"<BRAND_UUID>","name":"Prod X","slug":"prod-x"}'
+
+# Coverage (roles)
+curl -s "/api/coverage/roles?threshold=3"
+
+# Playbooks
+curl -s -XPOST /api/playbooks -H "content-type: application/json" \
+  -d '{"handle":"support_router_v1","title":"Support Router","body_md":"### Steps…"}'
+curl -s "/api/playbooks?query=support"
+
+
+Wire UI
+
+Place <OnboardingWizard buId="…"/> on your BU Home or a dedicated route /onboarding.
+
+Visit /coverage to see unstaffed/over-replicated.
+
+Visit /playbooks to create and list playbooks.
+
+Update Work Orders create form to use playbook_handle (simple select that pulls /api/playbooks).
+
+Acceptance criteria (Definition of Done)
+
+Onboarding wizard creates a Brand with 3 Drive links, and (optional) a Product; returns 201s with IDs.
+
+Coverage views show unstaffed roles (agent_count=0) and over-replicated roles (≥ threshold), with totals via X-Total-Count.
+
+Playbooks registry supports create/update by handle, listing, and fetch by handle.
+Work Orders can capture playbook_handle.

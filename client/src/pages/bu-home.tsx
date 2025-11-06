@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { useRoute } from "wouter";
+import { useRoute, useLocation } from "wouter";
 import { Link } from "wouter";
 import type { Brand, KnowledgeLink } from "@shared/schema";
 import { Badge } from "@/components/ui/badge";
@@ -8,6 +8,9 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { BrandDetailsModal } from "@/components/brand-details-modal";
 import { PageBreadcrumb, buildBreadcrumbs } from "@/components/PageBreadcrumb";
+import AcademySidebar from "@/components/AcademySidebar";
+import { queryClient } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 import { useState } from "react";
 
 type BUConfig = {
@@ -39,9 +42,11 @@ const buConfigs: Record<string, BUConfig> = {
 };
 
 type AgentSummary = {
+  name: string;
   display_name: string;
-  autonomy_level: string;
-  status: string;
+  autonomy_level: "L0" | "L1" | "L2" | "L3";
+  status: "pilot" | "live" | "watch" | "rollback";
+  next_gate: number | null;
   task_success: number;
   latency_p95_s: number;
   cost_per_task_usd: number;
@@ -49,11 +54,13 @@ type AgentSummary = {
 
 export default function BUHomePage() {
   const [, params] = useRoute("/bu/:slug");
+  const [, setLocation] = useLocation();
   const buSlug = params?.slug?.toUpperCase() || "IMAGINATION";
   const config = buConfigs[buSlug] || buConfigs.IMAGINATION;
   const [brandFilter, setBrandFilter] = useState("");
   const [selectedBrand, setSelectedBrand] = useState<Brand | null>(null);
   const [isBrandModalOpen, setIsBrandModalOpen] = useState(false);
+  const { toast } = useToast();
 
   // Fetch brands for this BU
   const { data: brands = [], isLoading: brandsLoading } = useQuery<Brand[]>({
@@ -119,13 +126,56 @@ export default function BUHomePage() {
     businessUnit: { slug: buSlug, name: config.name },
   });
 
-  return (
-    <div className="max-w-7xl mx-auto p-6 space-y-6">
-      {/* Breadcrumb */}
-      <PageBreadcrumb segments={breadcrumbs} />
+  // Academy Sidebar handlers
+  const handleTrainClick = (agentId: string) => {
+    setLocation(`/academy/train?agent=${agentId}`);
+  };
 
-      {/* Header */}
-      <Card>
+  const handlePromote = async (agentId: string) => {
+    try {
+      const res = await fetch(`/api/agents/${agentId}/promote`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ advance: 1 }),
+      });
+      
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.error || "Failed to promote agent");
+      }
+      
+      // Invalidate queries to refresh data
+      await queryClient.invalidateQueries({ queryKey: ["/api/agents/summary", buSlug] });
+      
+      toast({
+        title: "Agent promoted",
+        description: "The agent has been successfully promoted to the next gate.",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Promotion failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Pick first agent for sidebar (or null if no agents)
+  const featuredAgent = agents.length > 0 ? agents[0] : null;
+
+  return (
+    <div className="max-w-7xl mx-auto p-6">
+      {/* Breadcrumb */}
+      <div className="mb-6">
+        <PageBreadcrumb segments={breadcrumbs} />
+      </div>
+
+      {/* Two-column layout: Main content + Academy Sidebar */}
+      <div className="flex flex-col lg:flex-row gap-6">
+        {/* Main content */}
+        <div className="flex-1 space-y-6">
+          {/* Header */}
+          <Card>
         <CardHeader className="pb-3">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
@@ -154,10 +204,10 @@ export default function BUHomePage() {
             </div>
           </div>
         </CardHeader>
-      </Card>
+          </Card>
 
-      {/* Brands grid */}
-      <section className="space-y-3">
+          {/* Brands grid */}
+          <section className="space-y-3">
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-semibold">Brands</h2>
           <Input
@@ -202,9 +252,9 @@ export default function BUHomePage() {
             ))}
           </div>
         )}
-      </section>
+          </section>
 
-      <div className="grid lg:grid-cols-3 gap-6">
+          <div className="grid lg:grid-cols-3 gap-6">
         {/* Roster & Pods */}
         <Card className="lg:col-span-2">
           <CardHeader className="pb-3">
@@ -291,10 +341,10 @@ export default function BUHomePage() {
             </div>
           </CardContent>
         </Card>
-      </div>
+          </div>
 
-      {/* Dashboards */}
-      <Card>
+          {/* Dashboards */}
+          <Card>
         <CardHeader className="pb-3">
           <h2 className="text-lg font-semibold">Dashboards</h2>
         </CardHeader>
@@ -342,10 +392,10 @@ export default function BUHomePage() {
             </Card>
           </div>
         </CardContent>
-      </Card>
+          </Card>
 
-      {/* Activity */}
-      <Card>
+          {/* Activity */}
+          <Card>
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between">
             <h2 className="text-lg font-semibold">Recent Activity</h2>
@@ -359,7 +409,27 @@ export default function BUHomePage() {
             Recent activity will appear here as Work Orders run and agents are promoted.
           </div>
         </CardContent>
-      </Card>
+          </Card>
+        </div>
+        {/* End Main content */}
+
+        {/* Academy Sidebar */}
+        {featuredAgent && (
+          <aside className="lg:w-80 flex-shrink-0">
+            <AcademySidebar
+              agent={{
+                id: featuredAgent.name,
+                name: featuredAgent.display_name,
+                autonomy: featuredAgent.autonomy_level,
+                status: featuredAgent.status,
+                nextGate: featuredAgent.next_gate,
+              }}
+              onTrainClick={handleTrainClick}
+              onPromote={handlePromote}
+            />
+          </aside>
+        )}
+      </div>
 
       {/* Brand Details Modal */}
       <BrandDetailsModal 
