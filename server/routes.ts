@@ -2183,6 +2183,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   const opsSettingsRoute = await import("./routes/ops_settings.route");
   app.use(opsSettingsRoute.router);
 
+  // Ops Overview - Aggregated ops metrics dashboard (public for demo)
+  const opsOverviewRoute = await import("./routes/ops.overview.route");
+  app.use(opsOverviewRoute.router);
+
   // Copilot - AI assistant for querying DTH API (requires authentication)
   const copilot = await import("./copilot");
   app.use("/copilot", isAuthenticated, copilot.default);

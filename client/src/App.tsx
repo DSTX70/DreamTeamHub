@@ -45,6 +45,7 @@ import AffiliatesReport from "@/pages/ops/AffiliatesReport";
 import InventoryLowStock from "@/pages/ops/InventoryLowStock";
 import ImagesAdmin from "@/pages/ops/ImagesAdmin";
 import OpsSettings from "@/pages/ops/OpsSettings";
+import OpsOverview from "@/pages/ops/OpsOverview";
 import LLMProviderSelect from "@/pages/llm/ProviderSelect";
 import ProviderPromptLinter from "@/pages/llm/ProviderPromptLinter";
 import Checkout from "@/pages/checkout/Checkout";
@@ -89,6 +90,7 @@ function AuthenticatedRoutes() {
       <Route path="/playbooks/:handle" component={PlaybooksEditPage} />
       <Route path="/wo/playbook-preview" component={PlaybookPreview} />
       <Route path="/onboarding/success" component={OnboardingSuccess} />
+      <Route path="/ops/overview" component={OpsOverview} />
       <Route path="/ops/alerts" component={OpsAlertHooksDemo} />
       <Route path="/ops/affiliates" component={AffiliatesReport} />
       <Route path="/ops/inventory" component={InventoryLowStock} />

@@ -28,6 +28,14 @@ The platform also features an Alert Notification System for multi-channel delive
 
 An Ops Dashboard & Observability provides real-time operational metrics, displaying PUBLISH events, draft uploads, work order runs, and error rates, with lightweight alert rules.
 
+**Ops Overview Dashboard** serves as a unified operational command center, aggregating key metrics from all subsystems:
+- **Inventory**: Displays low-stock SKU count with quick link to `/ops/inventory`
+- **Images**: Shows S3 bucket status, connectivity probe, and Cache-Control configuration with link to `/ops/images`
+- **Affiliates**: Presents 7-day performance metrics (clicks, unique visitors, orders, revenue, commission at 10%) with link to `/ops/affiliates`
+- **LLM Linter**: Displays active rule count for JSON schema validation with link to `/llm/provider/linter`
+
+This single-pane view enables rapid assessment of system health and provides one-click navigation to detailed management interfaces.
+
 Future phases include an Onboarding Wizard for brand/product creation and Coverage Views for role staffing analysis.
 
 **Completed E-Commerce Features (November 2025):**
