@@ -49,6 +49,11 @@ The platform is structured into core modules and features:
 - **Onboarding Wizard (Phase-2)**: Multi-step wizard for creating brands with Google Drive folder links, optional product creation with Drive integration, validates URL formats, and creates complete brand/product hierarchies in one workflow.
 - **Coverage Views (Phase-2)**: Role staffing analysis showing unstaffed roles (no agents assigned), over-replicated roles (exceeding configurable threshold), and complete coverage table with agent counts per role. Dynamic threshold adjustment allows flexible over-replication detection.
 - **Playbooks Registry (Phase-2)**: Create, edit, and manage reusable playbooks (handle-based references) for Work Orders. Playbooks store markdown content and can be referenced by unique handles in work order configurations, enabling standardized operational procedures.
+- **Saved Addresses & Checkout (Nov 2025)**: Address validation (US/CA), saved address CRUD, checkout autofill, field-level validation. Uses in-memory storage (DB migration planned).
+- **Affiliate E2E Tracking (Nov 2025)**: Pixel-based click tracking, 30-day cookie attribution, order attribution, comprehensive ops reporting with CSV export, event feed. In-memory storage with visitor deduplication via IP+UA hashing.
+- **Low-Stock Inventory Scheduler (Nov 2025)**: Per-SKU threshold management, 60-second automated scanning, low-stock event logging, inline threshold editor, recount simulation. In-memory storage.
+- **Responsive Images with S3 (Nov 2025)**: Allowlist-based upload authorization, MIME sniffing (blocks SVG/XML), Sharp transformation to AVIF/WebP/JPG across 6 widths (320-1920px), S3 integration with configurable cache headers, Picture component with automatic srcset generation. Requires AWS credentials.
+- **Prompt Linter (Nov 2025)**: Client-side JSON Schema validation for LLM prompts, auto-fix suggestions for common anti-patterns, prompt augmentation with "JSON-only" blocks. Fully client-side, no server dependencies.
 
 ### Technology Stack
 - **Frontend**: React 18, TypeScript, Wouter, TanStack Query v5, React Hook Form, Zod, Shadcn UI, Tailwind CSS.
@@ -76,6 +81,9 @@ The platform is structured into core modules and features:
 - **PostgreSQL (Neon-backed)**: Primary database for persistent storage.
 - **Replit Auth**: Provides secure user authentication via OpenID Connect.
 - **Google Drive API**: Integrated for knowledge management features (search, upload drafts, publish files).
+- **AWS S3**: Image storage for responsive image transformation feature.
+- **Sharp**: High-performance image processing library for responsive images.
+- **Multer**: File upload handling for image uploads.
 
 ## Production Readiness Status
 
