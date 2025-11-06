@@ -1,0 +1,203 @@
+Perfect — here’s a **single, PR-style drop** that adds a **“return JSON only” instruction helper** to auto-augment prompts and boost structured output rates. It:
+
+* Generates a compact, human-readable **schema outline** from your `output_schema`.
+* Prepends strict **anti-chatter rules** (“single JSON object, no prose, no fences”).
+* Optionally leverages **OpenAI’s response_format=json_object** when enabled.
+* Is fully toggleable via env flags.
+
+Apply with:
+
+```bash
+git apply -p0 <<'PATCH'
+*** Begin Patch
+*** Add File: server/lib/engine/jsonOnly.ts
++// Build a compact "return JSON only" system instruction from a JSON Schema.
++// - Produces a short schema outline (field: type, required, enums)
++// - Adds anti-chatter constraints (no prose, no code fences)
++// - Optional example hint placeholder (not used by default to avoid hallucinations)
++//
++// Usage:
++//   const instr = buildJsonOnlyInstruction(outputSchema);
++//   const finalSystem = instr + "\n\n" + originalSystem;
++//
++type JsonSchema = any;
++
++export function buildJsonOnlyInstruction(schema: JsonSchema): string {
++  const outline = schemaOutline(schema);
++  return [
++    "You MUST return a single JSON object that exactly matches the required schema below.",
++    "Do NOT include any prose, explanations, code fences, or backticks.",
++    "Do NOT include keys that are not listed.",
++    "If a value is unknown, use a sensible empty value that still validates (e.g., empty string, 0, empty array) unless the schema forbids it.",
++    "",
++    "SCHEMA OUTLINE:",
++    outline,
++    "",
++    "Output: a single JSON object only."
++  ].join("\n");
++}
++
++function schemaOutline(schema: JsonSchema, name = "root", indent = 0): string {
++  const pad = "  ".repeat(indent);
++  const t = Array.isArray(schema?.type) ? schema.type.join("|") : (schema?.type ?? "object");
++  if (t === "object") {
++    const req = (schema?.required ?? []) as string[];
++    const props = schema?.properties ?? {};
++    const lines: string[] = [`${pad}${name}: object`];
++    for (const key of Object.keys(props)) {
++      lines.push(fieldLine(key, props[key], req.includes(key), indent + 1));
++    }
++    return lines.join("\n");
++  }
++  return `${pad}${name}: ${t}`;
++}
++
++function fieldLine(key: string, sch: JsonSchema, required: boolean, indent = 0): string {
++  const pad = "  ".repeat(indent);
++  const t = Array.isArray(sch?.type) ? sch.type.join("|") : (sch?.type ?? inferTypeFromSchema(sch));
++  const bits: string[] = [`${pad}${key}${required ? "*" : ""}: ${t}`];
++  if (Array.isArray(sch?.enum) && sch.enum.length) {
++    bits.push(` enum[${sch.enum.slice(0, 6).map((e: any) => JSON.stringify(e)).join(", ")}${sch.enum.length > 6 ? ", …" : ""}]`);
++  }
++  if (t === "object" && sch?.properties) {
++    const req = (sch?.required ?? []) as string[];
++    const sub: string[] = [];
++    for (const subKey of Object.keys(sch.properties)) {
++      sub.push(fieldLine(subKey, sch.properties[subKey], req.includes(subKey), indent + 1));
++    }
++    return [bits.join(""), sub.join("\n")].join("\n");
++  }
++  if (t === "array" && sch?.items) {
++    const itmT = Array.isArray(sch.items?.type) ? sch.items.type.join("|") : (sch.items?.type ?? "any");
++    bits.push(` items<${itmT}>`);
++  }
++  return bits.join("");
++}
++
++function inferTypeFromSchema(sch: JsonSchema): string {
++  if (sch?.properties) return "object";
++  if (sch?.items) return "array";
++  return "any";
++}
++
+*** End Patch
+PATCH
+```
+
+---
+
+### 2) Use the helper inside `runSkill` (+ optional OpenAI JSON response_format)
+
+This patch augments your system prompt with the JSON-only instruction and (optionally) forces OpenAI to return a JSON object when `SKILL_JSON_USE_OPENAI_RESPONSE_FORMAT=true`.
+
+```bash
+git apply -p0 <<'PATCH'
+*** Begin Patch
+*** Update File: server/lib/engine/providers/openai.ts
+@@
+-export type LLMArgs = { system: string; user: string; model?: string };
+-export async function callOpenAI({ system, user, model }: LLMArgs) {
++export type LLMArgs = { system: string; user: string; model?: string; jsonObject?: boolean };
++export async function callOpenAI({ system, user, model, jsonObject }: LLMArgs) {
+   const key = process.env.OPENAI_API_KEY!;
+   const m = model || process.env.OPENAI_MODEL || "gpt-4o-mini";
+   if (!key) throw new Error("OPENAI_API_KEY missing");
++  const useJson = !!jsonObject && (process.env.SKILL_JSON_USE_OPENAI_RESPONSE_FORMAT || "false").toLowerCase() === "true";
+   const r = await fetch("https://api.openai.com/v1/chat/completions", {
+     method: "POST",
+     headers: { "content-type":"application/json", "authorization":`Bearer ${key}` },
+     body: JSON.stringify({
+       model: m,
+       messages: [{ role:"system", content: system }, { role:"user", content: user }],
+-      temperature: 0.2,
++      temperature: 0.2,
++      ...(useJson ? { response_format: { type: "json_object" } } : {})
+     })
+   });
+*** End Patch
+PATCH
+```
+
+```bash
+git apply -p0 <<'PATCH'
+*** Begin Patch
+*** Update File: server/lib/engine/runSkill.ts
+@@
+ import { callOpenAI } from "./providers/openai";
+ import { callVertex } from "./providers/vertex";
+ import { extractJSONBlock } from "./jsonExtract";
++import { buildJsonOnlyInstruction } from "./jsonOnly";
+@@
+-  // Build prompts
+-  const sys = expand(skill.promptSys, { inputs, context });
+-  const usr = expand(skill.promptUser, { inputs, context });
++  // Build prompts (+ JSON-only augment)
++  const jsonOnlyOn = (process.env.SKILL_JSON_HELPER || "true").toLowerCase() !== "false";
++  const jsonInstr = jsonOnlyOn ? buildJsonOnlyInstruction(skill.outputSchema) : "";
++  const sys = [jsonInstr, expand(skill.promptSys, { inputs, context })].filter(Boolean).join("\n\n");
++  const usr = expand(skill.promptUser, { inputs, context });
+@@
+-    if (provider === "vertex") {
++    if (provider === "vertex") {
+       const out = await callVertex({ system: sys, user: usr, model: process.env.VERTEX_MODEL });
+       llmText = out.text;
+     } else {
+-      const out = await callOpenAI({ system: sys, user: usr, model: process.env.OPENAI_MODEL });
++      const out = await callOpenAI({
++        system: sys,
++        user: usr,
++        model: process.env.OPENAI_MODEL,
++        jsonObject: true
++      });
+       llmText = out.text;
+     }
+   } catch (e:any) {
+*** End Patch
+PATCH
+```
+
+---
+
+### 3) Env flags
+
+Add these in Replit → Secrets as desired:
+
+```
+# Turn on JSON-only prompt augmentation (default: on)
+SKILL_JSON_HELPER=true
+
+# Prefer OpenAI JSON wire format (when using OpenAI)
+SKILL_JSON_USE_OPENAI_RESPONSE_FORMAT=true
+```
+
+> Keep `SKILL_REQUIRE_JSON=true` to **hard fail** runs that don’t validate, or leave it unset/false to **fallback** to summary mode.
+
+---
+
+### 4) Quick validation
+
+1. **Augmented prompt (OpenAI)**
+
+   * With `SKILL_JSON_HELPER=true` and `SKILL_JSON_USE_OPENAI_RESPONSE_FORMAT=true`, start a WO with a skill that has a strict `output_schema`.
+   * Expect: LLM returns a JSON object; extractor validates → `status:"done"`, `output_json` is structured.
+
+2. **Augmented prompt (Vertex)**
+
+   * With `SKILL_JSON_HELPER=true`, Vertex receives strong “JSON only” constraints (+ schema outline) in the system prompt.
+   * If the model still emits prose, the extractor will attempt to parse fenced or inline JSON.
+   * Enable `SKILL_REQUIRE_JSON=true` to enforce.
+
+3. **Off switch**
+
+   * Set `SKILL_JSON_HELPER=false` and retry: engine removes JSON-only augmentation (keeps previous behavior).
+
+---
+
+### 5) Why this helps
+
+* **Schema outline** gives the model a compact target (fields, required, enums) without dumping a massive schema.
+* **Anti-chatter constraints** remove fences and commentary that break parsers.
+* **OpenAI json_object** response struct adds another guardrail when available.
+* Combined with your **extract-then-validate** step and optional **strict** mode, this significantly increases valid structured output rates on v1.
+
+If you want, I can also add a **tiny “prompt linter”** that warns when your `output_schema` has patterns that commonly degrade JSON compliance (e.g., unconstrained `any`, deeply nested unions).

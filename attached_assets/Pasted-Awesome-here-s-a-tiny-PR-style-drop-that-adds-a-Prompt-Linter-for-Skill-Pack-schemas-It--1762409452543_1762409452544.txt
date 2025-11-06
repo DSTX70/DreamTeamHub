@@ -1,0 +1,319 @@
+Awesome — here’s a **tiny, PR-style drop** that adds a **Prompt Linter** for Skill Pack schemas.
+It detects the common patterns that degrade structured JSON compliance and returns succinct warnings.
+I also wire it into your **Skill Pack POST** route (so Replit sees warnings immediately) and add a **/api/skills/[handle]/lint** endpoint to lint any stored pack on demand.
+
+> Apply each block with:
+>
+> ```bash
+> git apply -p0 <<'PATCH'
+> …diff…
+> PATCH
+> ```
+
+---
+
+## 1) Prompt Linter utility
+
+```diff
+diff --git a/server/lib/engine/promptLinter.ts b/server/lib/engine/promptLinter.ts
+new file mode 100644
+--- /dev/null
++++ b/server/lib/engine/promptLinter.ts
+@@
++/**
++ * Prompt Linter for JSON Schema
++ * Flags patterns that usually reduce JSON compliance from LLMs:
++ *  - Unconstrained "any" (no type/properties/items)
++ *  - Objects with additionalProperties true and no properties
++ *  - Arrays without "items"
++ *  - Deep nesting (> 6) or large/stacked unions (oneOf|anyOf|allOf > 3)
++ *  - Many strings with no maxLength (soft hint)
++ */
++export type LintWarning = { path: string; code: string; msg: string; severity: "warn"|"info" };
++
++type JS = any;
++
++export function lintSchema(schema: JS): LintWarning[] {
++  const warnings: LintWarning[] = [];
++  let stringNoLimit = 0;
++
++  function add(path: string, code: string, msg: string, severity: "warn"|"info" = "warn") {
++    warnings.push({ path, code, msg, severity });
++  }
++
++  function toPath(parent: string, key?: string|number) {
++    if (key === undefined || key === null || key === "") return parent || "/";
++    return parent === "/" ? `/${key}` : `${parent}/${key}`;
++  }
++
++  function arr(v: JS | JS[]) { return Array.isArray(v) ? v : v !== undefined ? [v] : []; }
++
++  function visit(node: JS, path = "/", depth = 0) {
++    if (!node || typeof node !== "object") {
++      add(path, "schema/empty", "Schema node is empty; treated as 'any'", "info");
++      return;
++    }
++    if (depth > 6) add(path, "depth/deep-nesting", "Schema nesting is deeper than 6 levels; consider flattening");
++
++    // Union checks
++    const unions = ["oneOf", "anyOf", "allOf"].filter(k => Array.isArray(node[k]) && node[k].length);
++    for (const k of unions) {
++      const len = node[k].length;
++      if (len > 3) add(toPath(path, k), "union/large", `${k} has ${len} options; consider ≤3 for reliability`);
++      node[k].forEach((sub: JS, i: number) => visit(sub, toPath(path, `${k}/${i}`), depth + 1));
++    }
++    if (unions.length) return; // don't double-report type/etc for union container node
++
++    // Type inference
++    const typ = Array.isArray(node.type) ? node.type : node.type ? [node.type] : [];
++    const t = typ[0]; // coarse primary type
++
++    if (!t && !node.properties && !node.items) {
++      add(path, "type/any", "No type/properties/items — unconstrained 'any' reduces JSON compliance");
++    }
++
++    if (t === "object" || node.properties) {
++      const props = node.properties || {};
++      const keys = Object.keys(props);
++      const addProps = node.additionalProperties;
++      if ((addProps === true || (typeof addProps === "object" && !Object.keys(addProps).length)) && !keys.length) {
++        add(path, "object/unconstrained", "Object allows any additional properties and has no explicit fields");
++      }
++      // descend into properties
++      keys.forEach(k => visit(props[k], toPath(path, `properties/${k}`), depth + 1));
++    }
++
++    if (t === "array" || node.items) {
++      if (!node.items) add(path, "array/items-missing", "Array without 'items' schema is unconstrained");
++      else visit(node.items, toPath(path, "items"), depth + 1);
++    }
++
++    if (t === "string") {
++      if (node.maxLength === undefined) {
++        stringNoLimit++;
++        if (stringNoLimit >= 5) {
++          add(path, "string/no-maxLength", "Many string fields have no maxLength; consider adding limits", "info");
++          stringNoLimit = 0; // avoid spamming
++        }
++      }
++    }
++  }
++
++  try {
++    visit(schema || {}, "/");
++  } catch (e: any) {
++    add("/", "schema/parse-error", `Linter exception: ${e?.message || e}`, "warn");
++  }
++  return warnings;
++}
++
+*** End Patch
+```
+
+---
+
+## 2) Show warnings during Skill creation (`POST /api/skills`) and add a lint endpoint
+
+```diff
+diff --git a/app/api/skills/route.ts b/app/api/skills/route.ts
+--- a/app/api/skills/route.ts
++++ b/app/api/skills/route.ts
+@@
+ import { NextRequest } from "next/server";
+ import { db } from "@/drizzle/db";
+ import { skillPack } from "@/drizzle/schema";
+ import { json } from "@/lib/next/response";
+ import { SkillPackBody } from "@/lib/validators/skills";
+ import { like } from "drizzle-orm";
++import { lintSchema } from "@/server/lib/engine/promptLinter";
+ 
+ export async function GET(req: NextRequest) {
+   const q = (req.nextUrl.searchParams.get("query") || "").trim();
+   const rows = q
+     ? await db.select().from(skillPack).where(like(skillPack.title, `%${q}%`))
+     : await db.select({ handle: skillPack.handle, title: skillPack.title }).from(skillPack).limit(100);
+   return json(rows, { status: 200, headers: { "X-Total-Count": String(rows.length) } });
+ }
+ 
+ export async function POST(req: NextRequest) {
+   const body = await req.json().catch(()=> ({}));
+   const parsed = SkillPackBody.safeParse(body);
+   if (!parsed.success) return json({ error: parsed.error.errors.map(e=>e.message).join("; ") }, 422);
+   const b = parsed.data;
++  // Lint schemas up-front
++  const inputWarnings = lintSchema(b.input_schema);
++  const outputWarnings = lintSchema(b.output_schema);
++  const warningCount = inputWarnings.length + outputWarnings.length;
+ 
+   const [row] = await db.insert(skillPack).values({
+     handle: b.handle, title: b.title, description: b.description || null,
+     promptSys: b.prompt_sys, promptUser: b.prompt_user,
+     inputSchema: b.input_schema, outputSchema: b.output_schema,
+     toolsAllowed: b.tools_allowed || [],
+     capsRunsPerDay: b.caps_runs_per_day ?? 100,
+     capsUsdPerDay: b.caps_usd_per_day ?? 2.0,
+     playbookHandle: b.playbook_handle || null
+   }).onConflictDoUpdate({
+     target: skillPack.handle,
+     set: {
+       title: b.title, description: b.description || null,
+       promptSys: b.prompt_sys, promptUser: b.prompt_user,
+       inputSchema: b.input_schema, outputSchema: b.output_schema,
+       toolsAllowed: b.tools_allowed || [],
+       capsRunsPerDay: b.caps_runs_per_day ?? 100,
+       capsUsdPerDay: b.caps_usd_per_day ?? 2.0,
+       playbookHandle: b.playbook_handle || null
+     }
+-  }).returning();
+-  return json(row, 201);
++  }).returning();
++  return new Response(JSON.stringify({ ...row, lint: { input: inputWarnings, output: outputWarnings } }), {
++    status: 201,
++    headers: { "content-type":"application/json", ...(warningCount ? { "X-Lint-Warnings": String(warningCount) } : {}) }
++  });
+ }
+```
+
+```diff
+diff --git a/app/api/skills/[handle]/lint/route.ts b/app/api/skills/[handle]/lint/route.ts
+new file mode 100644
+--- /dev/null
++++ b/app/api/skills/[handle]/lint/route.ts
+@@
++import { NextRequest } from "next/server";
++import { db } from "@/drizzle/db";
++import { skillPack } from "@/drizzle/schema";
++import { eq } from "drizzle-orm";
++import { lintSchema } from "@/server/lib/engine/promptLinter";
++
++export async function GET(_req: NextRequest, ctx: { params: { handle: string } }) {
++  const [sp] = await db.select().from(skillPack).where(eq(skillPack.handle, ctx.params.handle));
++  if (!sp) return new Response(JSON.stringify({ error: "not found" }), { status: 404, headers: { "content-type":"application/json" }});
++  const input = lintSchema(sp.inputSchema);
++  const output = lintSchema(sp.outputSchema);
++  const count = input.length + output.length;
++  return new Response(JSON.stringify({ lint: { input, output } }), { status: 200, headers: { "content-type":"application/json", ...(count ? { "X-Lint-Warnings": String(count) } : {}) }});
++}
+```
+
+---
+
+## 3) (Optional) Show warnings in UI after creating/updating a Skill
+
+If you’ve got a Skill editor page, show the returned warnings:
+
+```diff
+diff --git a/web/pages/skills/new.tsx b/web/pages/skills/new.tsx
+new file mode 100644
+--- /dev/null
++++ b/web/pages/skills/new.tsx
+@@
++import React, { useState } from "react";
++
++export default function NewSkillPage(){
++  const [handle,setHandle]=useState(""); const [title,setTitle]=useState("");
++  const [promptSys,setPromptSys]=useState(""); const [promptUser,setPromptUser]=useState("");
++  const [inputSchema,setInputSchema]=useState('{"type":"object","properties":{}}');
++  const [outputSchema,setOutputSchema]=useState('{"type":"object","properties":{}}');
++  const [msg,setMsg]=useState(""); const [lint,setLint]=useState<any>(null);
++
++  const save=async()=>{
++    setMsg(""); setLint(null);
++    let inS:any = {}; let outS:any = {};
++    try{ inS = JSON.parse(inputSchema); outS = JSON.parse(outputSchema); }catch{ setMsg("Invalid JSON schema"); return; }
++    const r = await fetch("/api/skills", {
++      method:"POST", headers:{ "content-type":"application/json" },
++      body: JSON.stringify({ handle, title, prompt_sys:promptSys, prompt_user:promptUser, input_schema: inS, output_schema: outS })
++    });
++    const j = await r.json();
++    if (!r.ok) { setMsg(j?.error || "Save failed"); return; }
++    setMsg("Saved ✔"); setLint(j?.lint || null);
++  };
++
++  return (
++    <div className="max-w-4xl mx-auto p-6 space-y-4">
++      <h1 className="text-2xl font-semibold">New Skill Pack</h1>
++      <input className="border rounded px-2 py-1 w-full" placeholder="handle" value={handle} onChange={e=>setHandle(e.target.value)}/>
++      <input className="border rounded px-2 py-1 w-full" placeholder="title" value={title} onChange={e=>setTitle(e.target.value)}/>
++      <textarea className="border rounded px-2 py-1 w-full" rows={4} placeholder="prompt_sys" value={promptSys} onChange={e=>setPromptSys(e.target.value)}/>
++      <textarea className="border rounded px-2 py-1 w-full" rows={4} placeholder="prompt_user" value={promptUser} onChange={e=>setPromptUser(e.target.value)}/>
++      <div className="grid md:grid-cols-2 gap-3">
++        <div>
++          <label className="text-sm block mb-1">Input schema (JSON)</label>
++          <textarea className="border rounded px-2 py-1 w-full" rows={10} value={inputSchema} onChange={e=>setInputSchema(e.target.value)}/>
++        </div>
++        <div>
++          <label className="text-sm block mb-1">Output schema (JSON)</label>
++          <textarea className="border rounded px-2 py-1 w-full" rows={10} value={outputSchema} onChange={e=>setOutputSchema(e.target.value)}/>
++        </div>
++      </div>
++      <div className="flex items-center gap-2">
++        <button className="px-3 py-1 border rounded bg-black text-white" onClick={save}>Save</button>
++        <span className="text-sm text-gray-600">{msg}</span>
++      </div>
++      {lint && (
++        <div className="rounded-xl border p-3 text-sm">
++          <div className="font-medium mb-1">Prompt Linter Warnings</div>
++          {["input","output"].map(side => (
++            <div key={side} className="mt-2">
++              <div className="text-xs uppercase text-gray-500">{side}</div>
++              <ul className="list-disc pl-5">
++                {(lint[side]||[]).map((w:any, i:number)=>(
++                  <li key={i}><code>{w.path}</code> — <b>{w.code}</b>: {w.msg}</li>
++                ))}
++                {!(lint[side]||[]).length && <li className="text-gray-500">No warnings</li>}
++              </ul>
++            </div>
++          ))}
++        </div>
++      )}
++    </div>
++  );
++}
+```
+
+*(If you already have a Skill editor UI, just steal the “warnings list” section.)*
+
+---
+
+## 4) What to watch for
+
+Typical warnings you’ll see:
+
+* `type/any` — nodes with no `type/properties/items` (LLMs love to ramble when targets are vague).
+* `object/unconstrained` — object allows anything; constrain fields or `additionalProperties:false`.
+* `array/items-missing` — array without `items`.
+* `union/large` — long `oneOf/anyOf/allOf`; keep ≤ 3 options if possible.
+* `depth/deep-nesting` — very deep schemas (>6) reduce compliance.
+* `string/no-maxLength` — many strings without limits (soft hint).
+
+Use this to nudge Skill Pack authors toward tighter schemas and better structured outputs.
+
+---
+
+## 5) (Optional) Wire linter into runs
+
+If you want to log linter warnings automatically when a skill executes, you can add this snippet to `runSkill` after loading `skill`:
+
+```ts
+import { lintSchema } from "@/server/lib/engine/promptLinter";
+// ...
+const lint = lintSchema(skill.outputSchema);
+if (lint.length) {
+  await db.insert(opsEvent).values({
+    kind:"LINT",
+    message:`Skill ${skill.handle} output_schema lint: ${lint.length} warnings`,
+    meta:{ warnings: lint.slice(0, 10) } // truncate
+  });
+}
+```
+
+---
+
+## 6) Done ✅
+
+* Skill creation now returns structured **lint warnings** (`X-Lint-Warnings` header).
+* You can lint any stored skill at `/api/skills/[handle]/lint`.
+* This dovetails with your **JSON-only helper** and **JSON extraction/validation** to improve structured success rates.
+
+If you want this linter to **auto-fix** trivial cases (e.g., inject `additionalProperties:false` when missing), I can add a safe “suggested fixes” mode next.
