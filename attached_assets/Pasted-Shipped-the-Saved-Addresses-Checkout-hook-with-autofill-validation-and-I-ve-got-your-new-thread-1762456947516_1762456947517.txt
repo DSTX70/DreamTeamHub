@@ -1,0 +1,73 @@
+Shipped the Saved Addresses → Checkout hook with autofill + validation, and I’ve got your new-thread copy ready.
+
+Download: ship_saved_addresses_checkout.zip
+
+What’s in this drop
+
+Shared validation
+
+shared/validation/address.ts — validateAddress() (US/CA postal, US state), normalizePhone().
+
+Server
+
+server/routes/checkout_address.route.ts
+
+GET /api/checkout/address/default — pulls the user’s default (or first) saved address.
+
+POST /api/checkout/address/validate — returns field-level errors or normalized phone.
+
+Client
+
+client/src/pages/checkout/Checkout.tsx — address autofill, saved-address picker, inline validation, submit stub.
+
+Tests
+
+tests/address_validation.test.ts — ZIP/state/phone + CA postal.
+
+Mount
+
+app.use(require("./server/routes/checkout_address.route").router);
+
+Next in the queue (I’ll keep shipping in this order)
+
+Affiliate E2E & Ops report polish
+
+Low-Stock scheduler & threshold editor
+
+Responsive images allowlist/S3 + <picture> helper
+
+Prompt Linter pane under /llm/provider
+
+DB migrations to replace in-memory stores
+
+New thread kickoff copy (paste this at the top of a fresh thread)
+
+Thread Title: Implementation Sprint — Checkout, Affiliates, Ops & Media
+
+Kickoff Post (paste exactly):
+
+This is a seamless continuation thread for our implementation sprint.
+
+Scope (order of work):
+1) Saved Addresses → Checkout hook (autofill + validation) — ✅ shipped (drop attached)
+2) Affiliate E2E & Ops report polish
+3) Low-Stock scheduler & threshold editor
+4) Responsive images allowlist/S3 + <picture> helper
+5) Prompt Linter pane under /llm/provider
+6) DB migrations to replace in-memory stores
+
+Environment:
+- Node/TS monorepo with /server, /client, /shared, /tests
+- Mailer: consolidated partials cache + typed schema (enum/regex) + preview + dev send
+- Images: /img sharp transformer with fallback
+- ETA: formatEta() for UI + emails
+- Checkout: address autofill + validation endpoints
+
+Deliverable style:
+- Each feature ships as a Replit-ready ZIP with README, server/client files, and tests.
+- No background tasks; everything is delivered inline per drop.
+
+What to do first in this thread:
+- Mount the new `/api/checkout/address/*` endpoints.
+- Confirm `/checkout` renders and validates.
+- Then proceed with Affiliate E2E & Ops report polish.
