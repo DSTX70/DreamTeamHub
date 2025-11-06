@@ -55,6 +55,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { IdeaSparkButton } from "@/components/idea-spark";
 import { SearchModal, useSearchShortcut } from "@/components/search-modal";
 import HeaderOpsMenu from "@/components/HeaderOpsMenu";
+import OpsHotkeys from "@/components/OpsHotkeys";
 import { useState } from "react";
 
 function AuthenticatedRoutes() {
@@ -187,6 +188,7 @@ function AppContent() {
         </div>
         <IdeaSparkButton />
         <SearchModal open={isSearchOpen} onOpenChange={setIsSearchOpen} />
+        <OpsHotkeys />
       </div>
     </SidebarProvider>
   );
