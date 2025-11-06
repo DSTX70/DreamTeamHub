@@ -247,7 +247,7 @@ export function SearchModal({ open, onOpenChange }: SearchModalProps) {
         } else {
           if (rCount === 0) {
             setZone("actions");
-            setSelectedIndex(aCount ? Math.max(aCount - 1, 0) : -1);
+            setSelectedIndex(aCount ? 0 : -1);
             return;
           }
           const prev = selectedIndex - 1;
@@ -255,7 +255,7 @@ export function SearchModal({ open, onOpenChange }: SearchModalProps) {
             setSelectedIndex(prev);
           } else {
             setZone("actions");
-            setSelectedIndex(aCount ? Math.max(aCount - 1, 0) : -1);
+            setSelectedIndex(aCount ? 0 : -1);
           }
         }
       } else if (e.key === "Enter") {
