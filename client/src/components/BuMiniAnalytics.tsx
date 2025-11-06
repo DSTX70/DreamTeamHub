@@ -1,12 +1,18 @@
 import { useEffect, useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Loader2 } from "lucide-react";
+import { Sparkline } from "@/components/Sparkline";
 
 type OpsSummaryData = {
   window: string;
   publish_count_24h: number;
   draft_count_24h: number;
   wo_runs_24h: number;
+  series?: {
+    publish: number[];
+    draft: number[];
+    wo: number[];
+  };
 };
 
 type BuMiniAnalyticsProps = {
@@ -24,7 +30,7 @@ export default function BuMiniAnalytics({ buId }: BuMiniAnalyticsProps) {
       setLoading(true);
       try {
         const response = await fetch(
-          `/api/ops/summary?owner_type=BU&owner_id=${buId}`,
+          `/api/ops/summary?owner_type=BU&owner_id=${buId}&series=1`,
           {
             credentials: "include",
           }
@@ -49,16 +55,22 @@ export default function BuMiniAnalytics({ buId }: BuMiniAnalyticsProps) {
       label: "Publishes (24h)",
       value: data?.publish_count_24h,
       testId: "metric-publishes",
+      seriesKey: "publish" as const,
+      sparkLabel: "Publishes (last hr)",
     },
     {
       label: "Draft uploads (24h)",
       value: data?.draft_count_24h,
       testId: "metric-drafts",
+      seriesKey: "draft" as const,
+      sparkLabel: "Drafts (last hr)",
     },
     {
       label: "WO runs (24h)",
       value: data?.wo_runs_24h,
       testId: "metric-wo-runs",
+      seriesKey: "wo" as const,
+      sparkLabel: "WO runs (last hr)",
     },
   ];
 
@@ -80,6 +92,16 @@ export default function BuMiniAnalytics({ buId }: BuMiniAnalyticsProps) {
                 "—"
               )}
             </div>
+            {data?.series && (
+              <div className="mt-3">
+                <Sparkline
+                  data={data.series[metric.seriesKey]}
+                  label={metric.sparkLabel}
+                  width={140}
+                  height={32}
+                />
+              </div>
+            )}
           </CardContent>
         </Card>
       ))}

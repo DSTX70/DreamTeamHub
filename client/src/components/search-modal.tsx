@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import {
@@ -9,7 +9,8 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Search, Sparkles, Package, FolderKanban, Users, Layers } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Search, Sparkles, Package, FolderKanban, Users, Layers, X } from "lucide-react";
 
 interface SearchResult {
   type: 'brand' | 'product' | 'project' | 'agent' | 'pod';
@@ -41,29 +42,120 @@ const typeColors = {
   pod: "bg-pink-500/10 text-pink-500",
 };
 
+const MAX_RECENT = 8;
+const RECENT_SEARCHES_KEY = "cmdk_recent";
+
 export function SearchModal({ open, onOpenChange }: SearchModalProps) {
   const [query, setQuery] = useState("");
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [, setLocation] = useLocation();
+  const [recent, setRecent] = useState<string[]>([]);
+  const [allResults, setAllResults] = useState<SearchResult[]>([]);
+  const [offset, setOffset] = useState(0);
+  const [total, setTotal] = useState(0);
+  const [fetchingMore, setFetchingMore] = useState(false);
+  const sentinelRef = useRef<HTMLDivElement | null>(null);
+  const listRef = useRef<HTMLDivElement | null>(null);
+  const limit = 10;
+
+  // Load recent searches from localStorage
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(RECENT_SEARCHES_KEY);
+      if (raw) setRecent(JSON.parse(raw));
+    } catch {}
+  }, []);
+
+  const pushRecent = useCallback((s: string) => {
+    const v = s.trim();
+    if (v.length < 2) return;
+    const next = [v, ...recent.filter(x => x !== v)].slice(0, MAX_RECENT);
+    setRecent(next);
+    try {
+      localStorage.setItem(RECENT_SEARCHES_KEY, JSON.stringify(next));
+    } catch {}
+  }, [recent]);
+
+  const clearRecent = useCallback(() => {
+    setRecent([]);
+    try {
+      localStorage.removeItem(RECENT_SEARCHES_KEY);
+    } catch {}
+  }, []);
 
   // Reset state when modal closes
   useEffect(() => {
     if (!open) {
       setQuery("");
       setSelectedIndex(0);
+      setAllResults([]);
+      setOffset(0);
+      setTotal(0);
     }
   }, [open]);
 
-  // Fetch search results
-  const { data: results = [], isLoading } = useQuery<SearchResult[]>({
-    queryKey: ["/api/search", query],
+  // Reset when query changes
+  useEffect(() => {
+    setAllResults([]);
+    setOffset(0);
+    setTotal(0);
+    setSelectedIndex(0);
+  }, [query]);
+
+  // Fetch search results (initial + pagination)
+  const { data: searchData, isLoading } = useQuery<{ items: SearchResult[]; count: number }>({
+    queryKey: ["/api/search", query, offset],
     enabled: query.trim().length > 0,
     queryFn: async () => {
-      const res = await fetch(`/api/search?q=${encodeURIComponent(query)}&limit=10`);
+      const res = await fetch(`/api/search?q=${encodeURIComponent(query)}&limit=${limit}&offset=${offset}`);
       if (!res.ok) throw new Error("Search failed");
-      return res.json();
+      const data = await res.json();
+      const count = parseInt(res.headers.get("X-Total-Count") || data.count || "0", 10);
+      return { items: data.items || data, count };
     },
   });
+
+  // Update results when data changes
+  useEffect(() => {
+    if (searchData?.items) {
+      setAllResults(prev => offset === 0 ? searchData.items : [...prev, ...searchData.items]);
+      setTotal(searchData.count);
+      if (offset === 0 && searchData.items.length > 0) {
+        setSelectedIndex(0);
+      }
+    }
+  }, [searchData, offset]);
+
+  const results = allResults;
+  const hasMore = results.length < total;
+
+  // Infinite scroll observer
+  useEffect(() => {
+    if (!open || !hasMore || isLoading || fetchingMore) return;
+    const el = sentinelRef.current;
+    if (!el) return;
+
+    const io = new IntersectionObserver(
+      (entries) => {
+        const ent = entries[0];
+        if (ent.isIntersecting && !fetchingMore) {
+          setFetchingMore(true);
+          setOffset(prev => prev + limit);
+        }
+      },
+      { root: listRef.current, rootMargin: "200px", threshold: 0 }
+    );
+
+    io.observe(el);
+    return () => io.disconnect();
+  }, [open, hasMore, isLoading, fetchingMore, limit]);
+
+  // Clear fetchingMore when new data arrives
+  useEffect(() => {
+    if (searchData && fetchingMore) {
+      setFetchingMore(false);
+    }
+  }, [searchData, fetchingMore]);
 
   // Keyboard navigation
   useEffect(() => {
@@ -87,6 +179,7 @@ export function SearchModal({ open, onOpenChange }: SearchModalProps) {
   }, [open, results, selectedIndex]);
 
   const handleSelect = (result: SearchResult) => {
+    pushRecent(query);
     setLocation(result.url);
     onOpenChange(false);
   };
@@ -111,14 +204,46 @@ export function SearchModal({ open, onOpenChange }: SearchModalProps) {
           </div>
         </DialogHeader>
 
-        <div className="max-h-[400px] overflow-y-auto p-2">
-          {isLoading && (
+        <div ref={listRef} className="max-h-[400px] overflow-y-auto p-2">
+          {isLoading && offset === 0 && (
             <div className="p-8 text-center text-muted-foreground">
               Searching...
             </div>
           )}
 
-          {!isLoading && query.trim().length === 0 && (
+          {!isLoading && query.trim().length === 0 && recent.length > 0 && (
+            <div className="p-4">
+              <div className="flex items-center justify-between mb-3">
+                <p className="text-xs text-muted-foreground font-medium">Recent searches</p>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={clearRecent}
+                  className="h-6 text-xs"
+                  data-testid="button-clear-recent"
+                >
+                  <X className="h-3 w-3 mr-1" />
+                  Clear
+                </Button>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {recent.map((s) => (
+                  <Button
+                    key={s}
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setQuery(s)}
+                    className="h-7 text-xs"
+                    data-testid={`button-recent-${s}`}
+                  >
+                    {s}
+                  </Button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {!isLoading && query.trim().length === 0 && recent.length === 0 && (
             <div className="p-8 text-center text-muted-foreground">
               <p className="text-sm">Start typing to search across</p>
               <p className="text-xs mt-1">Brands • Products • Projects • Agents • Pods</p>
@@ -176,6 +301,17 @@ export function SearchModal({ open, onOpenChange }: SearchModalProps) {
                   </button>
                 );
               })}
+              
+              {/* Infinite scroll sentinel */}
+              {hasMore && (
+                <div
+                  ref={sentinelRef}
+                  className="p-4 text-center text-sm text-muted-foreground"
+                  data-testid="scroll-sentinel"
+                >
+                  {fetchingMore ? "Loading more..." : "Scroll to load more"}
+                </div>
+              )}
             </div>
           )}
         </div>
