@@ -8,8 +8,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Play } from "lucide-react";
+import { Loader2, Play, ClipboardList } from "lucide-react";
 import { PageBreadcrumb, buildBreadcrumbs } from "@/components/PageBreadcrumb";
+import { EmptyState } from "@/components/empty-state";
 
 type WO = {
   id: string;
@@ -355,9 +356,15 @@ export default function WorkOrdersPage() {
               <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
             </div>
           ) : workOrders.length === 0 ? (
-            <p className="text-sm text-muted-foreground py-8 text-center">
-              No work orders yet. Create one above to get started.
-            </p>
+            <EmptyState
+              icon={ClipboardList}
+              title="No work orders yet"
+              description="Work orders are AI-driven tasks with budget caps. Create one using the templates above to get started with automated workflows."
+              action={{
+                label: "Scroll to Create Form",
+                onClick: () => window.scrollTo({ top: 0, behavior: "smooth" }),
+              }}
+            />
           ) : (
             <div className="space-y-4">
               {workOrders.map((order) => (
@@ -371,9 +378,11 @@ export default function WorkOrdersPage() {
                       {order.title}
                     </span>
                     <Badge variant="secondary" data-testid={`badge-autonomy-${order.id}`}>
+                      <span className="sr-only">Autonomy level: </span>
                       {order.autonomy}
                     </Badge>
                     <Badge variant="outline" data-testid={`badge-status-${order.id}`}>
+                      <span className="sr-only">Status: </span>
                       {order.status}
                     </Badge>
                     <span className="text-sm text-muted-foreground">

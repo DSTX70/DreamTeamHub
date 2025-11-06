@@ -6,6 +6,26 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Accessibility: Visible focus rings */
+*:focus-visible {
+  outline: 2px solid hsl(var(--ring));
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* Accessibility: Screen reader only text */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+
 /* DARK MODE (Default) */
 :root {
   --button-outline: rgba(255,255,255, .12);

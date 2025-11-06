@@ -31,7 +31,7 @@ const navigation = [
     title: "Orchestration",
     items: [
       { title: "Intake & Routing", url: "/intake", icon: Inbox },
-      { title: "Work Orders", url: "/work-orders", icon: ClipboardList },
+      { title: "Work Orders (Drafts)", url: "/work-orders", icon: ClipboardList },
       { title: "Decision Log", url: "/decisions", icon: FileText },
     ],
   },
@@ -49,7 +49,7 @@ const navigation = [
     items: [
       { title: "Dream Team Chat", url: "/chat", icon: MessageSquare },
       { title: "Agent Console", url: "/agent-console", icon: Bot },
-      { title: "Copilot Assistant", url: "/copilot", icon: Cpu },
+      { title: "Copilot & Integrations", url: "/copilot", icon: Cpu },
       { title: "Summon & Mirror", url: "/summon-mirror", icon: Radio },
       { title: "Brainstorm Studio", url: "/brainstorm", icon: Lightbulb },
       { title: "Audit Engine", url: "/audits", icon: Shield },

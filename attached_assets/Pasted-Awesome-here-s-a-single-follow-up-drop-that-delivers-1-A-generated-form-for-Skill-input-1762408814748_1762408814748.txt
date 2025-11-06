@@ -1,0 +1,379 @@
+Awesome — here’s a **single follow-up drop** that delivers:
+
+1. A **generated form** for Skill inputs from **JSON Schema** (replaces the raw JSON textarea in the WO form).
+2. A **pluggable LLM call** inside `runSkill` with providers for **OpenAI** and **Vertex AI**.
+
+Each block below is a unified diff you can `git apply`. I’ve included minimal helpers and clear env instructions.
+
+> Apply each block with:
+>
+> ```bash
+> git apply -p0 <<'PATCH'
+> …diff…
+> PATCH
+> ```
+>
+> Then set env vars (at the end) and restart.
+
+---
+
+## A) UI — JSON Schema → Generated Form (WO Create)
+
+```diff
+diff --git a/web/components/JsonSchemaForm.tsx b/web/components/JsonSchemaForm.tsx
+new file mode 100644
+--- /dev/null
++++ b/web/components/JsonSchemaForm.tsx
+@@
++import React, { useEffect, useMemo, useState } from "react";
++type Props = {
++  schema: any;                 // JSON Schema object for inputs
++  value?: any;                 // current value
++  onChange: (val: any) => void;
++  disabled?: boolean;
++};
++
++// Very small JSON Schema form for objects / strings / numbers / booleans.
++// (No arrays/oneOf in v1; keeps it tiny and safe.)
++export default function JsonSchemaForm({ schema, value, onChange, disabled }: Props) {
++  const root = useMemo(()=> schema || { type: "object", properties: {} }, [schema]);
++  const [model, setModel] = useState<any>(value ?? {});
++  useEffect(()=>{ setModel(value ?? {}); }, [value]);
++
++  const props = root.properties || {};
++  const required: string[] = root.required || [];
++
++  function setField(k: string, v: any) {
++    const next = { ...(model||{}) , [k]: v };
++    setModel(next);
++    onChange(next);
++  }
++
++  function renderField(k: string, sub: any) {
++    const t = sub?.type || "string";
++    const label = sub?.title || k;
++    const req = required.includes(k);
++    const help = sub?.description;
++    const val = model?.[k];
++    if (t === "boolean") {
++      return (
++        <label key={k} className="flex items-center gap-2 text-sm">
++          <input type="checkbox" checked={!!val} disabled={disabled}
++                 onChange={e=>setField(k, e.target.checked)} />
++          <span>{label}{req && " *"}</span>
++        </label>
++      );
++    }
++    if (t === "number" || t === "integer") {
++      return (
++        <div key={k} className="text-sm">
++          <label className="block mb-1">{label}{req && " *"}</label>
++          <input type="number" className="border rounded px-2 py-1 w-full"
++                 disabled={disabled}
++                 value={val ?? ""}
++                 onChange={e=>setField(k, e.target.value==="" ? undefined : Number(e.target.value))}/>
++          {help && <div className="text-xs text-gray-600 mt-1">{help}</div>}
++        </div>
++      );
++    }
++    // default to string
++    const isLong = (sub?.format === "textarea") || (sub?.maxLength && sub.maxLength > 120);
++    return (
++      <div key={k} className="text-sm">
++        <label className="block mb-1">{label}{req && " *"}</label>
++        {isLong ? (
++          <textarea rows={sub?.rows ?? 4} className="border rounded px-2 py-1 w-full"
++                    disabled={disabled}
++                    value={val ?? ""}
++                    onChange={e=>setField(k, e.target.value)} />
++        ) : (
++          <input className="border rounded px-2 py-1 w-full"
++                 disabled={disabled}
++                 value={val ?? ""}
++                 onChange={e=>setField(k, e.target.value)} />
++        )}
++        {help && <div className="text-xs text-gray-600 mt-1">{help}</div>}
++      </div>
++    );
++  }
++
++  if (root.type !== "object") {
++    return <div className="text-xs text-rose-700">Unsupported schema root type: {String(root.type)}</div>;
++  }
++
++  return (
++    <div className="space-y-2">
++      {Object.keys(props).map(k => renderField(k, props[k]))}
++    </div>
++  );
++}
+```
+
+```diff
+diff --git a/web/components/WorkOrderForm.tsx b/web/components/WorkOrderForm.tsx
+--- a/web/components/WorkOrderForm.tsx
++++ b/web/components/WorkOrderForm.tsx
+@@
+-import React, { useEffect, useState } from "react";
++import React, { useEffect, useMemo, useState } from "react";
+ import PlaybookPreview from "@/components/PlaybookPreview";
++import JsonSchemaForm from "@/components/JsonSchemaForm";
+@@
+   const [skills,setSkills]=useState<Array<{handle:string; title:string}>>([]);
+   const [inputJson,setInputJson]=useState<string>("{\n  \n}");
++  const [skillSchema,setSkillSchema]=useState<any>(null);
+@@
+     (async ()=>{
+       const r = await fetch("/api/skills?query=");
+       const data = await r.json();
+       if(mounted) setSkills(Array.isArray(data)? data : []);
+     })();
+     return ()=>{ mounted=false; };
+   },[]);
++
++  // Load selected skill schema to generate a form
++  useEffect(()=>{ let ab=false; (async()=>{
++    if (!skillHandle) { setSkillSchema(null); return; }
++    const r = await fetch(`/api/skills/${encodeURIComponent(skillHandle)}`);
++    if(!r.ok){ setSkillSchema(null); return; }
++    const j = await r.json();
++    if(!ab) setSkillSchema(j?.inputSchema || null);
++  })(); return ()=>{ab=true;} }, [skillHandle]);
++
++  const parsedInput = useMemo(()=> {
++    try { return inputJson?.trim() ? JSON.parse(inputJson) : {}; } catch { return {}; }
++  }, [inputJson]);
+@@
+       <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
+         <div className="lg:col-span-2 space-y-3">
+@@
+           <label className="text-sm block mt-3">Skill (enables execution)</label>
+           <select
+             className="border rounded px-2 py-1 w-full"
+             value={skillHandle}
+             onChange={(e)=>setSkillHandle(e.target.value)}
+           >
+             <option value="">— Select a skill (optional) —</option>
+             {skills.map(s=>(
+               <option key={s.handle} value={s.handle}>{s.title} — {s.handle}</option>
+             ))}
+           </select>
+-          <label className="text-sm block mt-3">Skill Inputs (JSON)</label>
+-          <textarea className="border rounded px-2 py-1 w-full" rows={6} value={inputJson} onChange={e=>setInputJson(e.target.value)} />
++          {/* Auto-generated form from JSON Schema if available; falls back to JSON textarea */}
++          {skillSchema ? (
++            <>
++              <label className="text-sm block mt-3">Skill Inputs</label>
++              <JsonSchemaForm schema={skillSchema} value={parsedInput} onChange={(val)=> setInputJson(JSON.stringify(val, null, 2))} />
++            </>
++          ) : (
++            <>
++              <label className="text-sm block mt-3">Skill Inputs (JSON)</label>
++              <textarea className="border rounded px-2 py-1 w-full" rows={6} value={inputJson} onChange={e=>setInputJson(e.target.value)} />
++            </>
++          )}
+           <div className="text-xs text-gray-600">
+             Tip: manage playbooks at <a className="underline" href="/playbooks" target="_blank" rel="noreferrer">/playbooks</a>.
+           </div>
+         </div>
+         <div className="lg:col-span-1">
+           <PlaybookPreview handle={playbookHandle}/>
+         </div>
+       </div>
+```
+
+---
+
+## B) Engine — pluggable providers (OpenAI/Vertex) + real call in `runSkill`
+
+```diff
+diff --git a/server/lib/engine/providers/openai.ts b/server/lib/engine/providers/openai.ts
+new file mode 100644
+--- /dev/null
++++ b/server/lib/engine/providers/openai.ts
+@@
++export type LLMArgs = { system: string; user: string; model?: string };
++export async function callOpenAI({ system, user, model }: LLMArgs) {
++  const key = process.env.OPENAI_API_KEY!;
++  const m = model || process.env.OPENAI_MODEL || "gpt-4o-mini";
++  if (!key) throw new Error("OPENAI_API_KEY missing");
++  const r = await fetch("https://api.openai.com/v1/chat/completions", {
++    method: "POST",
++    headers: { "content-type":"application/json", "authorization":`Bearer ${key}` },
++    body: JSON.stringify({
++      model: m,
++      messages: [{ role:"system", content: system }, { role:"user", content: user }],
++      temperature: 0.2,
++    })
++  });
++  if (!r.ok) throw new Error(`OpenAI HTTP ${r.status}`);
++  const j = await r.json();
++  const text = j.choices?.[0]?.message?.content || "";
++  return { text, provider:"openai", model:m };
++}
+```
+
+```diff
+diff --git a/server/lib/engine/providers/vertex.ts b/server/lib/engine/providers/vertex.ts
+new file mode 100644
+--- /dev/null
++++ b/server/lib/engine/providers/vertex.ts
+@@
++// Minimal Vertex AI text request (REST). You can swap to official SDK if preferred.
++export type VertexArgs = { system: string; user: string; model?: string };
++export async function callVertex({ system, user, model }: VertexArgs) {
++  const project = process.env.VERTEX_PROJECT_ID!;
++  const location = process.env.VERTEX_LOCATION || "us-central1";
++  const token = process.env.GOOGLE_ACCESS_TOKEN || ""; // or use an auth fetcher
++  const m = model || process.env.VERTEX_MODEL || "gemini-1.5-flash";
++  if (!project || !token) throw new Error("VERTEX_PROJECT_ID or GOOGLE_ACCESS_TOKEN missing");
++  const url = `https://${location}-aiplatform.googleapis.com/v1/projects/${project}/locations/${location}/publishers/google/models/${m}:generateContent`;
++  const r = await fetch(url, {
++    method: "POST",
++    headers: { "content-type":"application/json", "authorization": `Bearer ${token}` },
++    body: JSON.stringify({
++      contents: [{ role: "user", parts: [{ text: `${system}\n\n${user}` }]}]
++    })
++  });
++  if (!r.ok) throw new Error(`Vertex HTTP ${r.status}`);
++  const j = await r.json();
++  const text = j.candidates?.[0]?.content?.parts?.[0]?.text || "";
++  return { text, provider:"vertex", model:m };
++}
+```
+
+```diff
+diff --git a/server/lib/engine/runSkill.ts b/server/lib/engine/runSkill.ts
+--- a/server/lib/engine/runSkill.ts
++++ b/server/lib/engine/runSkill.ts
+@@
+ import { db } from "@/drizzle/db";
+ import { workOrderRun, opsEvent } from "@/drizzle/schema";
+ import { compileSchema, validateWith } from "./jsonSchema";
++import { callOpenAI } from "./providers/openai";
++import { callVertex } from "./providers/vertex";
+@@
+ export async function runSkill(args: RunArgs) {
+   const { woId, agentName, skill, inputs, context } = args;
+   const started = Date.now();
+@@
+-  // === EXECUTE ===
+-  // TODO: Replace with your model/tooling execution. For now, we simulate a draft artifact.
+-  const simulatedMs = Math.floor(500 + Math.random()*1500);
+-  const simulatedCost = Number((0.002 + Math.random()*0.006).toFixed(3));
+-  const outputRef = `${context.outputPath}/skill_${skill.handle}_${Date.now()}.txt`;
+-  const outputJson = { summary: "Simulated result", inputs };
++  // === EXECUTE (pluggable provider) ===
++  const provider = (process.env.SKILL_ENGINE_PROVIDER || "openai").toLowerCase();
++  let llmText = "";
++  const execStart = Date.now();
++  try {
++    if (provider === "vertex") {
++      const out = await callVertex({ system: sys, user: usr, model: process.env.VERTEX_MODEL });
++      llmText = out.text;
++    } else {
++      const out = await callOpenAI({ system: sys, user: usr, model: process.env.OPENAI_MODEL });
++      llmText = out.text;
++    }
++  } catch (e:any) {
++    const [run] = await db.insert(workOrderRun).values({
++      woId, agentName, status: "failed", ms: Date.now()-execStart, cost: 0,
++      mirror: `LLM call failed: ${e?.message || e}`
++    }).returning();
++    await db.insert(opsEvent).values({ kind:"ERROR", message:`WO_RUN LLM error ${woId}`, meta:{ err: String(e) }});
++    return { status:"failed", ms: run.ms, cost: 0, output_ref: null };
++  }
++
++  // Construct output artifact (very basic v1)
++  const outputRef = `${context.outputPath}/skill_${skill.handle}_${Date.now()}.md`;
++  const outputJson = { summary: llmText?.slice(0, 2000), inputs };
+@@
+-  const vOut = compileSchema(skill.outputSchema);
++  const vOut = compileSchema(skill.outputSchema);
+   const outRes = validateWith(vOut, outputJson);
+   const status = outRes.ok ? "done" : "failed";
+ 
+-  const finished = started + simulatedMs;
++  const execMs = Date.now() - execStart;
++  const approxCost = provider === "openai" ? 0.003 : 0.002; // coarse placeholder; wire real pricing later
+   const [run] = await db.insert(workOrderRun).values({
+-    woId, agentName, status, ms: simulatedMs, cost: simulatedCost,
++    woId, agentName, status, ms: execMs, cost: approxCost,
+     mirror: `Drafts ready → ${context.outputPath}`,
+     outputRef, outputJson
+   }).returning();
+ 
+   await db.insert(opsEvent).values({
+     kind: "WO_RUN",
+     message: `WO ${woId} skill ${skill.handle} ${status}`,
+-    meta: { outputRef, cost: simulatedCost, ms: simulatedMs }
++    meta: { outputRef, cost: approxCost, ms: execMs }
+   });
+ 
+-  return { status, ms: simulatedMs, cost: simulatedCost, output_ref: outputRef, output_json: outputJson };
++  return { status, ms: execMs, cost: approxCost, output_ref: outputRef, output_json: outputJson };
+ }
+```
+
+---
+
+## C) Env setup (Replit → Secrets)
+
+Pick a provider; you can set both and choose with `SKILL_ENGINE_PROVIDER`.
+
+**OpenAI**
+
+```
+SKILL_ENGINE_PROVIDER=openai
+OPENAI_API_KEY=sk-...
+OPENAI_MODEL=gpt-4o-mini
+```
+
+**Vertex AI**
+
+```
+SKILL_ENGINE_PROVIDER=vertex
+VERTEX_PROJECT_ID=your-gcp-project
+VERTEX_LOCATION=us-central1
+VERTEX_MODEL=gemini-1.5-flash
+GOOGLE_ACCESS_TOKEN=ya29....
+```
+
+> For Vertex, you can mint a short-lived OAuth token in CI or swap this to an ADC/JWT flow later.
+
+---
+
+## D) Quick validation
+
+1. **Skill form generation**
+
+   * Create/update a Skill with an input schema like:
+
+     ```json
+     {
+       "type":"object",
+       "required":["ticket_text"],
+       "properties":{
+         "ticket_text":{"type":"string","title":"Ticket Text","description":"Paste the customer message","format":"textarea"}
+       }
+     }
+     ```
+   * In WO Create: select the Skill → form renders; submit → `input_json` is set.
+
+2. **Execution**
+
+   * Start the WO → `runSkill` calls the chosen LLM provider, validates output, writes `work_order_run` + `ops_event(WO_RUN)`, returns `{ status, ms, cost, output_ref, output_json }`.
+
+3. **Fallback**
+
+   * If provider env is missing or token fails, you get a `failed` run with error mirror and an `ERROR` ops_event.
+
+---
+
+### Definition of Done (Task 8 — final)
+
+* Operators can **pick a Skill** and **fill inputs** via a generated form.
+* Engine calls **OpenAI/Vertex** (based on env), validates outputs, and logs end-to-end.
+* No raw JSON editing required unless a schema isn’t provided (we still fall back safely).
+
+If you want, I can also add **JSON extraction** (try to parse a JSON block from the LLM text and validate against `output_schema`) for stricter structured outputs in v1.

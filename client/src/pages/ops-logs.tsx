@@ -211,7 +211,7 @@ export default function OpsLogsPage() {
           )}
           
           {!isLoading && events.length > 0 && (
-            <div className="overflow-x-auto">
+            <div className="overflow-x-auto" role="region" aria-live="polite" aria-label="Operations events table">
               <table className="w-full">
                 <thead className="border-b">
                   <tr className="text-left text-sm font-medium text-muted-foreground">
@@ -231,12 +231,16 @@ export default function OpsLogsPage() {
                         {formatDistanceToNow(new Date(event.createdAt), { addSuffix: true })}
                       </td>
                       <td className="py-3 pr-4">
-                        <Badge variant="outline">{event.kind}</Badge>
+                        <Badge variant="outline">
+                          <span className="sr-only">Event type: </span>
+                          {event.kind}
+                        </Badge>
                       </td>
                       <td className="py-3 pr-4">
                         {event.ownerType && (
                           <div className="space-y-1">
                             <Badge variant="secondary" className="text-xs">
+                              <span className="sr-only">Owner type: </span>
                               {event.ownerType}
                             </Badge>
                             {event.ownerId && (

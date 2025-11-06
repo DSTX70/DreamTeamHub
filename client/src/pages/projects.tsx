@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useRoute, useLocation, Link } from "wouter";
-import { Plus, Filter, FolderKanban, Calendar, Users, CheckCircle2, AlertCircle, Clock, Sparkles, Lightbulb, Shield, Package } from "lucide-react";
+import { Plus, Filter, FolderKanban, Calendar, Users, CheckCircle2, AlertCircle, Clock, Sparkles, Lightbulb, Shield, Package, ClipboardList } from "lucide-react";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -10,6 +10,7 @@ import type { Project, Brand } from "@shared/schema";
 import { IdeaSparksList } from "@/components/idea-sparks-list";
 import { BrandDetailsModal } from "@/components/brand-details-modal";
 import { PageBreadcrumb, buildBreadcrumbs } from "@/components/PageBreadcrumb";
+import { EmptyState } from "@/components/empty-state";
 
 const PILLAR_ICONS = {
   Imagination: Sparkles,
@@ -302,19 +303,29 @@ export default function Projects() {
         {isLoading ? (
           <div className="text-center py-12 text-muted-foreground">Loading projects...</div>
         ) : filteredProjects.length === 0 ? (
-          <Card className="py-12">
-            <CardContent className="text-center space-y-2">
-              <FolderKanban className="h-12 w-12 mx-auto text-muted-foreground" />
-              <p className="text-muted-foreground">No projects found</p>
-              <Link href="/projects/new">
-                <Button 
-                  variant="outline" 
-                  data-testid="button-create-first-project"
-                >
-                  <Plus className="h-4 w-4" />
-                  Create your first project
-                </Button>
-              </Link>
+          <Card>
+            <CardContent className="py-12">
+              <EmptyState
+                icon={FolderKanban}
+                title="No projects found"
+                description={
+                  selectedCategory === "all" && selectedStatus === "all"
+                    ? "Get started by creating your first project or work order"
+                    : "Try adjusting your filters or create a new project"
+                }
+                action={{
+                  label: "New Project",
+                  onClick: () => setLocation("/projects/new"),
+                }}
+              />
+              <div className="flex justify-center gap-2 mt-4">
+                <Link href="/work-orders">
+                  <Button variant="outline" data-testid="button-create-work-order">
+                    <ClipboardList className="h-4 w-4 mr-2" />
+                    Create Work Order
+                  </Button>
+                </Link>
+              </div>
             </CardContent>
           </Card>
         ) : (
@@ -340,12 +351,15 @@ export default function Projects() {
                       </div>
                       <div className="flex flex-wrap gap-2 mt-3">
                         <Badge className={statusConfig.color} data-testid={`badge-status-${project.id}`}>
+                          <span className="sr-only">Status: </span>
                           {statusConfig.label}
                         </Badge>
                         <Badge className={priorityConfig.color} data-testid={`badge-priority-${project.id}`}>
+                          <span className="sr-only">Priority: </span>
                           {priorityConfig.label}
                         </Badge>
                         <Badge variant="outline" data-testid={`badge-category-${project.id}`}>
+                          <span className="sr-only">Category: </span>
                           {project.category}
                         </Badge>
                         {brand && (
