@@ -2163,13 +2163,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
   const checkoutAddressRoute = await import("./routes/checkout_address.route");
   app.use(checkoutAddressRoute.router);
 
-  // Affiliates - Affiliate tracking and reporting (public for demo)
-  const affiliateRoute = await import("./routes/affiliate.route");
+  // Affiliates - Affiliate tracking and reporting (DB-backed, public for demo)
+  const affiliateRoute = await import("./routes/affiliate.route.db");
   app.use(affiliateRoute.router);
 
-  // Inventory - Low-stock monitoring and threshold management (public for demo)
-  const inventoryRoute = await import("./routes/inventory.route");
+  // Inventory - Low-stock monitoring and threshold management (DB-backed, public for demo)
+  const inventoryRoute = await import("./routes/inventory.route.db");
   app.use(inventoryRoute.router);
+
+  // Inventory Scheduler - Manual scan trigger (public for demo)
+  const inventorySchedulerRoute = await import("./routes/inventory.scheduler.route");
+  app.use(inventorySchedulerRoute.router);
+
+  // Ops Settings - Notification settings and testing (public for demo)
+  const opsSettingsRoute = await import("./routes/ops_settings.route");
+  app.use(opsSettingsRoute.router);
 
   // Copilot - AI assistant for querying DTH API (requires authentication)
   const copilot = await import("./copilot");

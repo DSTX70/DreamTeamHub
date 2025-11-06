@@ -44,6 +44,7 @@ import OpsAlertHooksDemo from "@/pages/ops/AlertHooksDemo";
 import AffiliatesReport from "@/pages/ops/AffiliatesReport";
 import InventoryLowStock from "@/pages/ops/InventoryLowStock";
 import ImagesAdmin from "@/pages/ops/ImagesAdmin";
+import OpsSettings from "@/pages/ops/OpsSettings";
 import LLMProviderSelect from "@/pages/llm/ProviderSelect";
 import ProviderPromptLinter from "@/pages/llm/ProviderPromptLinter";
 import Checkout from "@/pages/checkout/Checkout";
@@ -92,6 +93,7 @@ function AuthenticatedRoutes() {
       <Route path="/ops/affiliates" component={AffiliatesReport} />
       <Route path="/ops/inventory" component={InventoryLowStock} />
       <Route path="/ops/images" component={ImagesAdmin} />
+      <Route path="/ops/settings" component={OpsSettings} />
       <Route path="/llm/provider" component={LLMProviderSelect} />
       <Route path="/llm/provider/linter" component={ProviderPromptLinter} />
       <Route path="/bu/:slug" component={BUHomePage} />

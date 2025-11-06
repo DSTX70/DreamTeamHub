@@ -1,6 +1,8 @@
 import cron from 'node-cron';
 import { storage } from './storage';
-import { startLowStockScheduler } from './scheduler/lowStockScheduler';
+import { startLowStockSchedulerDB } from './scheduler/lowStockScheduler.db';
+import { webhookNotifier } from './notifiers/webhook';
+import { emailNotifier } from './notifiers/email';
 
 /**
  * Nightly Agent Goldens Snapshot
@@ -60,9 +62,33 @@ export function initializeCronJobs() {
 
   console.log('[Cron] 🕐 Nightly agent golden snapshot scheduled for 2:00 AM');
 
-  // Start low-stock inventory scheduler (scans every 60 seconds)
-  startLowStockScheduler({ intervalMs: 60_000 });
-  console.log('[Cron] 📦 Low-stock inventory scheduler started (60s interval)');
+  // Start DB-backed low-stock inventory scheduler with webhook + email notifiers
+  const notifiers = [
+    // Webhook notifier (Slack-compatible)
+    process.env.SLACK_WEBHOOK_URL ? webhookNotifier({ url: process.env.SLACK_WEBHOOK_URL }) : null,
+    // Email notifier (optional, requires SMTP config)
+    process.env.SMTP_HOST ? emailNotifier({
+      enabled: true,
+      from: process.env.MAIL_FROM || 'noreply@dreamteamhub.app',
+      to: process.env.EMAIL_TO || 'ops@dreamteamhub.app',
+      transport: {
+        host: process.env.SMTP_HOST,
+        port: Number(process.env.SMTP_PORT || 587),
+        secure: false,
+        auth: {
+          user: process.env.SMTP_USER!,
+          pass: process.env.SMTP_PASS!
+        }
+      }
+    }) : null
+  ].filter(Boolean) as any[];
+  
+  startLowStockSchedulerDB({ 
+    intervalMs: 60_000,
+    notifiers,
+    throttleMs: 300_000 // 5min cooldown between duplicate alerts for same SKU+stock level
+  });
+  console.log(`[Cron] 📦 DB-backed low-stock scheduler started (60s interval, ${notifiers.length} notifier(s))`);
 
   // Optional: Run on startup for testing (disabled by default)
   // Uncomment the line below to create a snapshot when the server starts
