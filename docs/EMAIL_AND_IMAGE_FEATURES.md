@@ -19,21 +19,29 @@ This document describes two new features added to Dream Team Hub:
 ### Features
 
 ✅ **Partial Loader** - Reusable email components (header, line items, footer)  
+✅ **LRU-Capped Cache** - Limits to 8 dirs / 32 files per dir (env-tunable)  
 ✅ **mtime-Aware Caching** - Automatic cache invalidation when partials change  
 ✅ **HTML Escaping** - Prevents injection attacks with `{{var}}` syntax  
-✅ **Unescaped Variants** - Triple-brace `{{{var}}}` for images/links you control  
+✅ **Unescaped Variants** - Triple-brace `{{{var}}}` for images/links (works in loops!)  
 ✅ **Loop Support** - `{{#each array}}` for rendering lists  
-✅ **Simple Templating** - Easy variable replacement
+✅ **Type-Safe Rendering** - Compile-time type checking + runtime validation  
+✅ **Schema System** - Enum & pattern constraints for template variables
 
 ### File Locations
 
 ```
-server/lib/mailer.ts              # Core rendering engine
-server/lib/mailer.example.ts      # Usage examples
-emails/tx/order_shipped.mjml      # Example: Order shipped template
-emails/tx/order_update.mjml       # Example: Order update template
-emails/tx/partials/header.mjml    # Example: Email header partial
-emails/tx/partials/line_item.mjml # Example: Line item partial
+server/lib/mailer.ts                            # Core rendering engine with LRU cache
+server/lib/mailer.typed.ts                      # Type-safe wrapper
+shared/email/schema.ts                          # Schema DSL for type safety
+emails/tx/schemas/order_shipped.schema.ts       # Example: Order shipped schema
+emails/tx/schemas/order_update.schema.ts        # Example: Order update schema (with enum)
+emails/tx/order_shipped.mjml                    # Example: Order shipped template
+emails/tx/order_update.mjml                     # Example: Order update template
+emails/tx/partials/header.mjml                  # Example: Email header partial
+emails/tx/partials/line_item.mjml               # Example: Line item partial
+server/examples/sendShippedEmail.example.ts     # Example: Type-safe rendering
+server/examples/sendUpdateEmail.example.ts      # Example: Enum validation
+server/examples/testCacheLRU.example.ts         # Example: Cache testing
 ```
 
 ### API Reference
@@ -81,6 +89,153 @@ const html = renderTxEmailFromFile(
 );
 
 // Send with your mail transport (nodemailer, sendgrid, etc.)
+```
+
+### LRU Cache System
+
+The partial cache uses an LRU (Least Recently Used) eviction strategy with environment-tunable limits:
+
+**Environment Variables:**
+- `PARTIAL_CACHE_MAX_DIRS` - Max cached directories (default: 8, min: 1)
+- `PARTIAL_CACHE_MAX_FILES` - Max files per directory (default: 32, min: 1)
+
+**Features:**
+- **mtime-aware** - Automatically invalidates cache when partials are modified
+- **LRU eviction** - Keeps most recently used directories and files in memory
+- **Zero-config** - Works out of the box with sensible defaults
+
+**Cache Stats API:**
+
+```typescript
+import { getCacheStats, clearPartialCache } from "./server/lib/mailer";
+
+// Get current cache statistics
+const stats = getCacheStats();
+console.log(stats);
+// {
+//   directories: 1,
+//   totalFiles: 2,
+//   maxDirs: 8,
+//   maxFilesPerDir: 32,
+//   directoriesDetail: [
+//     { directory: 'emails/tx/partials', files: 2, lastUsed: '2025-11-06T...' }
+//   ]
+// }
+
+// Clear cache (useful for testing)
+clearPartialCache();
+```
+
+**Example with Custom Limits:**
+
+```bash
+# Use stricter cache limits for resource-constrained environments
+PARTIAL_CACHE_MAX_DIRS=4 PARTIAL_CACHE_MAX_FILES=16 npm run start
+```
+
+### Type-Safe Rendering
+
+Use `renderTxEmailFromFileTyped()` for compile-time type checking and runtime validation:
+
+**1. Define Schema:**
+
+```typescript
+// emails/tx/schemas/order_shipped.schema.ts
+import { object, string, url, array, number } from "../../../shared/email/schema";
+
+export const orderShippedSchema = object({
+  orderId: string(),
+  etaDate: string(),
+  orderLink: url(),
+  brandHeaderUrl: url(),
+  brandName: string(),
+  lineItems: array(object({
+    thumbUrl: url(),
+    title: string(),
+    qty: number(),
+    price: string({ pattern: '^\\$?\\d+(?:\\.\\d{2})?$' }), // Currency regex
+  })),
+});
+```
+
+**2. Use Type-Safe Wrapper:**
+
+```typescript
+import { renderTxEmailFromFileTyped } from "./server/lib/mailer.typed";
+import { orderShippedSchema } from "./emails/tx/schemas/order_shipped.schema";
+
+// TypeScript enforces schema at compile time
+const html = renderTxEmailFromFileTyped(
+  "emails/tx/order_shipped.mjml",
+  orderShippedSchema,
+  {
+    orderId: "12345",
+    etaDate: "Nov 10, 2025",
+    orderLink: "https://example.com/orders/12345",  // Validated as URL
+    brandHeaderUrl: "https://example.com/logo.png",
+    brandName: "Fab Card Co.",
+    lineItems: [
+      {
+        thumbUrl: "https://example.com/p1.webp",
+        title: "Card A",
+        qty: 2,
+        price: "$7.98"  // Validated against regex pattern
+      }
+    ]
+  },
+  "emails/tx/partials"
+);
+```
+
+**Benefits:**
+- ✅ **Compile-time errors** - TypeScript catches missing/wrong fields
+- ✅ **Runtime validation** - Throws `ValidationError` with precise path (e.g., `lineItems[0].qty: Expected number`)
+- ✅ **URL validation** - Ensures URLs are valid HTTP/HTTPS
+- ✅ **Pattern matching** - Validates strings against regex (e.g., currency format)
+- ✅ **Enum constraints** - Restricts values to specific set
+
+### Schema System
+
+**Supported Types:**
+- `string()` - String values with optional enum/pattern constraints
+- `number()` - Numeric values with optional enum constraints
+- `boolean()` - Boolean values with optional enum constraints
+- `url()` - URL strings (validated as HTTP/HTTPS) with optional pattern
+- `array(schema)` - Arrays with item validation
+- `object(properties)` - Nested objects
+
+**Enum Constraints:**
+
+```typescript
+const orderUpdateSchema = object({
+  orderId: string(),
+  statusCopy: string({ 
+    enum: ['Processing', 'Packed', 'Shipped', 'Delayed'] as const
+  }),
+});
+
+// This will throw ValidationError at runtime:
+// statusCopy: "Invalid" ❌
+// Expected one of [Processing, Packed, Shipped, Delayed]
+```
+
+**Pattern (Regex) Constraints:**
+
+```typescript
+const productSchema = object({
+  price: string({ pattern: '^\\$?\\d+(?:\\.\\d{2})?$' }),  // $10.00 or 10.00
+  sku: string({ pattern: '^[A-Z]{2}\\d{4}$' }),            // AB1234
+  email: string({ pattern: '^[^@]+@[^@]+\\.[^@]+$' }),     // Basic email
+});
+```
+
+**Optional Fields:**
+
+```typescript
+const schema = object({
+  name: string(),
+  nickname: string({ optional: true }),  // Can be undefined
+});
 ```
 
 ### Template Syntax
@@ -134,19 +289,7 @@ Use triple-braces for images/links you control.
 {{/each}}
 ```
 
-### Partial Caching
-
-Partials are cached in memory with mtime tracking:
-- Cache key: `${directory}/${filename}`
-- Auto-invalidation when file mtime changes
-- Zero configuration required
-
-**Development Tip:** The cache automatically updates when you edit partials, but you can manually clear it:
-
-```typescript
-import { clearPartialCache } from "./server/lib/mailer";
-clearPartialCache();
-```
+**Note:** Both `{{var}}` (escaped) and `{{{var}}}` (unescaped) work inside `{{#each}}` loops!
 
 ---
 
