@@ -26,7 +26,7 @@ export const MAIL_FROM = process.env.MAIL_FROM || 'noreply@example.com';
 /**
  * Create Nodemailer transporter
  */
-export const transporter = nodemailer.createTransporter(SMTP_CONFIG);
+export const transporter = nodemailer.createTransport(SMTP_CONFIG);
 
 /**
  * Send transactional email

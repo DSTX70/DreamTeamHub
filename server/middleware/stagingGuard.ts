@@ -31,8 +31,8 @@ export function stagingGuard() {
   return (req: Request, res: Response, next: NextFunction) => {
     if (!enabled) return next();
     
-    // Allow health check and assets
-    if (req.path === "/healthz" || req.path.startsWith("/assets/")) return next();
+    // Allow health check, assets, img, and dev routes
+    if (req.path === "/healthz" || req.path.startsWith("/assets/") || req.path.startsWith("/img") || req.path.startsWith("/dev/")) return next();
     
     // Check IP allowlist
     const clientIp = requestIp.getClientIp(req);

@@ -9,7 +9,7 @@ import { orderShippedSchema } from "../../emails/tx/schemas/order_shipped.schema
 import { orderUpdateSchema } from "../../emails/tx/schemas/order_update.schema";
 import { formatEta } from "../lib/eta";
 
-export const router = Router();
+const router = Router();
 
 /**
  * GET /dev/email/preview
@@ -22,6 +22,7 @@ export const router = Router();
  * - status: For order_update only (Processing|Packed|Shipped|Delayed)
  */
 router.get("/dev/email/preview", (req, res) => {
+  console.log('[EmailPreview] Route HIT!', req.path, req.query);
   try {
     const {
       template = 'order_shipped',
@@ -108,4 +109,5 @@ router.get("/dev/email/preview", (req, res) => {
   }
 });
 
+export { router };
 export default router;

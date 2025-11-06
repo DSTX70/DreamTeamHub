@@ -9,7 +9,7 @@ import { sendTxEmail, MAIL_FROM } from "../lib/mailTransport";
 import { orderShippedSchema } from "../../emails/tx/schemas/order_shipped.schema";
 import { formatEta } from "../lib/eta";
 
-export const router = Router();
+const router = Router();
 
 /**
  * POST /dev/email/send-shipped
@@ -95,4 +95,5 @@ router.post("/dev/email/send-shipped", async (req, res) => {
   }
 });
 
+export { router };
 export default router;
