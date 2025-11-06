@@ -11,14 +11,21 @@ export default function OpsHotkeys({ navigate: customNavigate }: OpsHotkeysProps
   const [, setLocation] = useLocation();
   const navigate = customNavigate || setLocation;
   const [showToast, setShowToast] = useState(false);
+  const [hotkeysEnabled, setHotkeysEnabled] = useState(true);
 
   useEffect(() => {
-    // Check if user has seen the hotkeys toast before
-    const seen = localStorage.getItem("opsHotkeysSeen");
-    if (!seen) {
-      // Not seen yet, ready to show on first use
-      // We don't show it immediately, only after first hotkey press
-    }
+    // Fetch hotkeys setting from server
+    const fetchSettings = async () => {
+      try {
+        const r = await fetch("/api/ops/settings/notifiers");
+        const j = await r.json();
+        setHotkeysEnabled(j.settings.hotkeysEnabled ?? true);
+      } catch {
+        // Default to enabled on error
+        setHotkeysEnabled(true);
+      }
+    };
+    fetchSettings();
   }, []);
 
   const handleHotkeyNavigation = (path: string) => {
@@ -33,15 +40,20 @@ export default function OpsHotkeys({ navigate: customNavigate }: OpsHotkeysProps
     navigate(path);
   };
 
-  useHotkeys({
-    g: {
-      o: () => handleHotkeyNavigation("/ops/overview"),
-      i: () => handleHotkeyNavigation("/ops/inventory"),
-      m: () => handleHotkeyNavigation("/ops/images"),
-      a: () => handleHotkeyNavigation("/ops/affiliates"),
-      s: () => handleHotkeyNavigation("/ops/settings"),
-    },
-  });
+  // Only register hotkeys if enabled
+  useHotkeys(
+    hotkeysEnabled
+      ? {
+          g: {
+            o: () => handleHotkeyNavigation("/ops/overview"),
+            i: () => handleHotkeyNavigation("/ops/inventory"),
+            m: () => handleHotkeyNavigation("/ops/images"),
+            a: () => handleHotkeyNavigation("/ops/affiliates"),
+            s: () => handleHotkeyNavigation("/ops/settings"),
+          },
+        }
+      : {}
+  );
 
   return (
     <>

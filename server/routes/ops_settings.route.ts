@@ -21,6 +21,7 @@ router.post("/api/ops/settings/notifiers", express.json(), async (req: Request, 
     smtpPort: Number(body.smtpPort || 587),
     smtpUser: String(body.smtpUser || ""),
     smtpPass: String(body.smtpPass || ""),
+    hotkeysEnabled: body.hotkeysEnabled ?? true,
   });
   const s = await effectiveSettings();
   res.json({ ok: true, settings: s });

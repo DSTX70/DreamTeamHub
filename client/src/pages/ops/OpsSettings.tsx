@@ -10,6 +10,7 @@ type Settings = {
   smtpPort: number;
   smtpUser: string;
   smtpPass: string;
+  hotkeysEnabled: boolean;
 };
 
 const OpsSettings: React.FC = () => {
@@ -74,6 +75,13 @@ const OpsSettings: React.FC = () => {
   return (
     <div className="p-4 space-y-4">
       <h1 className="text-xl font-semibold">Ops Settings — Alerts</h1>
+
+      <div className="border rounded p-4 space-y-3">
+        <div className="font-semibold">Global Controls</div>
+        <FormRow label="Enable Keyboard Shortcuts">
+          <input type="checkbox" checked={s.hotkeysEnabled} onChange={e=>setS({ ...s, hotkeysEnabled: e.target.checked })} data-testid="checkbox-hotkeys-enabled" />
+        </FormRow>
+      </div>
 
       <div className="border rounded p-4 space-y-3">
         <div className="font-semibold">Slack / Webhook</div>

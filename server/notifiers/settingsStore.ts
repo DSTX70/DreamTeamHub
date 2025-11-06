@@ -13,6 +13,7 @@ export type OpsSettings = {
   smtpPort?: number;
   smtpUser?: string;
   smtpPass?: string;
+  hotkeysEnabled?: boolean;
 };
 
 async function ensureDir() {
@@ -45,5 +46,6 @@ export async function effectiveSettings(): Promise<Required<OpsSettings>> {
     smtpPort: Number(disk.smtpPort || process.env.SMTP_PORT || 587),
     smtpUser: disk.smtpUser || process.env.SMTP_USER || "",
     smtpPass: disk.smtpPass || process.env.SMTP_PASS || "",
+    hotkeysEnabled: disk.hotkeysEnabled ?? true,
   };
 }
