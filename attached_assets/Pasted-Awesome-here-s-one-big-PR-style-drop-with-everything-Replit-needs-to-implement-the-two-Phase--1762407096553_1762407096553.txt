@@ -1,0 +1,473 @@
+Awesome — here’s **one big, PR-style drop** with everything Replit needs to implement the two Phase-2 features:
+
+* **Universal search “everywhere” (Cmd+K) with quick actions**
+* **Ops event stream → mini analytics cards on BU Home**
+
+Each block is a unified diff you can `git apply`. I’ve included a tiny SQL migration, a Next.js **/api/search** route (using a helper), the **/api/ops/summary** route, React components/hooks for **Cmd+K**, and the **BU mini-analytics** component + a small patch to your BU Home page.
+
+> Apply each block in order:
+>
+> ```bash
+> git apply -p0 <<'PATCH'
+> …diff block…
+> PATCH
+> ```
+
+---
+
+## 0) SQL — ops_event index for fast summaries
+
+```diff
+diff --git a/migrations/2025-11-05_cmdk_ops_summary.sql b/migrations/2025-11-05_cmdk_ops_summary.sql
+new file mode 100644
+--- /dev/null
++++ b/migrations/2025-11-05_cmdk_ops_summary.sql
+@@
++-- Speed up /api/ops/summary queries
++create index if not exists idx_ops_event_owner_time on ops_event(owner_type, owner_id, at desc);
++create index if not exists idx_ops_event_kind_time on ops_event(kind, at desc);
+```
+
+Run after applying all patches:
+
+```bash
+psql "$DATABASE_URL" -f migrations/2025-11-05_cmdk_ops_summary.sql
+```
+
+---
+
+## 1) Backend — universal search helper + route
+
+```diff
+diff --git a/drizzle/search.ts b/drizzle/search.ts
+new file mode 100644
+--- /dev/null
++++ b/drizzle/search.ts
+@@
++import { sql } from "drizzle-orm";
++import type { PgDatabase } from "drizzle-orm/pg-core";
++
++type SearchOpts = {
++  q: string;
++  limit?: number;
++  offset?: number;
++  scope?: "GLOBAL"|"BU"|"BRAND"|"PRODUCT"|"PROJECT";
++  ownerId?: string;
++  types?: Array<"brand"|"product"|"project"|"task"|"agent">;
++};
++
++export async function universalSearch(db: PgDatabase<any>, opts: SearchOpts) {
++  const q = opts.q.trim();
++  const limit = Math.min(Math.max(opts.limit ?? 20, 1), 50);
++  const offset = Math.max(opts.offset ?? 0, 0);
++  const types = opts.types?.length ? sql`and type = any(${sql.array(opts.types,"text")})` : sql``;
++
++  const { rows } = await db.execute(sql`
++    with needle as (select unaccent(${q}) as v)
++    , projects as (
++      select 'project'::text type, p.id::text id, p.title title,
++        0.6*coalesce(ts_rank(p.tsv, plainto_tsquery('simple', ${q})),0) +
++        0.4*similarity(unaccent(p.title), (select v from needle)) score,
++        jsonb_build_array('i³','…','…','…','Project') path,
++        jsonb_build_object('status', p.status, 'due_date', p.due_date) extras
++      from project p
++      where p.title % (select v from needle) or (p.tsv is not null and p.tsv @@ plainto_tsquery('simple', ${q}))
++    )
++    , products as (
++      select 'product', pr.id::text, pr.name,
++        0.6*coalesce(ts_rank(pr.tsv, plainto_tsquery('simple', ${q})),0) +
++        0.4*similarity(unaccent(pr.name), (select v from needle)),
++        jsonb_build_array('i³','…','…','Product'),
++        jsonb_build_object('type', pr.type)
++      from product pr
++      where pr.name % (select v from needle) or (pr.tsv is not null and pr.tsv @@ plainto_tsquery('simple', ${q}))
++    )
++    , brands as (
++      select 'brand', b.id::text, b.name,
++        0.6*coalesce(ts_rank(b.tsv, plainto_tsquery('simple', ${q})),0) +
++        0.4*similarity(unaccent(b.name), (select v from needle)),
++        jsonb_build_array('i³','…','Brand'),
++        '{}'::jsonb
++      from brand b
++      where b.name % (select v from needle) or (b.tsv is not null and b.tsv @@ plainto_tsquery('simple', ${q}))
++    )
++    , agents as (
++      select 'agent', a.id::text, a.name,
++        0.6*coalesce(ts_rank(a.tsv, plainto_tsquery('simple', ${q})),0) +
++        0.4*similarity(unaccent(a.name), (select v from needle)),
++        jsonb_build_array('Agents'),
++        jsonb_build_object('level', a.autonomy, 'status', a.status)
++      from agent a
++      where a.name % (select v from needle) or (a.tsv is not null and a.tsv @@ plainto_tsquery('simple', ${q}))
++    )
++    , tasks as (
++      select 'task', t.id::text, t.title,
++        0.6*coalesce(ts_rank(t.tsv, plainto_tsquery('simple', ${q})),0) +
++        0.4*similarity(unaccent(t.title), (select v from needle)),
++        jsonb_build_array('…','…','Task'),
++        jsonb_build_object('status', t.status)
++      from task t
++      where t.title % (select v from needle) or (t.tsv is not null and t.tsv @@ plainto_tsquery('simple', ${q}))
++    )
++    , hits as (select * from projects union all select * from products union all select * from brands union all select * from agents union all select * from tasks)
++    select
++      (select count(*) from hits) as count,
++      jsonb_agg(h order by h.score desc) filter (where true) as items
++    from (
++      select * from hits h
++      where 1=1 ${types}
++      order by score desc
++      limit ${limit} offset ${offset}
++    ) h;
++  `);
++  const row = rows[0] as any;
++  return { count: Number(row?.count ?? 0), items: row?.items ?? [] };
++}
+```
+
+```diff
+diff --git a/app/api/search/route.ts b/app/api/search/route.ts
+new file mode 100644
+--- /dev/null
++++ b/app/api/search/route.ts
+@@
++import { NextRequest } from "next/server";
++import { db } from "@/drizzle/db";
++import { universalSearch } from "@/drizzle/search";
++
++export async function GET(req: NextRequest) {
++  const q = (req.nextUrl.searchParams.get("q") || "").trim();
++  if (q.length < 2) return new Response(JSON.stringify({ error: "q required (min 2 chars)" }), { status: 422, headers: { "content-type":"application/json" }});
++  const limit = Number(req.nextUrl.searchParams.get("limit") || 20);
++  const offset = Number(req.nextUrl.searchParams.get("offset") || 0);
++  const types = (req.nextUrl.searchParams.get("types") || "").split(",").map(s=>s.trim()).filter(Boolean) as any;
++  const result = await universalSearch(db as any, { q, limit, offset, types });
++  return new Response(JSON.stringify({ ...result, limit, offset }), {
++    status: 200,
++    headers: { "content-type":"application/json", "X-Total-Count": String(result.count) }
++  });
++}
+```
+
+---
+
+## 2) Backend — Ops summary route
+
+```diff
+diff --git a/app/api/ops/summary/route.ts b/app/api/ops/summary/route.ts
+new file mode 100644
+--- /dev/null
++++ b/app/api/ops/summary/route.ts
+@@
++import { NextRequest } from "next/server";
++import { db } from "@/drizzle/db";
++import { opsEvent } from "@/drizzle/schema";
++import { and, eq, gte, sql } from "drizzle-orm";
++
++export async function GET(req: NextRequest) {
++  const ownerType = req.nextUrl.searchParams.get("owner_type") || undefined;
++  const ownerId = req.nextUrl.searchParams.get("owner_id") || undefined;
++  const since = new Date(Date.now() - 24*60*60*1000);
++  const where = and(
++    gte(opsEvent.at, since),
++    ownerType ? eq(opsEvent.ownerType, ownerType) : undefined,
++    ownerId ? eq(opsEvent.ownerId, ownerId as any) : undefined
++  );
++  const rows = await db.select({
++    kind: opsEvent.kind,
++    count: sql<number>`count(*)`
++  }).from(opsEvent).where(where as any).groupBy(opsEvent.kind);
++
++  const byKind: Record<string, number> = {};
++  rows.forEach(r => { byKind[r.kind] = Number(r.count); });
++
++  const out = {
++    window: "24h",
++    publish_count_24h: byKind["PUBLISH"] || 0,
++    draft_count_24h: byKind["KNOWLEDGE_DRAFT"] || 0,
++    wo_runs_24h: Object.keys(byKind).filter(k=>k.startsWith("WO_")).reduce((s,k)=>s+byKind[k], 0)
++  };
++  return new Response(JSON.stringify(out), { status: 200, headers: { "content-type":"application/json" }});
++}
+```
+
+---
+
+## 3) Frontend — Cmd+K palette + hook + provider
+
+```diff
+diff --git a/web/hooks/useCmdK.ts b/web/hooks/useCmdK.ts
+new file mode 100644
+--- /dev/null
++++ b/web/hooks/useCmdK.ts
+@@
++import { useCallback, useEffect, useState } from "react";
++
++export function useCmdK() {
++  const [open, setOpen] = useState(false);
++  const onKey = useCallback((e: KeyboardEvent) => {
++    const meta = e.metaKey || e.ctrlKey;
++    if (meta && e.key.toLowerCase() === "k") { e.preventDefault(); setOpen(true); }
++    if (e.key === "Escape") setOpen(false);
++  }, []);
++  useEffect(()=>{ window.addEventListener("keydown", onKey); return ()=>window.removeEventListener("keydown", onKey); }, [onKey]);
++  return { open, setOpen };
++}
+```
+
+```diff
+diff --git a/web/components/CmdK.tsx b/web/components/CmdK.tsx
+new file mode 100644
+--- /dev/null
++++ b/web/components/CmdK.tsx
+@@
++import React, { useEffect, useMemo, useState } from "react";
++
++type Hit = { type:string; id:string; title:string; path?:string[]; extras?:Record<string,any> };
++type Action = { id:string; label:string; run:()=>void };
++
++export default function CmdK({ open, onClose, scope }:{ open:boolean; onClose:()=>void; scope?:{ owner:"GLOBAL"|"BU"|"BRAND"|"PRODUCT"; ownerId?:string }}) {
++  const [q,setQ]=useState(""); const [hits,setHits]=useState<Hit[]>([]); const [loading,setL]=useState(false);
++  const actions: Action[] = useMemo(()=>[
++    { id:"new-wo", label:"+ New Work Order", run:()=>{ location.href="/work-orders/new"; }},
++    { id:"open-copilot", label:"Open Copilot", run:()=>{ location.href="/copilot"; }},
++    scope?.owner !== "GLOBAL" ? { id:"search-kb", label:"Search Knowledge in this context", run:()=>{ location.href=`/knowledge/search?scope=${scope?.owner}&id=${scope?.ownerId||""}`; }} : null,
++  ].filter(Boolean) as Action[], [scope]);
++
++  useEffect(()=>{
++    let abort=false;
++    const fetchHits = async () => {
++      if (q.trim().length<2){ setHits([]); return; }
++      setL(true);
++      const r = await fetch(`/api/search?q=${encodeURIComponent(q)}&limit=10`);
++      const data = await r.json();
++      if (!abort) setHits((data.items||[]).map((x:any)=>({ type:x.type, id:x.id, title:x.title, path:x.path, extras:x.extras })));
++      setL(false);
++    };
++    fetchHits(); return ()=>{ abort=true; };
++  },[q]);
++
++  if(!open) return null;
++  return (
++    <div className="fixed inset-0 z-50 bg-black/40" onClick={onClose}>
++      <div className="mx-auto mt-24 w-full max-w-2xl rounded-2xl border bg-white p-3 shadow-xl" onClick={e=>e.stopPropagation()}>
++        <input autoFocus className="w-full border rounded px-3 py-2" placeholder="Search anything… (Cmd/Ctrl+K)"
++          value={q} onChange={e=>setQ(e.target.value)} />
++        {loading && <div className="text-sm text-gray-500 mt-2">Searching…</div>}
++        {!!actions.length && (
++          <div className="mt-3">
++            <div className="text-xs text-gray-500 mb-1">Quick actions</div>
++            <div className="flex flex-wrap gap-2">
++              {actions.map(a=>(
++                <button key={a.id} onClick={()=>{ a.run(); onClose(); }} className="px-2 py-1 border rounded text-sm">{a.label}</button>
++              ))}
++            </div>
++          </div>
++        )}
++        <ul className="mt-3 divide-y max-h-80 overflow-auto">
++          {hits.map(h=>(
++            <li key={`${h.type}:${h.id}`} className="py-2 flex items-start justify-between">
++              <div>
++                <div className="font-medium">{h.title}</div>
++                <div className="text-xs text-gray-600">{h.type}{h.path ? " · "+h.path.join(" › ") : ""}</div>
++              </div>
++              <a className="px-2 py-1 border rounded text-sm"
++                 href={h.type==="brand" ? `/brand/${h.id}`
++                    : h.type==="product" ? `/product/${h.id}`
++                    : h.type==="project" ? `/project/${h.id}`
++                    : h.type==="agent" ? `/agents/${h.id}`
++                    : h.type==="task" ? `/task/${h.id}` : "#"}
++                 onClick={onClose}>Open</a>
++            </li>
++          ))}
++          {!hits.length && q.trim().length>=2 && !loading && (
++            <li className="py-2 text-sm text-gray-500">No results</li>
++          )}
++        </ul>
++        <div className="mt-3 text-right">
++          <button className="px-3 py-1 border rounded" onClick={onClose}>Close</button>
++        </div>
++      </div>
++    </div>
++  );
++}
+```
+
+```diff
+diff --git a/web/components/CmdKProvider.tsx b/web/components/CmdKProvider.tsx
+new file mode 100644
+--- /dev/null
++++ b/web/components/CmdKProvider.tsx
+@@
++import React from "react";
++import { useCmdK } from "@/hooks/useCmdK";
++import CmdK from "@/components/CmdK";
++
++export default function CmdKProvider({ scope, children }:{ scope?:{ owner:"GLOBAL"|"BU"|"BRAND"|"PRODUCT"; ownerId?:string }; children: React.ReactNode }) {
++  const { open, setOpen } = useCmdK();
++  return (
++    <>
++      <CmdK open={open} onClose={()=>setOpen(false)} scope={scope}/>
++      {children}
++    </>
++  );
++}
+```
+
+```diff
+diff --git a/app/layout.tsx b/app/layout.tsx
+--- a/app/layout.tsx
++++ b/app/layout.tsx
+@@
+-import React from "react";
++import React from "react";
++import CmdKProvider from "@/components/CmdKProvider";
+ 
+ export default function RootLayout({ children }:{ children: React.ReactNode }) {
+   return (
+-    <html lang="en"><body>{children}</body></html>
++    <html lang="en">
++      <body>
++        <CmdKProvider scope={{ owner: "GLOBAL" }}>
++          {children}
++        </CmdKProvider>
++      </body>
++    </html>
+   );
+ }
+```
+
+> If your app uses a different layout path, adjust accordingly.
+
+---
+
+## 4) Frontend — BU mini analytics cards (ops summary)
+
+```diff
+diff --git a/web/components/BuMiniAnalytics.tsx b/web/components/BuMiniAnalytics.tsx
+new file mode 100644
+--- /dev/null
++++ b/web/components/BuMiniAnalytics.tsx
+@@
++import React, { useEffect, useState } from "react";
++
++export default function BuMiniAnalytics({ buId }:{ buId: string }) {
++  const [data,setData]=useState<{publish_count_24h:number; draft_count_24h:number; wo_runs_24h:number}|null>(null);
++  const [loading,setL]=useState(false);
++  useEffect(()=>{
++    let abort=false;
++    (async()=>{
++      setL(true);
++      const r = await fetch(`/api/ops/summary?owner_type=BU&owner_id=${buId}`);
++      const j = await r.json();
++      if(!abort) setData(j);
++      setL(false);
++    })();
++    return ()=>{ abort=true; };
++  },[buId]);
++
++  return (
++    <div className="grid sm:grid-cols-3 gap-3">
++      {["Publishes (24h)","Draft uploads (24h)","WO runs (24h)"].map((label, i)=>(
++        <div key={label} className="rounded-xl border p-4">
++          <div className="text-sm text-gray-600">{label}</div>
++          <div className="text-2xl font-semibold mt-1">
++            {loading || !data ? "—" : i===0 ? data.publish_count_24h : i===1 ? data.draft_count_24h : data.wo_runs_24h}
++          </div>
++        </div>
++      ))}
++    </div>
++  );
++}
+```
+
+```diff
+diff --git a/web/pages/bu/[slug].tsx b/web/pages/bu/[slug].tsx
+--- a/web/pages/bu/[slug].tsx
++++ b/web/pages/bu/[slug].tsx
+@@
+ import React from "react";
++import BuMiniAnalytics from "@/components/BuMiniAnalytics";
+@@
+ export default function BUHomePage() {
+   const buName = "IMAGINATION";
+   const buMission = "Create, publish, and amplify stories and experiences that move people.";
+   const owners = ["Lume (UX)", "AI Lab & Academy", "App Dev"];
+   const cadence = "Weekly reviews — Fridays";
++  const buId = "<IMAGINATION_BU_UUID>"; // TODO: inject real BU id from your loader
+ 
+   return (
+     <div className="max-w-7xl mx-auto p-6 space-y-6">
+@@
+-      {/* Dashboards */}
++      {/* Dashboards */}
+       <section className="rounded-2xl border p-4">
+         <h2 className="text-lg font-semibold">Dashboards</h2>
+-        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-3">
++        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-3">
+           <div className="rounded-xl border p-4">
+             <div className="text-sm text-gray-600">Avg success%</div>
+             <div className="text-2xl font-semibold">86%</div>
+           </div>
+           <div className="rounded-xl border p-4">
+             <div className="text-sm text-gray-600">p95 (s)</div>
+             <div className="text-2xl font-semibold">4.2</div>
+           </div>
+           <div className="rounded-xl border p-4">
+             <div className="text-sm text-gray-600">Median cost ($)</div>
+             <div className="text-2xl font-semibold">$0.022</div>
+           </div>
+           <div className="rounded-xl border p-4">
+             <div className="text-sm text-gray-600">Attention</div>
+             <div className="mt-2 flex gap-2">
+               <span className="px-2 py-0.5 rounded-full text-xs border border-green-300 text-green-800 bg-green-50">Low 18</span>
+               <span className="px-2 py-0.5 rounded-full text-xs border border-amber-300 text-amber-800 bg-amber-50">Medium 9</span>
+               <span className="px-2 py-0.5 rounded-full text-xs border border-rose-300 text-rose-800 bg-rose-50">High 5</span>
+             </div>
+           </div>
+         </div>
++        <div className="mt-4">
++          <BuMiniAnalytics buId={buId}/>
++        </div>
+       </section>
+```
+
+> Replace `"<IMAGINATION_BU_UUID>"` with your real BU id (or fetch it on the page and pass down).
+
+---
+
+## 5) Quick tests
+
+**Search**
+
+```bash
+curl -i "/api/search?q=mirror%20pond&limit=10"
+# -> 200 + X-Total-Count header; JSON {count, items[], limit, offset}
+```
+
+**Ops summary**
+
+```bash
+curl -i "/api/ops/summary?owner_type=BU&owner_id=<UUID>"
+# -> 200 JSON { window:"24h", publish_count_24h, draft_count_24h, wo_runs_24h }
+```
+
+**Cmd+K**
+
+* Press **Cmd+K** (or Ctrl+K) anywhere → palette opens.
+* Search 2+ chars → results display. Click a quick action or open a hit.
+
+**BU mini-analytics**
+
+* Visit `/bu/imagination` (or your BU page) → see cards update (Publishes/Drafts/WO runs in last 24h).
+
+---
+
+## Definition of Done
+
+* `Cmd+K` opens globally; search hits + quick actions work.
+* `/api/search` returns results with `X-Total-Count`.
+* `/api/ops/summary` returns counts filtered by BU; BU Home shows live numbers.
+* No TypeScript errors; all new files compile.
+
+If you want, I can add a **“recent searches”** memory to the Cmd+K palette or a tiny **sparkline** inside the mini analytics cards next.

@@ -9,6 +9,7 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { BrandDetailsModal } from "@/components/brand-details-modal";
 import { PageBreadcrumb, buildBreadcrumbs } from "@/components/PageBreadcrumb";
 import AcademySidebar from "@/components/AcademySidebar";
+import { KnowledgeModals } from "@/components/knowledge-modals";
 import { queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useState } from "react";
@@ -328,17 +329,11 @@ export default function BUHomePage() {
                 ))}
               </div>
             )}
-            <div className="flex flex-wrap gap-2 pt-2">
-              <Button variant="outline" size="sm" data-testid="button-search-knowledge">
-                <Link href={`/knowledge/search?scope=${buSlug}`}>Search</Link>
-              </Button>
-              <Button variant="outline" size="sm" data-testid="button-send-drafts">
-                <Link href={`/knowledge/drafts/new?scope=${buSlug}`}>Send to Drafts</Link>
-              </Button>
-              <Button variant="outline" size="sm" data-testid="button-promote-publish">
-                <Link href={`/knowledge/publish?scope=${buSlug}`}>Promote to Publish</Link>
-              </Button>
-            </div>
+            <KnowledgeModals
+              ownerType="bu"
+              ownerId={buSlug}
+              scope={buSlug}
+            />
           </CardContent>
         </Card>
           </div>

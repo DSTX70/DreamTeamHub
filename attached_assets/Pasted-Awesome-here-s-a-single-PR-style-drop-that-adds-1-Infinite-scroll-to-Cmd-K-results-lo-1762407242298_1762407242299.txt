@@ -1,0 +1,237 @@
+Awesome — here’s a **single, PR-style drop** that adds:
+
+1. **Infinite scroll** to Cmd+K results (loads more when you near the end, until `X-Total-Count` is reached).
+2. A **tooltip on the sparkline** showing the **last-hour value** on hover.
+
+> Apply each block with:
+>
+> ```bash
+> git apply -p0 <<'PATCH'
+> …diff…
+> PATCH
+> ```
+
+---
+
+## A) Cmd+K — Infinite scroll (offset/limit + IntersectionObserver)
+
+```diff
+diff --git a/web/components/CmdK.tsx b/web/components/CmdK.tsx
+--- a/web/components/CmdK.tsx
++++ b/web/components/CmdK.tsx
+@@
+-import React, { useEffect, useMemo, useState } from "react";
++import React, { useEffect, useMemo, useRef, useState, useCallback } from "react";
+ 
+ type Hit = { type:string; id:string; title:string; path?:string[]; extras?:Record<string,any> };
+ type Action = { id:string; label:string; run:()=>void };
+ 
+ export default function CmdK({ open, onClose, scope }:{ open:boolean; onClose:()=>void; scope?:{ owner:"GLOBAL"|"BU"|"BRAND"|"PRODUCT"; ownerId?:string }}){
+   const [q,setQ]=useState("");
+   const [hits,setHits]=useState<Hit[]>([]);
+   const [loading,setL]=useState(false);
+   const [recent,setRecent]=useState<string[]>([]);
+   const maxRecent = 8;
++  const [total,setTotal]=useState<number>(0);
++  const [limit] = useState<number>(10);
++  const [offset,setOffset]=useState<number>(0);
++  const [fetchingMore,setFetchingMore]=useState(false);
++  const sentinelRef = useRef<HTMLDivElement | null>(null);
+ 
+   // load recent
+   useEffect(()=>{ try{ const raw=localStorage.getItem("cmdk_recent"); if(raw) setRecent(JSON.parse(raw)); }catch{} },[]);
+   const pushRecent = (s:string)=> {
+     const v = s.trim(); if(v.length<2) return;
+     const next = [v, ...recent.filter(x=>x!==v)].slice(0, maxRecent);
+     setRecent(next); try{ localStorage.setItem("cmdk_recent", JSON.stringify(next)); }catch{}
+   };
+   const clearRecent = ()=>{ setRecent([]); try{ localStorage.removeItem("cmdk_recent"); }catch{} };
+ 
+   const actions: Action[] = useMemo(()=>[
+     { id:"new-wo", label:"+ New Work Order", run:()=>{ location.href="/work-orders/new"; }},
+     { id:"open-copilot", label:"Open Copilot", run:()=>{ location.href="/copilot"; }},
+     scope?.owner !== "GLOBAL" ? { id:"search-kb", label:"Search Knowledge in this context", run:()=>{ location.href=`/knowledge/search?scope=${scope?.owner}&id=${scope?.ownerId||""}`; }} : null,
+   ].filter(Boolean) as Action[], [scope]);
+ 
+-  useEffect(()=>{
+-    let abort=false;
+-    const fetchHits = async () => {
+-      if (q.trim().length<2){ setHits([]); return; }
+-      setL(true);
+-      const r = await fetch(`/api/search?q=${encodeURIComponent(q)}&limit=10`);
+-      const data = await r.json();
+-      if (!abort) setHits((data.items||[]).map((x:any)=>({ type:x.type, id:x.id, title:x.title, path:x.path, extras:x.extras })));
+-      setL(false);
+-    };
+-    fetchHits(); return ()=>{ abort=true; };
+-  },[q]);
++  // Reset when query changes
++  useEffect(()=>{ setHits([]); setOffset(0); setTotal(0); },[q]);
++
++  const loadPage = useCallback(async (nextOffset=0, replace=false) => {
++    if (q.trim().length<2) { setHits([]); setTotal(0); return; }
++    if (nextOffset>0) setFetchingMore(true); else setL(true);
++    try{
++      const url = new URL(`/api/search`, window.location.origin);
++      url.searchParams.set("q", q);
++      url.searchParams.set("limit", String(limit));
++      url.searchParams.set("offset", String(nextOffset));
++      const r = await fetch(url.toString());
++      const data = await r.json();
++      const count = Number(r.headers.get("X-Total-Count") || data.count || 0);
++      const pageItems: Hit[] = (data.items||[]).map((x:any)=>({ type:x.type, id:x.id, title:x.title, path:x.path, extras:x.extras }));
++      setTotal(count);
++      setHits(prev => replace ? pageItems : [...prev, ...pageItems]);
++      setOffset(nextOffset + (pageItems.length || 0));
++    } finally {
++      nextOffset>0 ? setFetchingMore(false) : setL(false);
++    }
++  },[q, limit]);
++
++  // Initial load & when query changes
++  useEffect(()=>{ if (open && q.trim().length>=2) loadPage(0, true); },[q, open, loadPage]);
++
++  const hasMore = hits.length < total;
++
++  // Infinite scroll sentinel
++  useEffect(()=>{
++    if (!open || !hasMore) return;
++    const el = sentinelRef.current;
++    if (!el) return;
++    const io = new IntersectionObserver((entries)=>{
++      const ent = entries[0];
++      if (ent.isIntersecting && !fetchingMore) {
++        loadPage(offset, false);
++      }
++    }, { root: document.querySelector(".max-h-80") || null, rootMargin: "200px", threshold: 0 });
++    io.observe(el);
++    return ()=> io.disconnect();
++  },[open, hasMore, fetchingMore, offset, loadPage]);
+ 
+   if(!open) return null;
+   return (
+     <div className="fixed inset-0 z-50 bg-black/40" onClick={onClose}>
+       <div className="mx-auto mt-24 w-full max-w-2xl rounded-2xl border bg-white p-3 shadow-xl" onClick={e=>e.stopPropagation()}>
+         <input autoFocus className="w-full border rounded px-3 py-2" placeholder="Search anything… (Cmd/Ctrl+K)"
+           value={q} onChange={e=>setQ(e.target.value)} />
+         {loading && <div className="text-sm text-gray-500 mt-2">Searching…</div>}
+@@
+         <ul className="mt-3 divide-y max-h-80 overflow-auto">
+           {hits.map(h=>(
+             <li key={`${h.type}:${h.id}`} className="py-2 flex items-start justify-between">
+               <div>
+                 <div className="font-medium">{h.title}</div>
+                 <div className="text-xs text-gray-600">{h.type}{h.path ? " · "+h.path.join(" › ") : ""}</div>
+               </div>
+               <a className="px-2 py-1 border rounded text-sm"
+                  href={h.type==="brand" ? `/brand/${h.id}`
+                     : h.type==="product" ? `/product/${h.id}`
+                     : h.type==="project" ? `/project/${h.id}`
+                     : h.type==="agent" ? `/agents/${h.id}`
+                     : h.type==="task" ? `/task/${h.id}` : "#"}
+                  onClick={()=>{ pushRecent(q); onClose(); }}>Open</a>
+             </li>
+           ))}
+           {!hits.length && q.trim().length>=2 && !loading && (
+             <li className="py-2 text-sm text-gray-500">No results</li>
+           )}
++          {/* Infinite scroll sentinel */}
++          {hasMore && (
++            <li className="py-2 text-center text-sm text-gray-500" ref={sentinelRef}>
++              {fetchingMore ? "Loading more…" : "Scroll to load more"}
++            </li>
++          )}
+         </ul>
+         <div className="mt-3 text-right">
+           <button className="px-3 py-1 border rounded" onClick={onClose}>Close</button>
+         </div>
+       </div>
+     </div>
+   );
+ }
+```
+
+---
+
+## B) Sparkline — Tooltip with last-hour value
+
+```diff
+diff --git a/web/components/Sparkline.tsx b/web/components/Sparkline.tsx
+--- a/web/components/Sparkline.tsx
++++ b/web/components/Sparkline.tsx
+@@
+-import React from "react";
+-export default function Sparkline({ data, width=120, height=28 }:{ data:number[]; width?:number; height?:number }) {
+-  if (!data || !data.length) return <svg width={width} height={height}/>;
++import React, { useMemo, useState } from "react";
++export default function Sparkline({ data, width=120, height=28, label="Last hour" }:{
++  data:number[]; width?:number; height?:number; label?:string
++}) {
++  if (!data || !data.length) return <svg width={width} height={height} />;
+   const max = Math.max(...data, 1);
+   const step = width / (data.length - 1 || 1);
+-  const pts = data.map((v,i)=>[i*step, height - (v/max)*height]);
+-  const d = pts.map((p,i)=> (i===0?`M ${p[0]},${p[1]}`:`L ${p[0]},${p[1]}`)).join(" ");
+-  return (
+-    <svg width={width} height={height} viewBox={`0 0 ${width} ${height}`}>
+-      <path d={d} fill="none" stroke="currentColor" strokeWidth="1.5" />
+-    </svg>
+-  );
++  const pts = useMemo(()=>data.map((v,i)=>[i*step, height - (v/max)*height] as const),[data,max,step,height]);
++  const d = useMemo(()=>pts.map((p,i)=> (i===0?`M ${p[0]},${p[1]}`:`L ${p[0]},${p[1]}`)).join(" "),[pts]);
++  const last = data[data.length-1] ?? 0;
++  const [hover,setHover]=useState(false);
++  return (
++    <div className="relative inline-block text-gray-800" onMouseEnter={()=>setHover(true)} onMouseLeave={()=>setHover(false)} title={`${label}: ${last}`}>
++      <svg width={width} height={height} viewBox={`0 0 ${width} ${height}`}>
++        <path d={d} fill="none" stroke="currentColor" strokeWidth="1.5" />
++        {/* last point indicator */}
++        <circle cx={pts[pts.length-1][0]} cy={pts[pts.length-1][1]} r="2" fill="currentColor" />
++      </svg>
++      {hover && (
++        <div className="absolute right-0 -top-7 px-2 py-0.5 rounded bg-black text-white text-xs shadow">
++          {label}: <b>{last}</b>
++        </div>
++      )}
++    </div>
++  );
+ }
+```
+
+No other files need changes, but if you want a different label per metric (e.g., “Publishes”), you can pass `label="Publishes"` where you render the component.
+
+---
+
+## C) (Optional) Label the three BU sparklines
+
+```diff
+diff --git a/web/components/BuMiniAnalytics.tsx b/web/components/BuMiniAnalytics.tsx
+--- a/web/components/BuMiniAnalytics.tsx
++++ b/web/components/BuMiniAnalytics.tsx
+@@
+-            {data?.series && (
+-              <Sparkline data={i===0? data.series.publish : i===1? data.series.draft : data.series.wo} />
+-            )}
++            {data?.series && (
++              <Sparkline
++                data={i===0? data.series.publish : i===1? data.series.draft : data.series.wo}
++                label={i===0 ? "Publishes (last hr)" : i===1 ? "Drafts (last hr)" : "WO runs (last hr)"}
++              />
++            )}
+```
+
+---
+
+## D) Quick validation
+
+* **Cmd+K infinite scroll**
+
+  1. Press **Cmd/Ctrl+K**, search a broad term (e.g., “a”), scroll to the end → “Loading more…” appears and more results are appended.
+  2. Stop when total results (`X-Total-Count`) are loaded; sentinel disappears.
+
+* **Sparkline tooltip**
+
+  1. Hover each sparkline on BU Home → tooltip shows “Publishes (last hr): N”, etc.
+  2. The final dot is marked, so users get a visual anchor for the last hour.
+
+If you want me to add **keyboard selection** (↑/↓/Enter) to Cmd+K or **tap/click** tooltips on mobile for the sparkline, I can drop another small patch.

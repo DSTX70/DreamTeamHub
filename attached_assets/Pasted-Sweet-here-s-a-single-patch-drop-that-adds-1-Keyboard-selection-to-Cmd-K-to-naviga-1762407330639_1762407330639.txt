@@ -1,0 +1,226 @@
+Sweet — here’s a **single patch drop** that adds:
+
+1. **Keyboard selection** to Cmd+K (↑/↓ to navigate results, **Enter** to open the selected item; auto-scroll into view).
+2. **Tap/click tooltips on mobile** for the sparkline (toggle tip on tap; still shows on hover for desktop).
+
+Apply each block with:
+
+```bash
+git apply -p0 <<'PATCH'
+...diff...
+PATCH
+```
+
+---
+
+## A) Cmd+K — keyboard selection (↑/↓/Enter) + auto-scroll
+
+```diff
+diff --git a/web/components/CmdK.tsx b/web/components/CmdK.tsx
+--- a/web/components/CmdK.tsx
++++ b/web/components/CmdK.tsx
+@@
+-import React, { useEffect, useMemo, useRef, useState, useCallback } from "react";
++import React, { useEffect, useMemo, useRef, useState, useCallback } from "react";
+ 
+ type Hit = { type:string; id:string; title:string; path?:string[]; extras?:Record<string,any> };
+ type Action = { id:string; label:string; run:()=>void };
+ 
+ export default function CmdK({ open, onClose, scope }:{ open:boolean; onClose:()=>void; scope?:{ owner:"GLOBAL"|"BU"|"BRAND"|"PRODUCT"; ownerId?:string }}){
+   const [q,setQ]=useState("");
+   const [hits,setHits]=useState<Hit[]>([]);
+   const [loading,setL]=useState(false);
+   const [recent,setRecent]=useState<string[]>([]);
+   const maxRecent = 8;
+   const [total,setTotal]=useState<number>(0);
+   const [limit] = useState<number>(10);
+   const [offset,setOffset]=useState<number>(0);
+   const [fetchingMore,setFetchingMore]=useState(false);
+   const sentinelRef = useRef<HTMLDivElement | null>(null);
++  const listRef = useRef<HTMLUListElement | null>(null);
++  const [sel,setSel] = useState<number>(-1);
+ 
+   // load recent
+   useEffect(()=>{ try{ const raw=localStorage.getItem("cmdk_recent"); if(raw) setRecent(JSON.parse(raw)); }catch{} },[]);
+   const pushRecent = (s:string)=> {
+     const v = s.trim(); if(v.length<2) return;
+     const next = [v, ...recent.filter(x=>x!==v)].slice(0, maxRecent);
+     setRecent(next); try{ localStorage.setItem("cmdk_recent", JSON.stringify(next)); }catch{}
+   };
+   const clearRecent = ()=>{ setRecent([]); try{ localStorage.removeItem("cmdk_recent"); }catch{} };
+@@
+   // Reset when query changes
+-  useEffect(()=>{ setHits([]); setOffset(0); setTotal(0); },[q]);
++  useEffect(()=>{ setHits([]); setOffset(0); setTotal(0); setSel(-1); },[q]);
+@@
+   // Initial load & when query changes
+-  useEffect(()=>{ if (open && q.trim().length>=2) loadPage(0, true); },[q, open, loadPage]);
++  useEffect(()=>{ if (open && q.trim().length>=2) loadPage(0, true); },[q, open, loadPage]);
++  useEffect(()=>{ // reset selection when new page replaces items
++    setSel(hits.length ? 0 : -1);
++  },[hits.length]);
+@@
+   if(!open) return null;
+   return (
+     <div className="fixed inset-0 z-50 bg-black/40" onClick={onClose}>
+       <div className="mx-auto mt-24 w-full max-w-2xl rounded-2xl border bg-white p-3 shadow-xl" onClick={e=>e.stopPropagation()}>
+-        <input autoFocus className="w-full border rounded px-3 py-2" placeholder="Search anything… (Cmd/Ctrl+K)"
+-          value={q} onChange={e=>setQ(e.target.value)} />
++        <input
++          autoFocus
++          className="w-full border rounded px-3 py-2"
++          placeholder="Search anything… (Cmd/Ctrl+K)"
++          value={q}
++          onChange={e=>setQ(e.target.value)}
++          onKeyDown={(e)=>{
++            if (e.key === "ArrowDown") { e.preventDefault(); setSel(s=> Math.min((s<0? -1 : s)+1, hits.length-1)); }
++            else if (e.key === "ArrowUp") { e.preventDefault(); setSel(s=> Math.max((s<0? -1 : s)-1, 0)); }
++            else if (e.key === "Enter") {
++              if (sel >= 0 && hits[sel]) {
++                e.preventDefault();
++                const h = hits[sel];
++                const href = h.type==="brand" ? `/brand/${h.id}`
++                  : h.type==="product" ? `/product/${h.id}`
++                  : h.type==="project" ? `/project/${h.id}`
++                  : h.type==="agent" ? `/agents/${h.id}`
++                  : h.type==="task" ? `/task/${h.id}`
++                  : "#";
++                pushRecent(q); onClose();
++                window.location.href = href;
++              }
++            }
++          }}
++        />
+         {loading && <div className="text-sm text-gray-500 mt-2">Searching…</div>}
+@@
+-        <ul className="mt-3 divide-y max-h-80 overflow-auto">
+-          {hits.map(h=>(
+-            <li key={`${h.type}:${h.id}`} className="py-2 flex items-start justify-between">
++        <ul ref={listRef} className="mt-3 divide-y max-h-80 overflow-auto" role="listbox" aria-activedescendant={sel>=0?`cmdk-item-${sel}`:undefined}>
++          {hits.map((h, idx)=>(
++            <li
++              id={`cmdk-item-${idx}`}
++              key={`${h.type}:${h.id}`}
++              role="option"
++              aria-selected={sel===idx}
++              className={`py-2 flex items-start justify-between ${sel===idx ? "bg-gray-50" : ""}`}
++              ref={(el)=>{
++                if (el && sel===idx) {
++                  const parent = listRef.current;
++                  const rb = el.getBoundingClientRect();
++                  const pb = parent?.getBoundingClientRect?.();
++                  if (parent && pb) {
++                    if (rb.bottom > pb.bottom) parent.scrollTop += (rb.bottom - pb.bottom);
++                    if (rb.top < pb.top) parent.scrollTop -= (pb.top - rb.top);
++                  }
++                }
++              }}
++            >
+               <div>
+                 <div className="font-medium">{h.title}</div>
+                 <div className="text-xs text-gray-600">{h.type}{h.path ? " · "+h.path.join(" › ") : ""}</div>
+               </div>
+               <a className="px-2 py-1 border rounded text-sm"
+                  href={h.type==="brand" ? `/brand/${h.id}`
+                     : h.type==="product" ? `/product/${h.id}`
+                     : h.type==="project" ? `/project/${h.id}`
+                     : h.type==="agent" ? `/agents/${h.id}`
+                     : h.type==="task" ? `/task/${h.id}` : "#"}
+                  onClick={()=>{ pushRecent(q); onClose(); }}>Open</a>
+             </li>
+           ))}
+           {!hits.length && q.trim().length>=2 && !loading && (
+             <li className="py-2 text-sm text-gray-500">No results</li>
+           )}
+           {/* Infinite scroll sentinel */}
+           {hasMore && (
+             <li className="py-2 text-center text-sm text-gray-500" ref={sentinelRef}>
+               {fetchingMore ? "Loading more…" : "Scroll to load more"}
+             </li>
+           )}
+         </ul>
+         <div className="mt-3 text-right">
+           <button className="px-3 py-1 border rounded" onClick={onClose}>Close</button>
+         </div>
+       </div>
+     </div>
+   );
+ }
+```
+
+**What this adds**
+
+* Maintains a `sel`(ected) index.
+* Up/Down changes selection.
+* **Enter** opens the selected hit (and records recent).
+* Keeps the selected row in view as you arrow around.
+
+---
+
+## B) Sparkline — tap/click tooltip on mobile (toggle)
+
+```diff
+diff --git a/web/components/Sparkline.tsx b/web/components/Sparkline.tsx
+--- a/web/components/Sparkline.tsx
++++ b/web/components/Sparkline.tsx
+@@
+-import React, { useMemo, useState } from "react";
++import React, { useMemo, useState } from "react";
+ export default function Sparkline({ data, width=120, height=28, label="Last hour" }:{
+   data:number[]; width?:number; height?:number; label?:string
+ }) {
+   if (!data || !data.length) return <svg width={width} height={height} />;
+   const max = Math.max(...data, 1);
+   const step = width / (data.length - 1 || 1);
+   const pts = useMemo(()=>data.map((v,i)=>[i*step, height - (v/max)*height] as const),[data,max,step,height]);
+   const d = useMemo(()=>pts.map((p,i)=> (i===0?`M ${p[0]},${p[1]}`:`L ${p[0]},${p[1]}`)).join(" "),[pts]);
+   const last = data[data.length-1] ?? 0;
+-  const [hover,setHover]=useState(false);
++  const [hover,setHover]=useState(false);
++  const toggle = () => setHover(h => !h);
+   return (
+-    <div className="relative inline-block text-gray-800" onMouseEnter={()=>setHover(true)} onMouseLeave={()=>setHover(false)} title={`${label}: ${last}`}>
++    <div
++      className="relative inline-block text-gray-800"
++      onMouseEnter={()=>setHover(true)}
++      onMouseLeave={()=>setHover(false)}
++      onClick={toggle}
++      role="img"
++      aria-label={`${label}: ${last}`}
++      title={`${label}: ${last}`}
++    >
+       <svg width={width} height={height} viewBox={`0 0 ${width} ${height}`}>
+         <path d={d} fill="none" stroke="currentColor" strokeWidth="1.5" />
+         {/* last point indicator */}
+         <circle cx={pts[pts.length-1][0]} cy={pts[pts.length-1][1]} r="2" fill="currentColor" />
+       </svg>
+       {hover && (
+         <div className="absolute right-0 -top-7 px-2 py-0.5 rounded bg-black text-white text-xs shadow">
+           {label}: <b>{last}</b>
+         </div>
+       )}
+     </div>
+   );
+ }
+```
+
+**What this adds**
+
+* **Tap/click** toggles the tooltip on touch devices (no hover).
+* Keeps hover behavior for desktop.
+* Adds `aria-label` and `title` for accessibility.
+
+---
+
+## Quick validation
+
+**Cmd+K**
+
+* Press **Cmd/Ctrl+K** → type a broad query → use **↓/↑** to move through results → press **Enter** to open the selected item.
+* Scroll to the end → it auto-loads the next page until the total is reached.
+
+**Sparkline**
+
+* On desktop: hover shows the tip; on mobile/touch: tap to toggle the tip; tap again to hide.
+
+If you want, I can also add **↑/↓** to jump between **Quick actions** and **Results** groups (two-zone navigation) — it’s a tiny follow-up.

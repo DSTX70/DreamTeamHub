@@ -1,0 +1,283 @@
+Absolutely — here’s **one clean drop** that adds:
+
+1. **Recent searches memory** to the Cmd+K palette (persisted in `localStorage`, clickable, clearable).
+2. **Tiny sparklines** on BU Mini Analytics (hourly series for last 24h from `/api/ops/summary`).
+
+Apply each diff with:
+
+```bash
+git apply -p0 <<'PATCH'
+...diff...
+PATCH
+```
+
+---
+
+## A) Cmd+K — recent searches memory (persist & show)
+
+```diff
+diff --git a/web/components/CmdK.tsx b/web/components/CmdK.tsx
+--- a/web/components/CmdK.tsx
++++ b/web/components/CmdK.tsx
+@@
+-import React, { useEffect, useMemo, useState } from "react";
++import React, { useEffect, useMemo, useState } from "react";
+ 
+ type Hit = { type:string; id:string; title:string; path?:string[]; extras?:Record<string,any> };
+ type Action = { id:string; label:string; run:()=>void };
+ 
+ export default function CmdK({ open, onClose, scope }:{ open:boolean; onClose:()=>void; scope?:{ owner:"GLOBAL"|"BU"|"BRAND"|"PRODUCT"; ownerId?:string }}){
+-  const [q,setQ]=useState(""); const [hits,setHits]=useState<Hit[]>([]); const [loading,setL]=useState(false);
++  const [q,setQ]=useState("");
++  const [hits,setHits]=useState<Hit[]>([]);
++  const [loading,setL]=useState(false);
++  const [recent,setRecent]=useState<string[]>([]);
++  const maxRecent = 8;
++  // load recent
++  useEffect(()=>{ try{ const raw=localStorage.getItem("cmdk_recent"); if(raw) setRecent(JSON.parse(raw)); }catch{} },[]);
++  const pushRecent = (s:string)=> {
++    const v = s.trim(); if(v.length<2) return;
++    const next = [v, ...recent.filter(x=>x!==v)].slice(0, maxRecent);
++    setRecent(next); try{ localStorage.setItem("cmdk_recent", JSON.stringify(next)); }catch{}
++  };
++  const clearRecent = ()=>{ setRecent([]); try{ localStorage.removeItem("cmdk_recent"); }catch{} };
+ 
+   const actions: Action[] = useMemo(()=>[
+     { id:"new-wo", label:"+ New Work Order", run:()=>{ location.href="/work-orders/new"; }},
+     { id:"open-copilot", label:"Open Copilot", run:()=>{ location.href="/copilot"; }},
+     scope?.owner !== "GLOBAL" ? { id:"search-kb", label:"Search Knowledge in this context", run:()=>{ location.href=`/knowledge/search?scope=${scope?.owner}&id=${scope?.ownerId||""}`; }} : null,
+   ].filter(Boolean) as Action[], [scope]);
+ 
+   useEffect(()=>{
+     let abort=false;
+     const fetchHits = async () => {
+-      if (q.trim().length<2){ setHits([]); return; }
++      if (q.trim().length<2){ setHits([]); return; }
+       setL(true);
+       const r = await fetch(`/api/search?q=${encodeURIComponent(q)}&limit=10`);
+       const data = await r.json();
+       if (!abort) setHits((data.items||[]).map((x:any)=>({ type:x.type, id:x.id, title:x.title, path:x.path, extras:x.extras })));
+       setL(false);
+     };
+     fetchHits(); return ()=>{ abort=true; };
+   },[q]);
+ 
+   if(!open) return null;
+   return (
+     <div className="fixed inset-0 z-50 bg-black/40" onClick={onClose}>
+       <div className="mx-auto mt-24 w-full max-w-2xl rounded-2xl border bg-white p-3 shadow-xl" onClick={e=>e.stopPropagation()}>
+         <input autoFocus className="w-full border rounded px-3 py-2" placeholder="Search anything… (Cmd/Ctrl+K)"
+           value={q} onChange={e=>setQ(e.target.value)} />
+         {loading && <div className="text-sm text-gray-500 mt-2">Searching…</div>}
++        {/* Recent searches */}
++        {!loading && hits.length===0 && q.trim().length<2 && recent.length>0 && (
++          <div className="mt-3">
++            <div className="flex items-center justify-between">
++              <div className="text-xs text-gray-500">Recent searches</div>
++              <button className="text-xs underline" onClick={clearRecent}>Clear</button>
++            </div>
++            <div className="mt-1 flex flex-wrap gap-2">
++              {recent.map((s)=>(
++                <button key={s} className="px-2 py-1 border rounded text-sm hover:bg-gray-50"
++                  onClick={()=>{ setQ(s); }}>
++                  {s}
++                </button>
++              ))}
++            </div>
++          </div>
++        )}
+         {!!actions.length && (
+           <div className="mt-3">
+             <div className="text-xs text-gray-500 mb-1">Quick actions</div>
+             <div className="flex flex-wrap gap-2">
+               {actions.map(a=>(
+                 <button key={a.id} onClick={()=>{ a.run(); onClose(); }} className="px-2 py-1 border rounded text-sm">{a.label}</button>
+               ))}
+             </div>
+           </div>
+         )}
+         <ul className="mt-3 divide-y max-h-80 overflow-auto">
+-          {hits.map(h=>(
++          {hits.map(h=>(
+             <li key={`${h.type}:${h.id}`} className="py-2 flex items-start justify-between">
+               <div>
+                 <div className="font-medium">{h.title}</div>
+                 <div className="text-xs text-gray-600">{h.type}{h.path ? " · "+h.path.join(" › ") : ""}</div>
+               </div>
+-              <a className="px-2 py-1 border rounded text-sm"
++              <a className="px-2 py-1 border rounded text-sm"
+                  href={h.type==="brand" ? `/brand/${h.id}`
+                     : h.type==="product" ? `/product/${h.id}`
+                     : h.type==="project" ? `/project/${h.id}`
+                     : h.type==="agent" ? `/agents/${h.id}`
+                     : h.type==="task" ? `/task/${h.id}` : "#"}
+-                 onClick={onClose}>Open</a>
++                 onClick={()=>{ pushRecent(q); onClose(); }}>Open</a>
+             </li>
+           ))}
+           {!hits.length && q.trim().length>=2 && !loading && (
+             <li className="py-2 text-sm text-gray-500">No results</li>
+           )}
+         </ul>
+         <div className="mt-3 text-right">
+           <button className="px-3 py-1 border rounded" onClick={onClose}>Close</button>
+         </div>
+       </div>
+     </div>
+   );
+ }
+```
+
+---
+
+## B) Ops mini analytics — hourly series + sparkline
+
+### B1) Backend — add hourly series to `/api/ops/summary`
+
+```diff
+diff --git a/app/api/ops/summary/route.ts b/app/api/ops/summary/route.ts
+--- a/app/api/ops/summary/route.ts
++++ b/app/api/ops/summary/route.ts
+@@
+ export async function GET(req: NextRequest) {
+   const ownerType = req.nextUrl.searchParams.get("owner_type") || undefined;
+   const ownerId = req.nextUrl.searchParams.get("owner_id") || undefined;
++  const series = req.nextUrl.searchParams.get("series") === "1";
+   const since = new Date(Date.now() - 24*60*60*1000);
+   const where = and(
+     gte(opsEvent.at, since),
+     ownerType ? eq(opsEvent.ownerType, ownerType) : undefined,
+     ownerId ? eq(opsEvent.ownerId, ownerId as any) : undefined
+   );
+   const rows = await db.select({
+     kind: opsEvent.kind,
+     count: sql<number>`count(*)`
+   }).from(opsEvent).where(where as any).groupBy(opsEvent.kind);
+@@
+-  const out = {
++  const out:any = {
+     window: "24h",
+     publish_count_24h: byKind["PUBLISH"] || 0,
+     draft_count_24h: byKind["KNOWLEDGE_DRAFT"] || 0,
+     wo_runs_24h: Object.keys(byKind).filter(k=>k.startsWith("WO_")).reduce((s,k)=>s+byKind[k], 0)
+   };
+-  return new Response(JSON.stringify(out), { status: 200, headers: { "content-type":"application/json" }});
++  if (series) {
++    // Hourly buckets for last 24h
++    const srows = await db.execute(sql`
++      with hours as (
++        select generate_series(date_trunc('hour', now() - interval '23 hours'), date_trunc('hour', now()), interval '1 hour') as h
++      )
++      select h.h as hour,
++        coalesce(sum(case when e.kind='PUBLISH' then 1 else 0 end),0)::int as publish,
++        coalesce(sum(case when e.kind='KNOWLEDGE_DRAFT' then 1 else 0 end),0)::int as draft,
++        coalesce(sum(case when e.kind like 'WO_%' then 1 else 0 end),0)::int as wo
++      from hours h
++      left join ops_event e on date_trunc('hour', e.at)=h.h
++        ${ownerType ? sql`and e.owner_type=${ownerType}` : sql``}
++        ${ownerId ? sql`and e.owner_id=${ownerId}` : sql``}
++      group by h.h order by h.h asc
++    `);
++    const pub:number[]=[]; const dra:number[]=[]; const wor:number[]=[];
++    (srows.rows as any[]).forEach(r=>{ pub.push(Number(r.publish)); dra.push(Number(r.draft)); wor.push(Number(r.wo)); });
++    out.series = { publish: pub, draft: dra, wo: wor };
++  }
++  return new Response(JSON.stringify(out), { status: 200, headers: { "content-type":"application/json" }});
+ }
+```
+
+### B2) Frontend — tiny Sparkline + wire into BU card
+
+```diff
+diff --git a/web/components/Sparkline.tsx b/web/components/Sparkline.tsx
+new file mode 100644
+--- /dev/null
++++ b/web/components/Sparkline.tsx
+@@
++import React from "react";
++export default function Sparkline({ data, width=120, height=28 }:{ data:number[]; width?:number; height?:number }) {
++  if (!data || !data.length) return <svg width={width} height={height}/>;
++  const max = Math.max(...data, 1);
++  const step = width / (data.length - 1 || 1);
++  const pts = data.map((v,i)=>[i*step, height - (v/max)*height]);
++  const d = pts.map((p,i)=> (i===0?`M ${p[0]},${p[1]}`:`L ${p[0]},${p[1]}`)).join(" ");
++  return (
++    <svg width={width} height={height} viewBox={`0 0 ${width} ${height}`}>
++      <path d={d} fill="none" stroke="currentColor" strokeWidth="1.5" />
++    </svg>
++  );
++}
+```
+
+```diff
+diff --git a/web/components/BuMiniAnalytics.tsx b/web/components/BuMiniAnalytics.tsx
+--- a/web/components/BuMiniAnalytics.tsx
++++ b/web/components/BuMiniAnalytics.tsx
+@@
+-import React, { useEffect, useState } from "react";
++import React, { useEffect, useState } from "react";
++import Sparkline from "@/components/Sparkline";
+ 
+-export default function BuMiniAnalytics({ buId }:{ buId: string }) {
+-  const [data,setData]=useState<{publish_count_24h:number; draft_count_24h:number; wo_runs_24h:number}|null>(null);
++type Sum = { publish_count_24h:number; draft_count_24h:number; wo_runs_24h:number; series?:{ publish:number[]; draft:number[]; wo:number[] } };
++export default function BuMiniAnalytics({ buId }:{ buId: string }) {
++  const [data,setData]=useState<Sum|null>(null);
+   const [loading,setL]=useState(false);
+   useEffect(()=>{
+     let abort=false;
+     (async()=>{
+       setL(true);
+-      const r = await fetch(`/api/ops/summary?owner_type=BU&owner_id=${buId}`);
++      const r = await fetch(`/api/ops/summary?owner_type=BU&owner_id=${buId}&series=1`);
+       const j = await r.json();
+       if(!abort) setData(j);
+       setL(false);
+     })();
+     return ()=>{ abort=true; };
+   },[buId]);
+ 
+   return (
+-    <div className="grid sm:grid-cols-3 gap-3">
++    <div className="grid sm:grid-cols-3 gap-3">
+       {["Publishes (24h)","Draft uploads (24h)","WO runs (24h)"].map((label, i)=>(
+         <div key={label} className="rounded-xl border p-4">
+           <div className="text-sm text-gray-600">{label}</div>
+           <div className="text-2xl font-semibold mt-1">
+             {loading || !data ? "—" : i===0 ? data.publish_count_24h : i===1 ? data.draft_count_24h : data.wo_runs_24h}
+           </div>
++          <div className="mt-2 text-gray-800">
++            {data?.series && (
++              <Sparkline data={i===0? data.series.publish : i===1? data.series.draft : data.series.wo} />
++            )}
++          </div>
+         </div>
+       ))}
+     </div>
+   );
+ }
+```
+
+---
+
+## C) Quick validation
+
+**Search with recent memory**
+
+1. Press **Cmd+K**, search for “router” and open a result.
+2. Open Cmd+K again → “router” appears under **Recent searches**; clicking it re-runs.
+
+**Ops sparklines**
+
+1. Visit BU page → mini analytics show numbers **and** a tiny line for each metric.
+2. Trigger events (draft upload, publish, WO start) → series update within the next hour bucket.
+
+---
+
+## Definition of Done
+
+* Cmd+K shows recent searches when query is short; clicking a recent item fills the box; Clear removes memory.
+* `/api/ops/summary?series=1` returns hourly series for last 24h.
+* BU mini analytics render sparklines using those arrays.
+
+If you want, I can add **infinite scroll** to Cmd+K results or a **tooltip** on the sparkline with last-hour value — just say the word.

@@ -1,0 +1,178 @@
+Perfect — here’s a **tiny follow-up patch** that adds **two-zone keyboard navigation** in Cmd+K:
+
+* **Zones:** `Quick actions` and `Results`
+* **↑/↓** moves within a zone; when you hit the top/bottom, it jumps to the other zone
+* **Enter** executes the selected **action** or opens the selected **result**
+
+Apply with:
+
+```bash
+git apply -p0 <<'PATCH'
+...diff...
+PATCH
+```
+
+---
+
+```diff
+diff --git a/web/components/CmdK.tsx b/web/components/CmdK.tsx
+--- a/web/components/CmdK.tsx
++++ b/web/components/CmdK.tsx
+@@
+-import React, { useEffect, useMemo, useRef, useState, useCallback } from "react";
++import React, { useEffect, useMemo, useRef, useState, useCallback } from "react";
+ 
+ type Hit = { type:string; id:string; title:string; path?:string[]; extras?:Record<string,any> };
+ type Action = { id:string; label:string; run:()=>void };
+ 
+ export default function CmdK({ open, onClose, scope }:{ open:boolean; onClose:()=>void; scope?:{ owner:"GLOBAL"|"BU"|"BRAND"|"PRODUCT"; ownerId?:string }}){
+   const [q,setQ]=useState("");
+   const [hits,setHits]=useState<Hit[]>([]);
+   const [loading,setL]=useState(false);
+   const [recent,setRecent]=useState<string[]>([]);
+   const maxRecent = 8;
+   const [total,setTotal]=useState<number>(0);
+   const [limit] = useState<number>(10);
+   const [offset,setOffset]=useState<number>(0);
+   const [fetchingMore,setFetchingMore]=useState(false);
+   const sentinelRef = useRef<HTMLDivElement | null>(null);
+   const listRef = useRef<HTMLUListElement | null>(null);
+-  const [sel,setSel] = useState<number>(-1);
++  const [sel,setSel] = useState<number>(-1);           // selection index within current zone
++  const [zone,setZone] = useState<"actions"|"results">("results"); // which group is focused
+ 
+   // load recent
+   useEffect(()=>{ try{ const raw=localStorage.getItem("cmdk_recent"); if(raw) setRecent(JSON.parse(raw)); }catch{} },[]);
+@@
+   // Reset when query changes
+-  useEffect(()=>{ setHits([]); setOffset(0); setTotal(0); setSel(-1); },[q]);
++  useEffect(()=>{ setHits([]); setOffset(0); setTotal(0); setSel(-1); setZone("results"); },[q]);
+@@
+   useEffect(()=>{ if (open && q.trim().length>=2) loadPage(0, true); },[q, open, loadPage]);
+   useEffect(()=>{ // reset selection when new page replaces items
+-    setSel(hits.length ? 0 : -1);
++    if (zone==="results") setSel(hits.length ? 0 : -1);
+   },[hits.length, zone]);
+@@
+-        <input
++        <input
+           autoFocus
+           className="w-full border rounded px-3 py-2"
+           placeholder="Search anything… (Cmd/Ctrl+K)"
+           value={q}
+           onChange={e=>setQ(e.target.value)}
+           onKeyDown={(e)=>{
+-            if (e.key === "ArrowDown") { e.preventDefault(); setSel(s=> Math.min((s<0? -1 : s)+1, hits.length-1)); }
+-            else if (e.key === "ArrowUp") { e.preventDefault(); setSel(s=> Math.max((s<0? -1 : s)-1, 0)); }
+-            else if (e.key === "Enter") {
+-              if (sel >= 0 && hits[sel]) {
+-                e.preventDefault();
+-                const h = hits[sel];
+-                const href = h.type==="brand" ? `/brand/${h.id}`
+-                  : h.type==="product" ? `/product/${h.id}`
+-                  : h.type==="project" ? `/project/${h.id}`
+-                  : h.type==="agent" ? `/agents/${h.id}`
+-                  : h.type==="task" ? `/task/${h.id}`
+-                  : "#";
+-                pushRecent(q); onClose();
+-                window.location.href = href;
+-              }
+-            }
++            // counts
++            const aCount = actions.length;
++            const rCount = hits.length;
++            const inActions = zone==="actions";
++            const inResults = zone==="results";
++            if (e.key === "ArrowDown") {
++              e.preventDefault();
++              if (inActions) {
++                if (aCount===0) { setZone("results"); setSel(rCount?0:-1); return; }
++                const next = sel+1;
++                if (next < aCount) setSel(next);
++                else { setZone("results"); setSel(rCount?0:-1); }
++              } else {
++                if (rCount===0) return;
++                const next = sel+1;
++                if (next < rCount) setSel(next);
++                else { setZone("actions"); setSel(aCount?0:-1); }
++              }
++            } else if (e.key === "ArrowUp") {
++              e.preventDefault();
++              if (inActions) {
++                if (aCount===0) { setZone("results"); setSel(rCount?Math.max(rCount-1,0):-1); return; }
++                const prev = sel-1;
++                if (prev >= 0) setSel(prev);
++                else { setZone("results"); setSel(rCount?Math.max(rCount-1,0):-1); }
++              } else {
++                if (rCount===0) { setZone("actions"); setSel(aCount?Math.max(aCount-1,0):-1); return; }
++                const prev = sel-1;
++                if (prev >= 0) setSel(prev);
++                else { setZone("actions"); setSel(aCount?Math.max(aCount-1,0):-1); }
++              }
++            } else if (e.key === "Enter") {
++              if (inActions && sel>=0 && actions[sel]) {
++                e.preventDefault();
++                actions[sel]!.run(); onClose();
++              } else if (inResults && sel>=0 && hits[sel]) {
++                e.preventDefault();
++                const h = hits[sel];
++                const href = h.type==="brand" ? `/brand/${h.id}`
++                  : h.type==="product" ? `/product/${h.id}`
++                  : h.type==="project" ? `/project/${h.id}`
++                  : h.type==="agent" ? `/agents/${h.id}`
++                  : h.type==="task" ? `/task/${h.id}`
++                  : "#";
++                pushRecent(q); onClose(); window.location.href = href;
++              }
++            }
+           }}
+         />
+         {loading && <div className="text-sm text-gray-500 mt-2">Searching…</div>}
+@@
+-        {!!actions.length && (
++        {!!actions.length && (
+           <div className="mt-3">
+             <div className="text-xs text-gray-500 mb-1">Quick actions</div>
+             <div className="flex flex-wrap gap-2">
+-              {actions.map(a=>(
+-                <button key={a.id} onClick={()=>{ a.run(); onClose(); }} className="px-2 py-1 border rounded text-sm">{a.label}</button>
++              {actions.map((a, i)=>(
++                <button
++                  key={a.id}
++                  onClick={()=>{ a.run(); onClose(); }}
++                  className={`px-2 py-1 border rounded text-sm ${zone==="actions" && sel===i ? "bg-gray-50" : ""}`}
++                  aria-selected={zone==="actions" && sel===i}
++                >
++                  {a.label}
++                </button>
+               ))}
+             </div>
+           </div>
+         )}
+@@
+-          {hits.map((h, idx)=>(
++          {hits.map((h, idx)=>(
+             <li
+               id={`cmdk-item-${idx}`}
+               key={`${h.type}:${h.id}`}
+               role="option"
+               aria-selected={sel===idx}
+-              className={`py-2 flex items-start justify-between ${sel===idx ? "bg-gray-50" : ""}`}
++              className={`py-2 flex items-start justify-between ${zone==="results" && sel===idx ? "bg-gray-50" : ""}`}
+               ref={(el)=>{
+-                if (el && sel===idx) {
++                if (el && zone==="results" && sel===idx) {
+                   const parent = listRef.current;
+                   const rb = el.getBoundingClientRect();
+                   const pb = parent?.getBoundingClientRect?.();
+                   if (parent && pb) {
+                     if (rb.bottom > pb.bottom) parent.scrollTop += (rb.bottom - pb.bottom);
+                     if (rb.top < pb.top) parent.scrollTop -= (pb.top - rb.top);
+                   }
+                 }
+               }}
+             >
+```
+
+**That’s it.**
+Now Cmd+K supports quick action/result navigation with **↑/↓** across groups and **Enter** to execute. The sparkline already supports tap/click tooltips from the prior patch.

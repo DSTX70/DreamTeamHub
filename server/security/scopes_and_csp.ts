@@ -32,6 +32,14 @@ const API_TOKEN_SCOPES = [
   "roles:write"
 ];
 
+// Default scopes for all authenticated session users (operators)
+const SESSION_USER_SCOPES = [
+  "knowledge:draft:write",
+  "agents:write",
+  "roles:read",
+  "roles:write"
+];
+
 // Scope check: supports both session auth (req.user.scopes) and API token auth
 export function requireScopes(...scopes: string[]) {
   return (req: Request, res: Response, next: NextFunction) => {
@@ -46,8 +54,14 @@ export function requireScopes(...scopes: string[]) {
       return next();
     }
     
-    // Session auth: check req.user.scopes
-    const have = (req as any).user?.scopes || [];
+    // Session auth: user must be authenticated first
+    const user = (req as any).user;
+    if (!user) {
+      return res.status(403).json({ error: "authentication required" });
+    }
+    
+    // Grant default operator scopes to all authenticated session users
+    const have = user.scopes || SESSION_USER_SCOPES;
     const ok = scopes.every(s => have.includes(s));
     if (!ok) return res.status(403).json({ error: "insufficient scope" });
     next();
