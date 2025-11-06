@@ -40,6 +40,10 @@ The platform is structured into core modules and features:
 - **Operations Events Logging**: Fire-and-forget telemetry system tracks user interactions across the platform (BU views, knowledge actions, PUBLISH events, etc.) with automatic actor inference, request correlation IDs, and metadata enrichment for analytics and audit trails.
 - **Operations Logs Admin Page**: Full-featured admin interface for viewing and filtering operational events with real-time updates, CSV export, auto-refresh (5s interval), and comprehensive filtering by event kind, owner type, and owner ID. Accessible via `/ops-logs` in the Support navigation section.
 - **Knowledge Publishing System**: File publishing API with database-level idempotency protection. Uses PostgreSQL partial unique index on `(kind, owner_type, owner_id, meta->>'fileId')` to prevent duplicate PUBLISH events. Gracefully handles duplicate submissions with `alreadyPublished` flag without creating duplicate database records.
+- **Google Drive Integration**: Service account-based integration with Drive Gateway API endpoints for searching, uploading drafts, and publishing files. Uses googleapis with JWT authentication (GDRIVE_SA_EMAIL, GDRIVE_SA_PRIVATE_KEY) for secure access to shared drives. Supports Business Unit-specific knowledge management.
+- **Work Orders System**: Database-backed work order execution with budget caps enforcement (runs/day and $/day limits). Features rate limiting with 429 + Retry-After headers, work_order_runs tracking table, and automatic cap validation before execution.
+- **Academy Sidebar**: Interactive agent training and promotion interface integrated into Academy page. Displays promotion progress, evidence pack links, and allows one-click agent advancement.
+- **Two-Reviewer Publish Workflow**: Modal-based publish approval system with custom React hook (usePublishDialog) for start/confirm/close lifecycle. Supports idempotency via Idempotency-Key header to prevent duplicate submissions.
 
 ### Technology Stack
 - **Frontend**: React 18, TypeScript, Wouter, TanStack Query v5, React Hook Form, Zod, Shadcn UI, Tailwind CSS.
@@ -99,13 +103,41 @@ Dream Team Hub exposes a RESTful API with dual authentication support:
 - `POST /api/ops/events` - Create a new operational event (fire-and-forget telemetry)
 
 ### Knowledge/Publishing API (Session Auth)
-- `POST /api/knowledge/publish` - Publish a file with idempotency protection
+- `GET /api/knowledge/:owner/:id/search` - Search Google Drive for files
+  - Parameters: `owner` (bu|brand|product|project), `id` (owner ID)
+  - Query parameters: `q` (search query, optional)
+  - Returns array of files with id, name, mimeType, webViewLink
+- `POST /api/knowledge/:owner/:id/drafts` - Upload a draft file to Google Drive
+  - Parameters: `owner` (bu|brand|product|project), `id` (owner ID)
+  - Request body: `fileName`, `content` (base64 or text)
+  - Returns file metadata including fileId
+- `POST /api/knowledge/:owner/:id/publish/:fileId` - Publish a file with idempotency protection
+  - Parameters: `owner`, `id`, `fileId`
+  - Request headers: `Idempotency-Key` (optional, for duplicate prevention)
+  - Returns: `{success: true, alreadyPublished: boolean, eventId: number, message: string}`
+- `POST /api/knowledge/publish` - Legacy publish endpoint (for backward compatibility)
   - Request body: `fileId`, `fileName`, `fileUrl`, `ownerType`, `ownerId`, `meta` (optional)
   - Returns: `{success: true, alreadyPublished: boolean, eventId: number, message: string}`
-  - Idempotency: Duplicate fileId submissions return success without creating duplicate events
 - `GET /api/knowledge/published` - Retrieve published files
   - Query parameters: `owner_type` (optional), `owner_id` (optional)
   - Returns array of published file records with metadata
+
+### Work Orders API (Session Auth)
+- `GET /api/work-orders` - List all work orders with pagination
+  - Query parameters: `limit` (default: 50), `offset` (default: 0)
+  - Returns work orders array with X-Total-Count header
+- `POST /api/work-orders` - Create a new work order
+  - Request body: `name`, `description`, `caps` (runs_per_day, usd_per_day)
+  - Returns created work order with ID
+- `POST /api/work-orders/:woId/start` - Start a work order run with budget validation
+  - Parameters: `woId` (work order ID)
+  - Request body: `input` (task input), `cost_usd` (estimated cost)
+  - Returns: 429 with Retry-After header if caps exceeded, 201 with run ID on success
+
+### Agent Promotion API (Session Auth)
+- `POST /api/agents/:id/promote` - Promote an agent (advance autonomy gate)
+  - Parameters: `id` (agent ID)
+  - Returns updated agent with new autonomy level
 
 ### Authentication Methods
 1. **Session Auth**: Replit Auth login (for web UI)
