@@ -1,0 +1,62 @@
+What’s in this drop (Responsive images allowlist/S3 + <picture> helper)
+
+Server
+
+server/routes/images.route.ts
+
+GET /api/ops/images/allowlist — list allowlisted { sku, baseKey }.
+
+POST /api/ops/images/allowlist — upsert { items:[{sku, baseKey}] }.
+
+DELETE /api/ops/images/allowlist/:sku — remove.
+
+POST /api/ops/images/upload — multi-file upload (form-data files[], plus sku, baseKey, cacheControl). MIME-sniffs, blocks SVG/XML, transforms with Sharp to AVIF/WEBP/JPG across widths, uploads to S3, returns manifest.
+
+GET /api/ops/images/variants/:baseKey — list uploaded variants for a base key.
+
+server/routes/img_cdn.route.ts — optional app-based /img/* passthrough with long-lived Cache-Control.
+
+server/images/s3.ts — S3 client (SDK v3) + s3Put/s3List.
+
+server/images/mime.ts — binary MIME sniff (PNG/JPEG/WEBP/AVIF) and SVG/XML hard-reject.
+
+server/images/transform.ts — Sharp pipeline (sizes=[320,640,960,1280,1600,1920], formats avif/webp/jpg, tunable quality).
+
+server/images/uploader.ts — allowlist store + orchestrator (sha256 short hash for keys, variant upload, manifest).
+
+Shared
+
+shared/images/types.ts — types for upload results & variants.
+
+Client
+
+client/src/pages/ops/ImagesAdmin.tsx — Ops page: allowlist editor, drag-drop uploader w/ progress, Cache-Control input, total payload summary, variants table.
+
+client/src/components/Picture.tsx — <Picture baseKey="uploads/products/CARD-.../cover-abc123" sizes="(min-width:768px) 50vw, 100vw" alt="…"/> renders <picture> with AVIF/WEBP/JPG sources.
+
+client/src/utils/picture.ts — buildSrcSet(baseKey, ext, widths?) helper (defaults to the same widths as the transformer).
+
+Tests
+
+tests/images_policy.test.ts — basic MIME-sniff spec (rejects svg/xml, accept image types).
+
+Env & mount
+AWS_REGION=us-east-1
+AWS_S3_BUCKET=your-bucket
+AWS_ACCESS_KEY_ID=xxx
+AWS_SECRET_ACCESS_KEY=xxx
+IMG_DEFAULT_CACHE_CONTROL=public, max-age=31536000, immutable
+
+// server/app.ts
+app.use(require("./server/routes/images.route").router);
+app.use(require("./server/routes/img_cdn.route").router);
+
+Notes / fit with your earlier plan
+
+Hard MIME sniff + SVG/XML rejection is in place (per your security notes).
+
+Keys use baseKey/<filename>-<sha8>-<width>.<ext> so cache is content-addressable-ish and CDN-friendly.
+
+Admin shows total payload after upload; if you want a quality-vs-size graph next, we can wire it to the transformer’s quality knobs.
+
+Ready for later “CDN cache-control header for /uploads/products/*” — the default is set; override per-upload via the UI field.

@@ -42,6 +42,7 @@ import OnboardingSuccess from "@/pages/onboarding/Success";
 import CoverageDeepDive from "@/pages/coverage/DeepDive";
 import OpsAlertHooksDemo from "@/pages/ops/AlertHooksDemo";
 import AffiliatesReport from "@/pages/ops/AffiliatesReport";
+import InventoryLowStock from "@/pages/ops/InventoryLowStock";
 import LLMProviderSelect from "@/pages/llm/ProviderSelect";
 import Checkout from "@/pages/checkout/Checkout";
 import { Button } from "@/components/ui/button";
@@ -87,6 +88,7 @@ function AuthenticatedRoutes() {
       <Route path="/onboarding/success" component={OnboardingSuccess} />
       <Route path="/ops/alerts" component={OpsAlertHooksDemo} />
       <Route path="/ops/affiliates" component={AffiliatesReport} />
+      <Route path="/ops/inventory" component={InventoryLowStock} />
       <Route path="/llm/provider" component={LLMProviderSelect} />
       <Route path="/bu/:slug" component={BUHomePage} />
       <Route path="/checkout" component={Checkout} />

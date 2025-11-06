@@ -1,5 +1,6 @@
 import cron from 'node-cron';
 import { storage } from './storage';
+import { startLowStockScheduler } from './scheduler/lowStockScheduler';
 
 /**
  * Nightly Agent Goldens Snapshot
@@ -58,6 +59,10 @@ export function initializeCronJobs() {
   });
 
   console.log('[Cron] 🕐 Nightly agent golden snapshot scheduled for 2:00 AM');
+
+  // Start low-stock inventory scheduler (scans every 60 seconds)
+  startLowStockScheduler({ intervalMs: 60_000 });
+  console.log('[Cron] 📦 Low-stock inventory scheduler started (60s interval)');
 
   // Optional: Run on startup for testing (disabled by default)
   // Uncomment the line below to create a snapshot when the server starts

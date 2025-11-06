@@ -2159,6 +2159,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   const affiliateRoute = await import("./routes/affiliate.route");
   app.use(affiliateRoute.router);
 
+  // Inventory - Low-stock monitoring and threshold management (public for demo)
+  const inventoryRoute = await import("./routes/inventory.route");
+  app.use(inventoryRoute.router);
+
   // Copilot - AI assistant for querying DTH API (requires authentication)
   const copilot = await import("./copilot");
   app.use("/copilot", isAuthenticated, copilot.default);
