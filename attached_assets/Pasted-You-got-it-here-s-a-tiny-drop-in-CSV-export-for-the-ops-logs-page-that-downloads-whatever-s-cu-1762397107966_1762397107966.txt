@@ -1,0 +1,66 @@
+You got it—here’s a tiny, drop-in CSV export for the **/ops/logs** page that downloads whatever’s currently filtered in the table.
+
+### What to add inside `OpsLogsPage`
+
+1. **Helper to make CSV**
+2. **Export button** wired to current `rows` and `query`
+
+```tsx
+// 1) Add these helpers near the top of the file (inside OpsLogsPage or above it)
+function toCsv(rows: any[]) {
+  const headers = ["id","at","kind","ownerType","ownerId","actor","message","meta"];
+  const escape = (v: any) => {
+    if (v === null || v === undefined) return "";
+    const s = typeof v === "string" ? v : JSON.stringify(v);
+    // Escape double quotes by doubling them, wrap in quotes if needed
+    const needsQuotes = /[",\n]/.test(s);
+    const clean = s.replace(/"/g, '""');
+    return needsQuotes ? `"${clean}"` : clean;
+  };
+  const lines = [
+    headers.join(","),
+    ...rows.map(r => [
+      r.id, r.at, r.kind, r.ownerType, r.ownerId, r.actor, r.message, r.meta
+    ].map(escape).join(","))
+  ];
+  return lines.join("\n");
+}
+
+function downloadCsv(filename: string, text: string) {
+  const blob = new Blob([text], { type: "text/csv;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+```
+
+```tsx
+// 2) In the filters toolbar (next to Refresh / Auto-refresh), add this button:
+<button
+  className="px-3 py-1 border rounded"
+  onClick={() => {
+    const csv = toCsv(rows);
+    const ts = new Date().toISOString().slice(0,19).replace(/[:T]/g,"-");
+    const params = new URLSearchParams(query);
+    const kindParam = params.get("kind") || "ALL";
+    const ownerParam = (params.get("owner_type") || "ANY") + (params.get("owner_id") ? `-${params.get("owner_id")}` : "");
+    downloadCsv(`ops-logs_${kindParam}_${ownerParam}_${ts}.csv`, csv);
+  }}
+  disabled={!rows.length}
+>
+  Export CSV
+</button>
+```
+
+**Behavior**
+
+* Exports exactly the rows currently shown (honors your filters).
+* Filename includes `kind`, `owner_type[/owner_id]`, and a timestamp, e.g.:
+  `ops-logs_PUBLISH_BU-123e4567-e89b-12d3-a456-426614174000_2025-11-05-02-17-00.csv`.
+
+No extra server endpoints needed.
