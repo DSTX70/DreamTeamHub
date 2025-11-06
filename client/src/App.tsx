@@ -33,7 +33,7 @@ import IntegrationsPage from "@/pages/integrations";
 import WorkOrdersPage from "@/pages/work-orders";
 import BUHomePage from "@/pages/bu-home";
 import { Button } from "@/components/ui/button";
-import { LogOut, User as UserIcon } from "lucide-react";
+import { LogOut, User as UserIcon, Search } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { IdeaSparkButton } from "@/components/idea-spark";
 import { SearchModal, useSearchShortcut } from "@/components/search-modal";
@@ -106,7 +106,20 @@ function AppContent() {
         <AppSidebar />
         <div className="flex flex-col flex-1 overflow-hidden">
           <header className="flex items-center justify-between p-4 border-b bg-background">
-            <SidebarTrigger data-testid="button-sidebar-toggle" />
+            <div className="flex items-center gap-3">
+              <SidebarTrigger data-testid="button-sidebar-toggle" />
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setIsSearchOpen(true)}
+                data-testid="button-open-search"
+                className="gap-2"
+              >
+                <Search className="h-4 w-4" />
+                <span className="hidden sm:inline">Search</span>
+                <kbd className="hidden sm:inline px-1.5 py-0.5 bg-muted rounded text-xs">⌘K</kbd>
+              </Button>
+            </div>
             <div className="flex items-center gap-3">
               <div className="flex items-center gap-2">
                 <Avatar className="h-8 w-8">
