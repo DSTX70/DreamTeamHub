@@ -1,13 +1,14 @@
 import { useState, useEffect, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useRoute, useLocation, Link } from "wouter";
-import { Plus, Filter, FolderKanban, Calendar, Users, CheckCircle2, AlertCircle, Clock, Sparkles, Lightbulb, Shield } from "lucide-react";
+import { Plus, Filter, FolderKanban, Calendar, Users, CheckCircle2, AlertCircle, Clock, Sparkles, Lightbulb, Shield, Package } from "lucide-react";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import type { Project } from "@shared/schema";
+import type { Project, Brand } from "@shared/schema";
 import { IdeaSparksList } from "@/components/idea-sparks-list";
+import { BrandDetailsModal } from "@/components/brand-details-modal";
 
 const PILLAR_ICONS = {
   Imagination: Sparkles,
@@ -49,6 +50,8 @@ export default function Projects() {
   
   const [selectedCategory, setSelectedCategory] = useState<string>(categoryFromUrl);
   const [selectedStatus, setSelectedStatus] = useState<string>("all");
+  const [selectedBrand, setSelectedBrand] = useState<Brand | null>(null);
+  const [isBrandModalOpen, setIsBrandModalOpen] = useState(false);
 
   // Sync category with URL parameter
   useEffect(() => {
@@ -72,6 +75,27 @@ export default function Projects() {
   const { data: allProjects = [] } = useQuery<Project[]>({
     queryKey: ['/api/projects'],
   });
+
+  // Fetch all brands for display
+  const { data: brands = [] } = useQuery<Brand[]>({
+    queryKey: ['/api/brands'],
+  });
+
+  // Helper to get brand by ID
+  const getBrandById = (brandId: number | null) => {
+    if (!brandId) return null;
+    return brands.find(b => b.id === brandId) || null;
+  };
+
+  const handleBrandClick = (e: React.MouseEvent, brandId: number | null) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const brand = getBrandById(brandId);
+    if (brand) {
+      setSelectedBrand(brand);
+      setIsBrandModalOpen(true);
+    }
+  };
 
   // Stable queryKey for filtered projects
   const filteredQueryKey = useMemo(() => {
@@ -290,6 +314,7 @@ export default function Projects() {
               const PillarIcon = PILLAR_ICONS[project.category as keyof typeof PILLAR_ICONS];
               const statusConfig = STATUS_CONFIG[project.status as keyof typeof STATUS_CONFIG] || STATUS_CONFIG.planning;
               const priorityConfig = PRIORITY_CONFIG[(project.priority || 'medium') as keyof typeof PRIORITY_CONFIG];
+              const brand = getBrandById(project.brandId);
               
               return (
                 <Link key={project.id} href={`/project/${project.id}`}>
@@ -314,6 +339,17 @@ export default function Projects() {
                         <Badge variant="outline" data-testid={`badge-category-${project.id}`}>
                           {project.category}
                         </Badge>
+                        {brand && (
+                          <Badge 
+                            variant="secondary" 
+                            className="cursor-pointer hover-elevate"
+                            onClick={(e) => handleBrandClick(e, brand.id)}
+                            data-testid={`badge-brand-${project.id}`}
+                          >
+                            <Package className="h-3 w-3 mr-1" />
+                            {brand.name}
+                          </Badge>
+                        )}
                       </div>
                     </CardHeader>
                   <CardContent className="space-y-2 text-sm">
@@ -343,6 +379,13 @@ export default function Projects() {
         </h2>
         <IdeaSparksList hasProject={true} limit={8} />
       </div>
+
+      {/* Brand Details Modal */}
+      <BrandDetailsModal 
+        brand={selectedBrand}
+        open={isBrandModalOpen}
+        onOpenChange={setIsBrandModalOpen}
+      />
     </div>
   );
 }

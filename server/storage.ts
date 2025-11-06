@@ -144,7 +144,7 @@ export interface IStorage {
   createAgentRun(run: InsertAgentRun): Promise<AgentRun>;
   
   // Projects
-  getProjects(filters?: { category?: string; status?: string; podId?: number }): Promise<Project[]>;
+  getProjects(filters?: { category?: string; status?: string; podId?: number; brandId?: number }): Promise<Project[]>;
   getProject(id: number): Promise<Project | undefined>;
   createProject(project: InsertProject): Promise<Project>;
   updateProject(id: number, project: Partial<InsertProject>): Promise<Project | undefined>;
@@ -715,13 +715,14 @@ export class DatabaseStorage implements IStorage {
   }
 
   // ===== PROJECTS =====
-  async getProjects(filters?: { category?: string; status?: string; podId?: number }): Promise<Project[]> {
+  async getProjects(filters?: { category?: string; status?: string; podId?: number; brandId?: number }): Promise<Project[]> {
     let query = db.select().from(projects);
     
     const conditions = [];
     if (filters?.category) conditions.push(eq(projects.category, filters.category));
     if (filters?.status) conditions.push(eq(projects.status, filters.status));
     if (filters?.podId) conditions.push(eq(projects.podId, filters.podId));
+    if (filters?.brandId) conditions.push(eq(projects.brandId, filters.brandId));
     
     if (conditions.length > 0) {
       query = query.where(and(...conditions));

@@ -1489,12 +1489,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get all projects with filtering
   app.get("/api/projects", isAuthenticated, async (req, res) => {
     try {
-      const { category, status, podId } = req.query;
+      const { category, status, podId, brandId } = req.query;
       
       const filters: any = {};
       if (category) filters.category = category as string;
       if (status) filters.status = status as string;
       if (podId) filters.podId = parseInt(podId as string);
+      if (brandId) filters.brandId = parseInt(brandId as string);
 
       const projects = await storage.getProjects(filters);
       res.json(projects);
