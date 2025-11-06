@@ -37,6 +37,7 @@ The platform is structured into core modules and features:
 - **DTH Copilot**: AI-powered assistant using OpenAI tool-calling with dual-mode architecture (direct tool calling for instant responses + chat-based for Custom GPT). Features quick action buttons, paginated table views with formatted KPIs, and the **Findings at a Glance** analytics card that automatically calculates risk distribution (low/medium/high), identifies top at-risk agents, and suggests actionable next steps.
 - **Universal Search**: Cmd+K powered search modal that searches across brands, products, projects, agents, and pods with relevance-based sorting, keyboard navigation, and paginated results. Features visible search button in header and comprehensive API with X-Total-Count headers for accurate pagination.
 - **Breadcrumb Navigation**: Auto-generating breadcrumb component displays contextual hierarchy (i³ → BU → Brand → Product → Project → Task) across major pages including Control Tower, Projects, Roles, Academy, Copilot, Work Orders, and Business Unit home pages.
+- **Operations Events Logging**: Fire-and-forget telemetry system tracks user interactions across the platform (BU views, knowledge actions, etc.) with automatic actor inference, request correlation IDs, and metadata enrichment for analytics and audit trails.
 
 ### Technology Stack
 - **Frontend**: React 18, TypeScript, Wouter, TanStack Query v5, React Hook Form, Zod, Shadcn UI, Tailwind CSS.
