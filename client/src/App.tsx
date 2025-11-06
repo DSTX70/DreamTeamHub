@@ -54,6 +54,7 @@ import { LogOut, User as UserIcon, Search } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { IdeaSparkButton } from "@/components/idea-spark";
 import { SearchModal, useSearchShortcut } from "@/components/search-modal";
+import HeaderOpsMenu from "@/components/HeaderOpsMenu";
 import { useState } from "react";
 
 function AuthenticatedRoutes() {
@@ -155,6 +156,7 @@ function AppContent() {
               </Button>
             </div>
             <div className="flex items-center gap-3">
+              <HeaderOpsMenu />
               <div className="flex items-center gap-2">
                 <Avatar className="h-8 w-8">
                   <AvatarImage src={user?.profileImageUrl || undefined} alt={user?.firstName || "User"} />
