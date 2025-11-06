@@ -1,0 +1,66 @@
+Shipped. I added **Zod validators** and **Next.js route handler** variants for the remaining endpoints. Grab these files:
+
+* **Validators**
+
+  * Work Orders: [lib/validators/workOrders.ts](sandbox:/mnt/data/lib_validators_workOrders.ts)
+  * Knowledge: [lib/validators/knowledge.ts](sandbox:/mnt/data/lib_validators_knowledge.ts)
+
+* **Next.js routes with Zod integrated**
+
+  * Work Orders list/create: [app/api/work-orders/route.ts](sandbox:/mnt/data/app_api_work_orders_route.ts)
+  * Work Order start run: [app/api/work-orders/[woId]/start/route.ts](sandbox:/mnt/data/app_api_work_orders_start_route.ts)
+  * Knowledge search: [app/api/knowledge/[owner]/[id]/search/route.ts](sandbox:/mnt/data/app_api_knowledge_search_route.ts)
+  * Knowledge drafts upload: [app/api/knowledge/[owner]/[id]/drafts/route.ts](sandbox:/mnt/data/app_api_knowledge_drafts_route.ts)
+
+### What’s validated
+
+**Work Orders**
+
+* `POST /api/work-orders` body: title, owner, autonomy (L0–L3), inputs, output, optional `caps` (runs/day, $/day), optional `kpis` (successMin, p95Max), optional `playbook`, `stop`.
+* `POST /api/work-orders/:woId/start` body: `{ agent: string(min 2) }`.
+
+**Knowledge**
+
+* `GET /api/knowledge/:owner/:id/search?q=&limit=` query: `q` min 2 chars; `limit` 1–50.
+* `POST /api/knowledge/:owner/:id/drafts` body: `{ text, fileName, mimeType? }` with safe filename regex.
+
+### How to drop them in
+
+1. Put the two validator files under your project paths:
+
+```
+/lib/validators/workOrders.ts
+/lib/validators/knowledge.ts
+```
+
+2. Paste the route files into your Next.js App Router under:
+
+```
+/app/api/work-orders/route.ts
+/app/api/work-orders/[woId]/start/route.ts
+/app/api/knowledge/[owner]/[id]/search/route.ts
+/app/api/knowledge/[owner]/[id]/drafts/route.ts
+```
+
+3. Ensure you have the shared helpers already in place:
+
+* `lib/next/response.ts` (json/err helper) — or swap with `Response.json`.
+
+4. Restart your dev server and test:
+
+```bash
+# Work Orders
+curl -XPOST /api/work-orders -H "content-type: application/json" \
+  -d '{"title":"Router L1 Wk1","owner":"Lume","inputs":"/inbox/*","output":"/drafts/router/"}'
+
+curl -XPOST /api/work-orders/00000000-0000-0000-0000-000000000000/start \
+  -H "content-type: application/json" -d '{"agent":"Support L1 — Router"}'
+
+# Knowledge
+curl "/api/knowledge/BU/<IMAGINATION_ID>/search?q=calendar&limit=10"
+curl -XPOST "/api/knowledge/BU/<IMAGINATION_ID>/drafts" \
+  -H "content-type: application/json" \
+  -d '{"text":"# draft","fileName":"README.md","mimeType":"text/markdown"}'
+```
+
+If you want, I can add Zod schemas for **publish** (we already validated body + reviewer token) and for **agents/promote** next, or convert the Express versions to Next.js equivalents for any remaining routes.
