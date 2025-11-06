@@ -1,6 +1,10 @@
 /**
  * Transactional Email Rendering with MJML
- * Supports partials, templating, caching, and HTML escaping
+ * Features:
+ * - Partials loader with mtime-aware cache
+ * - LRU-capped cache (configurable via env vars)
+ * - HTML escaping for {{var}}, unescaped {{{var}}} for trusted content
+ * - {{> partial}} and {{#each}} support
  */
 
 import mjml2html from "mjml";
@@ -8,18 +12,34 @@ import fs from "fs";
 import path from "path";
 
 /**
- * Partial cache entry with mtime tracking for auto-invalidation
+ * Environment-tunable cache limits
+ */
+const MAX_CACHED_DIRS = Math.max(1, parseInt(process.env.PARTIAL_CACHE_MAX_DIRS || '8', 10));
+const MAX_FILES_PER_DIR = Math.max(1, parseInt(process.env.PARTIAL_CACHE_MAX_FILES || '32', 10));
+
+/**
+ * Partial cache entry with mtime tracking
  */
 interface PartialCacheEntry {
   content: string;
   mtime: number;
+  lastUsed: number; // For LRU eviction
 }
 
 /**
- * In-memory cache for MJML partials
- * Key: `${directory}/${filename}`
+ * Directory cache structure
  */
-const partialCache = new Map<string, PartialCacheEntry>();
+interface DirectoryCache {
+  files: Map<string, PartialCacheEntry>;
+  lastUsed: number; // For LRU eviction
+}
+
+/**
+ * LRU cache for MJML partials
+ * Key: directory path
+ * Value: Map of filename -> PartialCacheEntry
+ */
+const partialCache = new Map<string, DirectoryCache>();
 
 /**
  * HTML escape helper to prevent injection in transactional emails
@@ -36,25 +56,74 @@ function escapeHtml(str: string): string {
 }
 
 /**
- * Load a partial from the filesystem with mtime-aware caching
+ * Evict least-recently-used files from a directory cache
+ */
+function evictLRUFiles(dirCache: DirectoryCache): void {
+  if (dirCache.files.size <= MAX_FILES_PER_DIR) return;
+  
+  // Sort by lastUsed ascending (oldest first)
+  const entries = Array.from(dirCache.files.entries())
+    .sort((a, b) => a[1].lastUsed - b[1].lastUsed);
+  
+  // Remove oldest entries until within limit
+  const toRemove = dirCache.files.size - MAX_FILES_PER_DIR;
+  for (let i = 0; i < toRemove; i++) {
+    dirCache.files.delete(entries[i][0]);
+  }
+}
+
+/**
+ * Evict least-recently-used directory caches
+ */
+function evictLRUDirectories(): void {
+  if (partialCache.size <= MAX_CACHED_DIRS) return;
+  
+  // Sort directories by lastUsed ascending (oldest first)
+  const entries = Array.from(partialCache.entries())
+    .sort((a, b) => a[1].lastUsed - b[1].lastUsed);
+  
+  // Remove oldest entries until within limit
+  const toRemove = partialCache.size - MAX_CACHED_DIRS;
+  for (let i = 0; i < toRemove; i++) {
+    partialCache.delete(entries[i][0]);
+  }
+}
+
+/**
+ * Load a partial from the filesystem with LRU-capped mtime-aware caching
  */
 function loadPartial(partialsDir: string, partialName: string): string {
   const partialPath = path.join(partialsDir, `${partialName}.mjml`);
-  const cacheKey = `${partialsDir}/${partialName}`;
+  const now = Date.now();
   
   try {
     const stats = fs.statSync(partialPath);
     const mtime = stats.mtimeMs;
     
-    // Check cache and validate mtime
-    const cached = partialCache.get(cacheKey);
+    // Get or create directory cache
+    let dirCache = partialCache.get(partialsDir);
+    if (!dirCache) {
+      dirCache = { files: new Map(), lastUsed: now };
+      partialCache.set(partialsDir, dirCache);
+      evictLRUDirectories(); // Evict if needed
+    }
+    
+    // Update directory last used time
+    dirCache.lastUsed = now;
+    
+    // Check file cache and validate mtime
+    const cached = dirCache.files.get(partialName);
     if (cached && cached.mtime === mtime) {
+      // Cache hit - update last used time
+      cached.lastUsed = now;
       return cached.content;
     }
     
-    // Load from filesystem and cache
+    // Cache miss or stale - load from filesystem
     const content = fs.readFileSync(partialPath, 'utf-8');
-    partialCache.set(cacheKey, { content, mtime });
+    
+    dirCache.files.set(partialName, { content, mtime, lastUsed: now });
+    evictLRUFiles(dirCache); // Evict oldest files if needed
     
     return content;
   } catch (error) {
@@ -65,18 +134,20 @@ function loadPartial(partialsDir: string, partialName: string): string {
 
 /**
  * Replace variables in template with HTML escaping
- * Supports: {{var}}, {{{var}}} (unescaped for images/links)
+ * Supports: {{var}} (escaped), {{{var}}} (unescaped for trusted content)
  */
 function replaceVariables(template: string, vars: Record<string, any>): string {
   let result = template;
   
   // Replace triple-brace unescaped variables first (e.g., {{{imageUrl}}})
+  // For trusted content: image URLs, anchor hrefs, small HTML snippets
   result = result.replace(/\{\{\{(\w+)\}\}\}/g, (match, varName) => {
     const value = vars[varName];
     return value !== undefined ? String(value) : match;
   });
   
   // Replace double-brace escaped variables (e.g., {{userName}})
+  // For user-provided content: names, addresses, messages
   result = result.replace(/\{\{(\w+)\}\}/g, (match, varName) => {
     const value = vars[varName];
     return value !== undefined ? escapeHtml(String(value)) : match;
@@ -87,6 +158,7 @@ function replaceVariables(template: string, vars: Record<string, any>): string {
 
 /**
  * Process {{#each array}} loops with shallow variable replacement
+ * Supports both {{var}} (escaped) and {{{var}}} (unescaped) inside loops
  */
 function processEachLoops(template: string, vars: Record<string, any>): string {
   const eachRegex = /\{\{#each\s+(\w+)\}\}([\s\S]*?)\{\{\/each\}\}/g;
@@ -100,7 +172,8 @@ function processEachLoops(template: string, vars: Record<string, any>): string {
     }
     
     return array.map(item => {
-      // Replace variables within loop body (with HTML escaping)
+      // Replace variables within loop body
+      // replaceVariables handles both {{var}} and {{{var}}}
       return replaceVariables(loopBody, item);
     }).join('');
   });
@@ -121,7 +194,7 @@ function processPartials(template: string, partialsDir: string): string {
  * Simple templating engine for MJML
  * 1. Process partials ({{> header}})
  * 2. Process each loops ({{#each lineItems}})
- * 3. Replace root-level variables ({{var}})
+ * 3. Replace root-level variables ({{var}} or {{{var}}})
  */
 function applyTemplate(mjml: string, vars: Record<string, any>, partialsDir?: string): string {
   let result = mjml;
@@ -131,7 +204,7 @@ function applyTemplate(mjml: string, vars: Record<string, any>, partialsDir?: st
     result = processPartials(result, partialsDir);
   }
   
-  // 2. Process {{#each}} loops
+  // 2. Process {{#each}} loops (supports both {{var}} and {{{var}}} inside)
   result = processEachLoops(result, vars);
   
   // 3. Replace root-level variables
@@ -163,18 +236,30 @@ export function renderTxEmail(mjml: string, vars: Record<string, any> = {}): str
  * @param partialsDir - Directory containing partials (e.g., "emails/tx/partials")
  * @returns Rendered HTML email
  * 
+ * Environment Variables:
+ * - PARTIAL_CACHE_MAX_DIRS: Max cached directories (default: 8, min: 1)
+ * - PARTIAL_CACHE_MAX_FILES: Max files per directory (default: 32, min: 1)
+ * 
+ * Variable Syntax:
+ * - {{var}} - Escaped (safe for user content: names, messages)
+ * - {{{var}}} - Unescaped (trusted content: URLs, HTML)
+ * 
  * @example
  * ```ts
  * const html = renderTxEmailFromFile(
  *   "emails/tx/order_shipped.mjml",
  *   {
- *     orderId: "12345",
- *     etaDate: "Jan 15, 2025",
- *     orderLink: "https://app.example.com/orders/12345",
- *     brandName: "Acme Corp",
- *     brandHeaderUrl: "https://cdn.example.com/logo.png",
+ *     orderId: "12345",                                    // Escaped
+ *     etaDate: "Jan 15, 2025",                             // Escaped
+ *     orderLink: "https://app.example.com/orders/12345",   // Use {{{orderLink}}}
+ *     brandHeaderUrl: "https://cdn.example.com/logo.png",  // Use {{{brandHeaderUrl}}}
  *     lineItems: [
- *       { thumbUrl: "...", title: "Product A", qty: 2, price: "$29.99" },
+ *       { 
+ *         thumbUrl: "...",  // Use {{{thumbUrl}}} in template
+ *         title: "Product", // Use {{title}} in template (escaped)
+ *         qty: 2, 
+ *         price: "$29.99" 
+ *       },
  *     ],
  *   },
  *   "emails/tx/partials"
@@ -212,8 +297,20 @@ export function clearPartialCache(): void {
  * Get cache statistics (for monitoring)
  */
 export function getCacheStats() {
+  const totalFiles = Array.from(partialCache.values())
+    .reduce((sum, dir) => sum + dir.files.size, 0);
+  
+  const dirStats = Array.from(partialCache.entries()).map(([dir, cache]) => ({
+    directory: dir,
+    files: cache.files.size,
+    lastUsed: new Date(cache.lastUsed).toISOString(),
+  }));
+  
   return {
-    size: partialCache.size,
-    entries: Array.from(partialCache.keys()),
+    directories: partialCache.size,
+    totalFiles,
+    maxDirs: MAX_CACHED_DIRS,
+    maxFilesPerDir: MAX_FILES_PER_DIR,
+    directoriesDetail: dirStats,
   };
 }
