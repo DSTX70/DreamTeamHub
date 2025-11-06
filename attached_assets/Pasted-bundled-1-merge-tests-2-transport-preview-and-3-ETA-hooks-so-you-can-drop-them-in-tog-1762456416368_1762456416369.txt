@@ -1,0 +1,76 @@
+bundled #1 (merge + tests), #2 (transport + preview), and #3 (ETA hooks) so you can drop them in together.
+
+Download: ship_batch_1_2_3.zip
+
+What’s included
+#1 Mailer consolidation + typed + tests
+
+server/lib/mailer.ts — consolidated partials loader (mtime cache, LRU with env caps, escape+triple-brace, {{>}}, {{#each}}).
+
+server/lib/mailer.typed.ts — renderTxEmailFromFileTyped<S>() with compile-time TypeOf<S> + runtime validation.
+
+shared/email/schema.ts — schema DSL w/ enum + pattern, and validator.
+
+Tests
+
+tests/mailer_partials_cache.test.ts — mtime hot-reload on partials.
+
+tests/mailer_escape_triple.test.ts — escaped vs unescaped.
+
+tests/schema_enum_regex.test.ts — enum + regex constraints.
+
+#2 TX email transport + preview
+
+server/lib/mailTransport.ts — Nodemailer transport via env (SMTP_*, MAIL_FROM).
+
+server/routes/email_preview.route.ts — GET /dev/email/preview?template=order_shipped|order_update&orderId=&postalFrom=&postalTo=&status=
+
+Compiles MJML with sample vars and returns HTML.
+
+MJML + partials
+
+emails/tx/partials/header.mjml
+
+emails/tx/partials/line_item.mjml
+
+emails/tx/order_shipped.mjml
+
+emails/tx/order_update.mjml
+
+Example schemas:
+
+emails/tx/schemas/order_shipped.schema.ts
+
+emails/tx/schemas/order_update.schema.ts
+
+Dev send route:
+
+server/routes/dev_send_example.route.ts — POST /dev/email/send-shipped { to, orderId, postalFrom, postalTo }
+
+#3 ETA integration (real inputs + formatting)
+
+server/lib/eta.ts — computeEtaDays() + formatEta() helper.
+
+Preview & dev-send routes map postalFrom/postalTo → ETA, format to friendly date strings.
+
+Client page from earlier will display the same friendly format by default (browser locale).
+
+Env & wiring
+SMTP_HOST=localhost
+SMTP_PORT=1025
+SMTP_SECURE=false
+SMTP_USER=
+SMTP_PASS=
+MAIL_FROM="Fab Card Co. <noreply@example.com>"
+PARTIAL_CACHE_MAX_DIRS=8
+PARTIAL_CACHE_MAX_FILES=32
+APP_URL=http://localhost:3000
+
+
+Mount in your server bootstrap:
+
+import cookieParser from "cookie-parser";
+app.use(cookieParser());
+app.use(require("./server/routes/img.route").router);
+app.use(require("./server/routes/email_preview.route").router);
+app.use(require("./server/routes/dev_send_example.route").router);

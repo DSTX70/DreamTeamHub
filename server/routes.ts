@@ -2139,6 +2139,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   const imgRoute = await import("./routes/img.route");
   app.use(imgRoute.router);
 
+  // Email Preview - Development email template preview (public)
+  const emailPreviewRoute = await import("./routes/email_preview.route");
+  app.use(emailPreviewRoute.router);
+
+  // Dev Send Email - Development email sending (public)
+  const devSendEmailRoute = await import("./routes/dev_send_example.route");
+  app.use(devSendEmailRoute.router);
+
   // Copilot - AI assistant for querying DTH API (requires authentication)
   const copilot = await import("./copilot");
   app.use("/copilot", isAuthenticated, copilot.default);
