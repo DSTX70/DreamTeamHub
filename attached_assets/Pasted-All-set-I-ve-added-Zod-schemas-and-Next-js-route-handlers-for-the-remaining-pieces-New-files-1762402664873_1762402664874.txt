@@ -1,0 +1,66 @@
+All set — I’ve added Zod schemas and Next.js route handlers for the remaining pieces.
+
+### New files (ready to drop in)
+
+* **Publish validators (headers + body + helper):**
+  [lib/validators/publish.ts](sandbox:/mnt/data/lib/validators/publish.ts)
+
+* **Agents promote validators:**
+  [lib/validators/agents.ts](sandbox:/mnt/data/lib/validators/agents.ts)
+
+* **Next.js (App Router) — Publish with Zod:**
+  [app/api/knowledge/[owner]/[id]/publish/[fileId]/route.ts](sandbox:/mnt/data/app/api/knowledge/%5Bowner%5D/%5Bid%5D/publish/%5BfileId%5D/route.ts)
+
+* **Next.js (App Router) — Agents promote with Zod:**
+  [app/api/agents/[id]/promote/route.ts](sandbox:/mnt/data/app/api/agents/%5Bid%5D/promote/route.ts)
+
+### What they validate
+
+**Publish**
+
+* Headers:
+
+  * `x-reviewer-token` (≥ 12 chars)
+  * `idempotency-key` (optional, ≤ 255 chars)
+* Body:
+
+  * `approver.name` (min 2), `approver.email` (optional, email), `note` (≤ 2000)
+* Behavior: moves the file to Publish folder, writes `ops_event(kind:"PUBLISH")`, returns `X-Request-Id` and `X-Idempotency-Key`.
+
+**Agents/Promote**
+
+* Path param: `id` must be a valid UUID.
+* Body: optional `{ advance?: 1..3, note?: string }`.
+* Behavior: advances `nextGate` by `advance` (max 4), returns updated agent.
+
+### How to wire quickly
+
+1. Place the validator files under `lib/validators/…` and the routes under your `app/api/...` folders.
+2. Ensure these helpers exist (or swap with your own):
+
+   * `lib/next/response.ts` with `json()` helper (or use `Response.json` directly).
+   * `lib/drive/googleDrive_real.ts` and `lib/knowledge/resolveFolders.ts` (from earlier steps).
+3. Add SA env vars:
+
+   ```
+   GDRIVE_SA_EMAIL=…
+   GDRIVE_SA_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n"
+   ```
+
+### Quick tests
+
+```bash
+# Publish (requires prior draft file)
+curl -XPOST "/api/knowledge/BU/<IMAGINATION_ID>/publish/<FILE_ID>" \
+  -H "x-reviewer-token: 123456789012" \
+  -H "idempotency-key: abc123" \
+  -H "content-type: application/json" \
+  -d '{"approver":{"name":"A. Reviewer","email":"a@example.com"},"note":"Looks good"}' -i
+
+# Promote agent
+curl -XPOST "/api/agents/<AGENT_UUID>/promote" \
+  -H "content-type: application/json" \
+  -d '{"advance": 1, "note": "meets KPIs"}'
+```
+
+If you want me to also Zod-wrap the **Work Orders** Express routes (or finish Next.js API parity for any other endpoints), say the word and I’ll generate those patches too.
