@@ -975,3 +975,22 @@ export const productsRelations = relations(products, ({ one }) => ({
     references: [brands.id],
   }),
 }));
+
+// ===========================
+// OPERATIONS EVENTS
+// ===========================
+
+export const opsEvent = pgTable("ops_event", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  actor: text("actor"), // user id/email/agent name
+  kind: text("kind").notNull(), // e.g., "BU_VIEW", "KNOWLEDGE_DRAFT", "KNOWLEDGE_PUBLISH"
+  ownerType: text("owner_type"), // "BU" | "BRAND" | "PRODUCT" | "PROJECT"
+  ownerId: text("owner_id"), // ID for the ownerType above
+  message: text("message"), // human-readable description
+  meta: jsonb("meta").$type<Record<string, any>>(), // additional metadata
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const insertOpsEventSchema = createInsertSchema(opsEvent).omit({ id: true, createdAt: true });
+export type InsertOpsEvent = z.infer<typeof insertOpsEventSchema>;
+export type OpsEvent = typeof opsEvent.$inferSelect;

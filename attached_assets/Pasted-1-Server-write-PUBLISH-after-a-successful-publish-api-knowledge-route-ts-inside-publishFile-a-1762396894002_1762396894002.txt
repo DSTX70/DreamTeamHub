@@ -1,0 +1,84 @@
+1) Server: write PUBLISH after a successful publish
+// api/knowledge.route.ts (inside publishFile, after the Drive move/copy succeeds)
+import { db } from "../drizzle/db";
+import { opsEvent } from "../drizzle/schema";
+import crypto from "crypto";
+
+export async function publishFile(req, res) {
+  const owner = req.params.owner.toUpperCase();   // BU|BRAND|PRODUCT
+  const id = String(req.params.id);
+  const fileId = String(req.params.fileId);
+  const reviewer = String(req.headers["x-reviewer-token"] || "");
+  if (!reviewer || reviewer.length < 12) return res.status(403).json({ error: "reviewer token required" });
+
+  // 1) Resolve folders, authorize, and move/copy:
+  // const { publish } = await resolveFolders(owner as any, id);
+  // const driveMeta = await driveClient.copyOrMove(fileId, publish);
+
+  // 2) Build an idempotency key (avoid double-audits if client retries)
+  const idem = String(req.headers["idempotency-key"] || crypto.randomUUID());
+
+  // 3) Insert authoritative audit event
+  const [row] = await db.insert(opsEvent).values({
+    actor: "reviewer",                // or req.user.email
+    kind: "PUBLISH",
+    ownerType: owner,
+    ownerId: id as any,
+    message: `Published file ${fileId}`,
+    meta: {
+      fileId,
+      reviewerHash: crypto.createHash("sha256").update(reviewer).digest("hex"), // no plaintext token
+      idempotencyKey: idem,
+      // Optionally include Drive metadata you return from your client:
+      // driveTitle: driveMeta.name, driveUrl: driveMeta.webViewLink,
+      // fromFolder: driveMeta.previousParents, toFolder: publish
+    }
+  }).returning();
+
+  res.setHeader("X-Request-Id", row.id);
+  res.setHeader("X-Idempotency-Key", idem);
+  return res.json({ ok: true, fileId/*, driveMeta*/ });
+}
+
+Optional: harden idempotency (recommended)
+
+Add a partial unique index so replays don’t double-log:
+
+-- Prevent duplicate PUBLISH audit rows for the same file in the same owner scope
+create unique index if not exists uniq_publish_audit
+on ops_event ((meta->>'idempotencyKey'))
+where kind = 'PUBLISH';
+
+
+(Alternatively, key on (kind, ownerType, ownerId, meta->>'fileId') if you prefer.)
+
+2) Client: send an Idempotency-Key
+
+When you call the publish endpoint, include a stable key per action:
+
+await fetch(`/api/knowledge/BU/${IMAGINATION_ID}/publish/${fileId}`, {
+  method: "POST",
+  headers: {
+    "x-reviewer-token": reviewerToken,                 // 12+ chars
+    "idempotency-key": crypto.randomUUID(),            // or reuse if retrying
+  },
+});
+
+3) Keep your click analytics (unchanged)
+
+Click event = KNOWLEDGE_PUBLISH (funnel).
+
+Authoritative audit = PUBLISH (after success).
+Both are useful; the latter is what your compliance dashboards and /ops/logs should rely on.
+
+4) Acceptance (5 quick checks)
+
+ Successful publish returns { ok: true } and sets X-Request-Id and X-Idempotency-Key.
+
+ One ops_event(kind="PUBLISH") row per idempotency key.
+
+ No plaintext reviewer token stored (only a SHA-256 hash in meta.reviewerHash).
+
+ /ops/logs (or DB query) shows the event with ownerType/ownerId/fileId.
+
+ Retry of the same request (same Idempotency-Key) does not create a duplicate audit row.
