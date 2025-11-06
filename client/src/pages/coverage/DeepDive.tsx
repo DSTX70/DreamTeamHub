@@ -1,6 +1,6 @@
-import Breadcrumbs from "../../components/Breadcrumbs";
-import LeftRail from "../../components/LeftRail";
-import React from "react";
+import { PageBreadcrumb } from "@/components/PageBreadcrumb";
+import LeftRail from "@/components/LeftRail";
+import { useState, useEffect } from "react";
 
 type CoverageSummary = {
   files: number;
@@ -10,9 +10,9 @@ type CoverageSummary = {
 };
 
 export default function DeepDive() {
-  const [data, setData] = React.useState<CoverageSummary | null>(null);
+  const [data, setData] = useState<CoverageSummary | null>(null);
 
-  React.useEffect(() => {
+  useEffect(() => {
     fetch("/api/coverage/summary").then(r => r.json()).then(setData).catch(() => setData(null));
   }, []);
 
@@ -20,7 +20,7 @@ export default function DeepDive() {
     <div className="flex">
       <LeftRail />
       <main className="p-6 space-y-6 flex-1">
-        <Breadcrumbs trail={[{ label: "Coverage" }, { label: "Deep Dive" }]} />
+        <PageBreadcrumb segments={[{ label: "Coverage" }, { label: "Deep Dive" }]} />
         <h1 className="text-xl font-semibold">Coverage Deep Dive</h1>
         {!data ? <p>Loading…</p> : (
           <div className="space-y-2">

@@ -13,6 +13,10 @@ import { promoteAgent } from "./api/agents_promote.route";
 import { createBrand, createProduct } from "./api/onboarding.route";
 import { getRoleCoverage, getAgentsByRole } from "./api/coverage.route";
 import { listPlaybooks, createOrUpdatePlaybook, getPlaybookByHandle } from "./api/playbooks.route";
+import { router as woPlaybookPreviewRouter } from "./api/wo_playbook_preview.route";
+import { router as coverageReportRouter } from "./api/coverage_report.route";
+import { router as opsAlertHooksRouter } from "./api/ops_alert_hooks.route";
+import { router as llmInferRouter } from "./api/llm_infer.route";
 import { 
   insertPodSchema, insertPodAgentSchema, insertAgentSchema, insertPersonSchema, insertRoleCardSchema, insertRoleRaciSchema, insertAgentSpecSchema,
   insertWorkItemSchema, insertDecisionSchema, insertIdeaSparkSchema, insertBrainstormSessionSchema,
@@ -157,6 +161,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/playbooks", isAuthenticated, listPlaybooks);
   app.post("/api/playbooks", isAuthenticated, createOrUpdatePlaybook);
   app.get("/api/playbooks/:handle", isAuthenticated, getPlaybookByHandle);
+
+  // ===========================
+  // FEATURE BUNDLE: NEW ROUTES
+  // ===========================
+  
+  // Mount new feature routes (WO Playbook Preview, Coverage Report, Ops Alerts, LLM Infer)
+  app.use(isAuthenticated, woPlaybookPreviewRouter);
+  app.use(isAuthenticated, coverageReportRouter);
+  app.use(isAuthenticated, opsAlertHooksRouter);
+  app.use(isAuthenticated, llmInferRouter);
 
   // ===========================
   // CONTROL TOWER
