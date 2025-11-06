@@ -1,40 +1,40 @@
 import type { Request, Response } from "express";
+import crypto from "crypto";
 import { db } from "../db";
-import { opsEvent, insertOpsEventSchema } from "@shared/schema";
+import { opsEvent } from "@shared/schema";
 import { desc, and, eq, sql, gte, lte } from "drizzle-orm";
-
-type OpsPayload = {
-  kind: string;
-  actor?: string;
-  ownerType?: string;
-  ownerId?: string;
-  message?: string;
-  meta?: Record<string, any>;
-};
+import { GetOpsQuery, PostOpsBody } from "../../lib/validators/ops";
 
 export async function getOpsEvents(req: Request, res: Response) {
   try {
-    const { kind, owner_type, owner_id, from, to, limit = "100", offset = "0" } = req.query;
+    // Validate query parameters
+    const parsed = GetOpsQuery.safeParse(req.query);
+    if (!parsed.success) {
+      const msg = parsed.error.errors.map(e => e.message).join("; ");
+      return res.status(422).json({ error: msg });
+    }
+    
+    const { kind, owner_type, owner_id, from, to, limit, offset } = parsed.data;
     
     const filters = [];
     
-    if (kind && typeof kind === "string") {
+    if (kind) {
       filters.push(eq(opsEvent.kind, kind));
     }
     
-    if (owner_type && typeof owner_type === "string") {
+    if (owner_type) {
       filters.push(eq(opsEvent.ownerType, owner_type));
     }
     
-    if (owner_id && typeof owner_id === "string") {
+    if (owner_id) {
       filters.push(eq(opsEvent.ownerId, owner_id));
     }
     
-    if (from && typeof from === "string") {
+    if (from) {
       filters.push(gte(opsEvent.createdAt, new Date(from)));
     }
     
-    if (to && typeof to === "string") {
+    if (to) {
       filters.push(lte(opsEvent.createdAt, new Date(to)));
     }
     
@@ -52,8 +52,8 @@ export async function getOpsEvents(req: Request, res: Response) {
       .from(opsEvent)
       .where(whereClause)
       .orderBy(desc(opsEvent.createdAt))
-      .limit(parseInt(limit as string))
-      .offset(parseInt(offset as string));
+      .limit(limit)
+      .offset(offset);
     
     res.setHeader("X-Total-Count", String(count));
     res.json(events);
@@ -65,11 +65,14 @@ export async function getOpsEvents(req: Request, res: Response) {
 
 export async function postOpsEvent(req: Request, res: Response) {
   try {
-    const body = (req.body || {}) as OpsPayload;
-    
-    if (!body.kind) {
-      return res.status(422).json({ error: "kind required" });
+    // Validate body
+    const parsed = PostOpsBody.safeParse(req.body);
+    if (!parsed.success) {
+      const msg = parsed.error.errors.map(e => e.message).join("; ");
+      return res.status(422).json({ error: msg });
     }
+    
+    const body = parsed.data;
 
     // Infer actor from session if not provided
     const actor = body.actor || (req as any).user?.email || (req as any).user?.id || "anon";

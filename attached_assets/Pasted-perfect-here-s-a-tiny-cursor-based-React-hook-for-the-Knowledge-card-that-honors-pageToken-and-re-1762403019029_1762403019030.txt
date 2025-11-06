@@ -1,0 +1,74 @@
+perfect—here’s a tiny, cursor-based React hook for the Knowledge card that honors `pageToken` and reads `X-Next-Page-Token` from the response headers. It stays under ~20 lines of logic.
+
+### `useKnowledgeSearch.ts`
+
+```tsx
+import { useCallback, useEffect, useState } from "react";
+
+export function useKnowledgeSearch(
+  owner: "BU"|"BRAND"|"PRODUCT",
+  ownerId: string,
+  q: string,
+  limit = 10
+){
+  const [items, setItems] = useState<any[]>([]);
+  const [next, setNext]   = useState<string | null>(null);
+  const [loading, setL]   = useState(false);
+  const [err, setErr]     = useState<string | null>(null);
+
+  const load = useCallback(async (cursor: string | null = null, replace=false) => {
+    setL(true); setErr(null);
+    const u = new URL(`/api/knowledge/${owner}/${ownerId}/search`, window.location.origin);
+    u.searchParams.set("q", q); u.searchParams.set("limit", String(limit));
+    if (cursor) u.searchParams.set("pageToken", cursor);
+    const r = await fetch(u.toString());
+    if (!r.ok) { setErr(`HTTP ${r.status}`); setL(false); return; }
+    const data = await r.json();
+    const nextToken = r.headers.get("X-Next-Page-Token");
+    setNext(nextToken); setItems(s => replace ? data.items : [...s, ...data.items]); setL(false);
+  }, [owner, ownerId, q, limit]);
+
+  useEffect(() => { setItems([]); setNext(null); if (q.trim().length>=2) load(null, true); }, [q, limit, load]);
+
+  const fetchNext = useCallback(() => next ? load(next) : undefined, [next, load]);
+  return { items, loading, error: err, hasMore: !!next, fetchNext, reset: () => { setItems([]); setNext(null); } };
+}
+```
+
+### Quick usage in your Knowledge card
+
+```tsx
+import { useKnowledgeSearch } from "@/hooks/useKnowledgeSearch";
+
+function KnowledgeCard({ owner, ownerId }: { owner:"BU"|"BRAND"|"PRODUCT"; ownerId:string }) {
+  const [q, setQ] = useState("");
+  const { items, loading, error, hasMore, fetchNext } = useKnowledgeSearch(owner, ownerId, q, 10);
+
+  return (
+    <div className="rounded-2xl border p-4">
+      <div className="flex items-center gap-2">
+        <input className="border rounded px-2 py-1" value={q} onChange={e=>setQ(e.target.value)} placeholder="Search files…" />
+        {loading && <span className="text-sm text-gray-500">Loading…</span>}
+        {error && <span className="text-sm text-rose-600">{error}</span>}
+      </div>
+
+      <ul className="mt-3 divide-y">
+        {items.map(f => <li key={f.id} className="py-2">{f.name}</li>)}
+        {!items.length && !loading && q.trim().length>=2 && <li className="py-2 text-sm text-gray-500">No results</li>}
+      </ul>
+
+      {hasMore && (
+        <button className="mt-3 px-3 py-1 border rounded" onClick={fetchNext} disabled={loading}>
+          {loading ? "Loading…" : "Load more"}
+        </button>
+      )}
+    </div>
+  );
+}
+```
+
+**Notes**
+
+* The hook auto-resets when `q` or `limit` change and fetches the first page (requires `q.length ≥ 2`).
+* `fetchNext()` pulls the next page using `X-Next-Page-Token`.
+* If you prefer infinite scroll, call `fetchNext()` from an `IntersectionObserver` instead of a button.
