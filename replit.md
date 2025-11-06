@@ -2,7 +2,7 @@
 
 ## Overview
 
-Dream Team Hub is a multi-pod orchestration platform designed to unify management, reduce redundancy, synchronize actions, and enhance collaboration across various organizational units for distributed teams. It provides a "single pane of glass" for comprehensive operational oversight and improved team efficiency through modules for priority management, assignments, escalations, brainstorming, audits, decisions, and an AI-powered chat system with role-based personas.
+Dream Team Hub is a multi-pod orchestration platform designed to unify management, reduce redundancy, synchronize actions, and enhance collaboration across various organizational units for distributed teams. It provides a "single pane of glass" for comprehensive operational oversight and improved team efficiency through modules for priority management, assignments, escalations, brainstorming, audits, decisions, and an AI-powered chat system with role-based personas. The platform aims to streamline operations, foster innovation, and increase overall team productivity.
 
 ## User Preferences
 
@@ -13,149 +13,41 @@ I prefer detailed explanations of new features and significant changes. Please a
 Dream Team Hub is a full-stack application emphasizing a professional and usable design inspired by Linear and Notion, built with a clear separation of concerns.
 
 ### UI/UX Decisions
-- **Design System**: Professional, inspired by Linear + Notion, utilizing Shadcn UI with Radix UI primitives.
-- **Typography**: Inter for UI, JetBrains Mono for code, Space Grotesk for headings.
-- **Color Palette**: Blue-based professional scheme with global dark theme, glass-morphism aesthetics, custom brand colors (teal, violet, yellow, magenta, jade), and 21 pod-specific colors for visual coding via a `data-pod` attribute system.
-- **Components**: Custom elevation system, branded primitive components (e.g., BrandedCard, BrandedButton).
-- **Responsiveness**: Mobile-first approach.
-- **Accessibility**: WCAG AAA contrast ratios, ARIA labels, keyboard navigation.
+The design system is professional, inspired by Linear and Notion, utilizing Shadcn UI with Radix UI primitives. It features Inter, JetBrains Mono, and Space Grotesk fonts, a blue-based professional color scheme with a global dark theme, glass-morphism aesthetics, custom brand colors, and 21 pod-specific colors. Components include a custom elevation system and branded primitives. The design follows a mobile-first approach with WCAG AAA accessibility standards.
 
 ### Technical Implementations
-The platform is structured into core modules and features:
-- **Control Tower**: Dashboard for operational oversight.
-- **Business Unit Home Pages**: Dedicated landing pages for IMAGINATION, INNOVATION, and IMPACT with real-time brand portfolios, agent rosters, knowledge links (Google Drive integration), dashboard analytics, and recent activity feeds.
-- **Projects**: Comprehensive project management with detail pages, task/file management, agent assignments, and project-specific Idea Sparks.
-- **Idea Spark**: Quick idea capture (CRUD) accessible globally, with smart filtering and pod/project assignments.
-- **Role Cards System**: Manages Dream Team personas with RACI Matrix, bulk import, and visual pod color coding.
-- **Agent Lab Academy**: Interactive landing page displaying Agent Lab roles grouped by autonomy level, integrated into main navigation.
-- **Brainstorm Studio**: LLM-assisted ideation.
-- **Audit Engine**: Cross-pod compliance checks.
-- **Decision Log**: Immutable record of key decisions.
-- **Dream Team Chat**: AI-powered conversational interface using OpenAI GPT-4 with 32 role-based personas, context awareness, and agent memory.
-- **DTH Copilot**: AI-powered assistant using OpenAI tool-calling with dual-mode architecture (direct tool calling for instant responses + chat-based for Custom GPT). Features quick action buttons, paginated table views with formatted KPIs, and the **Findings at a Glance** analytics card that automatically calculates risk distribution (low/medium/high), identifies top at-risk agents, and suggests actionable next steps.
-- **Universal Search**: Cmd+K powered search modal that searches across brands, products, projects, agents, and pods with relevance-based sorting, two-zone keyboard navigation (Quick Actions + Results), localStorage-based recent searches memory (last 8 searches), and infinite scroll pagination with IntersectionObserver.
-- **Breadcrumb Navigation**: Auto-generating breadcrumb component displays contextual hierarchy across major pages.
-- **Operations Events Logging**: Fire-and-forget telemetry system tracks user interactions across the platform with automatic actor inference, request correlation IDs, and metadata enrichment for analytics and audit trails.
-- **Operations Logs Admin Page**: Full-featured admin interface for viewing and filtering operational events with real-time updates, CSV export, auto-refresh (5s interval), and comprehensive filtering.
-- **Knowledge Publishing System**: File publishing API with database-level idempotency protection using PostgreSQL partial unique index.
-- **Google Drive Integration**: Service account-based integration with Drive Gateway API endpoints for searching, uploading drafts, and publishing files, supporting Business Unit-specific knowledge management.
-- **Work Orders System**: Database-backed work order execution with **real LLM execution** via OpenAI, Anthropic, and Vertex AI providers. Features budget caps enforcement (runs/day and $/day limits), rate limiting, automatic cap validation, and cost tracking. Production-ready with comprehensive error handling.
-- **LLM Provider Infrastructure**: Production-ready integration with OpenAI GPT-4o, Anthropic Claude-3.5 Sonnet, and Vertex AI Gemini Pro. Features real API calls, cost tracking, graceful error handling, retries, and provider-specific prompt optimization.
-- **Alert Notification System**: Multi-channel alert delivery via Slack webhooks and custom webhook endpoints. Non-blocking delivery with diagnostic logging for ops dashboard alerts, budget violations, and system health monitoring. Production-ready.
-- **Evidence Pack System**: Full CRUD system for agent training evidence with KPI tracking (task success, latency, cost), promotion context, review status, and agent-specific retrieval. Features dual authentication and status filtering. Production-ready.
-- **Academy Sidebar**: Interactive agent training and promotion interface integrated into Academy page, Business Unit home pages, and Project detail pages. Displays promotion progress, evidence pack links, and allows one-click agent advancement.
-- **Two-Reviewer Publish Workflow**: Modal-based publish approval system with custom React hook (usePublishDialog) supporting idempotency via Idempotency-Key header.
-- **Ops Dashboard & Observability**: Real-time operational metrics dashboard displaying 24-hour counts for PUBLISH events, draft uploads, work order runs, error rates, and 429 rate limits. Features lightweight alert rules for PUBLISH errors (>2 in 10min), 5xx errors (>1%), and rate limit spikes, with auto-refresh every 30 seconds and visual alert indicators.
-- **Onboarding Wizard (Phase-2)**: Multi-step wizard for creating brands with Google Drive folder links, optional product creation with Drive integration, validates URL formats, and creates complete brand/product hierarchies in one workflow.
-- **Coverage Views (Phase-2)**: Role staffing analysis showing unstaffed roles (no agents assigned), over-replicated roles (exceeding configurable threshold), and complete coverage table with agent counts per role. Dynamic threshold adjustment allows flexible over-replication detection.
-- **Playbooks Registry (Phase-2)**: Create, edit, and manage reusable playbooks (handle-based references) for Work Orders. Playbooks store markdown content and can be referenced by unique handles in work order configurations, enabling standardized operational procedures.
-- **Saved Addresses & Checkout (Nov 2025)**: Address validation (US/CA), saved address CRUD, checkout autofill, field-level validation. Uses in-memory storage (DB migration planned).
-- **Affiliate E2E Tracking (Nov 2025)**: Pixel-based click tracking, 30-day cookie attribution, order attribution, comprehensive ops reporting with CSV export, event feed. In-memory storage with visitor deduplication via IP+UA hashing.
-- **Low-Stock Inventory Scheduler (Nov 2025)**: Per-SKU threshold management, 60-second automated scanning, low-stock event logging, inline threshold editor, recount simulation. In-memory storage.
-- **Responsive Images with S3 (Nov 2025)**: Allowlist-based upload authorization, MIME sniffing (blocks SVG/XML), Sharp transformation to AVIF/WebP/JPG across 6 widths (320-1920px), S3 integration with configurable cache headers, Picture component with automatic srcset generation. Requires AWS credentials.
-- **Prompt Linter (Nov 2025)**: Client-side JSON Schema validation for LLM prompts, auto-fix suggestions for common anti-patterns, prompt augmentation with "JSON-only" blocks. Fully client-side, no server dependencies.
+The platform includes core modules for operational oversight (Control Tower), dedicated Business Unit Home Pages (IMAGINATION, INNOVATION, IMPACT) with real-time data, and comprehensive Project management. Key features include a global Idea Spark for quick idea capture, a Role Cards System for managing Dream Team personas with RACI Matrix integration, and the Agent Lab Academy for role management.
+
+AI-powered features consist of Brainstorm Studio (LLM-assisted ideation), Dream Team Chat (OpenAI GPT-4 with 32 role-based personas and context awareness), and DTH Copilot (AI assistant with OpenAI tool-calling, quick actions, and "Findings at a Glance" analytics).
+
+Core operational systems include a Universal Search (Cmd+K), auto-generating Breadcrumb Navigation, and an Operations Events Logging system for telemetry and audit trails, viewable via the Operations Logs Admin Page.
+
+Knowledge management is supported by a Knowledge Publishing System with database-level idempotency and Google Drive Integration for Business Unit-specific content. Work Orders System enables real LLM execution via OpenAI, Anthropic, and Vertex AI with budget caps, rate limiting, and cost tracking. An LLM Provider Infrastructure integrates these services with robust error handling and cost tracking.
+
+The platform also features an Alert Notification System for multi-channel delivery (Slack, webhooks), an Evidence Pack System for agent training evidence management, and an Academy Sidebar for agent training and promotion. A Two-Reviewer Publish Workflow ensures content approval.
+
+An Ops Dashboard & Observability provides real-time operational metrics, displaying PUBLISH events, draft uploads, work order runs, and error rates, with lightweight alert rules.
+
+Future phases include an Onboarding Wizard for brand/product creation, Coverage Views for role staffing analysis, and a Playbooks Registry for reusable Work Order configurations. Additional planned features encompass Saved Addresses & Checkout, Affiliate E2E Tracking, Low-Stock Inventory Scheduler, Responsive Images with S3, and a client-side Prompt Linter.
 
 ### Technology Stack
-- **Frontend**: React 18, TypeScript, Wouter, TanStack Query v5, React Hook Form, Zod, Shadcn UI, Tailwind CSS.
-- **Backend**: Express.js, TypeScript, Drizzle ORM, Zod validation.
-- **Database**: PostgreSQL (Neon-backed) with a comprehensive relational model (25 tables).
+The frontend utilizes React 18, TypeScript, Wouter, TanStack Query v5, React Hook Form, Zod, Shadcn UI, and Tailwind CSS. The backend is built with Express.js, TypeScript, and Drizzle ORM. PostgreSQL, backed by Neon, serves as the primary database with a comprehensive relational model.
 
 ### Authentication & Security
-- **Authentication Provider**: Replit Auth (OpenID Connect).
-- **Security Architecture**: Dual authentication system with session-based auth for interactive users and API token auth for external integrations/CI/CD.
-- **Content Security Policy (CSP)**: Helmet-based CSP middleware mounted globally, strict in production.
-- **Scope-Based Authorization**: Protected routes use `requireScopes()` middleware. All authenticated users receive full operator scopes for simplified permission.
-- **Dual Authentication Middleware**: Routes use `isDualAuthenticated` to support both session and Bearer token flows.
-- **Rate Limiting**: Work Order caps enforced with `429` status + `Retry-After` header.
-- **Idempotency Protection**: Knowledge publish endpoints support `Idempotency-Key` header to prevent duplicate operations.
+Authentication is provided by Replit Auth (OpenID Connect). The security architecture employs a dual authentication system (session-based and API token auth) and a Helmet-based Content Security Policy (CSP). Scope-Based Authorization uses `requireScopes()` middleware. Routes support dual authentication via `isDualAuthenticated`. Rate limiting is enforced with `429` status and `Retry-After` headers. Idempotency protection is implemented for knowledge publish endpoints using the `Idempotency-Key` header.
 
 ### Staging Environment
-- **Automated Weekly Refresh**: GitHub Actions workflow refreshes staging database weekly using Greenmask for PII masking.
-- **Access Control**: Staging guard middleware provides dual authentication - basic auth or IP allowlist.
-- **Health Monitoring**: `/healthz` endpoint for uptime monitoring, bypasses authentication.
-- **Referential Integrity Validation**: Automated SQL tests after each staging refresh.
+The staging environment features automated weekly database refreshes using Greenmask for PII masking, access control via basic auth or IP allowlist, a `/healthz` endpoint for monitoring, and automated SQL tests for referential integrity validation.
 
 ## External Dependencies
 
-- **OpenAI GPT-4**: Powers the AI-driven conversational agents in Dream Team Chat and DTH Copilot.
-- **PostgreSQL (Neon-backed)**: Primary database for persistent storage.
-- **Replit Auth**: Provides secure user authentication via OpenID Connect.
-- **Google Drive API**: Integrated for knowledge management features (search, upload drafts, publish files).
-- **AWS S3**: Image storage for responsive image transformation feature.
-- **Sharp**: High-performance image processing library for responsive images.
-- **Multer**: File upload handling for image uploads.
-
-## Production Readiness Status
-
-**Status:** PRODUCTION-READY ✅  
-**Last Architect Review:** 2025-11-06
-
-### Production-Ready Systems (Architect Approved)
-- ✅ **LLM Provider Infrastructure**: OpenAI GPT-4o, Anthropic Claude-3.5, Vertex AI Gemini Pro
-- ✅ **Work Orders Execution**: Real LLM execution with budget caps and cost tracking
-- ✅ **Alert Notification System**: Multi-channel delivery (Slack + custom webhooks)
-- ✅ **DTH Copilot**: OpenAI tool-calling with throttling and validated schemas
-- ✅ **Evidence Pack System**: Full CRUD with dual authentication
-- ✅ **Authentication & Security**: Dual auth (session + Bearer token) with CSP
-- ✅ **Google Drive Integration**: Service account with idempotency protection
-- ✅ **Observability Dashboard**: Real-time metrics with auto-refresh
-
-**See:** `docs/PRODUCTION_READINESS.md` for comprehensive production readiness report
-
-## Go-Live Readiness Documentation
-
-Comprehensive operational documentation for production deployment:
-
-### Environment Configuration
-- **`docs/GO_LIVE_ENV_VARS.md`**: Complete reference for all required environment variables and secrets
-  - Database configuration (PostgreSQL auto-provided)
-  - Authentication secrets (SESSION_SECRET, DTH_API_TOKEN, REPL_ID, ISSUER_URL)
-  - OpenAI API integration (OPENAI_API_KEY, model selection, rate limits)
-  - Google Drive Service Account (GDRIVE_SA_EMAIL, GDRIVE_SA_PRIVATE_KEY)
-  - Rate limiting configuration (COPILOT_REQS_PER_MIN)
-  - Staging environment settings
-  - Pre-launch checklist and troubleshooting guide
-
-### Database Backup & Recovery
-- **`docs/BACKUP_CONFIGURATION.md`**: Database backup strategy and disaster recovery procedures
-  - Replit PostgreSQL point-in-time restore (14-day retention requirement)
-  - Restore procedures with step-by-step instructions
-  - Recovery Time Objective (RTO): <1 hour
-  - Recovery Point Objective (RPO): <5 minutes
-  - Backup validation and testing procedures
-  - Compliance and audit trail documentation
-
-### Security & Access Control
-- **`docs/GDRIVE_LEAST_PRIVILEGE_CHECKLIST.md`**: Google Drive Service Account security verification
-  - Least-privilege folder permission matrix (9 folders: 3 BUs × 3 roles)
-  - Service Account setup and configuration steps
-  - Folder structure (read/, draft/, publish/ per Business Unit)
-  - Permission verification checklist with test procedures
-  - Security audit guidelines
-  - Quarterly review schedule
-
-### Operational Runbooks
-- **`docs/RUNBOOK_PUBLISH_INCIDENT.md`**: Knowledge Publishing incident response (1-pager)
-  - File published to wrong folder recovery
-  - Duplicate publish (idempotency failure) resolution
-  - Publish failure troubleshooting (403, 500, timeout errors)
-  - X-Request-Id distributed tracing across operations events
-  - Rollback procedures (move file from publish/ to draft/)
-  - SQL queries for audit trail and event correlation
-
-- **`docs/RUNBOOK_WORK_ORDERS.md`**: Work Orders budget management (1-pager)
-  - Budget cap enforcement (calendar day: midnight to midnight UTC)
-  - Rate limit response handling (HTTP 429 with Retry-After: 86400)
-  - Safe cap adjustment workflows with approval levels
-  - Cost analysis and optimization guidance
-  - Suspicious activity detection and response
-  - SQL queries for usage monitoring (NOTE: cost column is TEXT, requires `::numeric` cast)
-
-### Key Operational Notes
-- **Work Orders Budget Window**: Calendar day (midnight to midnight UTC), NOT rolling 24-hour window
-- **429 Response Format**: Simple `{ "error": "..." }` - usage metrics are in operations_events table
-- **Cost Column Type**: TEXT in database, always use `::numeric` cast in SQL aggregations
-- **Retry-After Location**: `server/api/work_orders.route.ts` lines 84, 106
-- **Default Caps**: 100 runs/day, $2.00/day (often adjusted to $5.00+ in production)
-- **Idempotency Protection**: Publish endpoints support `Idempotency-Key` header, stored in published_knowledge table
-- **Service Account Scopes**: Full Drive API scope at OAuth level, folder-level permissions via sharing
+- **OpenAI GPT-4**: Powers AI-driven conversational agents and the DTH Copilot.
+- **PostgreSQL (Neon-backed)**: Primary database for persistent data storage.
+- **Replit Auth**: Provides secure user authentication.
+- **Google Drive API**: Integrated for knowledge management (search, upload drafts, publish files).
+- **AWS S3**: Used for responsive image storage.
+- **Sharp**: Image processing library for responsive images.
+- **Multer**: Handles file uploads for image processing.
+- **Anthropic Claude-3.5 Sonnet**: Alternative LLM provider for Work Orders execution.
+- **Vertex AI Gemini Pro**: Alternative LLM provider for Work Orders execution.
+- **Slack**: Used for multi-channel alert delivery.
