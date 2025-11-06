@@ -1497,7 +1497,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (podId) filters.podId = parseInt(podId as string);
       if (brandId) filters.brandId = parseInt(brandId as string);
 
+      console.log('[DEBUG] Projects API - filters:', filters);
       const projects = await storage.getProjects(filters);
+      console.log('[DEBUG] Projects API - results:', projects.length, 'projects');
       res.json(projects);
     } catch (error: any) {
       console.error('Error fetching projects:', error);
