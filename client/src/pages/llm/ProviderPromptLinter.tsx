@@ -1,0 +1,80 @@
+import React from "react";
+import { lintSchema } from "../../../../shared/lint/promptLinter";
+import { augmentForJson } from "../../../../shared/lint/promptAugment";
+import LintRuleCard from "./components/LintRuleCard";
+
+const sampleSchema = {
+  type: "object",
+  properties: {
+    id: { type: "string" },
+    score: { type: "number" },
+    tags: { type: "array", items: { type: "string" } }
+  },
+  required: ["id"]
+};
+
+const Editor: React.FC<{ label: string; value: string; setValue: (s:string)=>void, rows?: number }> = ({ label, value, setValue, rows=8 }) => (
+  <div className="flex-1 flex flex-col">
+    <div className="text-xs uppercase text-gray-600 mb-1">{label}</div>
+    <textarea className="border rounded p-2 font-mono text-sm" rows={rows} value={value} onChange={e=>setValue(e.target.value)} />
+  </div>
+);
+
+const ProviderPromptLinter: React.FC = () => {
+  const [schemaText, setSchemaText] = React.useState(JSON.stringify(sampleSchema, null, 2));
+  const [prompt, setPrompt] = React.useState("You are a helpful API that returns JSON only.");
+  const [issues, setIssues] = React.useState<any[]>([]);
+  const [fixed, setFixed] = React.useState<string>("");
+  const [aug, setAug] = React.useState<string>("");
+
+  const runLint = (apply: boolean) => {
+    try {
+      const schema = JSON.parse(schemaText || "{}");
+      const res = lintSchema(schema, apply);
+      setIssues(res.issues);
+      setFixed(apply && res.fixedSchema ? JSON.stringify(res.fixedSchema, null, 2) : "");
+      setAug(augmentForJson(apply && res.fixedSchema ? res.fixedSchema : schema, { forbidNonJsonText: true }));
+    } catch (e: any) {
+      setIssues([{ code: "schema.parse.error", level: "error", message: e?.message || "Invalid JSON", path: [] }]);
+      setFixed("");
+      setAug("");
+    }
+  };
+
+  return (
+    <div className="p-4 space-y-4">
+      <h1 className="text-xl font-semibold">Prompt Linter (LLM Provider)</h1>
+      <div className="flex gap-4">
+        <Editor label="Output JSON Schema" value={schemaText} setValue={setSchemaText} />
+        <Editor label="System/Instruction Prompt" value={prompt} setValue={setPrompt} />
+      </div>
+      <div className="flex gap-2">
+        <button className="px-3 py-2 border rounded" onClick={()=>runLint(false)}>Run Lint</button>
+        <button className="px-3 py-2 border rounded" onClick={()=>runLint(true)}>Run Lint + Apply Fixes</button>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="border rounded p-3">
+          <div className="font-semibold mb-2">Findings</div>
+          <div className="space-y-2">
+            {issues.length === 0 ? <div className="text-sm text-gray-500">No issues yet.</div> :
+              issues.map((i, idx) => <LintRuleCard key={idx} issue={i} />)
+            }
+          </div>
+        </div>
+
+        <div className="border rounded p-3">
+          <div className="font-semibold mb-2">Patched Schema (preview)</div>
+          <textarea className="w-full border rounded p-2 font-mono text-xs" rows={16} value={fixed} readOnly />
+        </div>
+      </div>
+
+      <div className="border rounded p-3">
+        <div className="font-semibold mb-2">Augmented Instructions (copy into system prompt)</div>
+        <textarea className="w-full border rounded p-2 font-mono text-xs" rows={8} value={aug} readOnly />
+      </div>
+    </div>
+  );
+};
+
+export default ProviderPromptLinter;

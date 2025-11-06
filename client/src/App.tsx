@@ -43,7 +43,9 @@ import CoverageDeepDive from "@/pages/coverage/DeepDive";
 import OpsAlertHooksDemo from "@/pages/ops/AlertHooksDemo";
 import AffiliatesReport from "@/pages/ops/AffiliatesReport";
 import InventoryLowStock from "@/pages/ops/InventoryLowStock";
+import ImagesAdmin from "@/pages/ops/ImagesAdmin";
 import LLMProviderSelect from "@/pages/llm/ProviderSelect";
+import ProviderPromptLinter from "@/pages/llm/ProviderPromptLinter";
 import Checkout from "@/pages/checkout/Checkout";
 import { Button } from "@/components/ui/button";
 import { LogOut, User as UserIcon, Search } from "lucide-react";
@@ -89,7 +91,9 @@ function AuthenticatedRoutes() {
       <Route path="/ops/alerts" component={OpsAlertHooksDemo} />
       <Route path="/ops/affiliates" component={AffiliatesReport} />
       <Route path="/ops/inventory" component={InventoryLowStock} />
+      <Route path="/ops/images" component={ImagesAdmin} />
       <Route path="/llm/provider" component={LLMProviderSelect} />
+      <Route path="/llm/provider/linter" component={ProviderPromptLinter} />
       <Route path="/bu/:slug" component={BUHomePage} />
       <Route path="/checkout" component={Checkout} />
       <Route path="/help" component={HelpPage} />

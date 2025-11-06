@@ -2139,6 +2139,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   const imgRoute = await import("./routes/img.route");
   app.use(imgRoute.router);
 
+  // Responsive Images - S3 upload with allowlist + MIME sniffing (public for demo)
+  const imagesRoute = await import("./routes/images.route");
+  app.use(imagesRoute.router);
+
+  // Image CDN - Optional app-based passthrough with cache headers (public)
+  const imgCdnRoute = await import("./routes/img_cdn.route");
+  app.use(imgCdnRoute.router);
+
   // Email Preview - Development email template preview (public)
   const emailPreviewRoute = await import("./routes/email_preview.route");
   app.use(emailPreviewRoute.router);
