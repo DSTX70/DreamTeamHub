@@ -6,7 +6,7 @@
 import type { Request, Response } from "express";
 import express from "express";
 import { storage } from "../storage";
-import { insertEvidencePackSchema } from "@shared/schema";
+import { insertEvidencePackSchema, updateEvidencePackSchema } from "@shared/schema";
 import { z } from "zod";
 
 export const router = express.Router();
@@ -95,8 +95,8 @@ router.patch("/:id", async (req: Request, res: Response) => {
       return res.status(400).json({ error: "Invalid evidence pack ID" });
     }
     
-    // Validate partial update
-    const validationResult = insertEvidencePackSchema.partial().safeParse(req.body);
+    // Validate update - prevents modifying immutable fields (agentId, submittedBy)
+    const validationResult = updateEvidencePackSchema.safeParse(req.body);
     if (!validationResult.success) {
       return res.status(400).json({
         error: "Validation failed",
@@ -104,12 +104,16 @@ router.patch("/:id", async (req: Request, res: Response) => {
       });
     }
     
-    // If status is being updated to approved/rejected, set review metadata
     const data = validationResult.data as any;
     const updateData = { ...data };
+    
+    // If status is being updated to approved/rejected, set review metadata
     if (updateData.status && (updateData.status === 'approved' || updateData.status === 'rejected')) {
       const userId = (req as any).user?.id;
-      updateData.reviewedBy = userId || updateData.reviewedBy;
+      if (!userId) {
+        return res.status(401).json({ error: "Authentication required for review actions" });
+      }
+      updateData.reviewedBy = userId;
       updateData.reviewedAt = new Date() as any;
     }
     

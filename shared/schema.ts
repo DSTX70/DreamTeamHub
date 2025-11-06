@@ -815,7 +815,15 @@ export const insertEvidencePackSchema = createInsertSchema(evidencePacks).omit({
   updatedAt: true,
   reviewedAt: true
 });
+
+// Update schema for evidence packs - prevents modifying immutable fields
+export const updateEvidencePackSchema = insertEvidencePackSchema.partial().omit({
+  agentId: true,     // Immutable - cannot change which agent the pack belongs to
+  submittedBy: true, // Immutable - cannot change who submitted it
+});
+
 export type InsertEvidencePack = z.infer<typeof insertEvidencePackSchema>;
+export type UpdateEvidencePack = z.infer<typeof updateEvidencePackSchema>;
 export type EvidencePack = typeof evidencePacks.$inferSelect;
 
 // Persons
