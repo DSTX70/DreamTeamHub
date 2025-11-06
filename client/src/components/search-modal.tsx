@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import {
@@ -45,9 +45,16 @@ const typeColors = {
 const MAX_RECENT = 8;
 const RECENT_SEARCHES_KEY = "cmdk_recent";
 
+type Action = {
+  id: string;
+  label: string;
+  run: () => void;
+};
+
 export function SearchModal({ open, onOpenChange }: SearchModalProps) {
   const [query, setQuery] = useState("");
   const [selectedIndex, setSelectedIndex] = useState(0);
+  const [zone, setZone] = useState<"actions" | "results">("results");
   const [, setLocation] = useLocation();
   const [recent, setRecent] = useState<string[]>([]);
   const [allResults, setAllResults] = useState<SearchResult[]>([]);
@@ -57,6 +64,30 @@ export function SearchModal({ open, onOpenChange }: SearchModalProps) {
   const sentinelRef = useRef<HTMLDivElement | null>(null);
   const listRef = useRef<HTMLDivElement | null>(null);
   const limit = 10;
+
+  // Quick actions
+  const actions: Action[] = useMemo(() => [
+    {
+      id: "new-wo",
+      label: "+ New Work Order",
+      run: () => setLocation("/work-orders/new"),
+    },
+    {
+      id: "open-copilot",
+      label: "Open Copilot",
+      run: () => setLocation("/copilot"),
+    },
+    {
+      id: "view-coverage",
+      label: "View Coverage",
+      run: () => setLocation("/coverage"),
+    },
+    {
+      id: "view-playbooks",
+      label: "View Playbooks",
+      run: () => setLocation("/playbooks"),
+    },
+  ], [setLocation]);
 
   // Load recent searches from localStorage
   useEffect(() => {
@@ -88,6 +119,7 @@ export function SearchModal({ open, onOpenChange }: SearchModalProps) {
     if (!open) {
       setQuery("");
       setSelectedIndex(0);
+      setZone("results");
       setAllResults([]);
       setOffset(0);
       setTotal(0);
@@ -100,6 +132,7 @@ export function SearchModal({ open, onOpenChange }: SearchModalProps) {
     setOffset(0);
     setTotal(0);
     setSelectedIndex(0);
+    setZone("results");
   }, [query]);
 
   // Fetch search results (initial + pagination)
@@ -120,11 +153,11 @@ export function SearchModal({ open, onOpenChange }: SearchModalProps) {
     if (searchData?.items) {
       setAllResults(prev => offset === 0 ? searchData.items : [...prev, ...searchData.items]);
       setTotal(searchData.count);
-      if (offset === 0 && searchData.items.length > 0) {
+      if (offset === 0 && searchData.items.length > 0 && zone === "results") {
         setSelectedIndex(0);
       }
     }
-  }, [searchData, offset]);
+  }, [searchData, offset, zone]);
 
   const results = allResults;
   const hasMore = results.length < total;
@@ -157,26 +190,89 @@ export function SearchModal({ open, onOpenChange }: SearchModalProps) {
     }
   }, [searchData, fetchingMore]);
 
-  // Keyboard navigation
+  // Two-zone keyboard navigation
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (!open) return;
 
+      const aCount = actions.length;
+      const rCount = results.length;
+      const inActions = zone === "actions";
+      const inResults = zone === "results";
+
       if (e.key === "ArrowDown") {
         e.preventDefault();
-        setSelectedIndex((prev) => Math.min(prev + 1, results.length - 1));
+        if (inActions) {
+          if (aCount === 0) {
+            setZone("results");
+            setSelectedIndex(rCount ? 0 : -1);
+            return;
+          }
+          const next = selectedIndex + 1;
+          if (next < aCount) {
+            setSelectedIndex(next);
+          } else {
+            setZone("results");
+            setSelectedIndex(rCount ? 0 : -1);
+          }
+        } else {
+          if (rCount === 0) {
+            setZone("actions");
+            setSelectedIndex(aCount ? 0 : -1);
+            return;
+          }
+          const next = selectedIndex + 1;
+          if (next < rCount) {
+            setSelectedIndex(next);
+          } else {
+            setZone("actions");
+            setSelectedIndex(aCount ? 0 : -1);
+          }
+        }
       } else if (e.key === "ArrowUp") {
         e.preventDefault();
-        setSelectedIndex((prev) => Math.max(prev - 1, 0));
-      } else if (e.key === "Enter" && results.length > 0) {
-        e.preventDefault();
-        handleSelect(results[selectedIndex]);
+        if (inActions) {
+          if (aCount === 0) {
+            setZone("results");
+            setSelectedIndex(rCount ? Math.max(rCount - 1, 0) : -1);
+            return;
+          }
+          const prev = selectedIndex - 1;
+          if (prev >= 0) {
+            setSelectedIndex(prev);
+          } else {
+            setZone("results");
+            setSelectedIndex(rCount ? Math.max(rCount - 1, 0) : -1);
+          }
+        } else {
+          if (rCount === 0) {
+            setZone("actions");
+            setSelectedIndex(aCount ? Math.max(aCount - 1, 0) : -1);
+            return;
+          }
+          const prev = selectedIndex - 1;
+          if (prev >= 0) {
+            setSelectedIndex(prev);
+          } else {
+            setZone("actions");
+            setSelectedIndex(aCount ? Math.max(aCount - 1, 0) : -1);
+          }
+        }
+      } else if (e.key === "Enter") {
+        if (inActions && selectedIndex >= 0 && actions[selectedIndex]) {
+          e.preventDefault();
+          actions[selectedIndex].run();
+          onOpenChange(false);
+        } else if (inResults && selectedIndex >= 0 && results[selectedIndex]) {
+          e.preventDefault();
+          handleSelect(results[selectedIndex]);
+        }
       }
     };
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [open, results, selectedIndex]);
+  }, [open, results, selectedIndex, zone, actions, onOpenChange]);
 
   const handleSelect = (result: SearchResult) => {
     pushRecent(query);
@@ -250,6 +346,31 @@ export function SearchModal({ open, onOpenChange }: SearchModalProps) {
             </div>
           )}
 
+          {/* Quick Actions */}
+          {actions.length > 0 && (
+            <div className="p-4 border-b">
+              <p className="text-xs text-muted-foreground font-medium mb-2">Quick actions</p>
+              <div className="flex flex-wrap gap-2">
+                {actions.map((action, i) => (
+                  <Button
+                    key={action.id}
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      action.run();
+                      onOpenChange(false);
+                    }}
+                    className={`h-7 text-xs ${zone === "actions" && selectedIndex === i ? "bg-accent" : ""}`}
+                    aria-selected={zone === "actions" && selectedIndex === i}
+                    data-testid={`action-${action.id}`}
+                  >
+                    {action.label}
+                  </Button>
+                ))}
+              </div>
+            </div>
+          )}
+
           {!isLoading && query.trim().length > 0 && results.length === 0 && (
             <div className="p-8 text-center text-muted-foreground">
               <p className="text-sm">No results found for "{query}"</p>
@@ -260,7 +381,7 @@ export function SearchModal({ open, onOpenChange }: SearchModalProps) {
             <div className="space-y-1">
               {results.map((result, index) => {
                 const Icon = typeIcons[result.type];
-                const isSelected = index === selectedIndex;
+                const isSelected = zone === "results" && index === selectedIndex;
 
                 return (
                   <button
