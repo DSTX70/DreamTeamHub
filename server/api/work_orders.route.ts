@@ -1,6 +1,6 @@
 import type { Request, Response } from "express";
 import { db } from "../db";
-import { workOrders, workOrderRuns } from "@shared/schema";
+import { workOrders, workOrderRuns, opsEvent } from "@shared/schema";
 import { desc, and, eq, gte } from "drizzle-orm";
 import { WorkOrderCreateBody, WorkOrderStartBody } from "../../lib/validators/workOrders";
 
@@ -63,10 +63,46 @@ export async function startWorkOrderRun(req: Request, res: Response) {
 
   const caps = wo.caps as { runsPerDay: number; usdPerDay: number };
   if (runsToday >= caps.runsPerDay) {
+    // Log RATE_LIMIT_429 event
+    const actor = agentName || (req as any).user?.email || (req as any).user?.id || "anonymous";
+    await db.insert(opsEvent).values({
+      actor,
+      kind: "RATE_LIMIT_429",
+      ownerType: null,
+      ownerId: woId,
+      message: `Work order rate limit: runs/day cap reached (${runsToday}/${caps.runsPerDay})`,
+      meta: {
+        woId,
+        woTitle: wo.title,
+        agentName,
+        reason: "runs_per_day_cap",
+        runsToday,
+        cap: caps.runsPerDay,
+        path: req.path,
+      },
+    });
     res.setHeader("Retry-After", "86400");
     return res.status(429).json({ error: "runs/day cap reached" });
   }
   if (costToday >= caps.usdPerDay) {
+    // Log RATE_LIMIT_429 event
+    const actor = agentName || (req as any).user?.email || (req as any).user?.id || "anonymous";
+    await db.insert(opsEvent).values({
+      actor,
+      kind: "RATE_LIMIT_429",
+      ownerType: null,
+      ownerId: woId,
+      message: `Work order rate limit: budget cap reached ($${costToday.toFixed(2)}/$${caps.usdPerDay})`,
+      meta: {
+        woId,
+        woTitle: wo.title,
+        agentName,
+        reason: "budget_cap",
+        costToday,
+        cap: caps.usdPerDay,
+        path: req.path,
+      },
+    });
     res.setHeader("Retry-After", "86400");
     return res.status(429).json({ error: "budget cap reached" });
   }
@@ -84,6 +120,27 @@ export async function startWorkOrderRun(req: Request, res: Response) {
     mirror: `Drafts ready → ${wo.output}`,
     finishedAt: new Date(),
   }).returning();
+
+  // Log WORK_ORDER_START event
+  const actor = agentName || (req as any).user?.email || (req as any).user?.id || "anonymous";
+  await db.insert(opsEvent).values({
+    actor,
+    kind: "WORK_ORDER_START",
+    ownerType: null,
+    ownerId: woId,
+    message: `Work order executed: ${wo.title}`,
+    meta: {
+      woId,
+      woTitle: wo.title,
+      agentName,
+      status: run.status,
+      ms: run.ms,
+      cost: run.cost,
+      runsToday: runsToday + 1,
+      costToday: costToday + Number(cost),
+      caps,
+    },
+  });
 
   res.status(201).json({
     agent: agentName,

@@ -63,6 +63,23 @@ export async function uploadDraft(req: Request, res: Response) {
     const drive = getDriveClient();
 
     const file = await drive.upload(draft!, { text, fileName, mimeType: mimeType ?? "text/markdown" });
+    
+    // Log KNOWLEDGE_DRAFT event
+    const actor = (req as any).user?.email || (req as any).user?.id || "anonymous";
+    await db.insert(opsEvent).values({
+      actor,
+      kind: "KNOWLEDGE_DRAFT",
+      ownerType: owner,
+      ownerId: id,
+      message: `Draft uploaded: ${fileName}`,
+      meta: {
+        fileId: file.id,
+        fileName,
+        mimeType: mimeType ?? "text/markdown",
+        driveUrl: file.webViewLink,
+      },
+    });
+    
     return res.status(201).json({ ok: true, file });
   } catch (e: any) {
     return res.status(e.status || 500).json({ error: e.message || "upload failed" });
@@ -125,6 +142,21 @@ export async function publishFile(req: Request, res: Response) {
     res.setHeader("X-Idempotency-Key", idem);
     return res.json({ ok: true, fileId, eventId: event.id, drive: out });
   } catch (e: any) {
+    // Log PUBLISH_ERROR event
+    const actor = "reviewer";
+    await db.insert(opsEvent).values({
+      actor,
+      kind: "PUBLISH_ERROR",
+      ownerType: String(req.params.owner).toUpperCase(),
+      ownerId: String(req.params.id),
+      message: `Publish failed: ${e.message || "unknown error"}`,
+      meta: {
+        fileId: String(req.params.fileId),
+        error: e.message || "publish failed",
+        status: e.status || 500,
+        path: req.path,
+      },
+    });
     return res.status(e.status || 500).json({ error: e.message || "publish failed" });
   }
 }
