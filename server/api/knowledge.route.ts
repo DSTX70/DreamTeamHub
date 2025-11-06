@@ -31,10 +31,11 @@ export async function searchKnowledge(req: Request, res: Response) {
       return res.status(422).json({ error: msg });
     }
     
+    const { q, limit } = parsed.data;
     const { read } = await resolveFolders(owner, id);
     required(read, "KB read folder not linked");
     const drive = getDriveClient();
-    const out = await drive.search(read!, parsed.data.q || "", parsed.data.limit ?? 20);
+    const out = await drive.search(read!, q, limit ?? 20);
     return res.json(out);
   } catch (e: any) {
     return res.status(e.status || 500).json({ error: e.message || "search failed" });
@@ -46,17 +47,18 @@ export async function uploadDraft(req: Request, res: Response) {
     const owner = String(req.params.owner).toUpperCase();
     const id = String(req.params.id);
     
-    const parsed = DraftUploadBody.safeParse(req.body);
+    const parsed = DraftUploadBody.safeParse(req.body || {});
     if (!parsed.success) {
       const msg = parsed.error.errors.map(e => e.message).join("; ");
       return res.status(422).json({ error: msg });
     }
     
+    const { text, fileName, mimeType } = parsed.data;
     const { draft } = await resolveFolders(owner, id);
     required(draft, "Drafts folder not linked");
     const drive = getDriveClient();
 
-    const file = await drive.upload(draft!, { text: parsed.data.content, fileName: parsed.data.fileName, mimeType: "text/markdown" });
+    const file = await drive.upload(draft!, { text, fileName, mimeType: mimeType ?? "text/markdown" });
     return res.status(201).json({ ok: true, file });
   } catch (e: any) {
     return res.status(e.status || 500).json({ error: e.message || "upload failed" });
