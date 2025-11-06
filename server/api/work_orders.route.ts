@@ -32,8 +32,9 @@ export async function createWorkOrder(req: Request, res: Response) {
       successMin: b.kpis?.successMin ?? 90,
       p95Max: b.kpis?.p95Max ?? 3.0,
     },
-    playbook: b.playbook,
-    stop: b.stop,
+    playbook: b.playbook ?? "",
+    playbookHandle: b.playbookHandle ?? null,
+    stop: b.stop ?? "",
     status: "draft",
   }).returning();
   res.status(201).json(row);

@@ -22,9 +22,17 @@ type WO = {
   caps: { runsPerDay: number; usdPerDay: number };
   kpis: { successMin: number; p95Max: number };
   playbook: string;
+  playbookHandle?: string;
   stop: string;
   status: string;
   created_at: string;
+};
+
+type Playbook = {
+  id: string;
+  handle: string;
+  title: string;
+  bodyMd: string;
 };
 
 type RunRow = {
@@ -71,10 +79,12 @@ export default function WorkOrdersPage() {
     capsUsd: "2",
     kpiSuccess: "90",
     kpiP95: "3.0",
-    playbook: "",
+    playbookHandle: "",
     stop: ""
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [playbooks, setPlaybooks] = useState<Playbook[]>([]);
+  const [loadingPlaybooks, setLoadingPlaybooks] = useState(false);
 
   const { data: workOrders = [], isLoading } = useQuery<WO[]>({
     queryKey: ["/api/work-orders"],
@@ -85,6 +95,29 @@ export default function WorkOrdersPage() {
     queryKey: ["/api/work-orders/runs"],
     refetchInterval: 8000,
   });
+
+  // Load playbooks for the select dropdown
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        setLoadingPlaybooks(true);
+        const response = await fetch("/api/playbooks", {
+          credentials: "include",
+        });
+        if (!response.ok) throw new Error("Failed to fetch playbooks");
+        const data = await response.json();
+        if (mounted) setPlaybooks(Array.isArray(data) ? data : []);
+      } catch (error) {
+        console.error("Failed to load playbooks:", error);
+      } finally {
+        if (mounted) setLoadingPlaybooks(false);
+      }
+    })();
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   const applyTemplate = (key: string) => {
     const t = templates[key];
@@ -100,7 +133,7 @@ export default function WorkOrdersPage() {
       capsUsd: String(t.caps?.usdPerDay ?? 2),
       kpiSuccess: String(t.kpis?.successMin ?? 90),
       kpiP95: String(t.kpis?.p95Max ?? 3.0),
-      playbook: t.playbook ?? "",
+      playbookHandle: "",
       stop: t.stop ?? ""
     });
   };
@@ -110,7 +143,7 @@ export default function WorkOrdersPage() {
     setIsSubmitting(true);
 
     try {
-      const body = {
+      const body: any = {
         title: form.title,
         owner: form.owner,
         autonomy: form.autonomy,
@@ -124,9 +157,13 @@ export default function WorkOrdersPage() {
           successMin: Number(form.kpiSuccess),
           p95Max: Number(form.kpiP95)
         },
-        playbook: form.playbook,
         stop: form.stop
       };
+      
+      // Add playbookHandle if selected
+      if (form.playbookHandle) {
+        body.playbookHandle = form.playbookHandle;
+      }
 
       const res = await fetch("/api/work-orders", {
         method: "POST",
@@ -153,7 +190,7 @@ export default function WorkOrdersPage() {
         capsUsd: "2",
         kpiSuccess: "90",
         kpiP95: "3.0",
-        playbook: "",
+        playbookHandle: "",
         stop: ""
       });
     } catch (error: any) {
@@ -318,14 +355,33 @@ export default function WorkOrdersPage() {
               />
             </div>
 
-            <Textarea
-              rows={3}
-              placeholder="Playbook (steps for the agent to follow)"
-              value={form.playbook}
-              onChange={(e) => setForm({ ...form, playbook: e.target.value })}
-              required
-              data-testid="textarea-playbook"
-            />
+            <div className="space-y-2">
+              <label className="text-sm font-medium">
+                Playbook {!form.playbookHandle && <span className="text-muted-foreground">(optional)</span>}
+              </label>
+              <Select
+                value={form.playbookHandle}
+                onValueChange={(value) => setForm({ ...form, playbookHandle: value })}
+              >
+                <SelectTrigger data-testid="select-playbook">
+                  <SelectValue placeholder={loadingPlaybooks ? "Loading playbooks..." : "— Select a playbook (optional) —"} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">— None —</SelectItem>
+                  {playbooks.map((pb) => (
+                    <SelectItem key={pb.id} value={pb.handle}>
+                      {pb.title} — {pb.handle}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                Manage playbooks at{" "}
+                <a href="/playbooks" target="_blank" rel="noreferrer" className="underline hover:text-foreground">
+                  /playbooks
+                </a>
+              </p>
+            </div>
             <Textarea
               rows={2}
               placeholder="Stop conditions (when to halt execution)"
@@ -406,10 +462,20 @@ export default function WorkOrdersPage() {
                     <div>Success ≥ <strong>{order.kpis.successMin}%</strong></div>
                     <div>P95 ≤ <strong>{order.kpis.p95Max}s</strong></div>
                   </div>
-                  {order.playbook && (
+                  {order.playbookHandle && (
                     <div className="text-sm">
                       <span className="text-muted-foreground">Playbook: </span>
-                      <span className="text-xs">{order.playbook}</span>
+                      <Badge variant="outline" className="text-xs">
+                        <code>{order.playbookHandle}</code>
+                      </Badge>
+                      <a
+                        href={`/playbooks?handle=${order.playbookHandle}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="ml-2 text-xs underline text-primary hover:text-primary/80"
+                      >
+                        View
+                      </a>
                     </div>
                   )}
                   <div className="pt-2">

@@ -23,6 +23,7 @@ export const WorkOrderCreateBody = z.object({
   caps: WorkOrderCaps.optional(),
   kpis: WorkOrderKpis.optional(),
   playbook: z.string().max(50000).optional(),
+  playbookHandle: z.string().max(100).optional(),
   stop: z.string().max(1000).optional(),
 });
 
