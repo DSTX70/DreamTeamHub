@@ -2,6 +2,7 @@ import type { Request, Response } from "express";
 import { db } from "../db";
 import { workOrders, workOrderRuns } from "@shared/schema";
 import { desc, and, eq, gte } from "drizzle-orm";
+import { WorkOrderCreateBody, WorkOrderStartBody } from "../../lib/validators/workOrders";
 
 export async function listWorkOrders(req: Request, res: Response) {
   const rows = await db.select().from(workOrders).orderBy(desc(workOrders.createdAt)).limit(50);
@@ -10,7 +11,13 @@ export async function listWorkOrders(req: Request, res: Response) {
 }
 
 export async function createWorkOrder(req: Request, res: Response) {
-  const b = req.body || {};
+  const parsed = WorkOrderCreateBody.safeParse(req.body);
+  if (!parsed.success) {
+    const msg = parsed.error.errors.map(e => e.message).join("; ");
+    return res.status(422).json({ error: msg });
+  }
+  
+  const b = parsed.data;
   const [row] = await db.insert(workOrders).values({
     title: b.title,
     owner: b.owner,
@@ -34,8 +41,14 @@ export async function createWorkOrder(req: Request, res: Response) {
 
 export async function startWorkOrderRun(req: Request, res: Response) {
   const woId = String(req.params.woId);
-  const agentName = String(req.body?.agent || "").trim();
-  if (!agentName) return res.status(422).json({ error: "agent required" });
+  
+  const parsed = WorkOrderStartBody.safeParse(req.body);
+  if (!parsed.success) {
+    const msg = parsed.error.errors.map(e => e.message).join("; ");
+    return res.status(422).json({ error: msg });
+  }
+  
+  const agentName = parsed.data.agent;
 
   const [wo] = await db.select().from(workOrders).where(eq(workOrders.id, woId));
   if (!wo) return res.status(404).json({ error: "work order not found" });
