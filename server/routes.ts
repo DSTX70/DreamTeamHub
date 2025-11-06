@@ -2147,6 +2147,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
   const devSendEmailRoute = await import("./routes/dev_send_example.route");
   app.use(devSendEmailRoute.router);
 
+  // Saved Addresses - User saved addresses CRUD (public for demo)
+  const addressRoute = await import("./routes/address.route");
+  app.use(addressRoute.router);
+
+  // Checkout Address - Checkout address autofill and validation (public for demo)
+  const checkoutAddressRoute = await import("./routes/checkout_address.route");
+  app.use(checkoutAddressRoute.router);
+
+  // Affiliates - Affiliate tracking and reporting (public for demo)
+  const affiliateRoute = await import("./routes/affiliate.route");
+  app.use(affiliateRoute.router);
+
   // Copilot - AI assistant for querying DTH API (requires authentication)
   const copilot = await import("./copilot");
   app.use("/copilot", isAuthenticated, copilot.default);

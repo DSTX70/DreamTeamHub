@@ -41,7 +41,9 @@ import PlaybookPreview from "@/pages/wo/PlaybookPreview";
 import OnboardingSuccess from "@/pages/onboarding/Success";
 import CoverageDeepDive from "@/pages/coverage/DeepDive";
 import OpsAlertHooksDemo from "@/pages/ops/AlertHooksDemo";
+import AffiliatesReport from "@/pages/ops/AffiliatesReport";
 import LLMProviderSelect from "@/pages/llm/ProviderSelect";
+import Checkout from "@/pages/checkout/Checkout";
 import { Button } from "@/components/ui/button";
 import { LogOut, User as UserIcon, Search } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -84,8 +86,10 @@ function AuthenticatedRoutes() {
       <Route path="/wo/playbook-preview" component={PlaybookPreview} />
       <Route path="/onboarding/success" component={OnboardingSuccess} />
       <Route path="/ops/alerts" component={OpsAlertHooksDemo} />
+      <Route path="/ops/affiliates" component={AffiliatesReport} />
       <Route path="/llm/provider" component={LLMProviderSelect} />
       <Route path="/bu/:slug" component={BUHomePage} />
+      <Route path="/checkout" component={Checkout} />
       <Route path="/help" component={HelpPage} />
       <Route path="/demo" component={Demo} />
       <Route component={NotFound} />
