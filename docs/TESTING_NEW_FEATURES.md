@@ -45,36 +45,125 @@ curl -X POST "${BASE_URL}/api/wo/playbook/preview" \
   -d '{
     "name": "test-playbook",
     "description": "Test playbook for regression",
-    "steps": ["step1", "step2", "step3"]
+    "schema": {"type": "object", "properties": {"field1": {"type": "string"}}},
+    "data": {"field1": "value1"}
   }'
 ```
 
-**Expected Response:**
+**Expected Response (HTTP 201):**
 ```json
 {
-  "ok": true,
-  "received": {
+  "success": true,
+  "id": 1,
+  "preview": {
+    "id": 1,
     "name": "test-playbook",
     "description": "Test playbook for regression",
-    "steps": ["step1", "step2", "step3"]
+    "schema": {"type": "object", "properties": {"field1": {"type": "string"}}},
+    "data": {"field1": "value1"},
+    "createdBy": null,
+    "createdAt": "2025-11-06T11:00:00.000Z",
+    "updatedAt": "2025-11-06T11:00:00.000Z"
   }
 }
 ```
 
-**Test Case 2: Empty Payload**
+**Test Case 2: Minimal Playbook**
 ```bash
 curl -X POST "${BASE_URL}/api/wo/playbook/preview" \
   -H "Authorization: Bearer ${DTH_API_TOKEN}" \
   -H "Content-Type: application/json" \
-  -d '{}'
+  -d '{
+    "name": "minimal-playbook"
+  }'
 ```
 
-**Expected Response:**
+**Expected Response (HTTP 201):**
 ```json
 {
-  "ok": true,
-  "received": {}
+  "success": true,
+  "id": 2,
+  "preview": {
+    "id": 2,
+    "name": "minimal-playbook",
+    "description": null,
+    "schema": {},
+    "data": {},
+    "createdBy": null,
+    "createdAt": "2025-11-06T11:00:00.000Z",
+    "updatedAt": "2025-11-06T11:00:00.000Z"
+  }
 }
+```
+
+**Test Case 3: Get All Previews**
+```bash
+curl -X GET "${BASE_URL}/api/wo/playbook/preview" \
+  -H "Authorization: Bearer ${DTH_API_TOKEN}"
+```
+
+**Expected Response (HTTP 200):**
+```json
+[
+  {
+    "id": 2,
+    "name": "minimal-playbook",
+    "description": null,
+    "schema": {},
+    "data": {},
+    "createdBy": null,
+    "createdAt": "2025-11-06T11:00:00.000Z",
+    "updatedAt": "2025-11-06T11:00:00.000Z"
+  },
+  {
+    "id": 1,
+    "name": "test-playbook",
+    "description": "Test playbook for regression",
+    "schema": {"type": "object", "properties": {"field1": {"type": "string"}}},
+    "data": {"field1": "value1"},
+    "createdBy": null,
+    "createdAt": "2025-11-06T11:00:00.000Z",
+    "updatedAt": "2025-11-06T11:00:00.000Z"
+  }
+]
+```
+
+**Test Case 4: Update Preview**
+```bash
+curl -X PUT "${BASE_URL}/api/wo/playbook/preview/1" \
+  -H "Authorization: Bearer ${DTH_API_TOKEN}" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "description": "Updated description"
+  }'
+```
+
+**Expected Response (HTTP 200):**
+```json
+{
+  "success": true,
+  "preview": {
+    "id": 1,
+    "name": "test-playbook",
+    "description": "Updated description",
+    "schema": {"type": "object", "properties": {"field1": {"type": "string"}}},
+    "data": {"field1": "value1"},
+    "createdBy": null,
+    "createdAt": "2025-11-06T11:00:00.000Z",
+    "updatedAt": "2025-11-06T11:15:00.000Z"
+  }
+}
+```
+
+**Test Case 5: Delete Preview**
+```bash
+curl -X DELETE "${BASE_URL}/api/wo/playbook/preview/1" \
+  -H "Authorization: Bearer ${DTH_API_TOKEN}"
+```
+
+**Expected Response (HTTP 204):**
+```
+(No content)
 ```
 
 ### 2. Coverage Summary API

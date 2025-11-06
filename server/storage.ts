@@ -5,20 +5,20 @@ import {
   audits, auditChecks, auditFindings, auditArtifacts, events,
   conversations, messages, agentMemories, agentRuns,
   projects, projectFiles, projectAgents, projectTasks, projectMessages,
-  agentGoldens, workOrders, brands, knowledgeLinks, products,
+  agentGoldens, workOrders, playbookPreviews, brands, knowledgeLinks, products,
   type User, type UpsertUser,
   type Pod, type PodAgent, type Agent, type Person, type RoleCard, type RoleRaci, type AgentSpec, type WorkItem, type Decision, type IdeaSpark,
   type BrainstormSession, type BrainstormParticipant, type BrainstormIdea, type BrainstormCluster, type BrainstormArtifact,
   type Audit, type AuditCheck, type AuditFinding, type AuditArtifact, type Event,
   type Conversation, type Message, type AgentMemory, type AgentRun,
   type Project, type ProjectFile, type ProjectAgent, type ProjectTask, type ProjectMessage,
-  type AgentGolden, type WorkOrder, type Brand, type KnowledgeLink, type Product,
+  type AgentGolden, type WorkOrder, type PlaybookPreview, type Brand, type KnowledgeLink, type Product,
   type InsertPod, type InsertPodAgent, type InsertAgent, type InsertPerson, type InsertRoleCard, type InsertRoleRaci, type InsertAgentSpec, type InsertWorkItem, type InsertDecision, type InsertIdeaSpark,
   type InsertBrainstormSession, type InsertBrainstormParticipant, type InsertBrainstormIdea, type InsertBrainstormCluster, type InsertBrainstormArtifact,
   type InsertAudit, type InsertAuditCheck, type InsertAuditFinding, type InsertAuditArtifact, type InsertEvent,
   type InsertConversation, type InsertMessage, type InsertAgentMemory, type InsertAgentRun,
   type InsertProject, type InsertProjectFile, type InsertProjectAgent, type InsertProjectTask, type InsertProjectMessage,
-  type InsertAgentGolden, type InsertWorkOrder, type InsertBrand, type InsertKnowledgeLink, type InsertProduct,
+  type InsertAgentGolden, type InsertWorkOrder, type InsertPlaybookPreview, type InsertBrand, type InsertKnowledgeLink, type InsertProduct,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, or, sql, inArray, isNotNull } from "drizzle-orm";
@@ -181,6 +181,13 @@ export interface IStorage {
   // Work Orders
   getWorkOrders(): Promise<WorkOrder[]>;
   createWorkOrder(order: InsertWorkOrder): Promise<WorkOrder>;
+  
+  // Playbook Previews (Drafts)
+  getPlaybookPreviews(): Promise<PlaybookPreview[]>;
+  getPlaybookPreview(id: number): Promise<PlaybookPreview | undefined>;
+  createPlaybookPreview(preview: InsertPlaybookPreview): Promise<PlaybookPreview>;
+  updatePlaybookPreview(id: number, preview: Partial<InsertPlaybookPreview>): Promise<PlaybookPreview | undefined>;
+  deletePlaybookPreview(id: number): Promise<boolean>;
   
   // Brands
   getBrands(filters?: { businessUnit?: string }): Promise<Brand[]>;
@@ -901,6 +908,35 @@ export class DatabaseStorage implements IStorage {
   async createWorkOrder(order: InsertWorkOrder): Promise<WorkOrder> {
     const [created] = await db.insert(workOrders).values(order).returning();
     return created;
+  }
+
+  // ===== PLAYBOOK PREVIEWS (DRAFTS) =====
+  async getPlaybookPreviews(): Promise<PlaybookPreview[]> {
+    return db.select().from(playbookPreviews).orderBy(desc(playbookPreviews.updatedAt));
+  }
+
+  async getPlaybookPreview(id: number): Promise<PlaybookPreview | undefined> {
+    const [preview] = await db.select().from(playbookPreviews).where(eq(playbookPreviews.id, id));
+    return preview;
+  }
+
+  async createPlaybookPreview(preview: InsertPlaybookPreview): Promise<PlaybookPreview> {
+    const [created] = await db.insert(playbookPreviews).values(preview).returning();
+    return created;
+  }
+
+  async updatePlaybookPreview(id: number, preview: Partial<InsertPlaybookPreview>): Promise<PlaybookPreview | undefined> {
+    const [updated] = await db
+      .update(playbookPreviews)
+      .set({ ...preview, updatedAt: new Date() })
+      .where(eq(playbookPreviews.id, id))
+      .returning();
+    return updated;
+  }
+
+  async deletePlaybookPreview(id: number): Promise<boolean> {
+    const result = await db.delete(playbookPreviews).where(eq(playbookPreviews.id, id));
+    return result.rowCount !== null && result.rowCount > 0;
   }
 
   // ===== BRANDS =====

@@ -901,6 +901,29 @@ export const insertPlaybookSchema = createInsertSchema(playbooks).omit({ id: tru
 export type InsertPlaybook = z.infer<typeof insertPlaybookSchema>;
 export type Playbook = typeof playbooks.$inferSelect;
 
+// Playbook Previews (Drafts) - for testing/validation before publishing
+export const playbookPreviews = pgTable("playbook_previews", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  name: text("name").notNull(),
+  description: text("description"),
+  schema: jsonb("schema").$type<Record<string, any>>().notNull(), // JSON Schema definition
+  data: jsonb("data").$type<Record<string, any>>().notNull(), // Form data filled in
+  createdBy: text("created_by"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const insertPlaybookPreviewSchema = createInsertSchema(playbookPreviews).omit({ 
+  id: true, 
+  createdAt: true, 
+  updatedAt: true 
+}).extend({
+  schema: z.record(z.any()).optional().default({}),
+  data: z.record(z.any()).optional().default({}),
+});
+export type InsertPlaybookPreview = z.infer<typeof insertPlaybookPreviewSchema>;
+export type PlaybookPreview = typeof playbookPreviews.$inferSelect;
+
 export const workOrders = pgTable("work_orders", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   title: text("title").notNull(),

@@ -98,23 +98,38 @@ RESPONSE=$(curl -s -w "\n%{http_code}" -X POST "$BASE_URL/api/wo/playbook/previe
   -H "Authorization: Bearer $DTH_API_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
-    "name": "test-playbook",
+    "name": "test-playbook-regression",
     "description": "Automated test playbook",
-    "steps": ["step1", "step2"]
+    "schema": {"type": "object"},
+    "data": {"test": "value"}
   }')
 HTTP_STATUS=$(echo "$RESPONSE" | tail -n 1)
 BODY=$(echo "$RESPONSE" | sed '$d')
-assert_http_status "$HTTP_STATUS" "200"
-assert_contains "$BODY" "ok"
-assert_contains "$BODY" "test-playbook"
+assert_http_status "$HTTP_STATUS" "201"
+assert_contains "$BODY" "success"
+assert_contains "$BODY" "test-playbook-regression"
+assert_contains "$BODY" "preview"
 
-print_test "1.2 Empty playbook submission"
+print_test "1.2 Minimal playbook submission"
 RESPONSE=$(curl -s -w "\n%{http_code}" -X POST "$BASE_URL/api/wo/playbook/preview" \
   -H "Authorization: Bearer $DTH_API_TOKEN" \
   -H "Content-Type: application/json" \
-  -d '{}')
+  -d '{
+    "name": "minimal-playbook-test"
+  }')
 HTTP_STATUS=$(echo "$RESPONSE" | tail -n 1)
+BODY=$(echo "$RESPONSE" | sed '$d')
+assert_http_status "$HTTP_STATUS" "201"
+assert_contains "$BODY" "success"
+
+print_test "1.3 Get all playbook previews"
+RESPONSE=$(curl -s -w "\n%{http_code}" -X GET "$BASE_URL/api/wo/playbook/preview" \
+  -H "Authorization: Bearer $DTH_API_TOKEN")
+HTTP_STATUS=$(echo "$RESPONSE" | tail -n 1)
+BODY=$(echo "$RESPONSE" | sed '$d')
 assert_http_status "$HTTP_STATUS" "200"
+# Response should be a JSON array
+assert_contains "$BODY" "["
 
 # Test 2: Coverage Summary API
 print_header "2. Coverage Summary API Tests"
