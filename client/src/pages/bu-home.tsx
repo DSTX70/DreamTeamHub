@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { BrandDetailsModal } from "@/components/brand-details-modal";
 import { useState } from "react";
 
 type BUConfig = {
@@ -50,6 +51,8 @@ export default function BUHomePage() {
   const buSlug = params?.slug?.toUpperCase() || "IMAGINATION";
   const config = buConfigs[buSlug] || buConfigs.IMAGINATION;
   const [brandFilter, setBrandFilter] = useState("");
+  const [selectedBrand, setSelectedBrand] = useState<Brand | null>(null);
+  const [isBrandModalOpen, setIsBrandModalOpen] = useState(false);
 
   // Fetch brands for this BU
   const { data: brands = [], isLoading: brandsLoading } = useQuery<Brand[]>({
@@ -175,6 +178,10 @@ export default function BUHomePage() {
                 key={brand.id}
                 className="hover-elevate transition-all cursor-pointer"
                 data-testid={`card-brand-${brand.slug}`}
+                onClick={() => {
+                  setSelectedBrand(brand);
+                  setIsBrandModalOpen(true);
+                }}
               >
                 <CardHeader>
                   <div className="font-medium" data-testid={`text-brand-name-${brand.slug}`}>
@@ -354,6 +361,13 @@ export default function BUHomePage() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Brand Details Modal */}
+      <BrandDetailsModal 
+        brand={selectedBrand}
+        open={isBrandModalOpen}
+        onOpenChange={setIsBrandModalOpen}
+      />
     </div>
   );
 }
