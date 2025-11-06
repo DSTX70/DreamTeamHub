@@ -1,0 +1,39 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Work Order Playbook",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "title": {
+      "type": "string"
+    },
+    "owner": {
+      "type": "string"
+    },
+    "steps": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "label": {
+            "type": "string"
+          },
+          "desc": {
+            "type": "string"
+          },
+          "est_minutes": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "label"
+        ]
+      }
+    }
+  },
+  "required": [
+    "title",
+    "steps"
+  ]
+}

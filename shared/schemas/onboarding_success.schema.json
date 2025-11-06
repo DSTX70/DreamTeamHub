@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Onboarding Success Links",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "brandId": {
+      "type": "string"
+    },
+    "links": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "label": {
+            "type": "string"
+          },
+          "href": {
+            "type": "string",
+            "format": "uri"
+          }
+        },
+        "required": [
+          "label",
+          "href"
+        ]
+      }
+    }
+  },
+  "required": [
+    "brandId",
+    "links"
+  ]
+}
