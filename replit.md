@@ -57,6 +57,23 @@ The platform is structured into core modules and features:
 ### Authentication & Security
 - **Authentication Provider**: Replit Auth (OpenID Connect).
 - **Security Architecture**: Dual authentication system with session-based auth for interactive users and API token auth for external integrations/CI/CD.
+- **Content Security Policy (CSP)**: Helmet-based CSP middleware mounted globally in `server/index.ts`:
+  - **Development**: CSP disabled to allow Vite HMR and inline scripts
+  - **Production**: Strict CSP with `script-src: ['self']`, `object-src: ['none']`, `base-uri: ['self']`
+- **Scope-Based Authorization**: Protected routes use `requireScopes()` middleware (`server/security/scopes_and_csp.ts`):
+  - **Session Auth**: Checks `req.user.scopes` array from Replit Auth
+  - **API Token Auth**: Grants predefined scopes from `API_TOKEN_SCOPES` array
+  - **Protected Scopes**:
+    - `knowledge:draft:write` - Upload drafts, publish files
+    - `agents:write` - Promote agents, modify agent data
+    - `roles:read`, `roles:write` - Read/modify role cards
+- **Dual Authentication Middleware**: Routes use `isDualAuthenticated` to support both session and Bearer token flows:
+  - Knowledge routes: search, drafts, publish
+  - Agent promotion
+  - Role card management
+- **Rate Limiting**: Work Order caps enforced with `429` status + `Retry-After` header via `retryAfter()` helper
+- **Idempotency Protection**: Knowledge publish endpoints support `Idempotency-Key` header to prevent duplicate operations
+- **Environment Configuration**: See `docs/ENVIRONMENT_SETUP.md` for complete setup guide
 
 ### Staging Environment
 - **Automated Weekly Refresh**: GitHub Actions workflow refreshes staging database every Monday at 07:00 UTC using Greenmask for PII masking.
