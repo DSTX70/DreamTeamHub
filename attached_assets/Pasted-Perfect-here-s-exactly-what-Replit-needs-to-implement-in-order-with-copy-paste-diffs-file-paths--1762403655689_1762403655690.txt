@@ -1,0 +1,250 @@
+Perfect—here’s exactly what Replit needs to implement, in order, with copy-paste diffs, file paths, and quick commands. Follow the sections 1–7 and check each box as you go.
+
+---
+
+# 1) Finish B3 — Drive Gateway (go live)
+
+## 1.1 Set env vars (Replit Secrets)
+
+Add these in Replit → Secrets:
+
+```
+GDRIVE_SA_EMAIL=service-account@project.iam.gserviceaccount.com
+GDRIVE_SA_PRIVATE_KEY=-----BEGIN PRIVATE KEY-----\n...MULTI-LINE...\n-----END PRIVATE KEY-----\n
+```
+
+## 1.2 Swap to SA client in knowledge routes
+
+**If using Express:**
+
+* Import from `server/integrations/googleDrive_real.ts` in `server/api/knowledge.route.ts` (already provided in earlier patch).
+* Mount routes in `server/index.ts`:
+
+```ts
+app.get("/api/knowledge/:owner/:id/search", searchKnowledge);
+app.post("/api/knowledge/:owner/:id/drafts", requireScopes("knowledge:draft:write"), uploadDraft);
+app.post("/api/knowledge/:owner/:id/publish/:fileId", requireScopes("knowledge:draft:write"), publishFile);
+```
+
+**If using Next.js App Router:**
+
+* Ensure these routes exist (from earlier step):
+
+  * `app/api/knowledge/[owner]/[id]/search/route.ts`
+  * `app/api/knowledge/[owner]/[id]/drafts/route.ts`
+  * `app/api/knowledge/[owner]/[id]/publish/[fileId]/route.ts`
+* The handlers already import `getDriveClient()` from `lib/drive/googleDrive_real`.
+
+## 1.3 Wire Knowledge card UI
+
+* Use the **cursor hook**:
+
+  * `web/hooks/useKnowledgeSearch.ts` (from earlier message)
+* Use the **publish modal hook + dialog**:
+
+  * `web/hooks/usePublishDialog.tsx` + `web/components/TwoManPublishDialog.tsx`
+
+**Example usage (Knowledge card):**
+
+```tsx
+import { useKnowledgeSearch } from "@/hooks/useKnowledgeSearch";
+import { usePublishDialog } from "@/hooks/usePublishDialog";
+import TwoManPublishDialog from "@/components/TwoManPublishDialog";
+
+function KnowledgeCard({ owner, ownerId, contextLabel }:{
+  owner:"BU"|"BRAND"|"PRODUCT"; ownerId:string; contextLabel?:string;
+}) {
+  const [q,setQ] = useState("");
+  const { items, loading, error, hasMore, fetchNext } = useKnowledgeSearch(owner, ownerId, q, 10);
+  const { open, fileId, start, close, confirm } = usePublishDialog({ owner, ownerId });
+
+  return (
+    <div className="rounded-2xl border p-4">
+      <div className="flex gap-2">
+        <input className="border rounded px-2 py-1" value={q} onChange={e=>setQ(e.target.value)} placeholder="Search files…" />
+        {loading && <span className="text-sm text-gray-500">Loading…</span>}
+        {error && <span className="text-sm text-rose-600">{error}</span>}
+      </div>
+      <ul className="mt-3 divide-y">
+        {items.map(f=>(
+          <li key={f.id} className="py-2 flex items-center justify-between">
+            <span>{f.name}</span>
+            <button className="px-2 py-1 border rounded" onClick={()=>start(f.id)}>Promote to Publish</button>
+          </li>
+        ))}
+      </ul>
+      {hasMore && <button className="mt-3 px-3 py-1 border rounded" onClick={fetchNext}>Load more</button>}
+
+      <TwoManPublishDialog open={open} onClose={close} fileId={fileId || ""} contextLabel={contextLabel} onConfirm={confirm}/>
+    </div>
+  );
+}
+```
+
+**Draft upload (sanitized filename):**
+
+* Routes include the sanitizer util (`sanitizeFilename.ts`) and Zod validators already.
+* Post a text draft:
+
+```ts
+await fetch(`/api/knowledge/${owner}/${ownerId}/drafts`, {
+  method: "POST",
+  headers: { "content-type": "application/json" },
+  body: JSON.stringify({ text: "# draft", fileName: "bad/name:with*chars?.md" })
+});
+```
+
+## 1.4 Verify (manual)
+
+* Search returns items + `X-Next-Page-Token` (see DevTools → Network → Response headers).
+* Draft upload saves with sanitized filename (no slashes/colons).
+* Publish requires `x-reviewer-token` ≥12 chars; response has `X-Request-Id` + `X-Idempotency-Key`.
+* `/ops/logs` shows a new `PUBLISH` row.
+
+---
+
+# 2) Finish B4 — Work Orders → Postgres (enforce caps)
+
+## 2.1 Use DB routes (UI)
+
+* Ensure the UI calls:
+
+  * `GET /api/work-orders` (list)
+  * `POST /api/work-orders` (create)
+  * `POST /api/work-orders/:woId/start` (start)
+
+## 2.2 Server routes (Zod-wrapped)
+
+* Express: `server/api/work_orders.db.route.ts` (Zod integrated)
+* Next.js: `app/api/work-orders/route.ts` and `app/api/work-orders/[woId]/start/route.ts` (Zod integrated)
+* Caps logic returns `429` + `Retry-After: 86400`.
+
+## 2.3 Verify (manual)
+
+* Create a WO → Start twice; exceed caps deliberately to see `429` + `Retry-After`.
+* Confirm each Start logs `{agent, wo_id, status, ms, cost, mirror}` in DB.
+
+---
+
+# 3) Finish B7 — Security (scopes, CSP, 429)
+
+## 3.1 CSP (global)
+
+* **Express:** `app.use(csp())` from `server/security/scopes_and_csp.ts`.
+* **Next.js:** add CSP header in `next.config.js` or middleware.
+
+## 3.2 Scopes (protected routes)
+
+* Drafts/Publish → `knowledge:draft:write`
+* Promote → `agents:write`
+* Use `requireScopes()` (Express) or equivalent check in Next.js handlers.
+
+## 3.3 Retry-After on 429
+
+* Ensure all cap/limit paths call `res.setHeader("Retry-After", "86400")` (Express) or set in `Response` headers (Next.js).
+
+---
+
+# 4) Finish Academy Sidebar (in-context actions)
+
+## 4.1 Add `<AcademySidebar />` right rail
+
+* Pages: `BU`, `Brand`, `Product`, `Project`.
+* Component: `web/components/AcademySidebar.tsx`.
+
+## 4.2 Wire actions
+
+* Open Training → `router.push("/academy/train?agent="+id)`
+* Promote → `POST /api/agents/:id/promote` (Next.js route with Zod validator).
+
+## 4.3 Verify
+
+* Promotion increments `nextGate` and UI shows the new value.
+
+---
+
+# 5) Quick QA (15 min)
+
+* **/bu/imagination**:
+
+  * Search KB (multi page), upload a draft with a “bad” filename (auto-fixes), publish via 2-man dialog → see **PUBLISH** in `/ops/logs`.
+* **Work Orders**:
+
+  * Create → Start → Start again → exceed caps → `429` + `Retry-After`.
+* **Security**:
+
+  * CSP header present; missing scopes on protected routes return **403**.
+* **REST**:
+
+  * Lists return arrays + `X-Total-Count` (or page count for Drive).
+
+---
+
+# 6) Ship checklist (tick these)
+
+* [ ] Env set: `GDRIVE_SA_EMAIL`, `GDRIVE_SA_PRIVATE_KEY`
+* [ ] SA client imported in knowledge routes
+* [ ] Knowledge search uses cursor hook
+* [ ] Draft filename sanitizer in place
+* [ ] Publish Zod headers/body validators live
+* [ ] Work Orders use Postgres + caps + 429
+* [ ] CSP middleware mounted
+* [ ] Scope middleware on protected routes
+* [ ] Academy sidebar on all entity pages
+* [ ] `/ops/logs` shows BU_VIEW · KNOWLEDGE_DRAFT · PUBLISH
+
+---
+
+# 7) Final smoke script (paste & run)
+
+```bash
+# 0) Vars
+BASE="${BASE:-http://localhost:3000}"
+IMAG="${IMAG:-<IMAGINATION_BU_ID>}"
+AGENT="${AGENT:-<AGENT_UUID>}"
+WOID=""
+TOKEN="123456789012"
+
+pass(){ echo "✅ $1"; }
+fail(){ echo "❌ $1"; }
+
+# 1) Knowledge search
+resp=$(curl -s -D >(grep -i "X-Next-Page-Token" >&2) "$BASE/api/knowledge/BU/$IMAG/search?q=test&limit=2")
+[ $? -eq 0 ] && pass "Knowledge search" || fail "Knowledge search"
+
+# 2) Draft upload (sanitized)
+resp=$(curl -s -XPOST "$BASE/api/knowledge/BU/$IMAG/drafts" -H "content-type: application/json" \
+  -d '{"text":"# draft","fileName":"bad/name:with*chars?.md"}')
+echo "$resp" | grep -q '"ok":true' && pass "Draft upload" || fail "Draft upload"
+
+FILE_ID=$(echo "$resp" | sed -n 's/.*"id":"\([^"]*\)".*/\1/p' | head -1)
+
+# 3) Publish (two-man)
+curl -s -i -XPOST "$BASE/api/knowledge/BU/$IMAG/publish/$FILE_ID" \
+  -H "x-reviewer-token: $TOKEN" -H "idempotency-key: demo-123" -H "content-type: application/json" \
+  -d '{"approver":{"name":"Reviewer"}}' | tee /dev/stderr | grep -q "X-Request-Id" \
+  && pass "Publish with audit" || fail "Publish with audit"
+
+# 4) Work Orders create
+resp=$(curl -s -XPOST "$BASE/api/work-orders" -H "content-type: application/json" \
+  -d '{"title":"Router L1 Wk1","owner":"Lume","inputs":"/inbox/*","output":"/drafts/router/"}')
+echo "$resp" | grep -q '"id"' && pass "WO create" || fail "WO create"
+WOID=$(echo "$resp" | sed -n 's/.*"id":"\([^"]*\)".*/\1/p' | head -1)
+
+# 5) Work Orders start
+resp=$(curl -s -XPOST "$BASE/api/work-orders/$WOID/start" -H "content-type: application/json" -d '{"agent":"Support L1 — Router"}')
+echo "$resp" | grep -q '"status":"done"' && pass "WO start" || fail "WO start"
+
+# 6) Caps (429)
+for i in $(seq 1 200); do
+  code=$(curl -s -o /dev/null -w "%{http_code}" -XPOST "$BASE/api/work-orders/$WOID/start" \
+    -H "content-type: application/json" -d '{"agent":"Support L1 — Router"}')
+  if [ "$code" = "429" ]; then pass "Caps enforced (429)"; break; fi
+done
+
+# 7) Promote agent
+resp=$(curl -s -XPOST "$BASE/api/agents/$AGENT/promote" -H "content-type: application/json" -d '{"advance":1}')
+echo "$resp" | grep -q '"ok":true' && pass "Promote" || fail "Promote"
+```
+
+Run through these steps and ping me with any failing line — I’ll hand you the exact fix patch on the spot.
