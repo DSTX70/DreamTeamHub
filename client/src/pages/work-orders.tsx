@@ -438,7 +438,7 @@ export default function WorkOrdersPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="overflow-auto">
+          <div className="overflow-auto" role="region" aria-live="polite" aria-label="Work order runs table">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b">
@@ -461,6 +461,7 @@ export default function WorkOrdersPage() {
                     </td>
                     <td className="p-2">
                       <Badge variant="outline" className="text-xs">
+                        <span className="sr-only">Status: </span>
                         {r.status}
                       </Badge>
                     </td>

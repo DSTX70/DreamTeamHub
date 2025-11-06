@@ -114,7 +114,7 @@ export default function CopilotPanel({ admin = false, customGptUrl }: { admin?: 
 
     return (
       <div className="space-y-3">
-        <div className="overflow-auto rounded-md border">
+        <div className="overflow-auto rounded-md border" role="region" aria-live="polite" aria-label="Copilot data table">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b bg-muted/50">
@@ -137,6 +137,7 @@ export default function CopilotPanel({ admin = false, customGptUrl }: { admin?: 
                       <td className="px-3 py-2">{String(name)}</td>
                       <td className="px-3 py-2">
                         <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+                          <span className="sr-only">Level: </span>
                           {String(level)}
                         </Badge>
                       </td>
@@ -151,6 +152,7 @@ export default function CopilotPanel({ admin = false, customGptUrl }: { admin?: 
                               : ""
                           }
                         >
+                          <span className="sr-only">Status: </span>
                           {String(status)}
                         </Badge>
                       </td>

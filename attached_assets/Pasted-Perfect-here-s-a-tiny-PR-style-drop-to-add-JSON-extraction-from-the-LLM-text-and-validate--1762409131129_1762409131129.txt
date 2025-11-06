@@ -1,0 +1,228 @@
+Perfect — here’s a **tiny PR-style drop** to add **JSON extraction** from the LLM text and validate it against your `output_schema` for stricter v1 structured outputs. It:
+
+* Adds a small extractor utility that finds the **first valid JSON block** (plain or fenced `json … `).
+* Updates `runSkill` to:
+
+  * Attempt structured parse → validate vs `output_schema` → prefer **structured** output if valid.
+  * If parsing/validation fails, **fallback** to the prior summary payload.
+  * Optional hard gate with `SKILL_REQUIRE_JSON=true` to **fail** the run when structured JSON can’t be validated.
+
+Apply each block with:
+
+```bash
+git apply -p0 <<'PATCH'
+...diff...
+PATCH
+```
+
+---
+
+## 1) Utility — robust JSON extraction from LLM text
+
+````diff
+diff --git a/server/lib/engine/jsonExtract.ts b/server/lib/engine/jsonExtract.ts
+new file mode 100644
+--- /dev/null
++++ b/server/lib/engine/jsonExtract.ts
+@@
++// Attempts to extract a JSON object/array from a string.
++// 1) Prefer ```json fenced blocks
++// 2) Fallback to first balanced {...} or [...]
++// Returns: { ok, value?, error? }
++export function extractJSONBlock(s: string): { ok: boolean; value?: any; error?: string } {
++  if (!s || typeof s !== "string") return { ok: false, error: "empty text" };
++
++  // 1) fenced ```json ... ```
++  const fence = /```(?:json)?\s*([\s\S]*?)```/gi;
++  let m: RegExpExecArray | null;
++  while ((m = fence.exec(s))) {
++    const chunk = (m[1] || "").trim();
++    if (!chunk) continue;
++    try { return { ok: true, value: JSON.parse(chunk) }; } catch {}
++  }
++
++  // 2) first balanced {...} or [...]
++  const firstObj = findBalanced(s, "{", "}");
++  if (firstObj) {
++    try { return { ok: true, value: JSON.parse(firstObj) }; } catch {}
++  }
++  const firstArr = findBalanced(s, "[", "]");
++  if (firstArr) {
++    try { return { ok: true, value: JSON.parse(firstArr) }; } catch {}
++  }
++
++  return { ok: false, error: "no json found" };
++}
++
++function findBalanced(s: string, open: "{"|"[", close: "}"|"]"): string | null {
++  const start = s.indexOf(open);
++  if (start < 0) return null;
++  let depth = 0;
++  for (let i = start; i < s.length; i++) {
++    const ch = s[i];
++    if (ch === open) depth++;
++    else if (ch === close) {
++      depth--;
++      if (depth === 0) return s.slice(start, i + 1);
++    }
++  }
++  return null;
++}
+````
+
+---
+
+## 2) Engine — use extractor in `runSkill` and validate vs `output_schema`
+
+```diff
+diff --git a/server/lib/engine/runSkill.ts b/server/lib/engine/runSkill.ts
+--- a/server/lib/engine/runSkill.ts
++++ b/server/lib/engine/runSkill.ts
+@@
+ import { db } from "@/drizzle/db";
+ import { workOrderRun, opsEvent } from "@/drizzle/schema";
+ import { compileSchema, validateWith } from "./jsonSchema";
+ import { callOpenAI } from "./providers/openai";
+ import { callVertex } from "./providers/vertex";
++import { extractJSONBlock } from "./jsonExtract";
+@@
+ export async function runSkill(args: RunArgs) {
+   const { woId, agentName, skill, inputs, context } = args;
+   const started = Date.now();
+@@
+   // Construct output artifact (very basic v1)
+   const outputRef = `${context.outputPath}/skill_${skill.handle}_${Date.now()}.md`;
+-  const outputJson = { summary: llmText?.slice(0, 2000), inputs };
++  // Attempt to extract structured JSON from LLM text
++  let structured: any | null = null;
++  let structuredOk = false;
++  let structuredErr: string | undefined;
++  const wantStrict = (process.env.SKILL_REQUIRE_JSON || "false").toLowerCase() === "true";
++
++  const ex = extractJSONBlock(llmText);
++  if (ex.ok) {
++    const vOut = compileSchema(skill.outputSchema);
++    const res = validateWith(vOut, ex.value);
++    if (res.ok) {
++      structured = ex.value;
++      structuredOk = true;
++    } else {
++      structuredErr = `output_schema: ${res.errors.join("; ")}`;
++    }
++  } else {
++    structuredErr = ex.error || "no json found";
++  }
++
++  // If strict JSON is required and we couldn't produce a valid structure, fail the run
++  if (wantStrict && !structuredOk) {
++    const failMs = Date.now() - started;
++    const [run] = await db.insert(workOrderRun).values({
++      woId, agentName, status:"failed", ms: failMs, cost: 0,
++      mirror: `Structured output required but invalid: ${structuredErr || "unknown error"}`,
++      outputRef: null, outputJson: null
++    }).returning();
++    await db.insert(opsEvent).values({
++      kind:"ERROR", message:`WO_RUN structured output required (fail) ${woId}`,
++      meta:{ error: structuredErr }
++    });
++    return { status:"failed", ms: failMs, cost: 0, output_ref: null, output_json: null };
++  }
++
++  // Build final output JSON (prefer structured if valid)
++  const outputJson = structuredOk
++    ? structured
++    : { summary: llmText?.slice(0, 2000), inputs };
+@@
+-  const vOut = compileSchema(skill.outputSchema);
+-  const outRes = validateWith(vOut, outputJson);
++  const vOut = compileSchema(skill.outputSchema);
++  const outRes = validateWith(vOut, outputJson);
+   const status = outRes.ok ? "done" : "failed";
+@@
+-  const [run] = await db.insert(workOrderRun).values({
+-    woId, agentName, status, ms: execMs, cost: approxCost,
+-    mirror: `Drafts ready → ${context.outputPath}`,
+-    outputRef, outputJson
+-  }).returning();
++  const [run] = await db.insert(workOrderRun).values({
++    woId, agentName, status, ms: execMs, cost: approxCost,
++    mirror: `Drafts ready → ${context.outputPath}`,
++    outputRef, outputJson
++  }).returning();
+ 
+   await db.insert(opsEvent).values({
+     kind: "WO_RUN",
+-    message: `WO ${woId} skill ${skill.handle} ${status}`,
+-    meta: { outputRef, cost: approxCost, ms: execMs }
++    message: `WO ${woId} skill ${skill.handle} ${status}`,
++    meta: { outputRef, cost: approxCost, ms: execMs, structured: structuredOk, structuredErr }
+   });
+ 
+   return { status, ms: execMs, cost: approxCost, output_ref: outputRef, output_json: outputJson };
+ }
+```
+
+---
+
+## 3) Optional: tighten Skill’s `output_schema` to encourage JSON
+
+No code change required, but for best results:
+
+* In each Skill Pack, define a **precise `output_schema`** (e.g., require `summary`, `classification`, etc.).
+* Update your Skill creation body to return JSON consistently (prompt your LLM to “Respond **only** with a JSON object matching this schema” and include the schema outline in the system/user prompt).
+
+Example `output_schema` (for a triage):
+
+```json
+{
+  "type":"object",
+  "required":["summary","category","confidence"],
+  "properties":{
+    "summary":{"type":"string"},
+    "category":{"type":"string","enum":["billing","shipping","technical","other"]},
+    "confidence":{"type":"number","minimum":0,"maximum":1}
+  }
+}
+```
+
+---
+
+## 4) Env toggle (strict mode)
+
+Set this **only if** you want to **fail** runs without valid JSON:
+
+```
+SKILL_REQUIRE_JSON=true
+```
+
+* When **true**: invalid/missing JSON → run **fails** with `ERROR` ops_event and no `output_json`.
+* When **false** (default): we **fallback** to the non-structured `{ summary, inputs }` payload and mark `structured:false` in `ops_event.meta`.
+
+---
+
+## 5) Quick validation
+
+1. **Strict off (default)**
+
+   * Run a Skill that replies in free text.
+   * WO run returns `status:"done"`, `output_json.summary` present, and `ops_event.meta.structured:false`.
+
+2. **Strict on (`SKILL_REQUIRE_JSON=true`)**
+
+   * Run the same Skill without changing its prompt.
+   * WO run fails: `status:"failed"`, mirror explains invalid structured output; `ops_event.kind:"ERROR"` with reason.
+
+3. **Structured prompt**
+
+   * Update the Skill prompt to produce JSON.
+   * Run again: `status:"done"`, `output_json` is a validated object; `ops_event.meta.structured:true`.
+
+---
+
+### Definition of Done (JSON extraction v1)
+
+* Engine extracts **JSON** from LLM output when present, validates against `output_schema`, and **prefers** it.
+* Optional hard gate via `SKILL_REQUIRE_JSON`.
+* Clear audit trail: `structured` flags/errors in `ops_event.meta`.
+
+If you want, I can add a **“return JSON only”** instruction helper to auto-augment your prompts (adds a compact schema outline and anti-chatter constraints) to boost structured success rates.
