@@ -16,6 +16,22 @@ export default function HeaderOpsMenu() {
   const [open, setOpen] = useState(false);
   const [showHint, setShowHint] = useState(false);
   const hintTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const [hotkeysEnabled, setHotkeysEnabled] = useState(true);
+
+  useEffect(() => {
+    // Fetch hotkeys setting from server
+    const fetchSettings = async () => {
+      try {
+        const r = await fetch("/api/ops/settings/notifiers");
+        const j = await r.json();
+        setHotkeysEnabled(j.settings.hotkeysEnabled ?? true);
+      } catch {
+        // Default to enabled on error
+        setHotkeysEnabled(true);
+      }
+    };
+    fetchSettings();
+  }, []);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -28,6 +44,11 @@ export default function HeaderOpsMenu() {
           target.tagName === "TEXTAREA" ||
           target.isContentEditable
         ) {
+          return;
+        }
+
+        // Don't open if hotkeys are disabled
+        if (!hotkeysEnabled) {
           return;
         }
 
@@ -55,7 +76,7 @@ export default function HeaderOpsMenu() {
         clearTimeout(hintTimerRef.current);
       }
     };
-  }, []);
+  }, [hotkeysEnabled]);
 
   return (
     <DropdownMenu open={open} onOpenChange={setOpen}>
@@ -70,45 +91,50 @@ export default function HeaderOpsMenu() {
           <DropdownMenuLabel className="p-0">Operations</DropdownMenuLabel>
           <Tooltip
             content={
-              <div className="space-y-1 text-xs">
-                <div className="font-semibold mb-1.5">Keyboard Shortcuts</div>
-                <div className="flex items-center gap-2">
-                  <kbd className="px-1.5 py-0.5 bg-muted rounded text-xs font-mono">g</kbd>
-                  <kbd className="px-1.5 py-0.5 bg-muted rounded text-xs font-mono">o</kbd>
-                  <span className="text-muted-foreground">— Overview</span>
+              hotkeysEnabled ? (
+                <div className="space-y-1 text-xs">
+                  <div className="font-semibold mb-1.5">Keyboard Shortcuts</div>
+                  <div className="flex items-center gap-2">
+                    <kbd className="px-1.5 py-0.5 bg-muted rounded text-xs font-mono">g</kbd>
+                    <kbd className="px-1.5 py-0.5 bg-muted rounded text-xs font-mono">o</kbd>
+                    <span className="text-muted-foreground">— Overview</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <kbd className="px-1.5 py-0.5 bg-muted rounded text-xs font-mono">g</kbd>
+                    <kbd className="px-1.5 py-0.5 bg-muted rounded text-xs font-mono">i</kbd>
+                    <span className="text-muted-foreground">— Inventory</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <kbd className="px-1.5 py-0.5 bg-muted rounded text-xs font-mono">g</kbd>
+                    <kbd className="px-1.5 py-0.5 bg-muted rounded text-xs font-mono">m</kbd>
+                    <span className="text-muted-foreground">— Images</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <kbd className="px-1.5 py-0.5 bg-muted rounded text-xs font-mono">g</kbd>
+                    <kbd className="px-1.5 py-0.5 bg-muted rounded text-xs font-mono">a</kbd>
+                    <span className="text-muted-foreground">— Affiliates</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <kbd className="px-1.5 py-0.5 bg-muted rounded text-xs font-mono">g</kbd>
+                    <kbd className="px-1.5 py-0.5 bg-muted rounded text-xs font-mono">s</kbd>
+                    <span className="text-muted-foreground">— Settings</span>
+                  </div>
+                  <div className="text-xs text-muted-foreground mt-2 pt-1.5 border-t">
+                    Press keys in sequence within ~1.2s
+                  </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <kbd className="px-1.5 py-0.5 bg-muted rounded text-xs font-mono">g</kbd>
-                  <kbd className="px-1.5 py-0.5 bg-muted rounded text-xs font-mono">i</kbd>
-                  <span className="text-muted-foreground">— Inventory</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <kbd className="px-1.5 py-0.5 bg-muted rounded text-xs font-mono">g</kbd>
-                  <kbd className="px-1.5 py-0.5 bg-muted rounded text-xs font-mono">m</kbd>
-                  <span className="text-muted-foreground">— Images</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <kbd className="px-1.5 py-0.5 bg-muted rounded text-xs font-mono">g</kbd>
-                  <kbd className="px-1.5 py-0.5 bg-muted rounded text-xs font-mono">a</kbd>
-                  <span className="text-muted-foreground">— Affiliates</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <kbd className="px-1.5 py-0.5 bg-muted rounded text-xs font-mono">g</kbd>
-                  <kbd className="px-1.5 py-0.5 bg-muted rounded text-xs font-mono">s</kbd>
-                  <span className="text-muted-foreground">— Settings</span>
-                </div>
-                <div className="text-xs text-muted-foreground mt-2 pt-1.5 border-t">
-                  Press keys in sequence within ~1.2s
-                </div>
-              </div>
+              ) : (
+                <div className="text-xs">Hotkeys disabled by Ops.</div>
+              )
             }
             side="left"
+            muted={!hotkeysEnabled}
           >
             <button
-              className="p-1 rounded hover-elevate"
+              className={`p-1 rounded ${hotkeysEnabled ? 'hover-elevate' : 'cursor-default opacity-50'}`}
               data-testid="button-shortcuts-help"
               type="button"
-              onMouseEnter={() => setShowHint(true)}
+              onMouseEnter={() => hotkeysEnabled && setShowHint(true)}
               onMouseLeave={() => {
                 // Only hide if not in auto-show mode
                 if (!hintTimerRef.current) {
@@ -117,8 +143,8 @@ export default function HeaderOpsMenu() {
               }}
               style={{ position: "relative" }}
             >
-              <HelpCircle className="h-3.5 w-3.5 text-muted-foreground" />
-              {showHint && (
+              <HelpCircle className={`h-3.5 w-3.5 ${hotkeysEnabled ? 'text-muted-foreground' : 'text-muted-foreground/50'}`} />
+              {showHint && hotkeysEnabled && (
                 <div className="absolute left-0 top-full mt-1 bg-popover text-popover-foreground shadow-md rounded-md border p-2 w-64 z-50" style={{ left: "-240px" }}>
                   <div className="space-y-1 text-xs">
                     <div className="font-semibold mb-1.5">Keyboard Shortcuts</div>
