@@ -70,3 +70,61 @@ The platform is structured into core modules and features:
 - **PostgreSQL (Neon-backed)**: Primary database for persistent storage.
 - **Replit Auth**: Provides secure user authentication via OpenID Connect.
 - **Google Drive API**: Integrated for knowledge management features (search, upload drafts, publish files).
+
+## Go-Live Readiness Documentation
+
+Comprehensive operational documentation for production deployment:
+
+### Environment Configuration
+- **`docs/GO_LIVE_ENV_VARS.md`**: Complete reference for all required environment variables and secrets
+  - Database configuration (PostgreSQL auto-provided)
+  - Authentication secrets (SESSION_SECRET, DTH_API_TOKEN, REPL_ID, ISSUER_URL)
+  - OpenAI API integration (OPENAI_API_KEY, model selection, rate limits)
+  - Google Drive Service Account (GDRIVE_SA_EMAIL, GDRIVE_SA_PRIVATE_KEY)
+  - Rate limiting configuration (COPILOT_REQS_PER_MIN)
+  - Staging environment settings
+  - Pre-launch checklist and troubleshooting guide
+
+### Database Backup & Recovery
+- **`docs/BACKUP_CONFIGURATION.md`**: Database backup strategy and disaster recovery procedures
+  - Replit PostgreSQL point-in-time restore (14-day retention requirement)
+  - Restore procedures with step-by-step instructions
+  - Recovery Time Objective (RTO): <1 hour
+  - Recovery Point Objective (RPO): <5 minutes
+  - Backup validation and testing procedures
+  - Compliance and audit trail documentation
+
+### Security & Access Control
+- **`docs/GDRIVE_LEAST_PRIVILEGE_CHECKLIST.md`**: Google Drive Service Account security verification
+  - Least-privilege folder permission matrix (9 folders: 3 BUs × 3 roles)
+  - Service Account setup and configuration steps
+  - Folder structure (read/, draft/, publish/ per Business Unit)
+  - Permission verification checklist with test procedures
+  - Security audit guidelines
+  - Quarterly review schedule
+
+### Operational Runbooks
+- **`docs/RUNBOOK_PUBLISH_INCIDENT.md`**: Knowledge Publishing incident response (1-pager)
+  - File published to wrong folder recovery
+  - Duplicate publish (idempotency failure) resolution
+  - Publish failure troubleshooting (403, 500, timeout errors)
+  - X-Request-Id distributed tracing across operations events
+  - Rollback procedures (move file from publish/ to draft/)
+  - SQL queries for audit trail and event correlation
+
+- **`docs/RUNBOOK_WORK_ORDERS.md`**: Work Orders budget management (1-pager)
+  - Budget cap enforcement (calendar day: midnight to midnight UTC)
+  - Rate limit response handling (HTTP 429 with Retry-After: 86400)
+  - Safe cap adjustment workflows with approval levels
+  - Cost analysis and optimization guidance
+  - Suspicious activity detection and response
+  - SQL queries for usage monitoring (NOTE: cost column is TEXT, requires `::numeric` cast)
+
+### Key Operational Notes
+- **Work Orders Budget Window**: Calendar day (midnight to midnight UTC), NOT rolling 24-hour window
+- **429 Response Format**: Simple `{ "error": "..." }` - usage metrics are in operations_events table
+- **Cost Column Type**: TEXT in database, always use `::numeric` cast in SQL aggregations
+- **Retry-After Location**: `server/api/work_orders.route.ts` lines 84, 106
+- **Default Caps**: 100 runs/day, $2.00/day (often adjusted to $5.00+ in production)
+- **Idempotency Protection**: Publish endpoints support `Idempotency-Key` header, stored in published_knowledge table
+- **Service Account Scopes**: Full Drive API scope at OAuth level, folder-level permissions via sharing

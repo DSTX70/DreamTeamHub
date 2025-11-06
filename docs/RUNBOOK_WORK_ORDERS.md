@@ -10,14 +10,20 @@
 ## Overview
 
 Work Orders execute simulated agent tasks with **budget caps** to prevent runaway costs:
-- **Runs per day:** Maximum number of executions per work order per 24h
-- **USD per day:** Maximum cost per work order per 24h
+- **Runs per day:** Maximum number of executions per work order per calendar day (midnight to midnight UTC)
+- **USD per day:** Maximum cost per work order per calendar day (midnight to midnight UTC)
+
+**Key Concepts:**
+- Budget enforcement uses **calendar day** (not rolling 24-hour window)
+- Caps reset automatically at midnight UTC
+- 429 responses are simple error messages (usage details in operations logs)
+- Cost column stored as TEXT (requires `::numeric` cast in SQL queries)
 
 This runbook covers:
-- Understanding budget caps
-- Safely raising caps
+- Understanding budget caps and calendar day enforcement
+- Safely raising caps with approval workflows
 - Responding to rate limit errors (HTTP 429)
-- Monitoring work order spend
+- Monitoring work order spend via operations logs
 
 ---
 
@@ -31,35 +37,44 @@ Each work order has two caps stored in database:
 ```typescript
 {
   caps: {
-    runsPerDay: 100,    // Max executions per 24h
-    usdPerDay: 5.00     // Max cost per 24h
+    runsPerDay: 100,    // Max executions per calendar day
+    usdPerDay: 2.00     // Max cost per calendar day (default)
   }
 }
 ```
 
-**Enforcement Window:** Rolling 24-hour window (not calendar day)
+**Enforcement Window:** Calendar day (midnight to midnight UTC)
+
+**How it works:**
+- Code checks: `startOfDay.setHours(0, 0, 0, 0)` (line 57-58)
+- Counts all runs with `started_at >= midnight today`
+- Resets automatically at midnight UTC
 
 **Example:**
-- Work order created: 2025-11-06 14:00
-- First run: 2025-11-06 14:30
-- Budget window: 2025-11-06 14:30 → 2025-11-07 14:30
+- Caps: 100 runs/day, $5.00/day
+- First run: 2025-11-06 00:01 UTC
+- 100th run: 2025-11-06 23:45 UTC
+- Budget resets: 2025-11-07 00:00 UTC (can run again)
+
+**IMPORTANT:** Budget window is **calendar day**, not 24 hours from first run.
 
 ### Rate Limit Response
 
 When cap exceeded, API returns:
 
 **HTTP 429 Too Many Requests**
+
 ```json
 {
-  "error": "Work order rate limit: runs/day cap reached (100/100)",
-  "caps": {
-    "runsPerDay": 100,
-    "usdPerDay": 5.00
-  },
-  "usage": {
-    "runsToday": 100,
-    "costToday": 4.83
-  }
+  "error": "runs/day cap reached"
+}
+```
+
+OR
+
+```json
+{
+  "error": "budget cap reached"
 }
 ```
 
@@ -67,6 +82,11 @@ When cap exceeded, API returns:
 ```
 Retry-After: 86400
 ```
+
+**Note:** The 429 response does NOT include usage metrics in the JSON body. To see current usage, check:
+1. **Operations Events:** Navigate to `/ops-logs`, filter by `RATE_LIMIT_429`
+2. **Operations Dashboard:** View 429 counts at `/ops-dashboard`
+3. **Database query:** See SQL examples below
 
 **What Retry-After Means:**
 - Value: `86400` (seconds = 24 hours)
@@ -79,8 +99,8 @@ Retry-After: 86400
 
 **Symptoms:**
 - User sees "Work order rate limit" error
-- HTTP 429 response
-- Message: `runs/day cap reached (X/Y)`
+- HTTP 429 response with simple JSON: `{ "error": "runs/day cap reached" }`
+- **Note:** Response does NOT include current usage counts
 
 **Root Cause:**
 - Work order executed too many times in 24h window
@@ -93,17 +113,19 @@ Retry-After: 86400
 
 **Check recent runs:**
 ```sql
+-- IMPORTANT: Use calendar day, not 24-hour window
+-- NOTE: cost column is TEXT, requires ::numeric cast
 SELECT 
-  agent,
+  agent_name as agent,
   wo_id,
   COUNT(*) as run_count,
-  SUM(cost) as total_cost,
+  SUM(cost::numeric) as total_cost,
   MIN(started_at) as first_run,
   MAX(finished_at) as last_run
 FROM work_order_runs
 WHERE wo_id = 'target-work-order-id'
-  AND started_at > NOW() - INTERVAL '24 hours'
-GROUP BY agent, wo_id;
+  AND started_at >= DATE_TRUNC('day', NOW())  -- Midnight today (UTC)
+GROUP BY agent_name, wo_id;
 ```
 
 **Red Flags:**
@@ -120,14 +142,16 @@ GROUP BY agent, wo_id;
 
 **Check current usage:**
 ```sql
+-- IMPORTANT: Use calendar day, not 24-hour window
+-- NOTE: cost column is TEXT, requires ::numeric cast
 SELECT 
   wo_id,
   COUNT(*) as runs_today,
-  SUM(cost) as cost_today,
-  AVG(cost) as avg_cost_per_run
+  SUM(cost::numeric) as cost_today,
+  AVG(cost::numeric) as avg_cost_per_run
 FROM work_order_runs
 WHERE wo_id = 'target-work-order-id'
-  AND started_at > NOW() - INTERVAL '24 hours'
+  AND started_at >= DATE_TRUNC('day', NOW())  -- Midnight today (UTC)
 GROUP BY wo_id;
 ```
 
@@ -182,8 +206,8 @@ VALUES (
 
 **Symptoms:**
 - User sees "budget cap reached" error
-- HTTP 429 response
-- Message: `budget cap reached ($X.XX/$Y.YY)`
+- HTTP 429 response with simple JSON: `{ "error": "budget cap reached" }`
+- **Note:** Response does NOT include cost amounts - check operations logs for details
 
 **Root Cause:**
 - Work order costs exceeded daily budget
@@ -197,18 +221,19 @@ VALUES (
 
 **Check cost distribution:**
 ```sql
+-- IMPORTANT: Use calendar day, not 24-hour window
 SELECT 
   wo_id,
-  agent,
+  agent_name as agent,
   COUNT(*) as run_count,
-  AVG(cost) as avg_cost,
-  MAX(cost) as max_cost,
-  SUM(cost) as total_cost,
-  PERCENTILE_CONT(0.95) WITHIN GROUP (ORDER BY cost) as p95_cost
+  AVG(cost::numeric) as avg_cost,
+  MAX(cost::numeric) as max_cost,
+  SUM(cost::numeric) as total_cost,
+  PERCENTILE_CONT(0.95) WITHIN GROUP (ORDER BY cost::numeric) as p95_cost
 FROM work_order_runs
 WHERE wo_id = 'target-work-order-id'
-  AND started_at > NOW() - INTERVAL '24 hours'
-GROUP BY wo_id, agent;
+  AND started_at >= DATE_TRUNC('day', NOW())  -- Midnight today (UTC)
+GROUP BY wo_id, agent_name;
 ```
 
 **Red Flags:**
@@ -305,15 +330,18 @@ ORDER BY created_at DESC;
 
 **Find who initiated runs:**
 ```sql
+-- IMPORTANT: Use calendar day, not 24-hour window
 SELECT 
   actor,
   COUNT(*) as run_count,
-  ARRAY_AGG(DISTINCT meta->>'ipAddress') as ip_addresses
+  meta->>'agentName' as agent_name,
+  MIN(created_at) as first_run,
+  MAX(created_at) as last_run
 FROM operations_events
 WHERE kind = 'WORK_ORDER_START'
-  AND (meta->>'workOrderId')::text = 'suspicious-work-order-id'
-  AND created_at > NOW() - INTERVAL '24 hours'
-GROUP BY actor;
+  AND (meta->>'woId')::text = 'suspicious-work-order-id'
+  AND created_at >= DATE_TRUNC('day', NOW())  -- Midnight today (UTC)
+GROUP BY actor, meta->>'agentName';
 ```
 
 ### 3. Escalate
@@ -344,20 +372,21 @@ Key metrics:
 
 **Run manually or schedule:**
 ```sql
+-- IMPORTANT: Use calendar day, not 24-hour window
 SELECT 
   w.id,
   w.title,
   w.caps->>'runsPerDay' as run_cap,
   w.caps->>'usdPerDay' as usd_cap,
   COUNT(r.id) as actual_runs,
-  COALESCE(SUM(r.cost), 0) as actual_cost,
+  COALESCE(SUM(r.cost::numeric), 0) as actual_cost,
   ROUND(100.0 * COUNT(r.id) / (w.caps->>'runsPerDay')::int, 1) as run_utilization_pct,
-  ROUND(100.0 * COALESCE(SUM(r.cost), 0) / (w.caps->>'usdPerDay')::numeric, 1) as cost_utilization_pct
+  ROUND(100.0 * COALESCE(SUM(r.cost::numeric), 0) / (w.caps->>'usdPerDay')::numeric, 1) as cost_utilization_pct
 FROM work_orders w
 LEFT JOIN work_order_runs r 
   ON w.id = r.wo_id 
-  AND r.started_at > NOW() - INTERVAL '24 hours'
-WHERE w.status = 'active'
+  AND r.started_at >= DATE_TRUNC('day', NOW())  -- Midnight today (UTC)
+WHERE w.status = 'draft'  -- Note: status is 'draft', not 'active' in current schema
 GROUP BY w.id, w.title, w.caps
 ORDER BY cost_utilization_pct DESC;
 ```
@@ -533,26 +562,39 @@ WHERE id = 'work-order-id';
 
 ### Key SQL Queries
 
-**Current usage:**
+**Current usage (today's calendar day):**
 ```sql
-SELECT wo_id, COUNT(*) as runs, SUM(cost) as cost
+SELECT wo_id, COUNT(*) as runs, SUM(cost::numeric) as cost
 FROM work_order_runs
-WHERE started_at > NOW() - INTERVAL '24 hours'
+WHERE started_at >= DATE_TRUNC('day', NOW())  -- Midnight today (UTC)
 GROUP BY wo_id;
 ```
 
-**Cap violators:**
+**Cap violators (with details):**
 ```sql
-SELECT * FROM operations_events
+SELECT 
+  id,
+  actor,
+  message,
+  meta->>'woId' as work_order_id,
+  meta->>'woTitle' as work_order_title,
+  meta->>'agentName' as agent,
+  meta->>'reason' as cap_type,
+  meta->>'runsToday' as runs_today,
+  meta->>'cap' as cap_limit,
+  created_at
+FROM operations_events
 WHERE kind = 'RATE_LIMIT_429'
-  AND created_at > NOW() - INTERVAL '1 hour'
+  AND created_at >= NOW() - INTERVAL '1 hour'
 ORDER BY created_at DESC;
 ```
 
 ### Default Values
 - **Runs per day:** 100
-- **USD per day:** $5.00
+- **USD per day:** $2.00 (default in code, often adjusted to $5.00+)
 - **Retry-After:** 86400 seconds (24 hours)
+- **Budget window:** Calendar day (midnight to midnight UTC)
+- **Status field:** `draft` (not `active` - all work orders use 'draft' status)
 
 ---
 
