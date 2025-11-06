@@ -35,6 +35,8 @@ The platform is structured into core modules and features:
 - **Dream Team Chat**: AI-powered conversational interface using OpenAI GPT-4 with 32 role-based personas, context awareness, and agent memory.
 - **Roles ⇄ Agent Specs Sync**: Synchronizes Agent Specifications from Role Cards with two-way diff views and smart suggestions.
 - **DTH Copilot**: AI-powered assistant using OpenAI tool-calling with dual-mode architecture (direct tool calling for instant responses + chat-based for Custom GPT). Features quick action buttons, paginated table views with formatted KPIs, and the **Findings at a Glance** analytics card that automatically calculates risk distribution (low/medium/high), identifies top at-risk agents, and suggests actionable next steps.
+- **Universal Search**: Cmd+K powered search modal that searches across brands, products, projects, agents, and pods with relevance-based sorting, keyboard navigation, and paginated results. Features visible search button in header and comprehensive API with X-Total-Count headers for accurate pagination.
+- **Breadcrumb Navigation**: Auto-generating breadcrumb component displays contextual hierarchy (i³ → BU → Brand → Product → Project → Task) across major pages including Control Tower, Projects, Roles, Academy, Copilot, Work Orders, and Business Unit home pages.
 
 ### Technology Stack
 - **Frontend**: React 18, TypeScript, Wouter, TanStack Query v5, React Hook Form, Zod, Shadcn UI, Tailwind CSS.
@@ -79,6 +81,13 @@ Dream Team Hub exposes a RESTful API with dual authentication support:
   - Includes pagination (limit/offset) and text search
   - Returns KPIs (task_success, latency_p95_s, cost_per_task_usd)
   - Includes promotion progress and links to evidence packs
+
+### Universal Search API (Session Auth)
+- `GET /api/search` - Universal search across all entities
+  - Query parameters: `q` (required), `limit` (default: 20), `offset` (default: 0), `types` (optional filter)
+  - Searches across brands, products, projects, agents, and pods
+  - Returns relevance-sorted results with X-Total-Count header for pagination
+  - Response includes type, id, title, subtitle, url, and context for each result
 
 ### Authentication Methods
 1. **Session Auth**: Replit Auth login (for web UI)
