@@ -1,4 +1,4 @@
-import { Home, Users, Lightbulb, Shield, FileText, Inbox, Sparkles, Layers, MessageSquare, Bot, Radio, Settings, RefreshCw, Palette, HelpCircle, FolderKanban, Presentation, GraduationCap, Cpu, Plug, ClipboardList, Building2 } from "lucide-react";
+import { Home, Users, Lightbulb, Shield, FileText, Inbox, Sparkles, Layers, MessageSquare, Bot, Radio, Settings, RefreshCw, Palette, HelpCircle, FolderKanban, Presentation, GraduationCap, Cpu, Plug, ClipboardList, Building2, FileBarChart } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import {
   Sidebar,
@@ -69,6 +69,7 @@ const navigation = [
   {
     title: "Support",
     items: [
+      { title: "Operations Logs", url: "/ops-logs", icon: FileBarChart },
       { title: "Integrations", url: "/integrations", icon: Plug },
       { title: "Platform Guide", url: "/help", icon: HelpCircle },
       { title: "Interactive Demo", url: "/demo", icon: Presentation },

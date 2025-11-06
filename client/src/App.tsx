@@ -32,6 +32,7 @@ import CopilotPage from "@/pages/copilot";
 import IntegrationsPage from "@/pages/integrations";
 import WorkOrdersPage from "@/pages/work-orders";
 import BUHomePage from "@/pages/bu-home";
+import OpsLogsPage from "@/pages/ops-logs";
 import { Button } from "@/components/ui/button";
 import { LogOut, User as UserIcon, Search } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -65,6 +66,7 @@ function AuthenticatedRoutes() {
       <Route path="/copilot" component={CopilotPage} />
       <Route path="/integrations" component={IntegrationsPage} />
       <Route path="/work-orders" component={WorkOrdersPage} />
+      <Route path="/ops-logs" component={OpsLogsPage} />
       <Route path="/bu/:slug" component={BUHomePage} />
       <Route path="/help" component={HelpPage} />
       <Route path="/demo" component={Demo} />

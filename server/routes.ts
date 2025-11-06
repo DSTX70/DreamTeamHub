@@ -3,7 +3,7 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated } from "./replitAuth";
 import { searchRoute } from "./api_search_route";
-import { postOpsEvent } from "./api/ops_events.route";
+import { getOpsEvents, postOpsEvent } from "./api/ops_events.route";
 import { 
   insertPodSchema, insertPodAgentSchema, insertAgentSchema, insertPersonSchema, insertRoleCardSchema, insertRoleRaciSchema, insertAgentSpecSchema,
   insertWorkItemSchema, insertDecisionSchema, insertIdeaSparkSchema, insertBrainstormSessionSchema,
@@ -102,6 +102,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // OPERATIONS EVENTS
   // ===========================
   
+  app.get("/api/ops/events", isAuthenticated, getOpsEvents);
   app.post("/api/ops/events", isAuthenticated, postOpsEvent);
 
   // ===========================
