@@ -1,0 +1,223 @@
+Below are PR-style diffs that (A) Zod-wrap the Express Work Orders routes you already mounted and (B) finish Next.js API parity for the ops events endpoints with Zod. Copy → git apply in Replit.
+
+A) Zod-wrap the Express Work Orders routes
+1) Add validators (server-side)
+diff --git a/server/lib/validators/workOrders.ts b/server/lib/validators/workOrders.ts
+new file mode 100644
+--- /dev/null
++++ b/server/lib/validators/workOrders.ts
+@@
++import { z } from "zod";
++
++export const AutonomyLevel = z.enum(["L0","L1","L2","L3"]);
++
++export const WorkOrderCaps = z.object({
++  runsPerDay: z.number().int().min(1).max(10000).default(100),
++  usdPerDay: z.number().min(0).max(1_000_000).default(2.0),
++}).partial().default({});
++
++export const WorkOrderKpis = z.object({
++  successMin: z.number().int().min(0).max(100).default(90),
++  p95Max: z.number().min(0).max(60_000).default(3.0),
++}).partial().default({});
++
++export const WorkOrderCreateBody = z.object({
++  title: z.string().min(3, "title too short"),
++  owner: z.string().min(2, "owner too short"),
++  autonomy: AutonomyLevel.default("L1").optional(),
++  inputs: z.string().min(1, "inputs required"),
++  output: z.string().min(1, "output required"),
++  caps: WorkOrderCaps.optional(),
++  kpis: WorkOrderKpis.optional(),
++  playbook: z.string().max(50000).optional(),
++  stop: z.string().max(1000).optional(),
++});
++
++export type WorkOrderCreateBody = z.infer<typeof WorkOrderCreateBody>;
++
++export const WorkOrderStartBody = z.object({
++  agent: z.string().min(2, "agent required"),
++});
++export type WorkOrderStartBody = z.infer<typeof WorkOrderStartBody>;
+
+2) Wrap the existing Express handlers with Zod
+diff --git a/server/api/work_orders.db.route.ts b/server/api/work_orders.db.route.ts
+--- a/server/api/work_orders.db.route.ts
++++ b/server/api/work_orders.db.route.ts
+@@
+ import { db } from "../drizzle/db";
+ import { workOrder, workOrderRun } from "../drizzle/schema";
+ import { desc, and, eq, gte } from "drizzle-orm";
++import { WorkOrderCreateBody, WorkOrderStartBody } from "../lib/validators/workOrders";
+ 
+ export async function listWorkOrders(req, res) {
+   const rows = await db.select().from(workOrder).orderBy(desc(workOrder.createdAt)).limit(50);
+   res.setHeader("X-Total-Count", String(rows.length));
+   res.json(rows);
+ }
+ 
+ export async function createWorkOrder(req, res) {
+-  const b = req.body || {};
++  const parsed = WorkOrderCreateBody.safeParse(req.body || {});
++  if (!parsed.success) {
++    const msg = parsed.error.errors.map(e => e.message).join("; ");
++    return res.status(422).json({ error: msg });
++  }
++  const b = parsed.data;
+   const [row] = await db.insert(workOrder).values({
+     title: b.title, owner: b.owner, autonomy: b.autonomy ?? "L1",
+     inputs: b.inputs, output: b.output,
+     capsRunsPerDay: b.caps?.runsPerDay ?? 100,
+     capsUsdPerDay: b.caps?.usdPerDay ?? "2.000",
+     kpiSuccessMin: b.kpis?.successMin ?? 90,
+     kpiP95Max: b.kpis?.p95Max ?? "3.00",
+     playbook: b.playbook, stop: b.stop, status: "draft",
+   }).returning();
+   res.status(201).json(row);
+ }
+ 
+ export async function startWorkOrderRun(req, res) {
+-  const woId = String(req.params.woId);
+-  const agentName = String(req.body?.agent || "").trim();
+-  if (!agentName) return res.status(422).json({ error: "agent required" });
++  const woId = String(req.params.woId);
++  const parsed = WorkOrderStartBody.safeParse(req.body || {});
++  if (!parsed.success) {
++    const msg = parsed.error.errors.map(e => e.message).join("; ");
++    return res.status(422).json({ error: msg });
++  }
++  const agentName = parsed.data.agent.trim();
+ 
+   const [wo] = await db.select().from(workOrder).where(eq(workOrder.id, woId));
+   if (!wo) return res.status(404).json({ error: "work order not found" });
+@@
+   const [run] = await db.insert(workOrderRun).values({
+     woId, agentName, status: "done", ms, cost, mirror: `Drafts ready → ${wo.output}`
+   }).returning();
+ 
+   res.status(201).json({
+     agent: agentName, wo_id: woId, status: run.status, ms: run.ms, cost: run.cost,
+     started_at: run.startedAt, finished_at: run.finishedAt, mirror: run.mirror
+   });
+ }
+
+B) Next.js API parity for Ops Events (GET + POST) with Zod
+
+This adds App Router versions of the ops logs/event endpoints (useful if you’re moving off Express).
+
+1) Validators
+diff --git a/lib/validators/ops.ts b/lib/validators/ops.ts
+new file mode 100644
+--- /dev/null
++++ b/lib/validators/ops.ts
+@@
++import { z } from "zod";
++
++export const OpsKind = z.string().min(2);
++export const OwnerType = z.enum(["BU","BRAND","PRODUCT","PROJECT"]);
++export const UUID = z.string().uuid("invalid UUID");
++
++export const PostOpsBody = z.object({
++  kind: OpsKind,                 // "BU_VIEW" | "KNOWLEDGE_DRAFT" | "PUBLISH" | ...
++  actor: z.string().min(1).optional(),
++  ownerType: OwnerType.optional(),
++  ownerId: UUID.optional(),
++  message: z.string().max(2000).optional(),
++  meta: z.record(z.any()).optional(),
++});
++
++export const GetOpsQuery = z.object({
++  limit: z.coerce.number().int().min(1).max(100).default(100),
++  kind: z.string().optional(),
++  owner_type: OwnerType.optional(),
++  owner_id: UUID.optional(),
++});
+
+2) Next.js routes
+
+POST /api/ops/events
+
+diff --git a/app/api/ops/events/route.ts b/app/api/ops/events/route.ts
+new file mode 100644
+--- /dev/null
++++ b/app/api/ops/events/route.ts
+@@
++import { NextRequest } from "next/server";
++import { json } from "@/lib/next/response";
++import { db } from "@/drizzle/db";
++import { opsEvent } from "@/drizzle/schema";
++import { PostOpsBody } from "@/lib/validators/ops";
++
++export async function POST(req: NextRequest) {
++  const body = await req.json().catch(()=> ({}));
++  const parsed = PostOpsBody.safeParse(body);
++  if (!parsed.success) return json({ error: parsed.error.errors.map(e=>e.message).join("; ") }, 422);
++  const b = parsed.data;
++  const [row] = await db.insert(opsEvent).values({
++    actor: b.actor ?? "anon",
++    kind: b.kind,
++    ownerType: b.ownerType,
++    ownerId: b.ownerId as any,
++    message: b.message,
++    meta: b.meta as any
++  }).returning();
++  return json({ ok: true, id: row.id }, 201);
++}
+
+
+GET /api/ops/events
+
+diff --git a/app/api/ops/events/route.ts b/app/api/ops/events/route.ts
+--- a/app/api/ops/events/route.ts
++++ b/app/api/ops/events/route.ts
+@@
++import { NextRequest } from "next/server";
++import { json } from "@/lib/next/response";
++import { db } from "@/drizzle/db";
++import { opsEvent } from "@/drizzle/schema";
++import { and, eq, desc } from "drizzle-orm";
++import { GetOpsQuery } from "@/lib/validators/ops";
++
++export async function GET(req: NextRequest) {
++  const qp = Object.fromEntries(req.nextUrl.searchParams.entries());
++  const parsed = GetOpsQuery.safeParse(qp);
++  if (!parsed.success) return json({ error: parsed.error.errors.map(e=>e.message).join("; ") }, 422);
++  const { limit, kind, owner_type, owner_id } = parsed.data;
++
++  const where = and(
++    kind ? eq(opsEvent.kind, kind) : undefined,
++    owner_type ? eq(opsEvent.ownerType, owner_type) : undefined,
++    owner_id ? eq(opsEvent.ownerId, owner_id as any) : undefined,
++  );
++  const rows = await db.select().from(opsEvent).where(where as any).orderBy(desc(opsEvent.at)).limit(limit);
++  return new Response(JSON.stringify(rows), { status: 200, headers: { "content-type":"application/json", "X-Total-Count": String(rows.length) }});
++}
+
+Quick tests
+
+Express (Work Orders):
+
+curl -XPOST /api/work-orders -H "content-type: application/json" \
+  -d '{"title":"Router L1 Wk1","owner":"Lume","inputs":"/inbox/*","output":"/drafts/router/"}'
+# -> 201 or 422 with clear validation error
+
+curl -XPOST /api/work-orders/<woId>/start -H "content-type: application/json" \
+  -d '{"agent":"Support L1 — Router"}'
+# -> 201 or 422 if missing agent
+
+
+Next.js (Ops):
+
+curl -XPOST /api/ops/events -H "content-type: application/json" \
+  -d '{"kind":"BU_VIEW","ownerType":"BU","ownerId":"<UUID>","message":"view"}'
+
+curl "/api/ops/events?limit=10&kind=PUBLISH&owner_type=BU&owner_id=<UUID>"
+# -> 200 with X-Total-Count
+
+Definition of Done
+
+✅ Work Orders Express routes reject malformed bodies with HTTP 422 + human messages.
+
+✅ Ops Events Next.js routes accept only well-formed payloads/queries and set X-Total-Count.
+
+✅ No behavior change to your good requests; only safer inputs and clearer errors.

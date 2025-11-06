@@ -48,9 +48,10 @@ The platform is structured into core modules and features:
 ### Technology Stack
 - **Frontend**: React 18, TypeScript, Wouter, TanStack Query v5, React Hook Form, Zod, Shadcn UI, Tailwind CSS.
   - **Reusable Components**: `FindingsAtAGlance` - Analytics summary card for agent performance metrics
-- **Backend**: Express.js, TypeScript, Drizzle ORM.
+- **Backend**: Express.js, TypeScript, Drizzle ORM, Zod validation.
   - **Copilot**: Dual-mode endpoint supporting direct tool calling (instant) and chat-based queries (Custom GPT)
   - **Analytics**: Real-time calculation of agent KPIs, risk categorization, and actionable insights
+  - **Request Validation**: Comprehensive Zod schemas for all API endpoints (`lib/validators/`) with detailed error messages
 - **Database**: PostgreSQL (Neon-backed) with a comprehensive relational model (25 tables).
 
 ### Authentication & Security
