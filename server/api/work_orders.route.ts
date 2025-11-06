@@ -108,28 +108,34 @@ export async function startWorkOrderRun(req: Request, res: Response) {
     return res.status(429).json({ error: "budget cap reached" });
   }
 
-  // Simulate a draft-only job
-  const ms = Math.floor(400 + Math.random() * 1600);
-  const cost = (0.002 + Math.random() * 0.004).toFixed(3);
-
+  // Execute work order using real LLM-powered executor
+  const { workOrderExecutor } = await import("../services/work-order-executor");
+  
+  const executionResult = await workOrderExecutor.execute(wo, agentName);
+  
   const [run] = await db.insert(workOrderRuns).values({
     woId,
     agentName,
-    status: "done",
-    ms,
-    cost,
-    mirror: `Drafts ready → ${wo.output}`,
+    status: executionResult.status === "success" ? "done" : 
+            executionResult.status === "failed" ? "failed" : "partial",
+    ms: executionResult.ms,
+    cost: executionResult.cost,
+    mirror: executionResult.error ? 
+            `Error: ${executionResult.error}` : 
+            executionResult.output,
     finishedAt: new Date(),
   }).returning();
 
-  // Log WORK_ORDER_START event
+  // Log WORK_ORDER_START event with actual execution metrics
   const actor = agentName || (req as any).user?.email || (req as any).user?.id || "anonymous";
+  const actualCost = Number(executionResult.cost);
+  
   await db.insert(opsEvent).values({
     actor,
     kind: "WORK_ORDER_START",
     ownerType: null,
     ownerId: woId,
-    message: `Work order executed: ${wo.title}`,
+    message: `Work order executed: ${wo.title} (${executionResult.status})`,
     meta: {
       woId,
       woTitle: wo.title,
@@ -138,9 +144,10 @@ export async function startWorkOrderRun(req: Request, res: Response) {
       ms: run.ms,
       cost: run.cost,
       runsToday: runsToday + 1,
-      costToday: costToday + Number(cost),
+      costToday: costToday + actualCost,
       caps,
       path: req.path,
+      executionMetadata: executionResult.metadata,
     },
   });
 
