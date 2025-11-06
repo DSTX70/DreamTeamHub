@@ -4,7 +4,8 @@ import { db } from "../db";
 import { knowledgeLinks, opsEvent } from "@shared/schema";
 import { eq, and } from "drizzle-orm";
 import { getDriveClient } from "../integrations/googleDrive_real";
-import { SearchQuery, DraftUploadBody, PublishBody } from "../../lib/validators/knowledge";
+import { SearchQuery, DraftUploadBody } from "../../lib/validators/knowledge";
+import { PublishHeaders, PublishBody } from "../../lib/validators/publish";
 
 function required(v: any, msg: string) {
   if (!v) throw Object.assign(new Error(msg), { status: 400 });
@@ -67,9 +68,27 @@ export async function publishFile(req: Request, res: Response) {
     const owner = String(req.params.owner).toUpperCase();
     const id = String(req.params.id);
     const fileId = String(req.params.fileId);
-    const reviewer = String(req.headers["x-reviewer-token"] || "");
-    required(reviewer && reviewer.length >= 12, "reviewer token required");
-    const idem = String(req.headers["idempotency-key"] || crypto.randomUUID());
+    
+    // Validate headers
+    const headersParsed = PublishHeaders.safeParse({
+      "x-reviewer-token": req.headers["x-reviewer-token"],
+      "idempotency-key": req.headers["idempotency-key"],
+    });
+    if (!headersParsed.success) {
+      const msg = headersParsed.error.errors.map(e => e.message).join("; ");
+      return res.status(422).json({ error: msg });
+    }
+    
+    // Validate body
+    const bodyParsed = PublishBody.safeParse(req.body);
+    if (!bodyParsed.success) {
+      const msg = bodyParsed.error.errors.map(e => e.message).join("; ");
+      return res.status(422).json({ error: msg });
+    }
+    
+    const reviewer = headersParsed.data["x-reviewer-token"];
+    const idem = headersParsed.data["idempotency-key"] || crypto.randomUUID();
+    const { approver, note } = bodyParsed.data;
 
     const { publish } = await resolveFolders(owner, id);
     required(publish, "Publish folder not linked");
@@ -83,13 +102,22 @@ export async function publishFile(req: Request, res: Response) {
       kind: "PUBLISH",
       ownerType: owner,
       ownerId: id,
-      message: `Published file ${fileId}`,
-      meta: { fileId, reviewerHash, idempotencyKey: idem, driveTitle: out.name, driveUrl: out.webViewLink }
+      message: `Published file ${fileId}${note ? `: ${note}` : ''}`,
+      meta: { 
+        fileId, 
+        reviewerHash, 
+        idempotencyKey: idem, 
+        driveTitle: out.name, 
+        driveUrl: out.webViewLink,
+        approverName: approver.name,
+        approverEmail: approver.email,
+        note
+      }
     }).returning();
 
     res.setHeader("X-Request-Id", out.id || "");
     res.setHeader("X-Idempotency-Key", idem);
-    return res.json({ ok: true, fileId, drive: out });
+    return res.json({ ok: true, fileId, eventId: event.id, drive: out });
   } catch (e: any) {
     return res.status(e.status || 500).json({ error: e.message || "publish failed" });
   }
