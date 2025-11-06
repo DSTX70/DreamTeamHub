@@ -3,6 +3,7 @@ import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { initializeCronJobs } from "./cron";
 import { stagingGuard } from "./middleware/stagingGuard";
+import { csp } from "./security/scopes_and_csp";
 
 const app = express();
 
@@ -13,6 +14,9 @@ app.get("/healthz", (_req, res) => {
 
 // Staging environment protection (basic auth or IP allowlist)
 app.use(stagingGuard());
+
+// Content Security Policy headers
+app.use(csp());
 
 declare module 'http' {
   interface IncomingMessage {

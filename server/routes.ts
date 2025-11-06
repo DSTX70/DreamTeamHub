@@ -2,6 +2,7 @@ import type { Express, RequestHandler } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated } from "./replitAuth";
+import { requireScopes } from "./security/scopes_and_csp";
 import { searchRoute } from "./api_search_route";
 import { getOpsEvents, postOpsEvent } from "./api/ops_events.route";
 import { publishFile, getPublishedFiles, searchKnowledge, uploadDraft } from "./api/knowledge.route";
@@ -112,11 +113,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // KNOWLEDGE / PUBLISHING & DRIVE GATEWAY
   // ===========================
   
-  app.get("/api/knowledge/:owner/:id/search", isAuthenticated, searchKnowledge);
-  app.post("/api/knowledge/:owner/:id/drafts", isAuthenticated, uploadDraft);
-  app.post("/api/knowledge/:owner/:id/publish/:fileId", isAuthenticated, publishFile);
-  app.post("/api/knowledge/publish", isAuthenticated, publishFile); // Legacy endpoint
-  app.get("/api/knowledge/published", isAuthenticated, getPublishedFiles);
+  app.get("/api/knowledge/:owner/:id/search", isDualAuthenticated, searchKnowledge);
+  app.post("/api/knowledge/:owner/:id/drafts", isDualAuthenticated, requireScopes("knowledge:draft:write"), uploadDraft);
+  app.post("/api/knowledge/:owner/:id/publish/:fileId", isDualAuthenticated, requireScopes("knowledge:draft:write"), publishFile);
+  app.post("/api/knowledge/publish", isDualAuthenticated, requireScopes("knowledge:draft:write"), publishFile); // Legacy endpoint
+  app.get("/api/knowledge/published", isDualAuthenticated, getPublishedFiles);
   
   // ===========================
   // WORK ORDERS (DB-backed with caps)
@@ -1405,7 +1406,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Promote agent (advance gate)
-  app.post("/api/agents/:id/promote", isAuthenticated, promoteAgent);
+  app.post("/api/agents/:id/promote", isDualAuthenticated, requireScopes("agents:write"), promoteAgent);
 
   // ===========================
   // AGENT LEARNING & MEMORY  
