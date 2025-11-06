@@ -1,0 +1,160 @@
+import React, { useEffect, useState } from "react";
+import SummaryCards from "./components/SummaryCards";
+
+type ReportItem = {
+  code: string;
+  clicks: number;
+  uniqueVisitors: number;
+  orders: number;
+  revenue: number;
+  commission: number;
+  conversionRate: number;
+};
+
+type ReportResp = {
+  items: ReportItem[];
+  totals: { clicks: number; uniqueVisitors: number; orders: number; revenue: number; commission: number };
+  window: { fromISO: string; toISO: string };
+  commissionRate: number;
+};
+
+type EventItem = { id: string; ts: number; type: "click" | "attribution"; code?: string; orderId?: string; orderTotal?: number; source?: string };
+
+function fmtCurrency(n: number) { return new Intl.NumberFormat(undefined, { style: "currency", currency: "USD" }).format(n); }
+function fmtPct(n: number) { return (n * 100).toFixed(1) + "%"; }
+function isoToday() { const d = new Date(); return d.toISOString().slice(0,10); }
+function isoNDaysAgo(n: number) { const d = new Date(Date.now() - n*86400000); return d.toISOString().slice(0,10); }
+
+const DownloadCsvButton: React.FC<{ from: string; to: string; rate: number }> = ({ from, to, rate }) => {
+  const href = `/api/ops/aff/report.csv?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}&rate=${rate}`;
+  return <a href={href} className=\"inline-flex items-center px-3 py-2 border rounded\">Download CSV</a>;
+};
+
+const DateFilters: React.FC<{ from: string; to: string; setFrom: (s: string)=>void; setTo: (s: string)=>void; rate: number; setRate: (n: number)=>void; onRefresh: ()=>void; }> = ({ from, to, setFrom, setTo, rate, setRate, onRefresh }) => {
+  return (
+    <div className=\"flex flex-wrap gap-2 items-end mb-4\">
+      <div className=\"flex flex-col\">
+        <label>From</label>
+        <input type=\"date\" value={from} onChange={e=>setFrom(e.target.value)} className=\"border rounded px-2 py-1\"/>
+      </div>
+      <div className=\"flex flex-col\">
+        <label>To</label>
+        <input type=\"date\" value={to} onChange={e=>setTo(e.target.value)} className=\"border rounded px-2 py-1\"/>
+      </div>
+      <div className=\"flex flex-col\">
+        <label>Commission %</label>
+        <input type=\"number\" min={0} max={100} step={0.5} value={rate*100} onChange={e=>setRate(Number(e.target.value)/100)} className=\"border rounded px-2 py-1 w-28\"/>
+      </div>
+      <button onClick={onRefresh} className=\"px-3 py-2 border rounded\">Refresh</button>
+      <div className=\"flex gap-2\">
+        <button className=\"px-2 py-1 border rounded\" onClick={()=>{setFrom(isoNDaysAgo(7)); setTo(isoToday()); onRefresh();}}>Last 7d</button>
+        <button className=\"px-2 py-1 border rounded\" onClick={()=>{setFrom(isoNDaysAgo(30)); setTo(isoToday()); onRefresh();}}>Last 30d</button>
+      </div>
+      <DownloadCsvButton from={from} to={to} rate={rate} />
+    </div>
+  );
+};
+
+const EventsPane: React.FC = () => {
+  const [items, setItems] = useState<EventItem[]>([]);
+  useEffect(()=>{
+    fetch(`/api/ops/aff/events?limit=100`).then(r=>r.json()).then(d=>setItems(d.items||[]));
+  },[]);
+  return (
+    <div className=\"border rounded p-3 mt-6\">
+      <div className=\"font-semibold mb-2\">Recent Events</div>
+      <ul className=\"max-h-64 overflow-auto space-y-1 text-sm\">
+        {items.map(ev=>{
+          const when = new Date(ev.ts).toLocaleString();
+          if (ev.type === \"click\") {
+            return <li key={ev.id}>• [{when}] Click — code {ev.code}</li>;
+          } else {
+            return <li key={ev.id}>• [{when}] Attribution — code {ev.code || \"UNATTRIBUTED\"} — order {ev.orderId} ({fmtCurrency(ev.orderTotal||0)})</li>;
+          }
+        })}
+      </ul>
+    </div>
+  );
+};
+
+const Table: React.FC<{ rows: ReportItem[]; totals: ReportResp[\"totals\"] }> = ({ rows, totals }) => {
+  return (
+    <div className=\"border rounded overflow-auto\">
+      <table className=\"min-w-full text-sm\">
+        <thead className=\"bg-gray-50\">
+          <tr>
+            <th className=\"text-left px-3 py-2\">Affiliate</th>
+            <th className=\"text-right px-3 py-2\">Clicks</th>
+            <th className=\"text-right px-3 py-2\">Unique</th>
+            <th className=\"text-right px-3 py-2\">Orders</th>
+            <th className=\"text-right px-3 py-2\">Conv%</th>
+            <th className=\"text-right px-3 py-2\">Revenue</th>
+            <th className=\"text-right px-3 py-2\">Commission</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map(r=>(
+            <tr key={r.code} className=\"odd:bg-white even:bg-gray-50\">
+              <td className=\"px-3 py-2 font-mono\">{r.code}</td>
+              <td className=\"px-3 py-2 text-right\">{r.clicks}</td>
+              <td className=\"px-3 py-2 text-right\">{r.uniqueVisitors}</td>
+              <td className=\"px-3 py-2 text-right\">{r.orders}</td>
+              <td className=\"px-3 py-2 text-right\">{fmtPct(r.conversionRate)}</td>
+              <td className=\"px-3 py-2 text-right\">{fmtCurrency(r.revenue)}</td>
+              <td className=\"px-3 py-2 text-right\">{fmtCurrency(r.commission)}</td>
+            </tr>
+          ))}
+        </tbody>
+        <tfoot className=\"bg-gray-100 font-semibold\">
+          <tr>
+            <td className=\"px-3 py-2 text-right\">Totals</td>
+            <td className=\"px-3 py-2 text-right\">{totals.clicks}</td>
+            <td className=\"px-3 py-2 text-right\">{totals.uniqueVisitors}</td>
+            <td className=\"px-3 py-2 text-right\">{totals.orders}</td>
+            <td className=\"px-3 py-2 text-right\">—</td>
+            <td className=\"px-3 py-2 text-right\">{fmtCurrency(totals.revenue)}</td>
+            <td className=\"px-3 py-2 text-right\">{fmtCurrency(totals.commission)}</td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+  );
+};
+
+const AffiliateReport: React.FC = () => {
+  const [from, setFrom] = useState(isoNDaysAgo(30));
+  const [to, setTo] = useState(isoToday());
+  const [rate, setRate] = useState(0.10);
+  const [data, setData] = useState<ReportResp | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  const fetchData = async () => {
+    setLoading(true);
+    try {
+      const qs = new URLSearchParams({ from, to, rate: String(rate) });
+      const res = await fetch(`/api/ops/aff/report?${qs.toString()}`);
+      const json = await res.json();
+      setData(json);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  React.useEffect(()=>{ fetchData(); }, []);
+
+  const rows = data?.items || [];
+  const totals = data?.totals || { clicks:0, uniqueVisitors:0, orders:0, revenue:0, commission:0 };
+
+  return (
+    <div className=\"p-4 space-y-4\">
+      <h1 className=\"text-xl font-semibold\">Affiliate Report</h1>
+      <DateFilters from={from} to={to} setFrom={setFrom} setTo={setTo} rate={rate} setRate={setRate} onRefresh={fetchData} />
+      <SummaryCards totals={totals} />
+      {loading ? <div>Loading…</div> : <Table rows={rows} totals={totals} />}
+      <EventsPane />
+      <div className=\"text-xs text-gray-500\">Window: {data?.window.fromISO} → {data?.window.toISO}. Commission rate: {(data?.commissionRate ?? rate)*100}%</div>
+    </div>
+  );
+};
+
+export default AffiliateReport;
