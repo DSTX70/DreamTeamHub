@@ -400,6 +400,7 @@ export const projects = pgTable("projects", {
   priority: text("priority").default('medium'), // low | medium | high | critical
   ownerId: integer("owner_id").references(() => persons.id),
   podId: integer("pod_id").references(() => pods.id),
+  brandId: integer("brand_id").references(() => brands.id),
   startDate: timestamp("start_date"),
   dueDate: timestamp("due_date"),
   completedAt: timestamp("completed_at"),
@@ -648,6 +649,10 @@ export const projectsRelations = relations(projects, ({ one, many }) => ({
   pod: one(pods, {
     fields: [projects.podId],
     references: [pods.id],
+  }),
+  brand: one(brands, {
+    fields: [projects.brandId],
+    references: [brands.id],
   }),
   files: many(projectFiles),
   pods: many(projectPods),
@@ -939,3 +944,34 @@ export const knowledgeLinks = pgTable("knowledge_links", {
 export const insertKnowledgeLinkSchema = createInsertSchema(knowledgeLinks).omit({ id: true, createdAt: true });
 export type InsertKnowledgeLink = z.infer<typeof insertKnowledgeLinkSchema>;
 export type KnowledgeLink = typeof knowledgeLinks.$inferSelect;
+
+// ===========================
+// PRODUCTS
+// ===========================
+
+export const products = pgTable("products", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  name: text("name").notNull(),
+  brandId: integer("brand_id").notNull().references(() => brands.id),
+  status: text("status").notNull().default('active'), // active | archived | planned
+  description: text("description"),
+  launched: timestamp("launched"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const insertProductSchema = createInsertSchema(products).omit({ id: true, createdAt: true });
+export type InsertProduct = z.infer<typeof insertProductSchema>;
+export type Product = typeof products.$inferSelect;
+
+// Relations
+export const brandsRelations = relations(brands, ({ many }) => ({
+  projects: many(projects),
+  products: many(products),
+}));
+
+export const productsRelations = relations(products, ({ one }) => ({
+  brand: one(brands, {
+    fields: [products.brandId],
+    references: [brands.id],
+  }),
+}));
