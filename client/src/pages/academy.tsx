@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { GraduationCap, TrendingUp, Award, Target } from "lucide-react";
+import { PageBreadcrumb, buildBreadcrumbs } from "@/components/PageBreadcrumb";
 
 interface AgentLabRole {
   id: number;
@@ -39,8 +40,11 @@ export default function AcademyPage() {
     "Strategic": groupedByLevel["Strategic"]?.length || 0,
   };
 
+  const breadcrumbs = buildBreadcrumbs({ page: "Agent Lab Academy" });
+
   return (
     <div className="space-y-6">
+      <PageBreadcrumb segments={breadcrumbs} />
       {/* Header */}
       <div className="border-b pb-6">
         <div className="flex items-center gap-3 mb-2">

@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { BrandDetailsModal } from "@/components/brand-details-modal";
+import { PageBreadcrumb, buildBreadcrumbs } from "@/components/PageBreadcrumb";
 import { useState } from "react";
 
 type BUConfig = {
@@ -114,16 +115,14 @@ export default function BUHomePage() {
     return "default";
   };
 
+  const breadcrumbs = buildBreadcrumbs({
+    businessUnit: { slug: buSlug, name: config.name },
+  });
+
   return (
     <div className="max-w-7xl mx-auto p-6 space-y-6">
       {/* Breadcrumb */}
-      <div className="text-sm text-muted-foreground">
-        <Link href="/" className="hover:underline" data-testid="link-home">
-          i³ Collective
-        </Link>
-        <span className="mx-1">›</span>
-        <span>{config.name}</span>
-      </div>
+      <PageBreadcrumb segments={breadcrumbs} />
 
       {/* Header */}
       <Card>

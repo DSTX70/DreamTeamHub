@@ -7,8 +7,9 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Separator } from '@/components/ui/separator';
 import { IdeaSparksList } from '@/components/idea-sparks-list';
+import { PageBreadcrumb, buildBreadcrumbs } from '@/components/PageBreadcrumb';
 import { format } from 'date-fns';
-import type { Project, ProjectAgent, ProjectTask, ProjectMessage, ProjectFile } from '@shared/schema';
+import type { Project, ProjectAgent, ProjectTask, ProjectMessage, ProjectFile, Brand } from '@shared/schema';
 
 const PILLAR_ICONS = {
   Imagination: Sparkles,
@@ -39,6 +40,17 @@ export default function ProjectDetail() {
   const { data: project, isLoading: projectLoading } = useQuery<Project>({
     queryKey: ['/api/projects', projectId],
     enabled: !!projectId,
+  });
+
+  // Fetch brand for breadcrumb
+  const { data: brand } = useQuery<Brand>({
+    queryKey: ['/api/brands', project?.brandId],
+    enabled: !!project?.brandId,
+    queryFn: async () => {
+      const res = await fetch(`/api/brands/${project?.brandId}`);
+      if (!res.ok) throw new Error('Failed to fetch brand');
+      return res.json();
+    },
   });
 
   // Fetch project agents
@@ -110,9 +122,19 @@ export default function ProjectDetail() {
   const completedTasks = tasks.filter(t => t.status === 'completed').length;
   const progressPercentage = tasks.length > 0 ? Math.round((completedTasks / tasks.length) * 100) : 0;
 
+  // Build breadcrumbs
+  const breadcrumbs = buildBreadcrumbs({
+    businessUnit: brand ? { slug: brand.business_unit.toLowerCase(), name: brand.business_unit } : undefined,
+    brand: brand ? { id: brand.id, name: brand.name } : undefined,
+    project: { id: project.id, name: project.title },
+  });
+
   return (
     <div className="min-h-screen bg-background p-6">
       <div className="max-w-6xl mx-auto space-y-6">
+        {/* Breadcrumb */}
+        <PageBreadcrumb segments={breadcrumbs} />
+        
         {/* Header */}
         <div className="flex items-start justify-between gap-4">
           <div className="flex-1 space-y-2">

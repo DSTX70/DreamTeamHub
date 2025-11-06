@@ -9,6 +9,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { Project, Brand } from "@shared/schema";
 import { IdeaSparksList } from "@/components/idea-sparks-list";
 import { BrandDetailsModal } from "@/components/brand-details-modal";
+import { PageBreadcrumb, buildBreadcrumbs } from "@/components/PageBreadcrumb";
 
 const PILLAR_ICONS = {
   Imagination: Sparkles,
@@ -152,9 +153,17 @@ export default function Projects() {
 
   const PillarIcon = getPillarIcon();
 
+  // Build breadcrumbs
+  const breadcrumbs = buildBreadcrumbs({
+    page: selectedCategory === "all" ? "Projects" : `${selectedCategory} Projects`,
+  });
+
   return (
     <div className="h-full overflow-auto">
       <div className="p-6 space-y-6">
+        {/* Breadcrumb */}
+        <PageBreadcrumb segments={breadcrumbs} />
+        
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>

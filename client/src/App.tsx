@@ -36,6 +36,8 @@ import { Button } from "@/components/ui/button";
 import { LogOut, User as UserIcon } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { IdeaSparkButton } from "@/components/idea-spark";
+import { SearchModal, useSearchShortcut } from "@/components/search-modal";
+import { useState } from "react";
 
 function AuthenticatedRoutes() {
   return (
@@ -82,10 +84,15 @@ function UnauthenticatedRoutes() {
 
 function AppContent() {
   const { user, isAuthenticated, isLoading } = useAuth();
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
+  
   const style = {
     "--sidebar-width": "16rem",
     "--sidebar-width-icon": "3rem",
   };
+
+  // Setup Cmd+K shortcut
+  useSearchShortcut(() => setIsSearchOpen(true));
 
   // Show landing page without sidebar for unauthenticated users
   if (isLoading || !isAuthenticated) {
@@ -130,6 +137,7 @@ function AppContent() {
           </main>
         </div>
         <IdeaSparkButton />
+        <SearchModal open={isSearchOpen} onOpenChange={setIsSearchOpen} />
       </div>
     </SidebarProvider>
   );

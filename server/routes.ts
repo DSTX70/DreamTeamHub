@@ -2,6 +2,7 @@ import type { Express, RequestHandler } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated } from "./replitAuth";
+import { searchRoute } from "./api_search_route";
 import { 
   insertPodSchema, insertPodAgentSchema, insertAgentSchema, insertPersonSchema, insertRoleCardSchema, insertRoleRaciSchema, insertAgentSpecSchema,
   insertWorkItemSchema, insertDecisionSchema, insertIdeaSparkSchema, insertBrainstormSessionSchema,
@@ -91,6 +92,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // ===========================
+  // UNIVERSAL SEARCH
+  // ===========================
+  
+  app.get("/api/search", isAuthenticated, searchRoute);
+
+  // ===========================
   // CONTROL TOWER
   // ===========================
   
@@ -146,6 +153,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/pods", isAuthenticated, async (req, res) => {
     try {
       const pods = await storage.getPods();
+      res.setHeader('X-Total-Count', pods.length.toString());
       res.json(pods);
     } catch (error) {
       console.error('Error fetching pods:', error);
@@ -355,6 +363,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const podId = req.query.podId ? parseInt(req.query.podId as string) : undefined;
       const agents = await storage.getPodAgents(podId);
+      res.setHeader('X-Total-Count', agents.length.toString());
       res.json(agents);
     } catch (error) {
       console.error('Error fetching pod agents:', error);
@@ -1489,7 +1498,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get all projects with filtering
   app.get("/api/projects", isAuthenticated, async (req, res) => {
     try {
-      const { category, status, podId, brandId } = req.query;
+      const { category, status, podId, brandId, limit, offset, q } = req.query;
       
       const filters: any = {};
       if (category) filters.category = category as string;
@@ -1497,9 +1506,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (podId) filters.podId = parseInt(podId as string);
       if (brandId) filters.brandId = parseInt(brandId as string);
 
-      console.log('[DEBUG] Projects API - filters:', filters);
-      const projects = await storage.getProjects(filters);
-      console.log('[DEBUG] Projects API - results:', projects.length, 'projects');
+      let projects = await storage.getProjects(filters);
+      
+      // Apply search query if provided
+      if (q) {
+        const query = (q as string).toLowerCase();
+        projects = projects.filter(p =>
+          p.title.toLowerCase().includes(query) ||
+          (p.description && p.description.toLowerCase().includes(query))
+        );
+      }
+      
+      // Set total count header before pagination
+      res.setHeader('X-Total-Count', projects.length.toString());
+      
+      // Apply pagination
+      const limitNum = limit ? parseInt(limit as string) : undefined;
+      const offsetNum = offset ? parseInt(offset as string) : 0;
+      
+      if (limitNum) {
+        projects = projects.slice(offsetNum, offsetNum + limitNum);
+      }
+
       res.json(projects);
     } catch (error: any) {
       console.error('Error fetching projects:', error);

@@ -9,6 +9,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/empty-state";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Search, Users, Plus, ChevronDown, Brain, Wrench, Target, TrendingUp, Shield } from "lucide-react";
+import { PageBreadcrumb, buildBreadcrumbs } from "@/components/PageBreadcrumb";
 import type { Agent, Pod } from "@shared/schema";
 
 export default function Roles() {
@@ -54,8 +55,11 @@ export default function Roles() {
     'L3': 'L3 - Human-in-Loop',
   };
 
+  const breadcrumbs = buildBreadcrumbs({ page: "Agents" });
+
   return (
     <div className="space-y-6">
+      <PageBreadcrumb segments={breadcrumbs} />
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-semibold mb-2" data-testid="page-title">Dream Team Agents</h1>

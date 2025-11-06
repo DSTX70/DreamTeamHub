@@ -9,6 +9,7 @@ import type { WorkItem } from "@shared/schema";
 import { format } from "date-fns";
 import { QuickStartDialog } from "@/components/quick-start-dialog";
 import { IdeaSparksList } from "@/components/idea-sparks-list";
+import { PageBreadcrumb, buildBreadcrumbs } from "@/components/PageBreadcrumb";
 
 interface ControlTowerData {
   top5: WorkItem[];
@@ -96,8 +97,11 @@ export default function ControlTower() {
     dueThisWeek: 0,
   };
 
+  const breadcrumbs = buildBreadcrumbs({ home: false, page: "Control Tower" });
+
   return (
     <BrandedSection>
+      <PageBreadcrumb segments={breadcrumbs} />
       <BrandedHero
         title="Dream Team Hub by i³ collective"
         subtitle="Live priorities, assignments, and escalations"

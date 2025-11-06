@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, Play } from "lucide-react";
+import { PageBreadcrumb, buildBreadcrumbs } from "@/components/PageBreadcrumb";
 
 type WO = {
   id: string;
@@ -194,8 +195,11 @@ export default function WorkOrdersPage() {
     }
   };
 
+  const breadcrumbs = buildBreadcrumbs({ page: "Work Orders" });
+
   return (
     <div className="container max-w-6xl py-8 space-y-8">
+      <PageBreadcrumb segments={breadcrumbs} />
       <div>
         <h1 className="text-3xl font-bold tracking-tight">Work Orders</h1>
         <p className="text-muted-foreground mt-2">
