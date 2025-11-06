@@ -33,7 +33,7 @@ The platform is structured into core modules and features:
 - **Decision Log**: Immutable record of key decisions.
 - **Dream Team Chat**: AI-powered conversational interface using OpenAI GPT-4 with 32 role-based personas, context awareness, and agent memory.
 - **DTH Copilot**: AI-powered assistant using OpenAI tool-calling with dual-mode architecture (direct tool calling for instant responses + chat-based for Custom GPT). Features quick action buttons, paginated table views with formatted KPIs, and the **Findings at a Glance** analytics card that automatically calculates risk distribution (low/medium/high), identifies top at-risk agents, and suggests actionable next steps.
-- **Universal Search**: Cmd+K powered search modal that searches across brands, products, projects, agents, and pods with relevance-based sorting, keyboard navigation, and paginated results.
+- **Universal Search**: Cmd+K powered search modal that searches across brands, products, projects, agents, and pods with relevance-based sorting, two-zone keyboard navigation (Quick Actions + Results), localStorage-based recent searches memory (last 8 searches), and infinite scroll pagination with IntersectionObserver.
 - **Breadcrumb Navigation**: Auto-generating breadcrumb component displays contextual hierarchy across major pages.
 - **Operations Events Logging**: Fire-and-forget telemetry system tracks user interactions across the platform with automatic actor inference, request correlation IDs, and metadata enrichment for analytics and audit trails.
 - **Operations Logs Admin Page**: Full-featured admin interface for viewing and filtering operational events with real-time updates, CSV export, auto-refresh (5s interval), and comprehensive filtering.
