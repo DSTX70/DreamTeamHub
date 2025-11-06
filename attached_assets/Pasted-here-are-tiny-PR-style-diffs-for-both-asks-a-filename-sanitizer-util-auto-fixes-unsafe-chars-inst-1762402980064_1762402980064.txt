@@ -1,0 +1,191 @@
+here are tiny PR-style diffs for both asks:
+
+a filename sanitizer util (auto-fixes unsafe chars instead of rejecting), wired into both Express and Next.js draft-upload routes; and
+
+wiring X-Total-Count (and pagination via X-Next-Page-Token) on Knowledge search responses, by extending the Drive client to return nextPageToken.
+
+Apply in Replit with:
+
+git apply -p0 <<'PATCH'
+...diff...
+PATCH
+
+1) Filename sanitizer util (+ route integration)
+A) Add a tiny util
+diff --git a/server/lib/utils/sanitizeFilename.ts b/server/lib/utils/sanitizeFilename.ts
+new file mode 100644
+--- /dev/null
++++ b/server/lib/utils/sanitizeFilename.ts
+@@
++// Replace unsafe characters, trim, collapse spaces/dots, enforce length, keep extension.
++export function sanitizeFilename(input: string, maxLen = 100): string {
++  if (!input) return "untitled.txt";
++  const trimmed = input.trim();
++  const parts = trimmed.split(".");
++  const ext = parts.length > 1 ? parts.pop()! : "";
++  const base = parts.join(".") || "untitled";
++  // Remove characters not allowed on common filesystems
++  let safeBase = base.replace(/[\/\\:*?"<>|]/g, "-").replace(/\s+/g, " ").replace(/^\.+|\.+$/g, "");
++  // Collapse multiple dashes
++  safeBase = safeBase.replace(/-{2,}/g, "-").trim();
++  // Enforce length (reserve for dot + ext)
++  const room = ext ? maxLen - (ext.length + 1) : maxLen;
++  if (safeBase.length > room) safeBase = safeBase.slice(0, room).trim();
++  const out = ext ? `${safeBase}.${ext}` : safeBase || "untitled";
++  return out || "untitled";
++}
+
+B) Loosen validator and sanitize in Express draft upload
+diff --git a/server/lib/validators/knowledge.ts b/server/lib/validators/knowledge.ts
+--- a/server/lib/validators/knowledge.ts
++++ b/server/lib/validators/knowledge.ts
+@@
+-export const DraftUploadBody = z.object({
+-  text: z.string().min(1, "text required"),
+-  fileName: z.string()
+-    .min(1)
+-    .max(255)
+-    .regex(/^[^\/\\:*?"<>|]+$/, "invalid filename"),
+-  mimeType: z.string().min(3).max(255).optional(),
+-});
++export const DraftUploadBody = z.object({
++  text: z.string().min(1, "text required"),
++  fileName: z.string().min(1).max(255), // allow anything; we sanitize in route
++  mimeType: z.string().min(3).max(255).optional(),
++});
+
+diff --git a/server/api/knowledge.route.ts b/server/api/knowledge.route.ts
+--- a/server/api/knowledge.route.ts
++++ b/server/api/knowledge.route.ts
+@@
+ import { SearchQuery, DraftUploadBody } from "../lib/validators/knowledge";
++import { sanitizeFilename } from "../lib/utils/sanitizeFilename";
+@@
+   const parsed = DraftUploadBody.safeParse(req.body || {});
+   if (!parsed.success) {
+     const msg = parsed.error.errors.map(e => e.message).join("; ");
+     return res.status(422).json({ error: msg });
+   }
+-  const { text, fileName, mimeType } = parsed.data;
++  const { text, mimeType } = parsed.data;
++  const fileName = sanitizeFilename(parsed.data.fileName);
+@@
+-  const file = await drive.upload(draft!, { text, fileName, mimeType: mimeType ?? "text/markdown" });
++  const file = await drive.upload(draft!, { text, fileName, mimeType: mimeType ?? "text/markdown" });
+   return res.status(201).json({ ok: true, file });
+
+C) Loosen validator and sanitize in Next.js draft upload
+diff --git a/lib/validators/knowledge.ts b/lib/validators/knowledge.ts
+--- a/lib/validators/knowledge.ts
++++ b/lib/validators/knowledge.ts
+@@
+-export const DraftUploadBody = z.object({
+-  text: z.string().min(1, "text required"),
+-  fileName: z.string().min(1).max(255)
+-    .regex(/^[^\/\\:*?"<>|]+$/, "invalid filename"),
+-  mimeType: z.string().min(3).max(255).optional(),
+-});
++export const DraftUploadBody = z.object({
++  text: z.string().min(1, "text required"),
++  fileName: z.string().min(1).max(255),
++  mimeType: z.string().min(3).max(255).optional(),
++});
+
+diff --git a/app/api/knowledge/[owner]/[id]/drafts/route.ts b/app/api/knowledge/[owner]/[id]/drafts/route.ts
+--- a/app/api/knowledge/[owner]/[id]/drafts/route.ts
++++ b/app/api/knowledge/[owner]/[id]/drafts/route.ts
+@@
+ import { DraftUploadBody } from "@/lib/validators/knowledge";
++import { sanitizeFilename } from "@/server/lib/utils/sanitizeFilename";
+@@
+-  const file = await getDriveClient().uploadText(draft, parsed.data.fileName, parsed.data.text, parsed.data.mimeType ?? "text/markdown");
++  const safe = sanitizeFilename(parsed.data.fileName);
++  const file = await getDriveClient().uploadText(draft, safe, parsed.data.text, parsed.data.mimeType ?? "text/markdown");
+   return json({ ok: true, file }, 201);
+
+2) X-Total-Count (and X-Next-Page-Token) on Knowledge search
+A) Extend the Drive client to support pageToken and return nextPageToken
+diff --git a/server/integrations/googleDrive_real.ts b/server/integrations/googleDrive_real.ts
+--- a/server/integrations/googleDrive_real.ts
++++ b/server/integrations/googleDrive_real.ts
+@@
+-export type DriveSearchResult = { items: DriveFile[] };
++export type DriveSearchResult = { items: DriveFile[]; nextPageToken?: string | null };
+@@
+-  async search(folderId: string, q: string, limit = 20): Promise<DriveSearchResult> {
++  async search(folderId: string, q: string, limit = 20, pageToken?: string | null): Promise<DriveSearchResult> {
+     const query = `name contains '${q.replace(/'/g, "\\'")}' and '${folderId}' in parents and trashed = false`;
+-    const r = await this.drive.files.list({ q: query, pageSize: limit, fields: "files(id,name,mimeType,webViewLink,createdTime,modifiedTime,parents)" });
+-    return { items: (r.data.files || []) as DriveFile[] };
++    const r = await this.drive.files.list({
++      q: query,
++      pageSize: limit,
++      pageToken: pageToken || undefined,
++      fields: "files(id,name,mimeType,webViewLink,createdTime,modifiedTime,parents),nextPageToken"
++    });
++    return { items: (r.data.files || []) as DriveFile[], nextPageToken: r.data.nextPageToken ?? null };
+   }
+
+
+If you’re using the Stub client in dev, add the same signature and return nextPageToken: null.
+
+B) Express search route: accept pageToken, set headers
+diff --git a/server/api/knowledge.route.ts b/server/api/knowledge.route.ts
+--- a/server/api/knowledge.route.ts
++++ b/server/api/knowledge.route.ts
+@@
+ export async function searchKnowledge(req: Request, res: Response) {
+   try {
+@@
+-    const { read } = await resolveFolders(owner, id);
++    const { read } = await resolveFolders(owner, id);
+     required(read, "KB read folder not linked");
+-    const drive = getDriveClient();
+-    const out = await drive.search(read!, q, Number(limit ?? 20));
+-    return res.json(out);
++    const out = await getDriveClient().search(read!, q, Number(limit ?? 20), String(req.query.pageToken || "") || null);
++    res.setHeader("X-Total-Count", String(out.items.length)); // page count (Drive doesn't expose grand total)
++    if (out.nextPageToken) res.setHeader("X-Next-Page-Token", out.nextPageToken);
++    return res.json(out);
+   } catch (e:any) {
+     return res.status(e.status || 500).json({ error: e.message || "search failed" });
+   }
+ }
+
+C) Next.js search route: accept pageToken, set headers
+diff --git a/app/api/knowledge/[owner]/[id]/search/route.ts b/app/api/knowledge/[owner]/[id]/search/route.ts
+--- a/app/api/knowledge/[owner]/[id]/search/route.ts
++++ b/app/api/knowledge/[owner]/[id]/search/route.ts
+@@
+-  const limit = Number(req.nextUrl.searchParams.get("limit") || 20);
+-  const out = await getDriveClient().search(read, q, limit);
+-  return json(out);
++  const limit = Number(req.nextUrl.searchParams.get("limit") || 20);
++  const pageToken = req.nextUrl.searchParams.get("pageToken");
++  const out = await getDriveClient().search(read, q, limit, pageToken || undefined);
++  return new Response(JSON.stringify(out), {
++    status: 200,
++    headers: {
++      "content-type": "application/json",
++      "X-Total-Count": String(out.items.length),
++      ...(out.nextPageToken ? { "X-Next-Page-Token": out.nextPageToken } : {})
++    }
++  });
+
+Sanity check (quick)
+# Draft upload now auto-fixes names
+curl -XPOST "/api/knowledge/BU/<IMAGINATION_ID>/drafts" \
+  -H "content-type: application/json" \
+  -d '{"text":"# draft","fileName":"bad/name:with*chars?.md"}'
+
+# Search with pagination token
+curl "/api/knowledge/BU/<IMAGINATION_ID>/search?q=mirror&limit=10" -i
+# -> 200, X-Total-Count: 10, maybe X-Next-Page-Token: <token>
+
+curl "/api/knowledge/BU/<IMAGINATION_ID>/search?q=mirror&limit=10&pageToken=<token>" -i
+
+Why this approach
+
+Sanitizer preserves user intent (keeps extension, cleans base, bounds length) instead of hard failing.
+
+Headers: Drive v3 does not return a true total count; we return the page count and a next page token, which is the honest, standard way to paginate against Google Drive.
