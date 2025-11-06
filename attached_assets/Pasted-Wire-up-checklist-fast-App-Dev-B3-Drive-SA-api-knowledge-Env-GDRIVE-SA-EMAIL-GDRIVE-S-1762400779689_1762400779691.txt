@@ -1,0 +1,75 @@
+Wire-up checklist (fast)
+App Dev (B3) — Drive SA + /api/knowledge
+
+Env
+
+GDRIVE_SA_EMAIL=...
+GDRIVE_SA_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n"
+
+
+Mount routes
+
+// server/index.ts
+import express from "express";
+import { searchKnowledge, uploadDraft, publishFile } from "./api_knowledge_route";
+const app = express();
+app.use(express.json({ limit: "5mb" }));
+app.get("/api/knowledge/:owner/:id/search", searchKnowledge);
+app.post("/api/knowledge/:owner/:id/drafts", uploadDraft);
+app.post("/api/knowledge/:owner/:id/publish/:fileId", publishFile);
+
+
+Test
+
+Search → returns Drive files.
+
+Upload draft → creates file in Drafts folder.
+
+Publish → responds { ok: true } and writes a PUBLISH event.
+
+AI Lab & Academy — Sidebar (Train/Promote)
+
+Add component
+Drop AcademySidebar.tsx (you already have this) and follow
+academy_sidebar_integration.md.
+
+Promote endpoint
+Implement /api/agents/:id/promote as shown in the guide.
+
+App Dev (B4) — Work Orders → Postgres + caps
+
+Mount routes
+
+// server/index.ts
+import { listWorkOrders, createWorkOrder, startWorkOrderRun } from "./api_work_orders_db_route";
+app.get("/api/work-orders", listWorkOrders);
+app.post("/api/work-orders", createWorkOrder);
+app.post("/api/work-orders/:woId/start", startWorkOrderRun);
+
+
+Verify caps
+Exceed runs/day or $/day → 429 + Retry-After: 86400.
+
+Amani (B7) — Scopes & CSP & Retry-After
+
+Helmet CSP
+
+import { csp } from "./security_scopes_and_csp";
+app.use(csp());
+
+
+Token scopes
+Add requireScopes("knowledge:draft:write") to drafts/publish routes, etc.
+
+429 Retry-After
+Use res.setHeader("Retry-After","60") or the helper from the same file.
+
+Quick smoke tests
+# Drive Gateway
+curl "/api/knowledge/BU/<IMAGINATION_ID>/search?q=calendar"
+curl -XPOST "/api/knowledge/BU/<IMAGINATION_ID>/drafts" -H "content-type: application/json" -d '{"text":"# draft","fileName":"README.md"}'
+curl -XPOST "/api/knowledge/BU/<IMAGINATION_ID>/publish/<fileId>" -H "x-reviewer-token: 123456789012" -H "idempotency-key: abc123"
+
+# Work Orders DB
+curl -XPOST /api/work-orders -H "content-type: application/json" -d '{"title":"Router L1 Wk1","owner":"Lume","inputs":"/inbox/*","output":"/drafts/router/"}'
+curl -XPOST /api/work-orders/<woId>/start -H "content-type: application/json" -d '{"agent":"Support L1 — Router"}'

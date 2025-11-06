@@ -1,0 +1,90 @@
+// api/knowledge.route.ts
+// Drive Gateway routes wired to RealDriveClient + PUBLISH audit with idempotency.
+import type { Request, Response } from "express";
+import crypto from "crypto";
+import { db } from "../drizzle/db";
+import { knowledgeLink, opsEvent } from "../drizzle/schema";
+import { eq, and } from "drizzle-orm";
+import { getDriveClient } from "../integrations/googleDrive_real";
+
+function required(v: any, msg: string) {
+  if (!v) throw Object.assign(new Error(msg), { status: 400 });
+}
+
+async function resolveFolders(ownerType: string, ownerId: string) {
+  const rows = await db.select().from(knowledgeLink).where(
+    and(eq(knowledgeLink.ownerType, ownerType), eq(knowledgeLink.ownerId, ownerId as any))
+  );
+  const map: Record<string, string|undefined> = {};
+  for (const r of rows) map[r.role] = r.driveFolderId as any;
+  return { read: map["read"], draft: map["draft"], publish: map["publish"] };
+}
+
+export async function searchKnowledge(req: Request, res: Response) {
+  try {
+    const owner = String(req.params.owner).toUpperCase();
+    const id = String(req.params.id);
+    const q = String(req.query.q || "");
+    required(q && q.length >= 2, "q required (min 2 chars)");
+    const { read } = await resolveFolders(owner, id);
+    required(read, "KB read folder not linked");
+    const drive = getDriveClient();
+    const out = await drive.search(read!, q, Number(req.query.limit ?? 20));
+    return res.json(out);
+  } catch (e:any) {
+    return res.status(e.status || 500).json({ error: e.message || "search failed" });
+  }
+}
+
+export async function uploadDraft(req: Request, res: Response) {
+  try {
+    const owner = String(req.params.owner).toUpperCase();
+    const id = String(req.params.id);
+    const { draft } = await resolveFolders(owner, id);
+    required(draft, "Drafts folder not linked");
+    const drive = getDriveClient();
+
+    // Accept simple text body for stub; replace with multipart parser for files
+    const text = (req.body && typeof req.body === "object" && "text" in req.body) ? (req.body as any).text : "# draft";
+    const name = (req.body && typeof req.body === "object" && "fileName" in req.body) ? (req.body as any).fileName : `draft-${Date.now()}.md`;
+
+    const file = await drive.upload(draft!, { text, fileName: name, mimeType: "text/markdown" });
+    // analytics click already captured elsewhere; here we just return file meta
+    return res.status(201).json({ ok: true, file });
+  } catch (e:any) {
+    return res.status(e.status || 500).json({ error: e.message || "upload failed" });
+  }
+}
+
+export async function publishFile(req: Request, res: Response) {
+  try {
+    const owner = String(req.params.owner).toUpperCase();
+    const id = String(req.params.id);
+    const fileId = String(req.params.fileId);
+    const reviewer = String(req.headers["x-reviewer-token"] || "");
+    required(reviewer && reviewer.length >= 12, "reviewer token required");
+    const idem = String(req.headers["idempotency-key"] || crypto.randomUUID());
+
+    const { publish } = await resolveFolders(owner, id);
+    required(publish, "Publish folder not linked");
+    const drive = getDriveClient();
+    const out = await drive.copyOrMove(fileId, publish!, "move");
+
+    // Authoritative PUBLISH audit
+    const reviewerHash = crypto.createHash("sha256").update(reviewer).digest("hex");
+    await db.insert(opsEvent).values({
+      actor: "reviewer",
+      kind: "PUBLISH",
+      ownerType: owner,
+      ownerId: id as any,
+      message: `Published file ${fileId}`,
+      meta: { fileId, reviewerHash, idempotencyKey: idem, driveTitle: out.name, driveUrl: out.webViewLink }
+    });
+
+    res.setHeader("X-Request-Id", out.id || "");
+    res.setHeader("X-Idempotency-Key", idem);
+    return res.json({ ok: true, fileId, drive: out });
+  } catch (e:any) {
+    return res.status(e.status || 500).json({ error: e.message || "publish failed" });
+  }
+}

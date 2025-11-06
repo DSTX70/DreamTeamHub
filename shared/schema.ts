@@ -908,6 +908,22 @@ export const insertWorkOrderSchema = createInsertSchema(workOrders).omit({ id: t
 export type InsertWorkOrder = z.infer<typeof insertWorkOrderSchema>;
 export type WorkOrder = typeof workOrders.$inferSelect;
 
+export const workOrderRuns = pgTable("work_order_runs", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  woId: varchar("wo_id").notNull().references(() => workOrders.id),
+  agentName: text("agent_name").notNull(),
+  status: text("status").notNull().default("running"), // running, done, failed
+  ms: integer("ms"), // execution time in milliseconds
+  cost: text("cost"), // decimal cost in USD
+  mirror: text("mirror"), // summary/result message
+  startedAt: timestamp("started_at").defaultNow().notNull(),
+  finishedAt: timestamp("finished_at"),
+});
+
+export const insertWorkOrderRunSchema = createInsertSchema(workOrderRuns).omit({ id: true, startedAt: true, finishedAt: true });
+export type InsertWorkOrderRun = z.infer<typeof insertWorkOrderRunSchema>;
+export type WorkOrderRun = typeof workOrderRuns.$inferSelect;
+
 // ===========================
 // BRANDS
 // ===========================

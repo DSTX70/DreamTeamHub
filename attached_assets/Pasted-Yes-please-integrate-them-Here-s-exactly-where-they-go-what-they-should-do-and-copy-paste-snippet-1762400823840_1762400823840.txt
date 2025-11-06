@@ -1,0 +1,246 @@
+Yes—please integrate them. Here’s exactly where they go, what they should do, and copy-paste snippets to wire them up fast.
+
+---
+
+# 1) Where to use each component
+
+## AcademySidebar.tsx (agent training & promotion)
+
+**Use on:** the right sidebar of these pages:
+
+* `/bu/[slug]` (Business Unit Home)
+* `/brand/[slug]`
+* `/product/[slug]`
+* `/project/[id]`
+
+**Data needed:** the primary agent (or a selected agent) for that context:
+
+```ts
+{id, name, autonomy: "L0"|"L1"|"L2"|"L3", status: "pilot"|"live"|"watch"|"rollback", next_gate?: number}
+```
+
+**Example placement (right rail)**:
+
+```tsx
+// web/pages/product/[slug].tsx (or your page component)
+import AcademySidebar from "@/components/AcademySidebar";
+
+<aside className="w-full lg:w-80">
+  <AcademySidebar
+    agent={{ id: agent.id, name: agent.name, autonomy: agent.autonomy, status: agent.status, nextGate: agent.next_gate }}
+    onTrainClick={(id)=>router.push(`/academy/train?agent=${id}`)}
+    onPromote={async (id)=>{
+      await fetch(`/api/agents/${id}/promote`, { method:"POST" });
+      router.refresh?.();
+    }}
+  />
+</aside>
+```
+
+**Server endpoint (promote):**
+
+```ts
+// server/api/agents_promote.route.ts
+import { db } from "@/drizzle/db";
+import { agent } from "@/drizzle/schema";
+import { eq } from "drizzle-orm";
+
+export async function promoteAgent(req, res) {
+  const id = String(req.params.id);
+  const [row] = await db.select().from(agent).where(eq(agent.id, id));
+  if (!row) return res.status(404).json({ error: "agent not found" });
+  const next = Math.min(4, (row.nextGate ?? 1) + 1);
+  const [updated] = await db.update(agent).set({ nextGate: next }).where(eq(agent.id, id)).returning();
+  res.json({ ok: true, agent: updated });
+}
+// server/index.ts
+app.post("/api/agents/:id/promote", promoteAgent);
+```
+
+**Functionality:**
+
+* “Open Training” → navigates to `/academy/train?agent=…`
+* “Promote (advance gate)” → POST `/api/agents/:id/promote`, then refresh
+
+---
+
+## TwoManPublishDialog.tsx (two-reviewer publish)
+
+**Use on:** the Knowledge panel on BU/Brand/Product pages (where you list Drive files).
+**Trigger:** the “Promote to Publish” button for a selected file.
+
+**Example usage:**
+
+```tsx
+import TwoManPublishDialog from "@/components/TwoManPublishDialog";
+const [open, setOpen] = useState(false);
+const [fileId, setFileId] = useState<string | null>(null);
+
+<button onClick={()=>{ setFileId(row.id); setOpen(true); }}>Promote to Publish</button>
+
+<TwoManPublishDialog
+  open={open}
+  onClose={()=>setOpen(false)}
+  fileId={fileId!}
+  contextLabel={`${buName} / ${brandName ?? ""}`}
+  onConfirm={async ({ reviewerToken, approver, note })=>{
+    await fetch(`/api/knowledge/BU/${buId}/publish/${fileId}`, {
+      method: "POST",
+      headers: {
+        "x-reviewer-token": reviewerToken,                 // ≥ 12 chars
+        "idempotency-key": crypto.randomUUID(),
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({ approver, note }),
+    });
+    setOpen(false);
+    router.refresh?.();
+  }}
+/>
+```
+
+**Server route (already scaffolded):** `/api/knowledge/:owner/:id/publish/:fileId`
+
+* Must require header `x-reviewer-token` (≥12 chars)
+* Writes an authoritative `ops_event` audit row with `kind:"PUBLISH"`
+* Returns `X-Request-Id` and `X-Idempotency-Key`
+
+---
+
+## integrations_googleDrive.ts (Drive SA wrapper)
+
+You have two options:
+
+1. **Stub** (already referenced as `integrations_googleDrive.ts`) — no real Drive calls; good for local dev.
+2. **Real SA client** (`integrations_googleDrive_real.ts`) — use Google APIs with service account.
+
+If you want the real one live now (recommended for v1), replace the import in your knowledge routes to:
+
+```ts
+// server/api/knowledge.route.ts
+import { getDriveClient } from "@/integrations/googleDrive_real"; // SA-backed client
+```
+
+**Env needed for real SA:**
+
+```
+GDRIVE_SA_EMAIL=service-account@project.iam.gserviceaccount.com
+GDRIVE_SA_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n"
+```
+
+**Routes to mount (Drive Gateway):**
+
+```ts
+// server/index.ts
+import { searchKnowledge, uploadDraft, publishFile } from "./api_knowledge_route";
+app.use(express.json({ limit: "5mb" }));
+app.get("/api/knowledge/:owner/:id/search", searchKnowledge);
+app.post("/api/knowledge/:owner/:id/drafts", uploadDraft);
+app.post("/api/knowledge/:owner/:id/publish/:fileId", publishFile);
+```
+
+**Functionality:**
+
+* **Search** Drive inside the mapped Read folder (via `knowledge_link` table)
+* **Upload to Drafts** folder (Markdown or file upload)
+* **Publish** moves file from Drafts → Publish folder (two-man dialog provides reviewer token); logs a `PUBLISH` audit with idempotency key
+
+---
+
+# 2) What functionality to implement (and acceptance)
+
+### A) App Dev (B3) — Drive SA + knowledge routes + PUBLISH
+
+* [ ] SA env variables set
+* [ ] `/api/knowledge/*` uses SA client
+* [ ] `publish` requires reviewer token and logs `ops_event(kind:"PUBLISH")`
+* [ ] `X-Request-Id` + `X-Idempotency-Key` returned on publish
+
+### B) AI Lab & Academy — Sidebar on entity pages
+
+* [ ] Sidebar visible on BU/Brand/Product/Project pages
+* [ ] “Open Training” routes to Academy
+* [ ] “Promote” mutates `next_gate` and refreshes
+
+### C) App Dev (B4) — Work Orders → Postgres + caps
+
+* [ ] `/api/work-orders` list/create use DB tables
+* [ ] `/api/work-orders/:woId/start` appends run row with `{agent, wo_id, status, ms, cost}`
+* [ ] When caps exceeded, returns `429` and sets `Retry-After: 86400`
+
+### D) Amani (B7) — Token scopes, CSP, Retry-After
+
+* [ ] Helmet CSP (`script-src 'self'`) enabled
+* [ ] Protected routes check scopes (e.g., `knowledge:draft:write`)
+* [ ] All 429 responses include `Retry-After`
+
+---
+
+# 3) Quick copy-paste wiring (server)
+
+```ts
+// server/index.ts (additions)
+import { csp, requireScopes } from "./security_scopes_and_csp";
+import { searchKnowledge, uploadDraft, publishFile } from "./api_knowledge_route";
+import { listWorkOrders, createWorkOrder, startWorkOrderRun } from "./api_work_orders_db_route";
+import { promoteAgent } from "./api/agents_promote.route";
+
+app.use(csp());                    // CSP
+app.use(express.json({ limit: "5mb" }));
+
+// Knowledge (Drive Gateway)
+app.get("/api/knowledge/:owner/:id/search", searchKnowledge);
+app.post("/api/knowledge/:owner/:id/drafts", requireScopes("knowledge:draft:write"), uploadDraft);
+app.post("/api/knowledge/:owner/:id/publish/:fileId", requireScopes("knowledge:draft:write"), publishFile);
+
+// Work Orders (DB-backed)
+app.get("/api/work-orders", listWorkOrders);
+app.post("/api/work-orders", createWorkOrder);
+app.post("/api/work-orders/:woId/start", startWorkOrderRun);
+
+// Academy promotion
+app.post("/api/agents/:id/promote", requireScopes("agents:write"), promoteAgent);
+```
+
+---
+
+# 4) Quick UI hooks (Knowledge card)
+
+```tsx
+// On your BU/Brand/Product Knowledge card
+const [showPublish, setShowPublish] = useState(false);
+const [fileId, setFileId] = useState<string|null>(null);
+
+<button onClick={()=>{ setFileId(row.id); setShowPublish(true); }}>Promote to Publish</button>
+
+<TwoManPublishDialog
+  open={showPublish}
+  onClose={()=>setShowPublish(false)}
+  fileId={fileId!}
+  contextLabel={`${buName}${brandName ? " / "+brandName : ""}`}
+  onConfirm={async ({ reviewerToken, approver, note })=>{
+    await fetch(`/api/knowledge/BU/${buId}/publish/${fileId}`, {
+      method: "POST",
+      headers: {
+        "x-reviewer-token": reviewerToken,
+        "idempotency-key": crypto.randomUUID(),
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({ approver, note }),
+    });
+    setShowPublish(false);
+    router.refresh?.();
+  }}
+/>
+```
+
+---
+
+# 5) Definition of Done (fast validation)
+
+* Navigate to `/bu/imagination` → sidebar visible; “Promote” works and increments gate.
+* Knowledge: search returns files; upload creates a Draft; publish with 2-man dialog succeeds and logs `PUBLISH`.
+* Work Orders: create + start adds a `work_order_run` entry; hitting caps returns `429` + `Retry-After`.
+* Headers: CSP present; protected routes reject when scopes missing.
+
+If you want me to push tiny PR-style patches for each file path you use in Replit, say the word and I’ll output the exact diffs next.

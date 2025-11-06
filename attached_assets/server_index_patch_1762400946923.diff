@@ -1,0 +1,31 @@
+--- a/server/index.ts
++++ b/server/index.ts
+@@
+ import express from "express";
++import { csp, requireScopes } from "./security_scopes_and_csp";
++import { searchKnowledge, uploadDraft, publishFile } from "./api_knowledge_route";
++import { listWorkOrders, createWorkOrder, startWorkOrderRun } from "./api_work_orders_db_route";
++import { promoteAgent } from "./api/agents_promote.route";
+ 
+ const app = express();
+-app.use(express.json());
++app.use(express.json({ limit: "5mb" }));
++app.use(csp()); // Helmet CSP
+ 
+ // Health
+ app.get("/healthz", (_req, res) => res.json({ ok: true }));
+ 
++// Knowledge (Drive Gateway)
++app.get("/api/knowledge/:owner/:id/search", searchKnowledge);
++app.post("/api/knowledge/:owner/:id/drafts", requireScopes("knowledge:draft:write"), uploadDraft);
++app.post("/api/knowledge/:owner/:id/publish/:fileId", requireScopes("knowledge:draft:write"), publishFile);
++
++// Work Orders (DB-backed)
++app.get("/api/work-orders", listWorkOrders);
++app.post("/api/work-orders", createWorkOrder);
++app.post("/api/work-orders/:woId/start", startWorkOrderRun);
++
++// Academy promotion
++app.post("/api/agents/:id/promote", requireScopes("agents:write"), promoteAgent);
++
+ export default app;
