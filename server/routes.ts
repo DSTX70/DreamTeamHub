@@ -4,7 +4,9 @@ import { storage } from "./storage";
 import { setupAuth, isAuthenticated } from "./replitAuth";
 import { searchRoute } from "./api_search_route";
 import { getOpsEvents, postOpsEvent } from "./api/ops_events.route";
-import { publishFile, getPublishedFiles } from "./api/knowledge.route";
+import { publishFile, getPublishedFiles, searchKnowledge, uploadDraft } from "./api/knowledge.route";
+import { listWorkOrders, createWorkOrder, startWorkOrderRun } from "./api/work_orders.route";
+import { promoteAgent } from "./api/agents_promote.route";
 import { 
   insertPodSchema, insertPodAgentSchema, insertAgentSchema, insertPersonSchema, insertRoleCardSchema, insertRoleRaciSchema, insertAgentSpecSchema,
   insertWorkItemSchema, insertDecisionSchema, insertIdeaSparkSchema, insertBrainstormSessionSchema,
@@ -107,11 +109,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/ops/events", isAuthenticated, postOpsEvent);
   
   // ===========================
-  // KNOWLEDGE / PUBLISHING
+  // KNOWLEDGE / PUBLISHING & DRIVE GATEWAY
   // ===========================
   
-  app.post("/api/knowledge/publish", isAuthenticated, publishFile);
+  app.get("/api/knowledge/:owner/:id/search", isAuthenticated, searchKnowledge);
+  app.post("/api/knowledge/:owner/:id/drafts", isAuthenticated, uploadDraft);
+  app.post("/api/knowledge/:owner/:id/publish/:fileId", isAuthenticated, publishFile);
+  app.post("/api/knowledge/publish", isAuthenticated, publishFile); // Legacy endpoint
   app.get("/api/knowledge/published", isAuthenticated, getPublishedFiles);
+  
+  // ===========================
+  // WORK ORDERS (DB-backed with caps)
+  // ===========================
+  
+  app.get("/api/work-orders", isAuthenticated, listWorkOrders);
+  app.post("/api/work-orders", isAuthenticated, createWorkOrder);
+  app.post("/api/work-orders/:woId/start", isAuthenticated, startWorkOrderRun);
 
   // ===========================
   // CONTROL TOWER
@@ -1390,6 +1403,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ error: error.message || 'Failed to delete agent' });
     }
   });
+
+  // Promote agent (advance gate)
+  app.post("/api/agents/:id/promote", isAuthenticated, promoteAgent);
 
   // ===========================
   // AGENT LEARNING & MEMORY  

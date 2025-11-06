@@ -1,0 +1,226 @@
+here are Next.js (App Router) route handlers for the Drive Gateway using a Zod validator on the publish payload. These replace the Express versions one-for-one.
+
+Assumes: Next.js 13/14 App Router, TypeScript, zod, and your Drizzle models.
+Install: npm i zod googleapis (if not already).
+Service Account env:
+GDRIVE_SA_EMAIL, GDRIVE_SA_PRIVATE_KEY (with \n newlines).
+
+0) Shared utilities (Next.js)
+lib/next/response.ts
+export function json(data: any, init: number | ResponseInit = 200) {
+  const initObj = typeof init === "number" ? { status: init } : init;
+  return Response.json(data, initObj);
+}
+export function err(message: string, status = 400) {
+  return json({ error: message }, status);
+}
+
+lib/drive/googleDrive_real.ts (SA client)
+import { google } from "googleapis";
+
+export type DriveFile = { id: string; name: string; mimeType?: string; webViewLink?: string; createdTime?: string; modifiedTime?: string; parents?: string[]; };
+
+function getAuth() {
+  const email = process.env.GDRIVE_SA_EMAIL!;
+  let key = process.env.GDRIVE_SA_PRIVATE_KEY!;
+  if (!email || !key) throw new Error("Missing GDRIVE_SA_EMAIL or GDRIVE_SA_PRIVATE_KEY");
+  key = key.replace(/\\n/g, "\n");
+  return new google.auth.JWT({ email, key, scopes: ["https://www.googleapis.com/auth/drive"] });
+}
+
+export class RealDriveClient {
+  private drive = google.drive({ version: "v3", auth: getAuth() });
+
+  async search(folderId: string, q: string, limit = 20) {
+    const query = `name contains '${q.replace(/'/g, "\\'")}' and '${folderId}' in parents and trashed = false`;
+    const r = await this.drive.files.list({ q: query, pageSize: limit, fields: "files(id,name,mimeType,webViewLink,createdTime,modifiedTime,parents)" });
+    return { items: (r.data.files || []) as DriveFile[] };
+  }
+
+  async uploadText(folderId: string, name: string, text: string, mimeType = "text/plain") {
+    const r = await this.drive.files.create({
+      requestBody: { name, parents: [folderId] },
+      media: { mimeType, body: Buffer.from(text, "utf8") as any },
+      fields: "id,name,mimeType,webViewLink,createdTime,modifiedTime,parents",
+    });
+    return r.data as DriveFile;
+  }
+
+  async copyOrMove(fileId: string, targetFolderId: string, mode: "copy" | "move" = "move") {
+    if (mode === "copy") {
+      const r = await this.drive.files.copy({
+        fileId,
+        requestBody: { parents: [targetFolderId] },
+        fields: "id,name,mimeType,webViewLink,createdTime,modifiedTime,parents",
+      });
+      return r.data as DriveFile;
+    }
+    const meta = await this.drive.files.get({ fileId, fields: "parents,name" });
+    const prevParents = (meta.data.parents || []).join(",");
+    const r = await this.drive.files.update({
+      fileId,
+      addParents: targetFolderId,
+      removeParents: prevParents || undefined,
+      fields: "id,name,mimeType,webViewLink,createdTime,modifiedTime,parents",
+    });
+    return r.data as DriveFile;
+  }
+}
+
+let cached: RealDriveClient | null = null;
+export function getDriveClient() {
+  if (!cached) cached = new RealDriveClient();
+  return cached;
+}
+
+lib/knowledge/resolveFolders.ts (Drizzle)
+import { db } from "@/drizzle/db";
+import { knowledgeLink } from "@/drizzle/schema";
+import { and, eq } from "drizzle-orm";
+
+export async function resolveFolders(ownerType: "BU"|"BRAND"|"PRODUCT", ownerId: string) {
+  const rows = await db.select().from(knowledgeLink)
+    .where(and(eq(knowledgeLink.ownerType, ownerType), eq(knowledgeLink.ownerId, ownerId as any)));
+  const map: Record<string, string | undefined> = {};
+  for (const r of rows) map[r.role] = r.driveFolderId as any;
+  return { read: map.read, draft: map.draft, publish: map.publish };
+}
+
+1) Search: app/api/knowledge/[owner]/[id]/search/route.ts
+import { NextRequest } from "next/server";
+import { json, err } from "@/lib/next/response";
+import { getDriveClient } from "@/lib/drive/googleDrive_real";
+import { resolveFolders } from "@/lib/knowledge/resolveFolders";
+
+export async function GET(req: NextRequest, ctx: { params: { owner: string; id: string } }) {
+  const q = req.nextUrl.searchParams.get("q") || "";
+  if (q.trim().length < 2) return err("q required (min 2 chars)", 422);
+
+  const owner = ctx.params.owner.toUpperCase() as "BU"|"BRAND"|"PRODUCT";
+  const id = ctx.params.id;
+  const { read } = await resolveFolders(owner, id);
+  if (!read) return err("KB read folder not linked", 404);
+
+  const limit = Number(req.nextUrl.searchParams.get("limit") || 20);
+  const out = await getDriveClient().search(read, q, limit);
+  return json(out);
+}
+
+2) Upload draft (text stub): app/api/knowledge/[owner]/[id]/drafts/route.ts
+import { NextRequest } from "next/server";
+import { json, err } from "@/lib/next/response";
+import { getDriveClient } from "@/lib/drive/googleDrive_real";
+import { resolveFolders } from "@/lib/knowledge/resolveFolders";
+
+export async function POST(req: NextRequest, ctx: { params: { owner: string; id: string } }) {
+  const body = await req.json().catch(() => null) as { text?: string; fileName?: string } | null;
+  const text = body?.text ?? "# draft";
+  const name = body?.fileName ?? `draft-${Date.now()}.md`;
+
+  const owner = ctx.params.owner.toUpperCase() as "BU"|"BRAND"|"PRODUCT";
+  const id = ctx.params.id;
+  const { draft } = await resolveFolders(owner, id);
+  if (!draft) return err("Drafts folder not linked", 404);
+
+  const file = await getDriveClient().uploadText(draft, name, text, "text/markdown");
+  return json({ ok: true, file }, 201);
+}
+
+3) Publish (two-man) with Zod: app/api/knowledge/[owner]/[id]/publish/[fileId]/route.ts
+import { NextRequest } from "next/server";
+import { json, err } from "@/lib/next/response";
+import { z } from "zod";
+import crypto from "crypto";
+import { getDriveClient } from "@/lib/drive/googleDrive_real";
+import { resolveFolders } from "@/lib/knowledge/resolveFolders";
+import { db } from "@/drizzle/db";
+import { opsEvent } from "@/drizzle/schema";
+
+const PublishBody = z.object({
+  approver: z.object({ name: z.string().min(2), email: z.string().email().optional() }).optional(),
+  note: z.string().max(2000).optional()
+});
+
+export async function POST(req: NextRequest, ctx: { params: { owner: string; id: string; fileId: string } }) {
+  const reviewer = req.headers.get("x-reviewer-token") || "";
+  if (reviewer.length < 12) return err("reviewer token required", 403);
+  const idem = req.headers.get("idempotency-key") || crypto.randomUUID();
+
+  const parse = PublishBody.safeParse(await req.json().catch(() => ({})));
+  if (!parse.success) return err(parse.error.errors.map(e => e.message).join("; "), 422);
+
+  const owner = ctx.params.owner.toUpperCase() as "BU"|"BRAND"|"PRODUCT";
+  const id = ctx.params.id;
+  const fileId = ctx.params.fileId;
+
+  const { publish } = await resolveFolders(owner, id);
+  if (!publish) return err("Publish folder not linked", 404);
+
+  const out = await getDriveClient().copyOrMove(fileId, publish, "move");
+
+  const reviewerHash = crypto.createHash("sha256").update(reviewer).digest("hex");
+  await db.insert(opsEvent).values({
+    actor: "reviewer",
+    kind: "PUBLISH",
+    ownerType: owner,
+    ownerId: id as any,
+    message: `Published file ${fileId}`,
+    meta: { fileId, reviewerHash, idempotencyKey: idem, driveTitle: out.name, driveUrl: out.webViewLink }
+  });
+
+  // Headers on Next Response:
+  return new Response(JSON.stringify({ ok: true, fileId, drive: out }), {
+    status: 200,
+    headers: {
+      "content-type": "application/json",
+      "X-Request-Id": out.id || "",
+      "X-Idempotency-Key": idem
+    }
+  });
+}
+
+(Optional) Promote endpoint as Next.js: app/api/agents/[id]/promote/route.ts
+import { NextRequest } from "next/server";
+import { db } from "@/drizzle/db";
+import { agent } from "@/drizzle/schema";
+import { eq } from "drizzle-orm";
+import { json, err } from "@/lib/next/response";
+
+export async function POST(_req: NextRequest, ctx: { params: { id: string } }) {
+  const id = ctx.params.id;
+  const rows = await db.select().from(agent).where(eq(agent.id, id));
+  if (!rows.length) return err("agent not found", 404);
+  const next = Math.min(4, ((rows[0] as any).nextGate ?? 1) + 1);
+  const [updated] = await db.update(agent).set({ nextGate: next }).where(eq(agent.id, id)).returning();
+  return json({ ok: true, agent: updated });
+}
+
+Scope checks & CSP in Next.js
+
+If you already have middleware for auth/scopes, wrap these routes with it. Otherwise, add a light check in each handler (e.g., read a parsed token from request headers and return err("insufficient scope", 403) when missing).
+
+For CSP in Next.js, set headers via next.config.js or middleware:
+
+// next.config.js
+module.exports = {
+  async headers() {
+    return [{
+      source: "/(.*)",
+      headers: [
+        { key: "Content-Security-Policy", value: "default-src 'self'; script-src 'self'; object-src 'none'; base-uri 'self'" }
+      ]
+    }];
+  }
+};
+
+Wiring the UI
+
+Your existing TwoManPublishDialog + usePublishDialog hook work without change; just keep their fetch URL paths aligned to the App Router versions above:
+
+/api/knowledge/BU/${id}/publish/${fileId}
+
+/api/knowledge/BU/${id}/drafts
+
+/api/knowledge/BU/${id}/search?q=…
+
+/api/agents/${agentId}/promote

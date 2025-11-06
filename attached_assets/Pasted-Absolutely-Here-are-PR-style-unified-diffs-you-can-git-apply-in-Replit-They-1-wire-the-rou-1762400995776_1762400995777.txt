@@ -1,0 +1,387 @@
+Absolutely. Here are **PR-style unified diffs** you can `git apply` in Replit. They (1) wire the router, (2) add the Drive Gateway + SA client, (3) move Work Orders to Postgres with caps, (4) add security helpers, and (5) drop the UI components + publish hook.
+
+> Run in your repo root:
+>
+> ```bash
+> # apply each patch block in order (or just copy → patch files manually)
+> git apply -p0 <<'PATCH'
+> ...diff...
+> PATCH
+> ```
+
+---
+
+### 1) Router wiring (CSP + JSON limit + routes)
+
+```diff
+diff --git a/server/index.ts b/server/index.ts
+--- a/server/index.ts
++++ b/server/index.ts
+@@
+-import express from "express";
++import express from "express";
++import { csp, requireScopes } from "./security/scopes_and_csp";
++import { searchKnowledge, uploadDraft, publishFile } from "./api/knowledge.route";
++import { listWorkOrders, createWorkOrder, startWorkOrderRun } from "./api/work_orders.db.route";
++import { promoteAgent } from "./api/agents_promote.route";
+ 
+-const app = express();
+-app.use(express.json());
++const app = express();
++app.use(express.json({ limit: "5mb" }));
++app.use(csp()); // Helmet CSP
+ 
+ // Health
+ app.get("/healthz", (_req, res) => res.json({ ok: true }));
+ 
++// Knowledge (Drive Gateway)
++app.get("/api/knowledge/:owner/:id/search", searchKnowledge);
++app.post("/api/knowledge/:owner/:id/drafts", requireScopes("knowledge:draft:write"), uploadDraft);
++app.post("/api/knowledge/:owner/:id/publish/:fileId", requireScopes("knowledge:draft:write"), publishFile);
++
++// Work Orders (DB-backed)
++app.get("/api/work-orders", listWorkOrders);
++app.post("/api/work-orders", createWorkOrder);
++app.post("/api/work-orders/:woId/start", startWorkOrderRun);
++
++// Academy promotion
++app.post("/api/agents/:id/promote", requireScopes("agents:write"), promoteAgent);
++
+ export default app;
+```
+
+---
+
+### 2) Security helpers (CSP + scopes + Retry-After)
+
+```diff
+diff --git a/server/security/scopes_and_csp.ts b/server/security/scopes_and_csp.ts
+new file mode 100644
+--- /dev/null
++++ b/server/security/scopes_and_csp.ts
+@@
++import type { Request, Response, NextFunction } from "express";
++import helmet from "helmet";
++
++export function csp() {
++  return helmet({
++    contentSecurityPolicy: {
++      useDefaults: true,
++      directives: {
++        "script-src": ["'self'"], // add nonces if absolutely needed
++        "object-src": ["'none'"],
++        "base-uri": ["'self'"]
++      }
++    }
++  });
++}
++
++export function requireScopes(...scopes: string[]) {
++  return (req: Request, res: Response, next: NextFunction) => {
++    const have = (req as any).user?.scopes || [];
++    const ok = scopes.every(s => have.includes(s));
++    if (!ok) return res.status(403).json({ error: "insufficient scope" });
++    next();
++  };
++}
++
++export function setRetryAfter(res: Response, seconds: number) {
++  res.setHeader("Retry-After", String(seconds));
++}
+```
+
+---
+
+### 3) Google Drive SA client (real) + Drive Gateway routes
+
+```diff
+diff --git a/server/integrations/googleDrive_real.ts b/server/integrations/googleDrive_real.ts
+new file mode 100644
+--- /dev/null
++++ b/server/integrations/googleDrive_real.ts
+@@
++// Real Google Drive SA client using googleapis v3 (search/upload/move).
++// Env: GDRIVE_SA_EMAIL, GDRIVE_SA_PRIVATE_KEY (with \n newlines).
++import { google } from "googleapis";
++
++export type DriveFile = { id: string; name: string; mimeType?: string; webViewLink?: string; createdTime?: string; modifiedTime?: string; parents?: string[]; };
++export type DriveSearchResult = { items: DriveFile[] };
++export type UploadInput = { buffer: ArrayBuffer | Buffer; fileName: string; mimeType?: string } | { text: string; fileName: string; mimeType?: string };
++export interface GoogleDriveClient {
++  search(folderId: string, q: string, limit?: number): Promise<DriveSearchResult>;
++  upload(folderId: string, file: UploadInput): Promise<DriveFile>;
++  copyOrMove(fileId: string, targetFolderId: string, mode?: "copy" | "move"): Promise<DriveFile>;
++}
++function getAuth() {
++  const email = process.env.GDRIVE_SA_EMAIL as string;
++  let key = process.env.GDRIVE_SA_PRIVATE_KEY as string;
++  if (!email || !key) throw new Error("Missing GDRIVE_SA_EMAIL or GDRIVE_SA_PRIVATE_KEY");
++  key = key.replace(/\\n/g, "\n");
++  return new google.auth.JWT({ email, key, scopes: ["https://www.googleapis.com/auth/drive"] });
++}
++export class RealDriveClient implements GoogleDriveClient {
++  private drive;
++  constructor() { this.drive = google.drive({ version: "v3", auth: getAuth() }); }
++  async search(folderId: string, q: string, limit = 20): Promise<DriveSearchResult> {
++    const query = `name contains '${q.replace(/'/g, "\\'")}' and '${folderId}' in parents and trashed = false`;
++    const r = await this.drive.files.list({ q: query, pageSize: limit, fields: "files(id,name,mimeType,webViewLink,createdTime,modifiedTime,parents)" });
++    return { items: (r.data.files || []) as DriveFile[] };
++  }
++  async upload(folderId: string, file: UploadInput): Promise<DriveFile> {
++    const name = "fileName" in file ? file.fileName : "untitled.txt";
++    const mimeType = ("mimeType" in file && file.mimeType) || "text/plain";
++    const media = "buffer" in file ? { mimeType, body: file.buffer as any } : { mimeType, body: Buffer.from(file.text, "utf8") };
++    const r = await this.drive.files.create({ requestBody: { name, parents: [folderId] }, media, fields: "id,name,mimeType,webViewLink,createdTime,modifiedTime,parents" });
++    return r.data as DriveFile;
++  }
++  async copyOrMove(fileId: string, targetFolderId: string, mode: "copy" | "move" = "copy"): Promise<DriveFile> {
++    if (mode === "copy") {
++      const r = await this.drive.files.copy({ fileId, requestBody: { parents: [targetFolderId] }, fields: "id,name,mimeType,webViewLink,createdTime,modifiedTime,parents" });
++      return r.data as DriveFile;
++    }
++    const meta = await this.drive.files.get({ fileId, fields: "parents,name" });
++    const prevParents = (meta.data.parents || []).join(",");
++    const r = await this.drive.files.update({ fileId, addParents: targetFolderId, removeParents: prevParents || undefined, fields: "id,name,mimeType,webViewLink,createdTime,modifiedTime,parents" });
++    return r.data as DriveFile;
++  }
++}
++let cached: GoogleDriveClient | null = null;
++export function getDriveClient(): GoogleDriveClient { if (!cached) cached = new RealDriveClient(); return cached; }
+diff --git a/server/api/knowledge.route.ts b/server/api/knowledge.route.ts
+new file mode 100644
+--- /dev/null
++++ b/server/api/knowledge.route.ts
+@@
++import type { Request, Response } from "express";
++import crypto from "crypto";
++import { db } from "../drizzle/db";
++import { knowledgeLink, opsEvent } from "../drizzle/schema";
++import { eq, and } from "drizzle-orm";
++import { getDriveClient } from "../integrations/googleDrive_real";
++
++function required(v: any, msg: string) { if (!v) throw Object.assign(new Error(msg), { status: 400 }); }
++async function resolveFolders(ownerType: string, ownerId: string) {
++  const rows = await db.select().from(knowledgeLink).where(and(eq(knowledgeLink.ownerType, ownerType), eq(knowledgeLink.ownerId, ownerId as any)));
++  const map: Record<string,string|undefined> = {}; for (const r of rows) map[r.role] = r.driveFolderId as any;
++  return { read: map["read"], draft: map["draft"], publish: map["publish"] };
++}
++export async function searchKnowledge(req: Request, res: Response) {
++  try {
++    const owner = String(req.params.owner).toUpperCase(); const id = String(req.params.id); const q = String(req.query.q || "");
++    required(q && q.length >= 2, "q required (min 2 chars)");
++    const { read } = await resolveFolders(owner, id); required(read, "KB read folder not linked");
++    const out = await getDriveClient().search(read!, q, Number(req.query.limit ?? 20));
++    return res.json(out);
++  } catch (e:any) { return res.status(e.status || 500).json({ error: e.message || "search failed" }); }
++}
++export async function uploadDraft(req: Request, res: Response) {
++  try {
++    const owner = String(req.params.owner).toUpperCase(); const id = String(req.params.id);
++    const { draft } = await resolveFolders(owner, id); required(draft, "Drafts folder not linked");
++    const text = (req.body && typeof req.body === "object" && "text" in req.body) ? (req.body as any).text : "# draft";
++    const name = (req.body && typeof req.body === "object" && "fileName" in req.body) ? (req.body as any).fileName : `draft-${Date.now()}.md`;
++    const file = await getDriveClient().upload(draft!, { text, fileName: name, mimeType: "text/markdown" });
++    return res.status(201).json({ ok: true, file });
++  } catch (e:any) { return res.status(e.status || 500).json({ error: e.message || "upload failed" }); }
++}
++export async function publishFile(req: Request, res: Response) {
++  try {
++    const owner = String(req.params.owner).toUpperCase(); const id = String(req.params.id);
++    const fileId = String(req.params.fileId); const reviewer = String(req.headers["x-reviewer-token"] || "");
++    required(reviewer && reviewer.length >= 12, "reviewer token required");
++    const idem = String(req.headers["idempotency-key"] || crypto.randomUUID());
++    const { publish } = await resolveFolders(owner, id); required(publish, "Publish folder not linked");
++    const out = await getDriveClient().copyOrMove(fileId, publish!, "move");
++    const reviewerHash = crypto.createHash("sha256").update(reviewer).digest("hex");
++    await db.insert(opsEvent).values({ actor: "reviewer", kind: "PUBLISH", ownerType: owner, ownerId: id as any, message: `Published file ${fileId}`, meta: { fileId, reviewerHash, idempotencyKey: idem, driveTitle: out.name, driveUrl: out.webViewLink } });
++    res.setHeader("X-Request-Id", out.id || ""); res.setHeader("X-Idempotency-Key", idem);
++    return res.json({ ok: true, fileId, drive: out });
++  } catch (e:any) { return res.status(e.status || 500).json({ error: e.message || "publish failed" }); }
++}
+```
+
+---
+
+### 4) Work Orders → Postgres with caps + Retry-After
+
+```diff
+diff --git a/server/api/work_orders.db.route.ts b/server/api/work_orders.db.route.ts
+new file mode 100644
+--- /dev/null
++++ b/server/api/work_orders.db.route.ts
+@@
++import { db } from "../drizzle/db";
++import { workOrder, workOrderRun } from "../drizzle/schema";
++import { desc, and, eq, gte } from "drizzle-orm";
++
++export async function listWorkOrders(_req, res) {
++  const rows = await db.select().from(workOrder).orderBy(desc(workOrder.createdAt)).limit(50);
++  res.setHeader("X-Total-Count", String(rows.length)); res.json(rows);
++}
++export async function createWorkOrder(req, res) {
++  const b = req.body || {};
++  const [row] = await db.insert(workOrder).values({
++    title: b.title, owner: b.owner, autonomy: b.autonomy ?? "L1",
++    inputs: b.inputs, output: b.output,
++    capsRunsPerDay: b.caps?.runsPerDay ?? 100, capsUsdPerDay: b.caps?.usdPerDay ?? "2.000",
++    kpiSuccessMin: b.kpis?.successMin ?? 90, kpiP95Max: b.kpis?.p95Max ?? "3.00",
++    playbook: b.playbook, stop: b.stop, status: "draft",
++  }).returning();
++  res.status(201).json(row);
++}
++export async function startWorkOrderRun(req, res) {
++  const woId = String(req.params.woId); const agentName = String(req.body?.agent || "").trim();
++  if (!agentName) return res.status(422).json({ error: "agent required" });
++  const [wo] = await db.select().from(workOrder).where(eq(workOrder.id, woId));
++  if (!wo) return res.status(404).json({ error: "work order not found" });
++  const startOfDay = new Date(); startOfDay.setHours(0,0,0,0);
++  const runs = await db.select().from(workOrderRun).where(and(eq(workOrderRun.woId, woId), gte(workOrderRun.startedAt, startOfDay)));
++  const runsToday = runs.length; const costToday = runs.reduce((s, r) => s + Number(r.cost), 0);
++  if (runsToday >= wo.capsRunsPerDay) { res.setHeader("Retry-After","86400"); return res.status(429).json({ error: "runs/day cap reached" }); }
++  if (costToday >= Number(wo.capsUsdPerDay)) { res.setHeader("Retry-After","86400"); return res.status(429).json({ error: "budget cap reached" }); }
++  const ms = Math.floor(400 + Math.random()*1600); const cost = Number((0.002 + Math.random()*0.004).toFixed(3));
++  const [run] = await db.insert(workOrderRun).values({ woId, agentName, status: "done", ms, cost, mirror: `Drafts ready → ${wo.output}` }).returning();
++  res.status(201).json({ agent: agentName, wo_id: woId, status: run.status, ms: run.ms, cost: run.cost, started_at: run.startedAt, finished_at: run.finishedAt, mirror: run.mirror });
++}
+```
+
+---
+
+### 5) Academy promote endpoint
+
+```diff
+diff --git a/server/api/agents_promote.route.ts b/server/api/agents_promote.route.ts
+new file mode 100644
+--- /dev/null
++++ b/server/api/agents_promote.route.ts
+@@
++import { db } from "../drizzle/db";
++import { agent } from "../drizzle/schema";
++import { eq } from "drizzle-orm";
++
++export async function promoteAgent(req, res) {
++  const id = String(req.params.id);
++  const [row] = await db.select().from(agent).where(eq(agent.id, id));
++  if (!row) return res.status(404).json({ error: "agent not found" });
++  const next = Math.min(4, (row.nextGate ?? 1) + 1);
++  const [updated] = await db.update(agent).set({ nextGate: next }).where(eq(agent.id, id)).returning();
++  return res.json({ ok: true, agent: updated });
++}
+```
+
+---
+
+### 6) UI components (Two-man publish dialog, Academy sidebar, publish hook)
+
+```diff
+diff --git a/web/components/TwoManPublishDialog.tsx b/web/components/TwoManPublishDialog.tsx
+new file mode 100644
+--- /dev/null
++++ b/web/components/TwoManPublishDialog.tsx
+@@
++import React, { useMemo, useState } from "react";
++export type PublishConfirm = { reviewerToken: string; approver: { name: string; email?: string }; note?: string; };
++export default function TwoManPublishDialog({ open, onClose, onConfirm, fileId, contextLabel }:{
++  open:boolean; onClose:()=>void; onConfirm:(p:PublishConfirm)=>Promise<void>|void; fileId:string; contextLabel?:string;
++}) {
++  const [token,setToken]=useState(""); const [name,setName]=useState(""); const [email,setEmail]=useState(""); const [note,setNote]=useState(""); const [busy,setBusy]=useState(false);
++  const ok = useMemo(()=> token.trim().length>=12 && name.trim().length>=2, [token,name]); if(!open) return null;
++  const submit = async()=>{ if(!ok||busy) return; setBusy(true); try{ await onConfirm({ reviewerToken:token.trim(), approver:{ name:name.trim(), email:email.trim()||undefined }, note:note.trim()||undefined }); onClose(); } finally{ setBusy(false);} };
++  return (<div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
++    <div className="w-full max-w-lg rounded-2xl border bg-white p-4 shadow-xl">
++      <div className="flex items-start justify-between gap-3">
++        <div><h3 className="text-lg font-semibold">Promote to Publish</h3>
++        <p className="text-sm text-gray-600 mt-1">Confirm publishing for <b>{fileId}</b>{contextLabel?<> in <b>{contextLabel}</b></>:null}. Two reviewers required.</p></div>
++        <button className="px-2 py-1 border rounded" onClick={onClose} aria-label="Close">✕</button>
++      </div>
++      <div className="grid grid-cols-1 gap-3 mt-4">
++        <div><label className="text-sm block mb-1">Reviewer token (min 12 chars)</label>
++          <input className="border rounded px-2 py-1 w-full" value={token} onChange={e=>setToken(e.target.value)} placeholder="••••••••••••" /></div>
++        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
++          <div><label className="text-sm block mb-1">Second approver name</label>
++            <input className="border rounded px-2 py-1 w-full" value={name} onChange={e=>setName(e.target.value)} placeholder="Jane Reviewer" /></div>
++          <div><label className="text-sm block mb-1">Second approver email (optional)</label>
++            <input className="border rounded px-2 py-1 w-full" value={email} onChange={e=>setEmail(e.target.value)} placeholder="jane@example.com" /></div>
++        </div>
++        <div><label className="text-sm block mb-1">Note (optional)</label>
++          <textarea className="border rounded px-2 py-1 w-full" rows={2} value={note} onChange={e=>setNote(e.target.value)} placeholder="Context or ticket link" /></div>
++      </div>
++      <div className="mt-4 flex items-center justify-end gap-2">
++        <button className="px-3 py-1 border rounded" onClick={onClose} disabled={busy}>Cancel</button>
++        <button className="px-3 py-1 border rounded bg-black text-white disabled:opacity-50" onClick={submit} disabled={!ok||busy}>{busy?"Publishing…":"Confirm publish"}</button>
++      </div>
++    </div></div>);
++}
+diff --git a/web/components/AcademySidebar.tsx b/web/components/AcademySidebar.tsx
+new file mode 100644
+--- /dev/null
++++ b/web/components/AcademySidebar.tsx
+@@
++import React, { useState } from "react";
++type AgentLite = { id:string; name:string; autonomy:"L0"|"L1"|"L2"|"L3"; status:"pilot"|"live"|"watch"|"rollback"; nextGate?:number|null; };
++export default function AcademySidebar({ agent, onTrainClick, onPromote }:{
++  agent: AgentLite; onTrainClick?:(agentId:string)=>void; onPromote?:(agentId:string)=>Promise<void>|void;
++}) {
++  const [busy,setBusy]=useState(false); const nextGate = typeof agent.nextGate==="number"?agent.nextGate:undefined;
++  const promote = async()=>{ if(!onPromote||busy) return; setBusy(true); try{ await onPromote(agent.id);} finally{ setBusy(false);} };
++  return (<aside className="rounded-2xl border p-4 space-y-3">
++    <div className="flex items-start justify-between"><h3 className="text-lg font-semibold">Academy</h3><span className="text-xs text-gray-600">Right sidebar</span></div>
++    <div className="text-sm">
++      <div className="text-gray-700"><b>{agent.name}</b></div>
++      <div className="text-gray-600">Level: <b>{agent.autonomy}</b> · Status: <b>{agent.status}</b></div>
++      <div className="text-gray-600">Next gate: <b>{nextGate ?? "—"}</b></div>
++    </div>
++    <div className="flex flex-col gap-2">
++      <button className="px-3 py-1 border rounded" onClick={()=>onTrainClick?.(agent.id)}>Open Training</button>
++      <button className="px-3 py-1 border rounded bg-black text-white disabled:opacity-50" disabled={!onPromote||busy} onClick={promote}>
++        {busy?"Promoting…":"Promote (advance gate)"}
++      </button>
++    </div>
++    <div className="text-xs text-gray-600">Promotion will advance the agent’s <b>gate</b> after review. Use for agents with success ≥ 90% and p95 ≤ 3s.</div>
++  </aside>);
++}
+diff --git a/web/hooks/usePublishDialog.tsx b/web/hooks/usePublishDialog.tsx
+new file mode 100644
+--- /dev/null
++++ b/web/hooks/usePublishDialog.tsx
+@@
++import { useCallback, useState } from "react";
++export type PublishConfirm = { reviewerToken:string; approver?:{name:string;email?:string}; note?:string; };
++export function usePublishDialog({ owner, ownerId }:{ owner:"BU"|"BRAND"|"PRODUCT"; ownerId:string }) {
++  const [open,setOpen]=useState(false); const [fileId,setFileId]=useState<string|null>(null); const [busy,setBusy]=useState(false);
++  const start = useCallback((id:string)=>{ setFileId(id); setOpen(true); },[]);
++  const close = useCallback(()=> setOpen(false),[]);
++  const confirm = useCallback(async ({ reviewerToken, approver, note }: PublishConfirm) => {
++    if(!fileId) return; setBusy(true);
++    try {
++      const r = await fetch(`/api/knowledge/${owner}/${ownerId}/publish/${fileId}`, {
++        method:"POST",
++        headers: { "x-reviewer-token": reviewerToken, "idempotency-key": crypto.randomUUID(), "content-type":"application/json" },
++        body: JSON.stringify({ approver, note })
++      });
++      if(!r.ok) throw new Error(`HTTP ${r.status}`);
++      setOpen(false);
++    } finally { setBusy(false); }
++  },[fileId, owner, ownerId]);
++  return { open, fileId, busy, start, close, confirm };
++}
+```
+
+---
+
+### 7) (Optional) `/ops/logs` GET + page were provided earlier; ping me if you want the diffs again.
+
+---
+
+## After applying
+
+1. Set env for Drive SA and restart.
+2. Hit the endpoints:
+
+   * `/api/knowledge/:owner/:id/search?q=…`
+   * `/api/knowledge/:owner/:id/drafts` (POST text)
+   * `/api/knowledge/:owner/:id/publish/:fileId` (with `x-reviewer-token` ≥ 12 chars)
+3. Try **Work Orders** create/start → observe 429 with `Retry-After` when caps exceeded.
+4. Add the **AcademySidebar** to your entity pages’ right rail; wire `onPromote`.
+
+Want me to also generate a **Next.js API Routes** variant (instead of Express) or a **Zod validator** for publish payloads?

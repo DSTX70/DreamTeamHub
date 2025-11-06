@@ -1,5 +1,5 @@
 import type { Request, Response } from "express";
-import { db } from "../drizzle/db";
+import { db } from "../db";
 import { workOrders, workOrderRuns } from "@shared/schema";
 import { desc, and, eq, gte } from "drizzle-orm";
 
