@@ -1,19 +1,19 @@
 // Referenced from javascript_database integration blueprint
 import { 
-  users, pods, podAgents, agents, persons, roleCards, roleRaci, agentSpecs, workItems, decisions, ideaSparks,
+  users, pods, podAgents, agents, evidencePacks, persons, roleCards, roleRaci, coverageHistory, agentSpecs, workItems, decisions, ideaSparks,
   brainstormSessions, brainstormParticipants, brainstormIdeas, brainstormClusters, brainstormArtifacts,
   audits, auditChecks, auditFindings, auditArtifacts, events,
   conversations, messages, agentMemories, agentRuns,
   projects, projectFiles, projectAgents, projectTasks, projectMessages,
   agentGoldens, workOrders, playbookPreviews, brands, knowledgeLinks, products,
   type User, type UpsertUser,
-  type Pod, type PodAgent, type Agent, type Person, type RoleCard, type RoleRaci, type AgentSpec, type WorkItem, type Decision, type IdeaSpark,
+  type Pod, type PodAgent, type Agent, type EvidencePack, type Person, type RoleCard, type RoleRaci, type CoverageHistory, type AgentSpec, type WorkItem, type Decision, type IdeaSpark,
   type BrainstormSession, type BrainstormParticipant, type BrainstormIdea, type BrainstormCluster, type BrainstormArtifact,
   type Audit, type AuditCheck, type AuditFinding, type AuditArtifact, type Event,
   type Conversation, type Message, type AgentMemory, type AgentRun,
   type Project, type ProjectFile, type ProjectAgent, type ProjectTask, type ProjectMessage,
   type AgentGolden, type WorkOrder, type PlaybookPreview, type Brand, type KnowledgeLink, type Product,
-  type InsertPod, type InsertPodAgent, type InsertAgent, type InsertPerson, type InsertRoleCard, type InsertRoleRaci, type InsertAgentSpec, type InsertWorkItem, type InsertDecision, type InsertIdeaSpark,
+  type InsertPod, type InsertPodAgent, type InsertAgent, type InsertEvidencePack, type InsertPerson, type InsertRoleCard, type InsertRoleRaci, type InsertCoverageHistory, type InsertAgentSpec, type InsertWorkItem, type InsertDecision, type InsertIdeaSpark,
   type InsertBrainstormSession, type InsertBrainstormParticipant, type InsertBrainstormIdea, type InsertBrainstormCluster, type InsertBrainstormArtifact,
   type InsertAudit, type InsertAuditCheck, type InsertAuditFinding, type InsertAuditArtifact, type InsertEvent,
   type InsertConversation, type InsertMessage, type InsertAgentMemory, type InsertAgentRun,
@@ -46,6 +46,13 @@ export interface IStorage {
   updateAgent(id: string, agent: Partial<InsertAgent>): Promise<Agent | undefined>;
   deleteAgent(id: string): Promise<boolean>;
   
+  // Evidence Packs
+  getEvidencePacks(filters?: { agentId?: string; status?: string }): Promise<EvidencePack[]>;
+  getEvidencePack(id: number): Promise<EvidencePack | undefined>;
+  createEvidencePack(pack: InsertEvidencePack): Promise<EvidencePack>;
+  updateEvidencePack(id: number, pack: Partial<InsertEvidencePack>): Promise<EvidencePack | undefined>;
+  deleteEvidencePack(id: number): Promise<boolean>;
+  
   // Persons
   getPersons(): Promise<Person[]>;
   getPerson(id: number): Promise<Person | undefined>;
@@ -62,6 +69,12 @@ export interface IStorage {
   // Role RACI
   getRoleRacis(filters?: { workstream?: string; roleHandle?: string }): Promise<RoleRaci[]>;
   createRoleRaci(raci: InsertRoleRaci): Promise<RoleRaci>;
+  
+  // Coverage History
+  getCoverageHistory(filters?: { startDate?: Date; endDate?: Date; limit?: number }): Promise<CoverageHistory[]>;
+  getCoverageSnapshot(id: number): Promise<CoverageHistory | undefined>;
+  createCoverageSnapshot(snapshot: InsertCoverageHistory): Promise<CoverageHistory>;
+  getLatestCoverageSnapshot(): Promise<CoverageHistory | undefined>;
   
   // Agent Specs
   getAgentSpecs(): Promise<AgentSpec[]>;
@@ -335,6 +348,44 @@ export class DatabaseStorage implements IStorage {
     return true;
   }
 
+  // ===== EVIDENCE PACKS =====
+  async getEvidencePacks(filters?: { agentId?: string; status?: string }): Promise<EvidencePack[]> {
+    let query = db.select().from(evidencePacks);
+    
+    const conditions = [];
+    if (filters?.agentId) conditions.push(eq(evidencePacks.agentId, filters.agentId));
+    if (filters?.status) conditions.push(eq(evidencePacks.status, filters.status));
+    
+    if (conditions.length > 0) {
+      query = query.where(and(...conditions)) as any;
+    }
+    
+    return await query.orderBy(desc(evidencePacks.submittedAt));
+  }
+
+  async getEvidencePack(id: number): Promise<EvidencePack | undefined> {
+    const [pack] = await db.select().from(evidencePacks).where(eq(evidencePacks.id, id));
+    return pack || undefined;
+  }
+
+  async createEvidencePack(pack: InsertEvidencePack): Promise<EvidencePack> {
+    const [created] = await db.insert(evidencePacks).values(pack).returning();
+    return created;
+  }
+
+  async updateEvidencePack(id: number, pack: Partial<InsertEvidencePack>): Promise<EvidencePack | undefined> {
+    const [updated] = await db.update(evidencePacks)
+      .set({ ...pack, updatedAt: new Date() })
+      .where(eq(evidencePacks.id, id))
+      .returning();
+    return updated || undefined;
+  }
+
+  async deleteEvidencePack(id: number): Promise<boolean> {
+    await db.delete(evidencePacks).where(eq(evidencePacks.id, id));
+    return true;
+  }
+
   // ===== PERSONS =====
   async getPersons(): Promise<Person[]> {
     return await db.select().from(persons).orderBy(persons.name);
@@ -417,6 +468,48 @@ export class DatabaseStorage implements IStorage {
   async createRoleRaci(raci: InsertRoleRaci): Promise<RoleRaci> {
     const [created] = await db.insert(roleRaci).values(raci).returning();
     return created;
+  }
+
+  // ===== COVERAGE HISTORY =====
+  async getCoverageHistory(filters?: { startDate?: Date; endDate?: Date; limit?: number }): Promise<CoverageHistory[]> {
+    let query = db.select().from(coverageHistory);
+    
+    const conditions = [];
+    if (filters?.startDate) {
+      conditions.push(sql`${coverageHistory.snapshotDate} >= ${filters.startDate}`);
+    }
+    if (filters?.endDate) {
+      conditions.push(sql`${coverageHistory.snapshotDate} <= ${filters.endDate}`);
+    }
+    
+    if (conditions.length > 0) {
+      query = query.where(and(...conditions)) as any;
+    }
+    
+    query = query.orderBy(desc(coverageHistory.snapshotDate)) as any;
+    
+    if (filters?.limit) {
+      query = query.limit(filters.limit) as any;
+    }
+    
+    return await query;
+  }
+
+  async getCoverageSnapshot(id: number): Promise<CoverageHistory | undefined> {
+    const [snapshot] = await db.select().from(coverageHistory).where(eq(coverageHistory.id, id));
+    return snapshot || undefined;
+  }
+
+  async createCoverageSnapshot(snapshot: InsertCoverageHistory): Promise<CoverageHistory> {
+    const [created] = await db.insert(coverageHistory).values(snapshot).returning();
+    return created;
+  }
+
+  async getLatestCoverageSnapshot(): Promise<CoverageHistory | undefined> {
+    const [latest] = await db.select().from(coverageHistory)
+      .orderBy(desc(coverageHistory.snapshotDate))
+      .limit(1);
+    return latest || undefined;
   }
 
   // ===== AGENT SPECS =====

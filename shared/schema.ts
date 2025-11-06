@@ -114,6 +114,34 @@ export const agents = pgTable("agents", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
+// Evidence packs for agent training and promotion
+export const evidencePacks = pgTable("evidence_packs", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  agentId: text("agent_id").notNull().references(() => agents.id),
+  packLabel: text("pack_label").notNull(), // Pack A, Pack B, etc.
+  evidenceLink: text("evidence_link").notNull(), // Google Drive folder, etc.
+  submittedBy: varchar("submitted_by").references(() => users.id),
+  submittedAt: timestamp("submitted_at").defaultNow().notNull(),
+  
+  // KPIs from the evidence pack
+  taskSuccessRate: integer("task_success_rate"), // 0-100%
+  p95LatencySeconds: integer("p95_latency_seconds"), // in seconds
+  costPerTaskUsd: text("cost_per_task_usd"), // stored as text to preserve precision
+  
+  // Promotion context
+  promotionFrom: text("promotion_from"), // L0, L1, L2, L3
+  promotionTo: text("promotion_to"), // L1, L2, L3, L4
+  
+  // Review status
+  status: text("status").notNull().default('pending'), // pending, approved, rejected
+  reviewedBy: varchar("reviewed_by").references(() => users.id),
+  reviewedAt: timestamp("reviewed_at"),
+  reviewNotes: text("review_notes"),
+  
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
 // ===========================
 // ROLE CARDS & RACI
 // ===========================
@@ -147,6 +175,34 @@ export const roleRaci = pgTable("role_raci", {
   accountable: jsonb("accountable").$type<string[]>().notNull().default(sql`'[]'`),
   consulted: jsonb("consulted").$type<string[]>().notNull().default(sql`'[]'`),
   informed: jsonb("informed").$type<string[]>().notNull().default(sql`'[]'`),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+// Coverage history snapshots for trend analysis
+export const coverageHistory = pgTable("coverage_history", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  snapshotDate: timestamp("snapshot_date").defaultNow().notNull(),
+  
+  // Overall metrics
+  totalRoles: integer("total_roles").notNull(),
+  totalAgents: integer("total_agents").notNull(),
+  unstaffedRoles: integer("unstaffed_roles").notNull(),
+  overReplicatedRoles: integer("over_replicated_roles").notNull(),
+  coveragePercent: integer("coverage_percent").notNull(), // 0-100
+  
+  // Detailed breakdown by role (JSON array of role coverage data)
+  roleBreakdown: jsonb("role_breakdown").$type<{
+    roleHandle: string;
+    roleName: string;
+    agentCount: number;
+    isUnstaffed: boolean;
+    isOverReplicated: boolean;
+  }[]>().notNull().default(sql`'[]'`),
+  
+  // Metadata
+  capturedBy: varchar("captured_by"), // User ID or 'system' for automated snapshots
+  notes: text("notes"), // Optional notes about this snapshot
+  
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
@@ -751,6 +807,17 @@ export const insertAgentSchema = createInsertSchema(agents).omit({ createdAt: tr
 export type InsertAgent = z.infer<typeof insertAgentSchema>;
 export type Agent = typeof agents.$inferSelect;
 
+// Evidence Packs
+export const insertEvidencePackSchema = createInsertSchema(evidencePacks).omit({ 
+  id: true, 
+  submittedAt: true, 
+  createdAt: true, 
+  updatedAt: true,
+  reviewedAt: true
+});
+export type InsertEvidencePack = z.infer<typeof insertEvidencePackSchema>;
+export type EvidencePack = typeof evidencePacks.$inferSelect;
+
 // Persons
 export const insertPersonSchema = createInsertSchema(persons).omit({ id: true, createdAt: true });
 export type InsertPerson = z.infer<typeof insertPersonSchema>;
@@ -765,6 +832,11 @@ export type RoleCard = typeof roleCards.$inferSelect;
 export const insertRoleRaciSchema = createInsertSchema(roleRaci).omit({ id: true, createdAt: true });
 export type InsertRoleRaci = z.infer<typeof insertRoleRaciSchema>;
 export type RoleRaci = typeof roleRaci.$inferSelect;
+
+// Coverage History
+export const insertCoverageHistorySchema = createInsertSchema(coverageHistory).omit({ id: true, snapshotDate: true, createdAt: true });
+export type InsertCoverageHistory = z.infer<typeof insertCoverageHistorySchema>;
+export type CoverageHistory = typeof coverageHistory.$inferSelect;
 
 // Work Items
 export const insertWorkItemSchema = createInsertSchema(workItems).omit({ id: true, createdAt: true, updatedAt: true });

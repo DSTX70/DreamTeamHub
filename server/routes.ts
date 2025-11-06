@@ -17,6 +17,8 @@ import { router as woPlaybookPreviewRouter } from "./api/wo_playbook_preview.rou
 import { router as coverageReportRouter } from "./api/coverage_report.route";
 import { router as opsAlertHooksRouter } from "./api/ops_alert_hooks.route";
 import { router as llmInferRouter } from "./api/llm_infer.route";
+import { router as evidencePacksRouter } from "./api/evidence_packs.route";
+import { router as coverageTrendsRouter } from "./api/coverage_trends.route";
 import { 
   insertPodSchema, insertPodAgentSchema, insertAgentSchema, insertPersonSchema, insertRoleCardSchema, insertRoleRaciSchema, insertAgentSpecSchema,
   insertWorkItemSchema, insertDecisionSchema, insertIdeaSparkSchema, insertBrainstormSessionSchema,
@@ -166,12 +168,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // FEATURE BUNDLE: NEW ROUTES
   // ===========================
   
-  // Mount new feature routes (WO Playbook Preview, Coverage Report, Ops Alerts, LLM Infer)
+  // Mount new feature routes (WO Playbook Preview, Coverage Report, Ops Alerts, LLM Infer, Evidence Packs)
   // Using isDualAuthenticated to support both API token and session authentication
   app.use(isDualAuthenticated, woPlaybookPreviewRouter);
   app.use(isDualAuthenticated, coverageReportRouter);
   app.use(isDualAuthenticated, opsAlertHooksRouter);
   app.use(isDualAuthenticated, llmInferRouter);
+  app.use("/api/evidence-packs", isDualAuthenticated, evidencePacksRouter);
+  app.use(isDualAuthenticated, coverageTrendsRouter);
 
   // ===========================
   // CONTROL TOWER
@@ -523,6 +527,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error('Error deleting agent:', error);
       res.status(500).json({ error: error.message || 'Failed to delete agent' });
+    }
+  });
+
+  // Get evidence packs for a specific agent
+  app.get("/api/agents/:agentId/evidence-packs", isDualAuthenticated, async (req, res) => {
+    try {
+      const { agentId } = req.params;
+      const { status } = req.query;
+      
+      const filters: { agentId: string; status?: string } = { agentId };
+      if (status && typeof status === 'string') filters.status = status;
+      
+      const packs = await storage.getEvidencePacks(filters);
+      
+      res.json(packs);
+    } catch (error: any) {
+      console.error("Error fetching agent evidence packs:", error);
+      res.status(500).json({
+        error: "Failed to fetch agent evidence packs",
+        message: error.message || "Unknown error"
+      });
     }
   });
 
