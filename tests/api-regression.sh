@@ -129,7 +129,7 @@ HTTP_STATUS=$(echo "$RESPONSE" | tail -n 1)
 BODY=$(echo "$RESPONSE" | sed '$d')
 assert_http_status "$HTTP_STATUS" "200"
 # Response should be a JSON array
-assert_contains "$BODY" "["
+assert_contains "$BODY" "\"id\""
 
 # Test 2: Coverage Summary API
 print_header "2. Coverage Summary API Tests"
@@ -197,7 +197,7 @@ RESPONSE=$(curl -s -w "\n%{http_code}" -X POST "$BASE_URL/api/llm/infer" \
 HTTP_STATUS=$(echo "$RESPONSE" | tail -n 1)
 BODY=$(echo "$RESPONSE" | sed '$d')
 assert_http_status "$HTTP_STATUS" "200"
-assert_contains "$BODY" "Mock response"
+assert_contains "$BODY" "MOCK:"
 
 print_test "4.2 Invalid provider handling"
 RESPONSE=$(curl -s -w "\n%{http_code}" -X POST "$BASE_URL/api/llm/infer" \

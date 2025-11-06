@@ -167,10 +167,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // ===========================
   
   // Mount new feature routes (WO Playbook Preview, Coverage Report, Ops Alerts, LLM Infer)
-  app.use(isAuthenticated, woPlaybookPreviewRouter);
-  app.use(isAuthenticated, coverageReportRouter);
-  app.use(isAuthenticated, opsAlertHooksRouter);
-  app.use(isAuthenticated, llmInferRouter);
+  // Using isDualAuthenticated to support both API token and session authentication
+  app.use(isDualAuthenticated, woPlaybookPreviewRouter);
+  app.use(isDualAuthenticated, coverageReportRouter);
+  app.use(isDualAuthenticated, opsAlertHooksRouter);
+  app.use(isDualAuthenticated, llmInferRouter);
 
   // ===========================
   // CONTROL TOWER
