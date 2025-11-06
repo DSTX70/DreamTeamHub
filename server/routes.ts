@@ -4,6 +4,7 @@ import { storage } from "./storage";
 import { setupAuth, isAuthenticated } from "./replitAuth";
 import { searchRoute } from "./api_search_route";
 import { getOpsEvents, postOpsEvent } from "./api/ops_events.route";
+import { publishFile, getPublishedFiles } from "./api/knowledge.route";
 import { 
   insertPodSchema, insertPodAgentSchema, insertAgentSchema, insertPersonSchema, insertRoleCardSchema, insertRoleRaciSchema, insertAgentSpecSchema,
   insertWorkItemSchema, insertDecisionSchema, insertIdeaSparkSchema, insertBrainstormSessionSchema,
@@ -104,6 +105,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   app.get("/api/ops/events", isAuthenticated, getOpsEvents);
   app.post("/api/ops/events", isAuthenticated, postOpsEvent);
+  
+  // ===========================
+  // KNOWLEDGE / PUBLISHING
+  // ===========================
+  
+  app.post("/api/knowledge/publish", isAuthenticated, publishFile);
+  app.get("/api/knowledge/published", isAuthenticated, getPublishedFiles);
 
   // ===========================
   // CONTROL TOWER
