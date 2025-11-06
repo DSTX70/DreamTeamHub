@@ -10,6 +10,7 @@ import { BrandDetailsModal } from "@/components/brand-details-modal";
 import { PageBreadcrumb, buildBreadcrumbs } from "@/components/PageBreadcrumb";
 import AcademySidebar from "@/components/AcademySidebar";
 import { KnowledgeModals } from "@/components/knowledge-modals";
+import BuMiniAnalytics from "@/components/BuMiniAnalytics";
 import { queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useState } from "react";
@@ -385,6 +386,11 @@ export default function BUHomePage() {
                 </div>
               </CardContent>
             </Card>
+          </div>
+          
+          {/* Operations Mini Analytics */}
+          <div className="mt-4">
+            <BuMiniAnalytics buId={buSlug.toUpperCase()} />
           </div>
         </CardContent>
           </Card>

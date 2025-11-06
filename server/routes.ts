@@ -6,6 +6,7 @@ import { requireScopes } from "./security/scopes_and_csp";
 import { searchRoute } from "./api_search_route";
 import { getOpsEvents, postOpsEvent } from "./api/ops_events.route";
 import { get24hMetrics, getAlertStatus, getEventTimeline } from "./api/ops_metrics.route";
+import { opsSummaryHandler } from "./api/ops_summary.route";
 import { publishFile, getPublishedFiles, searchKnowledge, uploadDraft } from "./api/knowledge.route";
 import { listWorkOrders, createWorkOrder, startWorkOrderRun } from "./api/work_orders.route";
 import { promoteAgent } from "./api/agents_promote.route";
@@ -120,6 +121,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/ops/metrics/24h", isAuthenticated, get24hMetrics);
   app.get("/api/ops/alerts", isAuthenticated, getAlertStatus);
   app.get("/api/ops/timeline", isAuthenticated, getEventTimeline);
+  app.get("/api/ops/summary", isAuthenticated, opsSummaryHandler);
   
   // ===========================
   // KNOWLEDGE / PUBLISHING & DRIVE GATEWAY
