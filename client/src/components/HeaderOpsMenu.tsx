@@ -9,14 +9,23 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import Tooltip from "@/components/Tooltip";
 import { useState, useEffect, useRef } from "react";
+
+// Role badge color mapping
+const ROLE_COLORS: Record<string, string> = {
+  ops_viewer: "bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20",
+  ops_editor: "bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/20",
+  ops_admin: "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20",
+};
 
 export default function HeaderOpsMenu() {
   const [open, setOpen] = useState(false);
   const [showHint, setShowHint] = useState(false);
   const hintTimerRef = useRef<NodeJS.Timeout | null>(null);
   const [hotkeysEnabled, setHotkeysEnabled] = useState(true);
+  const [roles, setRoles] = useState<string[]>([]);
 
   useEffect(() => {
     // Fetch hotkeys setting from server
@@ -31,6 +40,19 @@ export default function HeaderOpsMenu() {
       }
     };
     fetchSettings();
+
+    // Fetch user roles
+    const fetchRoles = async () => {
+      try {
+        const r = await fetch("/api/ops/_auth/ping");
+        const j = await r.json();
+        setRoles(j.roles || []);
+      } catch {
+        // Default to no roles on error
+        setRoles([]);
+      }
+    };
+    fetchRoles();
   }, []);
 
   useEffect(() => {
@@ -78,12 +100,40 @@ export default function HeaderOpsMenu() {
     };
   }, [hotkeysEnabled]);
 
+  // Check if user has required role for a feature
+  const hasRole = (...requiredRoles: string[]) => {
+    return requiredRoles.some(role => roles.includes(role));
+  };
+
+  // Display up to 3 role chips, with "+N" for extras
+  const displayRoles = roles.slice(0, 3);
+  const extraCount = Math.max(0, roles.length - 3);
+
   return (
     <DropdownMenu open={open} onOpenChange={setOpen}>
       <DropdownMenuTrigger asChild>
-        <Button variant="outline" size="sm" data-testid="button-ops-menu">
-          <Settings className="h-4 w-4 mr-2" />
+        <Button variant="outline" size="sm" data-testid="button-ops-menu" className="gap-2">
+          <Settings className="h-4 w-4" />
           <span className="hidden sm:inline">Ops</span>
+          {roles.length > 0 && displayRoles.map((role) => (
+            <Badge 
+              key={role}
+              variant="outline"
+              className={`text-[10px] px-1.5 py-0 h-4 ${ROLE_COLORS[role] || ''}`}
+              data-testid={`badge-role-${role}`}
+            >
+              {role.replace('ops_', '')}
+            </Badge>
+          ))}
+          {extraCount > 0 && (
+            <Badge 
+              variant="outline"
+              className="text-[10px] px-1.5 py-0 h-4"
+              data-testid="badge-role-extra"
+            >
+              +{extraCount}
+            </Badge>
+          )}
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-56">
@@ -183,52 +233,64 @@ export default function HeaderOpsMenu() {
           </Tooltip>
         </div>
         <DropdownMenuSeparator />
-        <Link href="/ops/overview">
-          <DropdownMenuItem data-testid="menu-ops-overview">
-            <LayoutDashboard className="h-4 w-4 mr-2" />
-            Overview
-            <kbd className="ml-auto px-1.5 py-0.5 bg-muted rounded text-xs font-mono text-muted-foreground">
-              g o
-            </kbd>
-          </DropdownMenuItem>
-        </Link>
-        <Link href="/ops/inventory">
-          <DropdownMenuItem data-testid="menu-ops-inventory">
-            <Package className="h-4 w-4 mr-2" />
-            Inventory
-            <kbd className="ml-auto px-1.5 py-0.5 bg-muted rounded text-xs font-mono text-muted-foreground">
-              g i
-            </kbd>
-          </DropdownMenuItem>
-        </Link>
-        <Link href="/ops/images">
-          <DropdownMenuItem data-testid="menu-ops-images">
-            <Image className="h-4 w-4 mr-2" />
-            Images
-            <kbd className="ml-auto px-1.5 py-0.5 bg-muted rounded text-xs font-mono text-muted-foreground">
-              g m
-            </kbd>
-          </DropdownMenuItem>
-        </Link>
-        <Link href="/ops/affiliates">
-          <DropdownMenuItem data-testid="menu-ops-affiliates">
-            <UserCheck className="h-4 w-4 mr-2" />
-            Affiliates
-            <kbd className="ml-auto px-1.5 py-0.5 bg-muted rounded text-xs font-mono text-muted-foreground">
-              g a
-            </kbd>
-          </DropdownMenuItem>
-        </Link>
-        <DropdownMenuSeparator />
-        <Link href="/ops/settings">
-          <DropdownMenuItem data-testid="menu-ops-settings">
-            <Settings className="h-4 w-4 mr-2" />
-            Settings
-            <kbd className="ml-auto px-1.5 py-0.5 bg-muted rounded text-xs font-mono text-muted-foreground">
-              g s
-            </kbd>
-          </DropdownMenuItem>
-        </Link>
+        
+        {/* Viewer/Editor/Admin can access these pages */}
+        {hasRole("ops_viewer", "ops_editor", "ops_admin") && (
+          <>
+            <Link href="/ops/overview">
+              <DropdownMenuItem data-testid="menu-ops-overview">
+                <LayoutDashboard className="h-4 w-4 mr-2" />
+                Overview
+                <kbd className="ml-auto px-1.5 py-0.5 bg-muted rounded text-xs font-mono text-muted-foreground">
+                  g o
+                </kbd>
+              </DropdownMenuItem>
+            </Link>
+            <Link href="/ops/inventory">
+              <DropdownMenuItem data-testid="menu-ops-inventory">
+                <Package className="h-4 w-4 mr-2" />
+                Inventory
+                <kbd className="ml-auto px-1.5 py-0.5 bg-muted rounded text-xs font-mono text-muted-foreground">
+                  g i
+                </kbd>
+              </DropdownMenuItem>
+            </Link>
+            <Link href="/ops/images">
+              <DropdownMenuItem data-testid="menu-ops-images">
+                <Image className="h-4 w-4 mr-2" />
+                Images
+                <kbd className="ml-auto px-1.5 py-0.5 bg-muted rounded text-xs font-mono text-muted-foreground">
+                  g m
+                </kbd>
+              </DropdownMenuItem>
+            </Link>
+            <Link href="/ops/affiliates">
+              <DropdownMenuItem data-testid="menu-ops-affiliates">
+                <UserCheck className="h-4 w-4 mr-2" />
+                Affiliates
+                <kbd className="ml-auto px-1.5 py-0.5 bg-muted rounded text-xs font-mono text-muted-foreground">
+                  g a
+                </kbd>
+              </DropdownMenuItem>
+            </Link>
+          </>
+        )}
+        
+        {/* Only Admin can access Settings */}
+        {hasRole("ops_admin") && (
+          <>
+            <DropdownMenuSeparator />
+            <Link href="/ops/settings">
+              <DropdownMenuItem data-testid="menu-ops-settings">
+                <Settings className="h-4 w-4 mr-2" />
+                Settings
+                <kbd className="ml-auto px-1.5 py-0.5 bg-muted rounded text-xs font-mono text-muted-foreground">
+                  g s
+                </kbd>
+              </DropdownMenuItem>
+            </Link>
+          </>
+        )}
       </DropdownMenuContent>
     </DropdownMenu>
   );

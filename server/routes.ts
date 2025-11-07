@@ -2187,6 +2187,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   const opsOverviewRoute = await import("./routes/ops.overview.route");
   app.use(opsOverviewRoute.router);
 
+  // Ops Auth - User role checking for ops features (requires authentication)
+  const opsAuthRoute = await import("./routes/ops_auth.route");
+  app.use("/api/ops/_auth", isAuthenticated, opsAuthRoute.default);
+
   // Copilot - AI assistant for querying DTH API (requires authentication)
   const copilot = await import("./copilot");
   app.use("/copilot", isAuthenticated, copilot.default);
