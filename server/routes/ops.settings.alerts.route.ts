@@ -2,6 +2,7 @@ import express, { Request, Response } from "express";
 import { readSettings, writeSettings, effectiveSettings } from "../notifiers/settingsStore";
 import { webhookNotifier } from "../notifiers/webhook";
 import { emailNotifier } from "../notifiers/email";
+import { getUserRoles } from "../security/roles";
 
 const router = express.Router();
 
@@ -12,13 +13,11 @@ const requireEditorOrAdmin = (req: Request, res: Response, next: Function) => {
     return res.status(401).json({ error: "Not authenticated" });
   }
   
-  // This would normally check user roles from the database
-  // For now, using the same logic as ops_auth.route.ts
+  const userId = user.claims.sub;
   const email = user.claims.email || "";
-  const isEditor = email?.includes("@") && email.split("@")[0].length > 0;
-  const isAdmin = ["dustinsparks@mac.com", "admin@example.com"].includes(email);
+  const roles = getUserRoles(userId, email);
   
-  if (!isEditor && !isAdmin) {
+  if (!roles.includes("ops_editor") && !roles.includes("ops_admin")) {
     return res.status(403).json({ error: "Requires ops_editor or ops_admin role" });
   }
   
@@ -37,6 +36,10 @@ router.get("/api/ops/settings/alerts", requireEditorOrAdmin, async (_req: Reques
       smtpPort: s.smtpPort,
       smtpUser: s.smtpUser,
       smtpPass: s.smtpPass,
+      weeklyDigestEnabled: s.weeklyDigestEnabled,
+      weeklyDigestDay: s.weeklyDigestDay,
+      weeklyDigestHour: s.weeklyDigestHour,
+      weeklyDigestTo: s.weeklyDigestTo,
     }
   });
 });
@@ -56,6 +59,10 @@ router.post("/api/ops/settings/alerts", express.json(), requireEditorOrAdmin, as
     smtpUser: String(body.smtpUser || ""),
     smtpPass: String(body.smtpPass || ""),
     hotkeysEnabled: current.hotkeysEnabled, // Preserve global setting
+    weeklyDigestEnabled: !!body.weeklyDigestEnabled,
+    weeklyDigestDay: typeof body.weeklyDigestDay === "number" ? body.weeklyDigestDay : current.weeklyDigestDay,
+    weeklyDigestHour: typeof body.weeklyDigestHour === "number" ? body.weeklyDigestHour : current.weeklyDigestHour,
+    weeklyDigestTo: String(body.weeklyDigestTo || ""),
   });
   
   const s = await effectiveSettings();

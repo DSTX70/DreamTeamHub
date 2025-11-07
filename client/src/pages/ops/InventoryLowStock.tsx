@@ -4,14 +4,16 @@ import { ExternalLink } from "lucide-react";
 import Breadcrumbs from "@/components/Breadcrumbs";
 import ThresholdCell from "./components/ThresholdCell";
 import NotifierBadge from "./components/NotifierBadge";
+import { useToast } from "@/hooks/use-toast";
 
-type Item = { sku: string; name: string; stock: number; threshold: number; status: "LOW"|"OK"; updatedAt: string };
+type Item = { sku: string; name: string; stock: number; threshold: number; status: "LOW"|"OK"; updatedAt: string; notifySlack: boolean; notifyEmail: boolean };
 type EventsItem = { id: string; ts: number; type: "low-stock"; sku: string; stock: number; threshold: number };
 type NotifierSettings = { slackWebhookUrl: string; emailEnabled: boolean };
 
 function fmtDate(iso: string) { return new Date(iso).toLocaleString(); }
 
 const InventoryLowStock: React.FC = () => {
+  const { toast } = useToast();
   const [rows, setRows] = React.useState<Item[]>([]);
   const [onlyLow, setOnlyLow] = React.useState(false);
   const [events, setEvents] = React.useState<EventsItem[]>([]);
@@ -22,7 +24,37 @@ const InventoryLowStock: React.FC = () => {
   const load = async () => {
     const res = await fetch("/api/ops/inventory/thresholds");
     const json = await res.json();
-    setRows(json.items || []);
+    const thresholds = json.items || [];
+    
+    // Load notify flags with error handling
+    try {
+      const notifyRes = await fetch("/api/ops/inventory/notify");
+      if (notifyRes.ok) {
+        const notifyJson = await notifyRes.json();
+        const notifyFlags = new Map((notifyJson.items || []).map((n: any) => [n.sku, n]));
+        
+        // Merge the data
+        setRows(thresholds.map((t: any) => ({
+          ...t,
+          notifySlack: notifyFlags.get(t.sku)?.notifySlack ?? true,
+          notifyEmail: notifyFlags.get(t.sku)?.notifyEmail ?? false,
+        })));
+      } else {
+        // Fall back to defaults if user lacks permission
+        setRows(thresholds.map((t: any) => ({
+          ...t,
+          notifySlack: true,
+          notifyEmail: false,
+        })));
+      }
+    } catch (error) {
+      // Fall back to defaults on error
+      setRows(thresholds.map((t: any) => ({
+        ...t,
+        notifySlack: true,
+        notifyEmail: false,
+      })));
+    }
   };
   const loadEvents = async () => {
     const res = await fetch("/api/ops/inventory/events?limit=100");
@@ -42,7 +74,7 @@ const InventoryLowStock: React.FC = () => {
     try {
       const r = await fetch("/api/ops/_auth/ping");
       const j = await r.json();
-      setRoles(Array.isArray(j?.who?.roles) ? j.who.roles : []);
+      setRoles(Array.isArray(j?.roles) ? j.roles : []);
     } catch {
       setRoles([]);
     }
@@ -69,6 +101,58 @@ const InventoryLowStock: React.FC = () => {
 
   const onChangeThreshold = (sku: string, threshold: number) => {
     setRows(prev => prev.map(r => r.sku === sku ? { ...r, threshold } : r));
+  };
+
+  const onChangeNotify = async (sku: string, field: "notifySlack" | "notifyEmail", value: boolean) => {
+    // Store previous value for rollback
+    const previousRow = rows.find(r => r.sku === sku);
+    if (!previousRow) return;
+    
+    // Update local state immediately (optimistic update)
+    setRows(prev => prev.map(r => r.sku === sku ? { ...r, [field]: value } : r));
+    
+    // Save to backend instantly
+    const updated = { ...previousRow, [field]: value };
+    try {
+      const response = await fetch("/api/ops/inventory/notify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ items: [{ sku, notifySlack: updated.notifySlack, notifyEmail: updated.notifyEmail }] })
+      });
+      
+      if (!response.ok) {
+        // Rollback on error
+        setRows(prev => prev.map(r => r.sku === sku ? previousRow : r));
+        
+        if (response.status === 401) {
+          toast({ 
+            title: "Authentication Required", 
+            description: "You must be logged in to modify notification settings.",
+            variant: "destructive" 
+          });
+        } else if (response.status === 403) {
+          toast({ 
+            title: "Access Denied", 
+            description: "You need admin permissions to modify notification settings.",
+            variant: "destructive" 
+          });
+        } else {
+          toast({ 
+            title: "Save Failed", 
+            description: "Could not save notification preference. Please try again.",
+            variant: "destructive" 
+          });
+        }
+      }
+    } catch (error) {
+      // Rollback on network error
+      setRows(prev => prev.map(r => r.sku === sku ? previousRow : r));
+      toast({ 
+        title: "Network Error", 
+        description: "Could not save notification preference. Please check your connection.",
+        variant: "destructive" 
+      });
+    }
   };
 
   const onSave = () => {
@@ -160,6 +244,7 @@ const InventoryLowStock: React.FC = () => {
               <th className="text-right px-3 py-2">Stock</th>
               <th className="text-right px-3 py-2">Threshold</th>
               <th className="text-left px-3 py-2">Status</th>
+              <th className="text-center px-3 py-2">Notify</th>
               <th className="text-left px-3 py-2">Updated</th>
             </tr>
           </thead>
@@ -173,6 +258,30 @@ const InventoryLowStock: React.FC = () => {
                   <ThresholdCell value={row.threshold} onChange={v => onChangeThreshold(row.sku, v)} />
                 </td>
                 <td className="px-3 py-2">{row.status}</td>
+                <td className="px-3 py-2">
+                  <div className="flex items-center justify-center gap-3">
+                    <label className="flex items-center gap-1 text-xs cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={row.notifySlack}
+                        onChange={e => onChangeNotify(row.sku, "notifySlack", e.target.checked)}
+                        data-testid={`checkbox-notify-slack-${row.sku}`}
+                        className="cursor-pointer"
+                      />
+                      <span className="text-muted-foreground">Slack</span>
+                    </label>
+                    <label className="flex items-center gap-1 text-xs cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={row.notifyEmail}
+                        onChange={e => onChangeNotify(row.sku, "notifyEmail", e.target.checked)}
+                        data-testid={`checkbox-notify-email-${row.sku}`}
+                        className="cursor-pointer"
+                      />
+                      <span className="text-muted-foreground">Email</span>
+                    </label>
+                  </div>
+                </td>
                 <td className="px-3 py-2">{fmtDate(row.updatedAt)}</td>
               </tr>
             ))}

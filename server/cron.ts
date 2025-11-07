@@ -1,6 +1,7 @@
 import cron from 'node-cron';
 import { storage } from './storage';
 import { startLowStockSchedulerDB } from './scheduler/lowStockScheduler.db';
+import { startWeeklyDigest } from './scheduler/weeklyDigest';
 import { webhookNotifier } from './notifiers/webhook';
 import { emailNotifier } from './notifiers/email';
 
@@ -89,6 +90,9 @@ export function initializeCronJobs() {
     throttleMs: 300_000 // 5min cooldown between duplicate alerts for same SKU+stock level
   });
   console.log(`[Cron] 📦 DB-backed low-stock scheduler started (60s interval, ${notifiers.length} notifier(s))`);
+
+  // Start weekly digest scheduler
+  startWeeklyDigest();
 
   // Optional: Run on startup for testing (disabled by default)
   // Uncomment the line below to create a snapshot when the server starts

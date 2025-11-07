@@ -14,6 +14,10 @@ export type OpsSettings = {
   smtpUser?: string;
   smtpPass?: string;
   hotkeysEnabled?: boolean;
+  weeklyDigestEnabled?: boolean;
+  weeklyDigestDay?: number; // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
+  weeklyDigestHour?: number; // 0-23
+  weeklyDigestTo?: string; // Email override for digest (falls back to emailTo if blank)
 };
 
 async function ensureDir() {
@@ -47,5 +51,9 @@ export async function effectiveSettings(): Promise<Required<OpsSettings>> {
     smtpUser: disk.smtpUser || process.env.SMTP_USER || "",
     smtpPass: disk.smtpPass || process.env.SMTP_PASS || "",
     hotkeysEnabled: disk.hotkeysEnabled ?? true,
+    weeklyDigestEnabled: disk.weeklyDigestEnabled ?? false,
+    weeklyDigestDay: disk.weeklyDigestDay ?? 0, // Default to Sunday
+    weeklyDigestHour: disk.weeklyDigestHour ?? 9, // Default to 9 AM
+    weeklyDigestTo: disk.weeklyDigestTo || "", // Falls back to emailTo in the digest scheduler
   };
 }

@@ -2183,6 +2183,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   const inventoryRoute = await import("./routes/inventory.route.db");
   app.use(inventoryRoute.router);
 
+  // Inventory Notify - Per-SKU notification flags (requires ops_admin)
+  const inventoryNotifyRoute = await import("./routes/inventory.notify.route");
+  app.use(isAuthenticated, inventoryNotifyRoute.router);
+
   // Inventory Scheduler - Manual scan trigger (public for demo)
   const inventorySchedulerRoute = await import("./routes/inventory.scheduler.route");
   app.use(inventorySchedulerRoute.router);

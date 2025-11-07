@@ -18,7 +18,7 @@ export default function SettingsIndexRedirect() {
         }
         
         const json = await res.json();
-        const roles: string[] = Array.isArray(json?.who?.roles) ? json.who.roles : [];
+        const roles: string[] = Array.isArray(json?.roles) ? json.roles : [];
         
         if (roles.includes("ops_admin")) {
           setAllowed("admin");

@@ -16,7 +16,7 @@ export default function SettingsLayout() {
       try {
         const r = await fetch("/api/ops/_auth/ping");
         const j = await r.json();
-        const roles = Array.isArray(j?.who?.roles) ? j.who.roles : [];
+        const roles = Array.isArray(j?.roles) ? j.roles : [];
         setUserRoles(roles);
       } catch {
         setUserRoles([]);

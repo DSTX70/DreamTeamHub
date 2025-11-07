@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 
 type AlertSettings = {
@@ -15,6 +16,10 @@ type AlertSettings = {
   smtpPort: number;
   smtpUser: string;
   smtpPass: string;
+  weeklyDigestEnabled: boolean;
+  weeklyDigestDay: number; // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
+  weeklyDigestHour: number; // 0-23
+  weeklyDigestTo: string; // Email override for digest
 };
 
 export default function SettingsAlerts() {
@@ -121,6 +126,8 @@ export default function SettingsAlerts() {
   if (!settings) {
     return <div className="p-4 text-muted-foreground">Loading...</div>;
   }
+
+  const dayNames = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
   return (
     <div className="space-y-6">
@@ -240,6 +247,78 @@ export default function SettingsAlerts() {
           >
             Test Email
           </Button>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Weekly Digest</CardTitle>
+          <CardDescription>Automated weekly summary of low-stock inventory items</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center justify-between">
+            <Label htmlFor="digest-enabled">Enable Weekly Digest</Label>
+            <Switch
+              id="digest-enabled"
+              checked={settings.weeklyDigestEnabled}
+              onCheckedChange={(checked) => setSettings({ ...settings, weeklyDigestEnabled: checked })}
+              data-testid="switch-digest-enabled"
+            />
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="digest-day">Day of Week</Label>
+              <Select
+                value={String(settings.weeklyDigestDay)}
+                onValueChange={(value) => setSettings({ ...settings, weeklyDigestDay: Number(value) })}
+              >
+                <SelectTrigger id="digest-day" data-testid="select-digest-day">
+                  <SelectValue placeholder="Select day" />
+                </SelectTrigger>
+                <SelectContent>
+                  {dayNames.map((name, idx) => (
+                    <SelectItem key={idx} value={String(idx)}>
+                      {name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="digest-hour">Hour (24h format)</Label>
+              <Select
+                value={String(settings.weeklyDigestHour)}
+                onValueChange={(value) => setSettings({ ...settings, weeklyDigestHour: Number(value) })}
+              >
+                <SelectTrigger id="digest-hour" data-testid="select-digest-hour">
+                  <SelectValue placeholder="Select hour" />
+                </SelectTrigger>
+                <SelectContent>
+                  {Array.from({ length: 24 }, (_, i) => (
+                    <SelectItem key={i} value={String(i)}>
+                      {String(i).padStart(2, "0")}:00
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="digest-to">Recipient Email (optional override)</Label>
+            <Input
+              id="digest-to"
+              value={settings.weeklyDigestTo}
+              onChange={(e) => setSettings({ ...settings, weeklyDigestTo: e.target.value })}
+              placeholder="Leave blank to use default email"
+              data-testid="input-digest-to"
+            />
+            <p className="text-xs text-muted-foreground">
+              Defaults to main email address if left blank
+            </p>
+          </div>
         </CardContent>
       </Card>
 

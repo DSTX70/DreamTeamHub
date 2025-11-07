@@ -52,7 +52,7 @@ const ImagesAdmin: React.FC = () => {
     try {
       const r = await fetch("/api/ops/_auth/ping");
       const j = await r.json();
-      setRoles(Array.isArray(j?.who?.roles) ? j.who.roles : []);
+      setRoles(Array.isArray(j?.roles) ? j.roles : []);
     } catch {
       setRoles([]);
     }

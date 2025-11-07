@@ -1,4 +1,4 @@
-import { pgTable, serial, text, varchar, integer, timestamp, numeric, index, uniqueIndex } from "drizzle-orm/pg-core";
+import { pgTable, serial, text, varchar, integer, timestamp, numeric, boolean, index, uniqueIndex } from "drizzle-orm/pg-core";
 
 export const affiliates = pgTable("affiliates", {
   id: serial("id").primaryKey(),
@@ -39,6 +39,8 @@ export const inventoryProducts = pgTable("inventory_products", {
   name: text("name").notNull(),
   stock: integer("stock").notNull().default(0),
   threshold: integer("threshold").notNull().default(0),
+  notifySlack: boolean("notify_slack").default(true).notNull(),
+  notifyEmail: boolean("notify_email").default(false).notNull(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
 });
 
