@@ -160,8 +160,8 @@ export default function WorkOrdersPage() {
         stop: form.stop
       };
       
-      // Add playbookHandle if selected
-      if (form.playbookHandle) {
+      // Add playbookHandle if selected (skip if "none")
+      if (form.playbookHandle && form.playbookHandle !== "none") {
         body.playbookHandle = form.playbookHandle;
       }
 
@@ -367,7 +367,7 @@ export default function WorkOrdersPage() {
                   <SelectValue placeholder={loadingPlaybooks ? "Loading playbooks..." : "— Select a playbook (optional) —"} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">— None —</SelectItem>
+                  <SelectItem value="none">— None —</SelectItem>
                   {playbooks.map((pb) => (
                     <SelectItem key={pb.id} value={pb.handle}>
                       {pb.title} — {pb.handle}
