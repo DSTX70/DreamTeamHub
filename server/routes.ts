@@ -2207,6 +2207,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   const opsOverviewRoute = await import("./routes/ops.overview.route");
   app.use(opsOverviewRoute.router);
 
+  // Ops Logs - Event logging and CSV download (public for demo)
+  const opsLogsRoute = await import("./routes/ops.logs.route");
+  app.use(opsLogsRoute.router);
+
   // Ops Auth - User role checking for ops features (requires authentication)
   const opsAuthRoute = await import("./routes/ops_auth.route");
   app.use("/api/ops/_auth", isAuthenticated, opsAuthRoute.default);
@@ -2260,6 +2264,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ error: error.message });
     }
   });
+
+  // Error logger middleware - logs all unhandled errors to ops_logs.csv (must be last)
+  const { errorLogger } = await import("./middleware/errorLogger");
+  app.use(errorLogger);
 
   const httpServer = createServer(app);
   return httpServer;
