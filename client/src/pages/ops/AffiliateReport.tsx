@@ -41,7 +41,17 @@ const DownloadCsvButton: React.FC<{ from: string; to: string; rate: number }> = 
   return <a href={href} className="inline-flex items-center px-3 py-2 border rounded">Download CSV</a>;
 };
 
-const DateFilters: React.FC<{ from: string; to: string; setFrom: (s: string)=>void; setTo: (s: string)=>void; rate: number; setRate: (n: number)=>void; onRefresh: ()=>void; }> = ({ from, to, setFrom, setTo, rate, setRate, onRefresh }) => {
+const DateFilters: React.FC<{ from: string; to: string; setFrom: (s: string)=>void; setTo: (s: string)=>void; rate: number; setRate: (n: number)=>void; onRefresh: ()=>void; onSetRange?: (from: string, to: string)=>void; }> = ({ from, to, setFrom, setTo, rate, setRate, onRefresh, onSetRange }) => {
+  const handleQuickSelect = (days: number) => {
+    const newFrom = isoNDaysAgo(days);
+    const newTo = isoToday();
+    setFrom(newFrom);
+    setTo(newTo);
+    if (onSetRange) {
+      onSetRange(newFrom, newTo);
+    }
+  };
+
   return (
     <div className="flex flex-wrap gap-2 items-end mb-4">
       <div className="flex flex-col">
@@ -58,8 +68,8 @@ const DateFilters: React.FC<{ from: string; to: string; setFrom: (s: string)=>vo
       </div>
       <button onClick={onRefresh} className="px-3 py-2 border rounded">Refresh</button>
       <div className="flex gap-2">
-        <button className="px-2 py-1 border rounded" onClick={()=>{setFrom(isoNDaysAgo(7)); setTo(isoToday()); onRefresh();}}>Last 7d</button>
-        <button className="px-2 py-1 border rounded" onClick={()=>{setFrom(isoNDaysAgo(30)); setTo(isoToday()); onRefresh();}}>Last 30d</button>
+        <button className="px-2 py-1 border rounded" onClick={()=>handleQuickSelect(7)}>Last 7d</button>
+        <button className="px-2 py-1 border rounded" onClick={()=>handleQuickSelect(30)}>Last 30d</button>
       </div>
       <DownloadCsvButton from={from} to={to} rate={rate} />
     </div>
@@ -183,16 +193,24 @@ const AffiliateReport: React.FC = () => {
     }
   };
 
-  const fetchData = async () => {
+  const fetchData = async (customFrom?: string, customTo?: string) => {
     setLoading(true);
     try {
-      const qs = new URLSearchParams({ from, to, rate: String(rate) });
+      const qs = new URLSearchParams({ 
+        from: customFrom || from, 
+        to: customTo || to, 
+        rate: String(rate) 
+      });
       const res = await fetch(`/api/ops/aff/report?${qs.toString()}`);
       const json = await res.json();
       setData(json);
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleSetRange = (newFrom: string, newTo: string) => {
+    fetchData(newFrom, newTo);
   };
 
   useEffect(()=>{ fetchData(); fetchAffiliates(); }, []);
@@ -203,7 +221,7 @@ const AffiliateReport: React.FC = () => {
   return (
     <div className="p-4 space-y-4">
       <h1 className="text-xl font-semibold">Affiliate Report</h1>
-      <DateFilters from={from} to={to} setFrom={setFrom} setTo={setTo} rate={rate} setRate={setRate} onRefresh={fetchData} />
+      <DateFilters from={from} to={to} setFrom={setFrom} setTo={setTo} rate={rate} setRate={setRate} onRefresh={fetchData} onSetRange={handleSetRange} />
       <SummaryCards totals={totals} />
       {loading ? <div>Loading…</div> : <Table rows={rows} totals={totals} defaultRate={data?.commissionRate ?? rate} overrides={overrides} statuses={statuses} />}
       <EventsPane />
