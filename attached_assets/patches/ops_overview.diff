@@ -1,0 +1,20 @@
+*** a/client/src/pages/ops/Overview.tsx
+--- b/client/src/pages/ops/Overview.tsx
+@@
+-import React from "react";
++import React from "react";
++import LiveHealthCard from "../../components/ops/LiveHealthCard";
+@@
+ export default function Overview() {
+   return (
+-    <div className="space-y-6">
+-      {/* existing overview content */}
+-    </div>
++    <div className="space-y-6">
++      {/* Live Health card */}
++      <LiveHealthCard />
++
++      {/* existing overview content */}
++    </div>
+   );
+ }
