@@ -5,7 +5,7 @@ import type { HealthResponse, CheckResult } from "../../shared/types/health";
 
 // Optional imports — leave as-is if your app doesn't provide these exact modules.
 // Swap these for your project's actual helpers.
-import { db } from "../drizzle/db"; // expect a db client compatible with .execute or .query('SELECT 1')
+import { db } from "../db"; // expect a db client compatible with .execute or .query('SELECT 1')
 import { S3Client, ListObjectsV2Command } from "@aws-sdk/client-s3";
 import nodemailer from "nodemailer";
 

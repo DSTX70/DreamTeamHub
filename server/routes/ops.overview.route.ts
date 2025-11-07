@@ -26,6 +26,18 @@ router.get("/api/ops/overview", async (_req: Request, res: Response) => {
   const env = { databaseUrl: !!process.env.DATABASE_URL, s3Bucket: !!bucket, opsToken: !!process.env.OPS_API_TOKEN };
   const digest = { enabled: !!s.weeklyDigestEnabled, lastSent: s.lastDigestAt || "" };
   const logs = getCounters();
-  res.json({ inventory, images, affiliates, linter, env, digest, logs });
+  
+  // Fetch health data from healthz endpoint
+  let liveHealth = null;
+  try {
+    const healthRes = await fetch(`http://localhost:${process.env.PORT || 5000}/api/healthz`);
+    if (healthRes.ok) {
+      liveHealth = await healthRes.json();
+    }
+  } catch (err) {
+    // Health check failed, liveHealth stays null
+  }
+  
+  res.json({ inventory, images, affiliates, linter, env, digest, logs, liveHealth });
 });
 export default router;

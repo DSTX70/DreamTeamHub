@@ -1,6 +1,7 @@
 import React from "react";
 import StatCard from "./components/StatCard";
-type Overview = { inventory:{lowCount:number}; images:{bucket:string;region:string;probeOk:boolean;defaultCacheControl:string}; affiliates:{clicks:number;uniques:number;orders:number;revenue:number;commission:number;window:{fromISO:string;toISO:string}}; linter:{rules:number}; env:{databaseUrl:boolean;s3Bucket:boolean;opsToken:boolean}; digest?:{enabled:boolean;lastSent?:string}; logs?:{errors:number;events:number}; };
+import LiveHealthCard from "../../components/ops/LiveHealthCard";
+type Overview = { inventory:{lowCount:number}; images:{bucket:string;region:string;probeOk:boolean;defaultCacheControl:string}; affiliates:{clicks:number;uniques:number;orders:number;revenue:number;commission:number;window:{fromISO:string;toISO:string}}; linter:{rules:number}; env:{databaseUrl:boolean;s3Bucket:boolean;opsToken:boolean}; digest?:{enabled:boolean;lastSent?:string}; logs?:{errors:number;events:number}; liveHealth?:any; };
 function fmtCurrency(n:number){ return new Intl.NumberFormat(undefined,{style:"currency",currency:"USD"}).format(n); }
 export default function OpsOverview(){
   const [data,setData]=React.useState<Overview|null>(null);
@@ -21,6 +22,7 @@ export default function OpsOverview(){
   return(<div className="p-4 space-y-4">
     <h1 className="text-xl font-semibold">Ops Overview</h1>
     <EnvRow/>
+    <LiveHealthCard />
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
       <StatCard title="Inventory" subtitle="Low-stock & thresholds" href="/ops/inventory">{data?<div>Low-stock SKUs: <span className={data.inventory.lowCount?"text-red-600 font-semibold":""}>{data.inventory.lowCount}</span></div>:<div className="text-gray-500">Loading…</div>}</StatCard>
       <StatCard title="Images" subtitle="Allowlist & uploads" href="/ops/images">{data?(<div className="space-y-1"><div>Bucket: <span className="font-mono">{data.images.bucket||"(unset)"}</span></div><div>Probe: {data.images.probeOk?"OK":"Check IAM/Region"}</div><div className="text-xs text-gray-600">Cache-Control: {data.images.defaultCacheControl}</div></div>):<div className="text-gray-500">Loading…</div>}</StatCard>

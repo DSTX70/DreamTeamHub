@@ -1,0 +1,71 @@
+Shipped the next bundle in the same style. 👇
+
+Download ship_llm_presets_form_validator_and_ops_logs.zip
+
+What’s inside (ready to drop in):
+
+LLM Presets + Form/Validator (client)
+
+client/src/pages/llm/presets.ts — GPT/Claude/Gemini preset tips + augment lines
+
+client/src/pages/llm/Linter.tsx — Presets UI with “Copy augmented prompt”
+
+client/src/pages/llm/SchemaForm.tsx — Generate Form from JSON Schema (objects, arrays, enums) + Ajv validator panel with copy JSON
+
+Ops Logs polish
+
+server/routes/ops_logs.route.ts — /api/ops/logs (cursor polling via after), /api/ops/logs/csv export, /api/ops/logs/counters
+
+shared/types/ops.ts — OpsEvent types
+
+client/src/pages/ops/Logs.tsx — live tail list (filters: level/owner/kind), per-line Copy, CSV download
+
+client/src/components/ops/CopyBtn.tsx — small reusable copy button
+
+patches/ops_overview_counters.diff — Overview chip: Logs: N · Err M (auto-refresh)
+
+Mount steps (copy/paste):
+
+Server
+
+// server/index.ts
+import express from "express";
+import opsLogsRouter from "./routes/ops_logs.route";
+
+const app = express();
+app.use("/api/ops/logs", opsLogsRouter);
+
+
+Client routes
+
+Add a route to /llm/linter → LLMLinterPage
+
+Add a route to /ops/logs → OpsLogsPage
+
+Overview counters
+
+Apply patches/ops_overview_counters.diff (or manually import the LiveCounters snippet in your /ops/overview page)
+
+Deps
+
+npm i ajv swr
+
+
+Optional hook for emitting events
+
+// anywhere you emit ops events
+import { appendOpsEvent } from "./routes/ops_logs.route";
+
+appendOpsEvent({ level:"info",  kind:"deploy", owner:"forge", msg:"Deployed main@abcdef" });
+appendOpsEvent({ level:"error", kind:"job",    owner:"cron",  msg:"Low-stock scheduler failed" });
+
+
+Validation checklist
+
+/llm/linter shows model tips and augmented prompt; “Copy” works
+
+Schema panel renders nested objects/enums; Ajv validator flips Valid/Errors appropriately; “Copy JSON” works
+
+/ops/logs streams new lines (polling every 2.5s), filters apply, “Copy” per line and CSV export good
+
+/ops/overview shows Logs: N · Err M chip updating live
