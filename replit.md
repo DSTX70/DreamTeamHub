@@ -33,6 +33,7 @@ An Ops Dashboard & Observability provides real-time operational metrics, display
 - **Images**: Shows S3 bucket status, connectivity probe, and Cache-Control configuration with link to `/ops/images`
 - **Affiliates**: Presents 7-day performance metrics (clicks, unique visitors, orders, revenue, commission at 10%) with link to `/ops/affiliates`
 - **LLM Linter**: Displays active rule count for JSON schema validation with link to `/llm/provider/linter`
+- **Environment Health**: Real-time status of critical environment variables (DATABASE_URL, S3_BUCKET, OPS_API_TOKEN, AWS_REGION) with OK/Missing badges
 
 This single-pane view enables rapid assessment of system health and provides one-click navigation to detailed management interfaces.
 
@@ -46,6 +47,8 @@ Future phases include an Onboarding Wizard for brand/product creation and Covera
 - **Saved Addresses & Checkout:** Complete checkout flow with address management
 - **Responsive Images with S3:** Sharp-based image transformation with AWS S3 storage
 - **Client-side Prompt Linter:** LLM schema validation for Work Orders
+- **CI/CD Pipeline:** GitHub Actions workflow with Node 20, pnpm, type-checking, tests, and environment health validation (with forked PR support)
+- **Environment Health Monitoring:** Real-time dashboard display and validation script for critical environment variables
 
 ### Technology Stack
 The frontend utilizes React 18, TypeScript, Wouter, TanStack Query v5, React Hook Form, Zod, Shadcn UI, and Tailwind CSS. The backend is built with Express.js, TypeScript, and Drizzle ORM. PostgreSQL, backed by Neon, serves as the primary database with a comprehensive relational model.
@@ -64,6 +67,22 @@ Authentication is provided by Replit Auth (OpenID Connect). The security archite
 - Client-side role gates with `RequireRole` component; server-side enforcement as source of truth
 
 Scope-Based Authorization uses `requireScopes()` middleware. Routes support dual authentication via `isDualAuthenticated`. Rate limiting is enforced with `429` status and `Retry-After` headers. Idempotency protection is implemented for knowledge publish endpoints using the `Idempotency-Key` header.
+
+### CI/CD & Deployment
+**GitHub Actions CI Pipeline:**
+- Automated testing on push and pull requests
+- Node 20 with pnpm package management
+- TypeScript type-checking
+- Environment health validation with required variables: DATABASE_URL, AWS_S3_BUCKET, OPS_API_TOKEN
+- Optional variables with defaults: AWS_REGION (defaults to us-east-1)
+- Forked PR support with secret handling safeguards
+- Test suite execution with comprehensive coverage
+
+**Environment Health Script** (`scripts/check-env.ts`):
+- Validates presence of required environment variables
+- Masks sensitive values in output for security
+- CI-aware execution with graceful handling of missing secrets
+- Exit code 1 on validation failure, 0 on success
 
 ### Staging Environment
 The staging environment features automated weekly database refreshes using Greenmask for PII masking, access control via basic auth or IP allowlist, a `/healthz` endpoint for monitoring, and automated SQL tests for referential integrity validation.
