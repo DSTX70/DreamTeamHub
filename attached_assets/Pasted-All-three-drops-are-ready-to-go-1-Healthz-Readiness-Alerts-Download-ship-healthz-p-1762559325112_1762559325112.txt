@@ -1,0 +1,81 @@
+All three drops are ready to go. 🔧⚡️
+
+1. Healthz + Readiness + Alerts
+
+* [Download **ship_healthz_prod_readiness_and_alerts.zip**](sandbox:/mnt/data/ship_healthz_prod_readiness_and_alerts.zip)
+
+  * `server/routes/healthz.route.ts` — readiness with per-probe timeouts + `/livez`
+  * `server/routes/admin_deploy.route.ts` — `POST /api/admin/deploy/mark`, `GET /api/admin/deploy/last`
+  * `client/src/components/ops/LastDeployChip.tsx` + `patches/ops_overview_last_deploy.diff`
+  * `ops/alertmanager/rules.yml` — example p95 and 5xx alerts
+  * README with mount + CI “deploy mark” curl
+
+2. LLM Linter — Presets CRUD + Auto-fix + JSON extraction
+
+* [Download **ship_llm_linter_presets_crud_and_autofix.zip**](sandbox:/mnt/data/ship_llm_linter_presets_crud_and_autofix.zip)
+
+  * `server/routes/llm_presets.route.ts` — in-memory CRUD for presets
+  * `client/src/pages/llm/LinterPresetsCRUD.tsx` — CRUD UI
+  * `client/src/pages/llm/autofix.ts` — prompt/schema auto-fix + JSON extraction + Ajv validate
+  * README with mount steps
+
+3. Ops Logs — SSE + Filters + Deep Link
+
+* [Download **ship_ops_logs_sse_and_filters.zip**](sandbox:/mnt/data/ship_ops_logs_sse_and_filters.zip)
+
+  * `server/routes/ops_logs_sse.route.ts` — `/api/ops/logs/stream` (SSE) and `/emit`
+  * `client/src/pages/ops/LogsSSE.tsx` — live stream with 15m/1h/24h filters, “Copy as JSON”
+  * `patches/ops_overview_error_link.diff` — `Err M` links to `/ops/logs?level=error`
+  * README with wiring notes
+
+Quick wire checklist (copy/paste):
+
+Server mounts
+
+```ts
+// server/index.ts
+import healthzRouter from "./routes/healthz.route";
+import adminDeployRouter from "./routes/admin_deploy.route";
+import opsLogsSseRouter from "./routes/ops_logs_sse.route";
+import llmPresetsRouter from "./routes/llm_presets.route";
+
+app.use("/api/healthz", healthzRouter);
+app.use("/api/admin/deploy", adminDeployRouter);
+app.use("/api/ops/logs", express.json(), opsLogsSseRouter);   // adds /stream and /emit
+app.use("/api/llm/presets", express.json(), llmPresetsRouter);
+```
+
+Client routes
+
+* Add `/ops/logs-sse` → `LogsSSE.tsx`
+* Add `/llm/linter/presets` → `LinterPresetsCRUD.tsx`
+* Apply:
+
+  * `patches/ops_overview_last_deploy.diff`
+  * `patches/ops_overview_error_link.diff`
+
+Deps (if not already present)
+
+```
+npm i ajv swr react-router-dom
+```
+
+CI “Deploy mark”
+
+```
+curl -X POST $API_BASE/api/admin/deploy/mark \
+  -H "Content-Type: application/json" \
+  -d '{"sha":"'$GITHUB_SHA'","tag":"'$RELEASE_TAG'","actor":"'$GITHUB_ACTOR'"}'
+```
+
+Prometheus/Alertmanager
+
+* Drop `ops/alertmanager/rules.yml` into your Prometheus rules path; tweak metric names/labels to your stack.
+
+Next small passes (remaining polish)
+
+* Healthz: cap total request time (e.g., global 2.5s guard), add probe result caching (e.g., 5–10s) for burst resilience.
+* LLM Linter: persist presets to DB; add versioning + “restore default” for GPT/Claude/Gemini; expose an API to auto-augment a prompt on the fly.
+* Ops Logs: replace in-memory SSE broadcaster with your real emitter; add “since” server param to `/api/ops/logs` for parity; add a “Copy raw JSON” vs “Copy summary” toggle.
+
+If you want, paste your repo’s exact paths (server entry, client pages root, shared types path), and I’ll generate a repo-tailored patch set to drop in without manual path tweaks.

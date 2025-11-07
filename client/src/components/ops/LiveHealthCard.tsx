@@ -1,7 +1,7 @@
 // client/src/components/ops/LiveHealthCard.tsx
 import React from "react";
 import useSWR from "swr";
-import type { HealthResponse } from "../../../shared/types/health";
+import type { HealthResponse } from "../../../../shared/types/health";
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
