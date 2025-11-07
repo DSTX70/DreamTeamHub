@@ -56,6 +56,7 @@ import { IdeaSparkButton } from "@/components/idea-spark";
 import { SearchModal, useSearchShortcut } from "@/components/search-modal";
 import HeaderOpsMenu from "@/components/HeaderOpsMenu";
 import OpsHotkeys from "@/components/OpsHotkeys";
+import FooterStatus from "@/components/FooterStatus";
 import { useState } from "react";
 
 function AuthenticatedRoutes() {
@@ -185,6 +186,9 @@ function AppContent() {
               <AuthenticatedRoutes />
             </div>
           </main>
+          <footer className="flex items-center justify-end px-4 py-2 border-t bg-background">
+            <FooterStatus />
+          </footer>
         </div>
         <IdeaSparkButton />
         <SearchModal open={isSearchOpen} onOpenChange={setIsSearchOpen} />
