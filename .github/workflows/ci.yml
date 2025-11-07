@@ -41,6 +41,8 @@ jobs:
           NODE_ENV: test
       
       - name: Environment health check
+        # Skip on forked PRs since secrets are not available
+        if: github.event_name == 'push' || !github.event.pull_request.head.repo.fork
         run: npx tsx scripts/check-env.ts
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}

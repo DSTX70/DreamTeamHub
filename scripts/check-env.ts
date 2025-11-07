@@ -92,6 +92,16 @@ function printResults(results: EnvCheckResult[]): void {
 }
 
 function main(): void {
+  // Detect CI environment without secrets (e.g., forked PRs)
+  const isCI = process.env.CI === 'true' || process.env.GITHUB_ACTIONS === 'true';
+  const allVarsEmpty = REQUIRED_VARS.every(name => !process.env[name]);
+  
+  if (isCI && allVarsEmpty) {
+    console.warn('\n⚠️  Warning: Running in CI with no environment variables set');
+    console.warn('This is expected for forked PRs. Skipping validation.\n');
+    process.exit(0);
+  }
+  
   const { results, hasErrors } = checkEnvironment();
   
   printResults(results);
