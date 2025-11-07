@@ -1,0 +1,31 @@
+import express, { Request, Response } from "express";
+import { inventoryDao } from "../db/inventoryDao";
+import { affiliateDao } from "../db/affiliateDao";
+import { s3List } from "../images/s3";
+import { runAllRules } from "../../shared/lint/rules";
+import { effectiveSettings } from "../notifiers/settingsStore";
+import { getCounters } from "../ops/logger";
+export const router = express.Router();
+router.get("/api/ops/overview", async (_req: Request, res: Response) => {
+  const lows = await inventoryDao.getLowStock();
+  const inventory = { lowCount: Array.isArray(lows) ? lows.length : 0 };
+  const bucket = process.env.AWS_S3_BUCKET || "";
+  const region = process.env.AWS_REGION || "us-east-1";
+  const defaultCacheControl = process.env.IMG_DEFAULT_CACHE_CONTROL || "public, max-age=31536000, immutable";
+  let probeOk = false;
+  if (bucket) { try { await s3List(""); probeOk = true; } catch { probeOk = false; } }
+  const images = { bucket, region, probeOk, defaultCacheControl };
+  const now = new Date();
+  const fromISO = new Date(now.getTime() - 7*86400000).toISOString();
+  const toISO = now.toISOString();
+  const rep = await affiliateDao.getReport({ fromISO, toISO, commissionRate: 0.10 });
+  const affiliates = { clicks: rep.totals.clicks, uniques: rep.totals.uniqueVisitors, orders: rep.totals.orders, revenue: rep.totals.revenue, commission: rep.totals.commission, window: rep.window };
+  const rulesCount = runAllRules({ type: "object", properties: {} }).length;
+  const linter = { rules: rulesCount };
+  const s = await effectiveSettings();
+  const env = { databaseUrl: !!process.env.DATABASE_URL, s3Bucket: !!bucket, opsToken: !!process.env.OPS_API_TOKEN };
+  const digest = { enabled: !!s.weeklyDigestEnabled, lastSent: s.lastDigestAt || "" };
+  const logs = getCounters();
+  res.json({ inventory, images, affiliates, linter, env, digest, logs });
+});
+export default router;
