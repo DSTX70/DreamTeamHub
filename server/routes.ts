@@ -165,6 +165,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/playbooks/:handle", isAuthenticated, getPlaybookByHandle);
 
   // ===========================
+  // PUBLIC ROUTES (no auth required)
+  // ===========================
+  
+  // Health Check - DB/S3/SMTP probes (public for monitoring)
+  const healthzRoute = await import("./routes/healthz.route");
+  app.use("/api/healthz", healthzRoute.default);
+
+  // ===========================
   // FEATURE BUNDLE: NEW ROUTES
   // ===========================
   
@@ -2210,10 +2218,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Ops Logs - Event logging and CSV download (public for demo)
   const opsLogsRoute = await import("./routes/ops.logs.route");
   app.use(opsLogsRoute.router);
-
-  // Health Check - DB/S3/SMTP probes (public for monitoring)
-  const healthzRoute = await import("./routes/healthz.route");
-  app.use("/api/healthz", healthzRoute.default);
 
   // Ops Auth - User role checking for ops features (requires authentication)
   const opsAuthRoute = await import("./routes/ops_auth.route");
