@@ -42,12 +42,13 @@ Future phases include an Onboarding Wizard for brand/product creation and Covera
 **Completed E-Commerce Features (November 2025):**
 - **Affiliate E2E Tracking:** Database-backed affiliate management with pixel-based click/conversion tracking, 30-day rolling metrics, and attribution deduplication
 - **Affiliate Rates & Payouts:** Per-affiliate commission rate overrides (nullable, falls back to default), status management (active/suspended), admin UI at `/ops/affiliates/admin` with case-insensitive code filter (URL param and input field), payout calculations with date range filtering and CSV export at `/ops/affiliates/payouts`, visual badges in report for rate overrides and suspension status, Edit links in report that navigate to admin with pre-filtered code, contextual back navigation ("← Back to Report" when filtered), open-in-new-tab icons for cross-page navigation
+- **Inventory Notification Overrides:** Per-SKU Slack/Email toggles with instant-save persistence, weekly digest scheduler (configurable day/hour/recipients), ops_admin-only authorization, optimistic UI updates with rollback on auth failures
 - **Low-Stock Inventory Scheduler:** DB-backed scheduler with webhook (Slack) and email (SMTP) notifiers, 60-second scan interval, 5-minute alert throttling, and comprehensive event logging
 - **Ops Settings UI:** Granular management interface at `/ops/settings` with role-based sub-routes (Alerts for ops_editor, Global for ops_admin), auto-redirect logic, webhook/email configuration, notification testing, and manual inventory scans
 - **Breadcrumb Navigation System:** Reusable breadcrumb component deployed across Ops pages (Settings, Images, Inventory) showing hierarchical path with role badge indicators
 - **Cross-Page Navigation UX:** Consistent open-in-new-tab icons (ExternalLink from lucide-react) on Settings links in Images and Inventory pages, contextual escape hatches for filtered views
 - **Saved Addresses & Checkout:** Complete checkout flow with address management
-- **Responsive Images with S3:** Sharp-based image transformation with AWS S3 storage
+- **Responsive Images with S3:** Sharp-based image transformation with AWS S3 storage, preview drawer for in-memory quality/size comparison (POST /api/ops/images/preview), re-encode & replace endpoint for ops_admin-only variant replacement (POST /api/ops/images/reencode), quality sliders (AVIF/WEBP/JPG), custom widths CSV, comparison table showing uploaded vs preview with Δ size and Δ%, role-gated Replace button
 - **Client-side Prompt Linter:** LLM schema validation for Work Orders
 - **CI/CD Pipeline:** GitHub Actions workflow with Node 20, pnpm, type-checking, tests, and environment health validation (with forked PR support)
 - **Environment Health Monitoring:** Real-time dashboard display and validation script for critical environment variables
