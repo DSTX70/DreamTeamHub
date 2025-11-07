@@ -1,6 +1,7 @@
 import React from "react";
 import ThresholdCell from "./components/ThresholdCell";
 import NotifierBadge from "./components/NotifierBadge";
+import Breadcrumbs from "../../components/Breadcrumbs";
 
 type Item = { sku: string; name: string; stock: number; threshold: number; status: "LOW"|"OK"; updatedAt: string };
 type EventsItem = { id: string; ts: number; type: "low-stock"; sku: string; stock: number; threshold: number };
@@ -14,6 +15,7 @@ const InventoryLowStock: React.FC = () => {
   const [events, setEvents] = React.useState<EventsItem[]>([]);
   const [saving, setSaving] = React.useState(false);
   const [notifiers, setNotifiers] = React.useState<NotifierSettings | null>(null);
+  const [roles, setRoles] = React.useState<string[]>([]);
 
   const load = async () => {
     const res = await fetch("/api/ops/inventory/thresholds");
@@ -27,12 +29,13 @@ const InventoryLowStock: React.FC = () => {
   };
   const loadNotifiers = async () => {
     try {
-      const r = await fetch("/api/ops/settings/notifiers");
-      const j = await r.json();
+      const r = await fetch("/api/ops/settings/notifiers"); const j = await r.json();
       setNotifiers({ slackWebhookUrl: j.settings?.slackWebhookUrl || "", emailEnabled: !!j.settings?.emailEnabled });
-    } catch {
-      setNotifiers({ slackWebhookUrl: "", emailEnabled: false });
-    }
+    } catch { setNotifiers({ slackWebhookUrl: "", emailEnabled: false }); }
+    try {
+      const r2 = await fetch("/api/ops/_auth/ping"); const j2 = await r2.json();
+      setRoles(Array.isArray(j2?.who?.roles)? j2.who.roles: []);
+    } catch { setRoles([]); }
   };
 
   React.useEffect(()=>{ load(); loadEvents(); loadNotifiers(); }, []);
@@ -44,30 +47,19 @@ const InventoryLowStock: React.FC = () => {
     try {
       await fetch("/api/ops/inventory/thresholds", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ items: updates }) });
       await load();
-    } finally {
-      setSaving(false);
-    }
+    } finally { setSaving(false); }
   };
 
-  const onChangeThreshold = (sku: string, threshold: number) => {
-    setRows(prev => prev.map(r => r.sku === sku ? { ...r, threshold } : r));
-  };
+  const onChangeThreshold = (sku: string, threshold: number) => { setRows(prev => prev.map(r => r.sku === sku ? { ...r, threshold } : r)); };
 
-  const onSave = () => {
-    const updates = rows.map(r => ({ sku: r.sku, threshold: r.threshold }));
-    saveThresholds(updates);
-  };
+  const onSave = () => { const updates = rows.map(r => ({ sku: r.sku, threshold: r.threshold })); saveThresholds(updates); };
 
   const simulateRecount = async () => {
     const input = window.prompt("Enter sku:stock pairs (comma separated), e.g. CARD-CC-HELLO-001:9,CARD-ME-NYE-004:5");
     if (!input) return;
-    const items = input.split(",").map(s => {
-      const [sku, stock] = s.split(":");
-      return { sku: sku?.trim(), stock: Number(stock) };
-    });
+    const items = input.split(",").map(s => { const [sku, stock] = s.split(":"); return { sku: sku?.trim(), stock: Number(stock) }; });
     await fetch("/api/ops/inventory/recount", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ items }) });
-    await load();
-    await loadEvents();
+    await load(); await loadEvents();
   };
 
   const slackActive = !!notifiers?.slackWebhookUrl;
@@ -75,6 +67,8 @@ const InventoryLowStock: React.FC = () => {
 
   return (
     <div className="p-4 space-y-4">
+      <Breadcrumbs items={[{label:"Ops", href:"/ops/overview"}, {label:"Inventory"}]} roles={roles} />
+
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-semibold">Inventory — Low Stock & Thresholds</h1>
         <div className="flex items-center gap-2">

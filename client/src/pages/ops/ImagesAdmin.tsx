@@ -1,4 +1,6 @@
 import React from "react";
+import { Link } from "wouter";
+import Breadcrumbs from "@/components/Breadcrumbs";
 import StatusBadge from "./components/StatusBadge";
 
 type AllowItem = { sku: string; baseKey: string };
@@ -27,6 +29,7 @@ const ImagesAdmin: React.FC = () => {
   const [variants, setVariants] = React.useState<any[]>([]);
   const [cacheControl, setCacheControl] = React.useState("public, max-age=31536000, immutable");
   const [status, setStatus] = React.useState<Status | null>(null);
+  const [roles, setRoles] = React.useState<string[]>([]);
 
   const load = async () => {
     const r = await fetch("/api/ops/images/allowlist");
@@ -43,17 +46,35 @@ const ImagesAdmin: React.FC = () => {
       setStatus(null);
     }
   };
+
+  const loadRoles = async () => {
+    try {
+      const r = await fetch("/api/ops/_auth/ping");
+      const j = await r.json();
+      setRoles(Array.isArray(j?.who?.roles) ? j.who.roles : []);
+    } catch {
+      setRoles([]);
+    }
+  };
   
-  React.useEffect(()=>{ load(); loadStatus(); }, []);
+  React.useEffect(() => {
+    load();
+    loadStatus();
+    loadRoles();
+  }, []);
 
   const addAllow = async () => {
-    await fetch("/api/ops/images/allowlist", { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({ items:[{ sku, baseKey }] }) });
+    await fetch("/api/ops/images/allowlist", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ items: [{ sku, baseKey }] })
+    });
     setSku("");
     await load();
   };
 
   const remove = async (sku: string) => {
-    await fetch("/api/ops/images/allowlist/" + encodeURIComponent(sku), { method:"DELETE" });
+    await fetch("/api/ops/images/allowlist/" + encodeURIComponent(sku), { method: "DELETE" });
     await load();
   };
 
@@ -78,19 +99,30 @@ const ImagesAdmin: React.FC = () => {
     const res = await fetch("/api/ops/images/upload", { method: "POST", body: form });
     const json: UploadResp = await res.json();
     setProgress(json.ok ? "Done" : "Failed");
+
     const list = await (await fetch("/api/ops/images/variants/" + encodeURIComponent(baseKey))).json();
     setVariants(list.items || []);
   };
 
-  const s3State: "ok"|"warn"|"err" =
-    status ? (status.hasBucketEnv ? (status.probeOk ? "ok" : "warn") : "err") : "warn";
-  const ccState: "ok"|"warn"|"err" =
-    status ? (status.defaultCacheControl ? "ok" : "warn") : "warn";
+  const s3State: "ok"|"warn"|"err" = status
+    ? (status.hasBucketEnv ? (status.probeOk ? "ok" : "warn") : "err")
+    : "warn";
+  const ccState: "ok"|"warn"|"err" = status
+    ? (status.defaultCacheControl ? "ok" : "warn")
+    : "warn";
 
   return (
-    <div className="p-4 space-y-6">
+    <div className="container max-w-6xl py-8 space-y-6">
+      <Breadcrumbs
+        items={[
+          { label: "Ops", href: "/ops/overview" },
+          { label: "Images" }
+        ]}
+        roles={roles}
+      />
+
       <div className="flex items-center justify-between">
-        <h1 className="text-xl font-semibold">Responsive Images — Allowlist & Upload</h1>
+        <h1 className="text-2xl font-bold tracking-tight">Responsive Images — Allowlist & Upload</h1>
         <div className="flex items-center gap-2">
           <StatusBadge
             label={status ? `S3: ${status.bucket || "(unset)"}` : "S3: (loading)"}
@@ -100,26 +132,60 @@ const ImagesAdmin: React.FC = () => {
             label={status ? `Cache-Control: ${status.defaultCacheControl || "(unset)"}` : "Cache-Control: (loading)"}
             state={ccState}
           />
-          <a className="text-xs underline text-gray-600" href="/ops/settings">Settings</a>
+          <Link href="/ops/settings" className="text-xs underline text-muted-foreground hover:text-foreground">
+            Settings
+          </Link>
         </div>
       </div>
 
       <section className="space-y-3">
         <div className="font-semibold">Allowlist</div>
         <div className="flex gap-2">
-          <input className="border rounded px-2 py-1" placeholder="SKU" value={sku} onChange={e=>setSku(e.target.value)} />
-          <input className="border rounded px-2 py-1 w-96" placeholder="Base key (e.g., uploads/products/CARD-CC-HELLO-001)" value={baseKey} onChange={e=>setBaseKey(e.target.value)} />
-          <button className="px-3 py-1 border rounded" onClick={addAllow}>Add/Update</button>
+          <input
+            className="border rounded px-2 py-1"
+            placeholder="SKU"
+            value={sku}
+            onChange={e => setSku(e.target.value)}
+            data-testid="input-sku"
+          />
+          <input
+            className="border rounded px-2 py-1 w-96"
+            placeholder="Base key (e.g., uploads/products/CARD-CC-HELLO-001)"
+            value={baseKey}
+            onChange={e => setBaseKey(e.target.value)}
+            data-testid="input-base-key"
+          />
+          <button
+            className="px-3 py-1 border rounded hover-elevate active-elevate-2"
+            onClick={addAllow}
+            data-testid="button-add-allowlist"
+          >
+            Add/Update
+          </button>
         </div>
         <div className="border rounded">
           <table className="min-w-full text-sm">
-            <thead><tr><th className="text-left px-3 py-2">SKU</th><th className="text-left px-3 py-2">Base Key</th><th className="px-3 py-2"></th></tr></thead>
+            <thead>
+              <tr>
+                <th className="text-left px-3 py-2">SKU</th>
+                <th className="text-left px-3 py-2">Base Key</th>
+                <th className="px-3 py-2"></th>
+              </tr>
+            </thead>
             <tbody>
               {allowlist.map(it => (
-                <tr key={it.sku} className="odd:bg-white even:bg-gray-50">
+                <tr key={it.sku} className="odd:bg-background even:bg-muted/50">
                   <td className="px-3 py-2 font-mono">{it.sku}</td>
                   <td className="px-3 py-2">{it.baseKey}</td>
-                  <td className="px-3 py-2 text-right"><button className="px-2 py-1 border rounded" onClick={()=>remove(it.sku)}>Remove</button></td>
+                  <td className="px-3 py-2 text-right">
+                    <button
+                      className="px-2 py-1 border rounded hover-elevate active-elevate-2"
+                      onClick={() => remove(it.sku)}
+                      data-testid={`button-remove-${it.sku}`}
+                    >
+                      Remove
+                    </button>
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -131,22 +197,41 @@ const ImagesAdmin: React.FC = () => {
         <div className="font-semibold">Upload & Transform</div>
         <div className="flex items-center gap-2">
           <label>Cache-Control</label>
-          <input className="border rounded px-2 py-1 w-[480px]" value={cacheControl} onChange={e=>setCacheControl(e.target.value)} />
+          <input
+            className="border rounded px-2 py-1 w-[480px]"
+            value={cacheControl}
+            onChange={e => setCacheControl(e.target.value)}
+            data-testid="input-cache-control"
+          />
         </div>
         <div
-          onDragOver={e=>e.preventDefault()}
+          onDragOver={e => e.preventDefault()}
           onDrop={onDrop}
-          className="border-dashed border-2 rounded p-6 text-center"
+          className="border-dashed border-2 rounded p-6 text-center text-muted-foreground"
+          data-testid="dropzone-upload"
         >
           Drag & drop images here (png, jpg, webp, avif). SVG/XML is blocked.
         </div>
         <div className="flex gap-2 items-center">
-          <input type="file" multiple onChange={e=>setFiles(e.target.files)} />
-          <button className="px-3 py-1 border rounded" onClick={onUpload}>Upload</button>
-          <span>{progress}</span>
+          <input
+            type="file"
+            multiple
+            onChange={e => setFiles(e.target.files)}
+            data-testid="input-file-upload"
+          />
+          <button
+            className="px-3 py-1 border rounded hover-elevate active-elevate-2"
+            onClick={onUpload}
+            data-testid="button-upload"
+          >
+            Upload
+          </button>
+          <span className="text-sm text-muted-foreground">{progress}</span>
         </div>
         {summary && (
-          <div className="text-sm text-gray-600">Total payload: {summary.count} files, {bytes(summary.total)}</div>
+          <div className="text-sm text-muted-foreground">
+            Total payload: {summary.count} files, {bytes(summary.total)}
+          </div>
         )}
       </section>
 
@@ -154,11 +239,18 @@ const ImagesAdmin: React.FC = () => {
         <div className="font-semibold">Generated Variants</div>
         <div className="border rounded overflow-auto">
           <table className="min-w-full text-sm">
-            <thead><tr><th className="text-left px-3 py-2">Key</th><th className="text-right px-3 py-2">Width</th><th className="text-left px-3 py-2">Ext</th><th className="text-right px-3 py-2">Size</th></tr></thead>
+            <thead>
+              <tr>
+                <th className="text-left px-3 py-2">Key</th>
+                <th className="text-right px-3 py-2">Width</th>
+                <th className="text-left px-3 py-2">Ext</th>
+                <th className="text-right px-3 py-2">Size</th>
+              </tr>
+            </thead>
             <tbody>
               {variants.map(v => (
-                <tr key={v.key} className="odd:bg-white even:bg-gray-50">
-                  <td className="px-3 py-2 font-mono">{v.key}</td>
+                <tr key={v.key} className="odd:bg-background even:bg-muted/50">
+                  <td className="px-3 py-2 font-mono text-xs">{v.key}</td>
                   <td className="px-3 py-2 text-right">{v.width ?? "—"}</td>
                   <td className="px-3 py-2">{v.ext ?? "—"}</td>
                   <td className="px-3 py-2 text-right">{bytes(v.size)}</td>

@@ -1,9 +1,11 @@
 import { Link, Route, Switch, useLocation } from "wouter";
 import { useEffect, useState } from "react";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import Breadcrumbs from "@/components/Breadcrumbs";
 import RequireRole from "@/components/RequireRole";
 import SettingsAlerts from "@/pages/ops/settings/SettingsAlerts";
 import SettingsGlobal from "@/pages/ops/settings/SettingsGlobal";
+import SettingsIndexRedirect from "@/pages/ops/settings/SettingsIndexRedirect";
 
 export default function SettingsLayout() {
   const [location, setLocation] = useLocation();
@@ -14,7 +16,8 @@ export default function SettingsLayout() {
       try {
         const r = await fetch("/api/ops/_auth/ping");
         const j = await r.json();
-        setUserRoles(j.roles || []);
+        const roles = Array.isArray(j?.who?.roles) ? j.who.roles : [];
+        setUserRoles(roles);
       } catch {
         setUserRoles([]);
       }
@@ -22,30 +25,22 @@ export default function SettingsLayout() {
     fetchRoles();
   }, []);
 
-  // Auto-redirect /ops/settings to appropriate sub-route
-  useEffect(() => {
-    if (location === "/ops/settings") {
-      const isAdmin = userRoles.includes("ops_admin");
-      const isEditor = userRoles.includes("ops_editor");
-      
-      if (isEditor || isAdmin) {
-        setLocation("/ops/settings/alerts");
-      } else if (isAdmin) {
-        setLocation("/ops/settings/global");
-      }
-    }
-  }, [location, userRoles, setLocation]);
-
+  // Determine breadcrumb tail based on current path
+  const tail = location.endsWith("/global") ? "Global" : location.endsWith("/alerts") ? "Alerts" : "Settings";
   const currentTab = location.includes("/ops/settings/global") ? "global" : "alerts";
   const hasAlertAccess = userRoles.includes("ops_editor") || userRoles.includes("ops_admin");
   const hasGlobalAccess = userRoles.includes("ops_admin");
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold" data-testid="text-settings-title">Ops Settings</h1>
-        <p className="text-muted-foreground">Configure operational alerts and global controls</p>
-      </div>
+    <div className="container max-w-6xl py-8 space-y-6">
+      <Breadcrumbs
+        items={[
+          { label: "Ops", href: "/ops/overview" },
+          { label: "Settings", href: "/ops/settings" },
+          { label: tail },
+        ]}
+        roles={userRoles}
+      />
 
       <Tabs value={currentTab} className="w-full">
         <TabsList>
@@ -67,6 +62,7 @@ export default function SettingsLayout() {
       </Tabs>
 
       <Switch>
+        <Route path="/ops/settings" component={SettingsIndexRedirect} />
         <Route path="/ops/settings/alerts">
           <RequireRole roles={["ops_editor", "ops_admin"]}>
             <SettingsAlerts />
