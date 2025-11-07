@@ -2191,6 +2191,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   const opsAuthRoute = await import("./routes/ops_auth.route");
   app.use("/api/ops/_auth", isAuthenticated, opsAuthRoute.default);
 
+  // Ops Settings: Alerts - Alert notification settings (requires ops_editor or ops_admin)
+  const opsSettingsAlertsRoute = await import("./routes/ops.settings.alerts.route");
+  app.use(opsSettingsAlertsRoute.default);
+
+  // Ops Settings: Global - Global controls (requires ops_admin)
+  const opsSettingsGlobalRoute = await import("./routes/ops.settings.global.route");
+  app.use(opsSettingsGlobalRoute.default);
+
   // Copilot - AI assistant for querying DTH API (requires authentication)
   const copilot = await import("./copilot");
   app.use("/copilot", isAuthenticated, copilot.default);
