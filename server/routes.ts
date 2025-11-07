@@ -2147,6 +2147,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   const imagesStatusRoute = await import("./routes/images.status.route");
   app.use(imagesStatusRoute.router);
 
+  // Images Preview - In-memory image preview without S3 writes (public for demo)
+  const imagesPreviewRoute = await import("./routes/images.preview.route");
+  app.use(imagesPreviewRoute.router);
+
+  // Images Re-encode - Re-encode and replace existing S3 variants (ops_admin only)
+  const imagesReencodeRoute = await import("./routes/images.reencode.route");
+  app.use(isAuthenticated, imagesReencodeRoute.router);
+
   // Image CDN - Optional app-based passthrough with cache headers (public)
   const imgCdnRoute = await import("./routes/img_cdn.route");
   app.use(imgCdnRoute.router);

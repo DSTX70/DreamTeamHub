@@ -84,6 +84,9 @@ const ImagesAdmin: React.FC = () => {
   const [preview, setPreview] = React.useState<{ items: PreviewItem[]; totalsByExt: Record<string, number>; totalsBytes: number } | null>(null);
   const [previewBusy, setPreviewBusy] = React.useState(false);
   const [previewError, setPreviewError] = React.useState<string>("");
+  
+  // Replace state
+  const [replacing, setReplacing] = React.useState(false);
 
   React.useEffect(()=>{
     (async ()=>{
@@ -94,7 +97,7 @@ const ImagesAdmin: React.FC = () => {
   React.useEffect(()=>{
     (async ()=>{
       try { const r = await fetch("/api/ops/images/status"); const j = await r.json(); setStatus(j); } catch { setStatus(null); }
-      try { const r2 = await fetch("/api/ops/_auth/ping"); const j2 = await r2.json(); setRoles(Array.isArray(j2?.who?.roles)? j2.who.roles: []); } catch { setRoles([]); }
+      try { const r2 = await fetch("/api/ops/_auth/ping"); const j2 = await r2.json(); setRoles(Array.isArray(j2?.roles)? j2.roles: []); } catch { setRoles([]); }
     })();
   },[]);
 
@@ -157,6 +160,54 @@ const ImagesAdmin: React.FC = () => {
       setPreviewError("Preview error");
     } finally {
       setPreviewBusy(false);
+    }
+  };
+
+  const getTargetPrefixFromStats = (): string | null => {
+    if (!stats?.items || stats.items.length === 0) return null;
+    const firstKey = stats.items[0].key;
+    // Strip -<width>.<ext> from the end
+    const match = firstKey.match(/^(.+)-\d+\.(avif|webp|jpg)$/);
+    return match ? match[1] : null;
+  };
+
+  const doReplace = async () => {
+    setReplacing(true);
+    setPreviewError("");
+    try {
+      const targetPrefix = getTargetPrefixFromStats();
+      if (!targetPrefix) { setPreviewError("No uploaded variants found"); setReplacing(false); return; }
+      
+      const form = new FormData();
+      const source = lastFile || (files && files[0]) || null;
+      if (!source) { setPreviewError("Select a source image"); setReplacing(false); return; }
+      
+      form.append("file", source);
+      form.append("targetPrefix", targetPrefix);
+      form.append("sizes", sizesCsv);
+      form.append("avifQ", String(avifQ));
+      form.append("webpQ", String(webpQ));
+      form.append("jpgQ", String(jpgQ));
+      
+      const r = await fetch("/api/ops/images/reencode", { method: "POST", body: form });
+      if (!r.ok) {
+        const err = await r.json().catch(() => ({ error: "Re-encode failed" }));
+        setPreviewError(err.error || "Re-encode failed");
+        setReplacing(false);
+        return;
+      }
+      
+      const j = await r.json();
+      console.log("[ImagesAdmin] Re-encoded variants:", j);
+      
+      // Refresh stats to show new sizes
+      await refreshStats(baseKey);
+      setPreviewError("✓ Replaced successfully");
+      
+    } catch (e: any) {
+      setPreviewError("Replace error: " + (e?.message || "unknown"));
+    } finally {
+      setReplacing(false);
     }
   };
 
@@ -285,9 +336,21 @@ const ImagesAdmin: React.FC = () => {
               </label>
             </div>
 
-            <div className="flex gap-2 items-center">
+            <div className="flex gap-2 items-center flex-wrap">
               <button className="px-3 py-1 border rounded" onClick={runPreview} disabled={previewBusy}>{previewBusy ? "Running…" : "Run Preview"}</button>
-              {previewError && <span className="text-sm text-red-600">{previewError}</span>}
+              
+              {roles.includes("ops_admin") && (
+                <button 
+                  className="px-3 py-1 border rounded bg-orange-50 hover:bg-orange-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                  onClick={doReplace}
+                  disabled={replacing || !preview || !stats || stats.items.length === 0 || (!lastFile && !files)}
+                  title="Re-encode and replace existing S3 variants (ops_admin only)"
+                >
+                  {replacing ? "Replacing…" : "Replace uploaded variants"}
+                </button>
+              )}
+              
+              {previewError && <span className={`text-sm ${previewError.startsWith("✓") ? "text-green-600" : "text-red-600"}`}>{previewError}</span>}
             </div>
 
             {preview && (

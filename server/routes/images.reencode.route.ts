@@ -1,17 +1,33 @@
 import express, { Request, Response } from "express";
 import multer from "multer";
 import { makeVariants, DEFAULT_PLAN } from "../images/transform";
-import { opsAuth } from "./ops_auth.route";
-import { requireRole } from "../security/roles";
-import { uploadToS3 } from "../images/uploader";
+import { getUserRoles } from "../security/roles";
+import { s3Put } from "../images/s3";
 
 export const router = express.Router();
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 25 * 1024 * 1024 } }); // 25MB
 
+// Require ops_admin for re-encode & replace (destructive operation)
+const requireAdmin = (req: Request, res: Response, next: Function) => {
+  const user = (req as any).user;
+  if (!user || !user.claims) {
+    return res.status(401).json({ error: "Not authenticated" });
+  }
+  
+  const userId = user.claims.sub;
+  const email = user.claims.email || "";
+  const roles = getUserRoles(userId, email);
+  
+  if (!roles.includes("ops_admin")) {
+    return res.status(403).json({ error: "Requires ops_admin role" });
+  }
+  
+  next();
+};
+
 router.post(
   "/api/ops/images/reencode",
-  opsAuth(),
-  requireRole("ops_admin"),
+  requireAdmin,
   upload.single("file"),
   async (req: Request, res: Response) => {
     try {
@@ -44,7 +60,7 @@ router.post(
 
       for (const v of variants) {
         const key = `${targetPrefix}-${v.width}.${v.ext}`;
-        await uploadToS3(key, v.buffer, v.contentType);
+        await s3Put(key, v.buffer, v.contentType);
         
         const size = v.buffer.length;
         items.push({ key, width: v.width, ext: v.ext, size });
