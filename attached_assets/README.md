@@ -1,13 +1,18 @@
-# Breadcrumbs added to Images Admin & Inventory
+# Images Admin — Preview Re‑encode Drawer
 
 **Date:** 2025-11-07
 
-This patch adds the same inline **Breadcrumbs** (with role chips) to:
-- **Images Admin** (Responsive Images — Allowlist & Upload)
-- **Inventory Low Stock & Thresholds**
+Adds a tiny **Preview re‑encode** drawer to the Images Admin page that:
+- Lets you pick a source file (defaults to the last file you selected in the uploader)
+- Adjust **quality sliders** (AVIF/WEBP/JPG) and custom widths CSV
+- Calls **POST /api/ops/images/preview** to get projected sizes (no upload to S3)
+- Shows a **Compare vs uploaded** diff (size and % change) using the current stats
 
-It expects the shared component at `client/src/components/Breadcrumbs.tsx` (from your previous drop).
+## How to use
+1. Open **Ops → Images**.
+2. Select a file and upload as usual (optional, but gives you a baseline for comparison).
+3. Click **Preview re‑encode** → adjust sliders → **Run Preview**.
+4. See totals by format and a row-by-row comparison (by width & format).
 
-## Files
-- `client/src/pages/ops/ImagesAdmin.tsx` — updated to render `Ops → Images`
-- `client/src/pages/ops/InventoryLowStock.tsx` — updated to render `Ops → Inventory`
+No server changes are required beyond mounting the preview endpoint you just added:
+`app.use(require("./server/routes/images.preview.route").router);`
