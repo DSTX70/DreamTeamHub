@@ -4,7 +4,7 @@ import { Router } from "express";
 import type { HealthResponse, CheckResult } from "../../shared/types/health";
 import { S3Client, ListObjectsV2Command } from "@aws-sdk/client-s3";
 import nodemailer from "nodemailer";
-import { db } from "../drizzle/db";
+import { db } from "../db";
 
 const router = Router();
 
