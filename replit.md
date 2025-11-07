@@ -20,7 +20,7 @@ The platform includes core modules for operational oversight (Control Tower), de
 
 AI-powered features consist of Brainstorm Studio (LLM-assisted ideation), Dream Team Chat (OpenAI GPT-4 with 32 role-based personas and context awareness), and DTH Copilot (AI assistant with OpenAI tool-calling, quick actions, and "Findings at a Glance" analytics).
 
-Core operational systems include a Universal Search (Cmd+K), auto-generating Breadcrumb Navigation, and an Operations Events Logging system for telemetry and audit trails, viewable via the Operations Logs Admin Page.
+Core operational systems include a Universal Search (Cmd+K), auto-generating Breadcrumb Navigation (deployed across all Ops pages with role badge indicators), and an Operations Events Logging system for telemetry and audit trails, viewable via the Operations Logs Admin Page.
 
 Knowledge management is supported by a Knowledge Publishing System with database-level idempotency and Google Drive Integration for Business Unit-specific content. Work Orders System enables real LLM execution via OpenAI, Anthropic, and Vertex AI with budget caps, rate limiting, and cost tracking. An LLM Provider Infrastructure integrates these services with robust error handling and cost tracking.
 
@@ -41,7 +41,8 @@ Future phases include an Onboarding Wizard for brand/product creation and Covera
 **Completed E-Commerce Features (November 2025):**
 - **Affiliate E2E Tracking:** Database-backed affiliate management with pixel-based click/conversion tracking, 30-day rolling metrics, and attribution deduplication
 - **Low-Stock Inventory Scheduler:** DB-backed scheduler with webhook (Slack) and email (SMTP) notifiers, 60-second scan interval, 5-minute alert throttling, and comprehensive event logging
-- **Ops Settings UI:** Management interface at `/ops/settings` for webhook/email configuration, notification testing, and manual inventory scans
+- **Ops Settings UI:** Granular management interface at `/ops/settings` with role-based sub-routes (Alerts for ops_editor, Global for ops_admin), auto-redirect logic, webhook/email configuration, notification testing, and manual inventory scans
+- **Breadcrumb Navigation System:** Reusable breadcrumb component deployed across Ops pages (Settings, Images, Inventory) showing hierarchical path with role badge indicators
 - **Saved Addresses & Checkout:** Complete checkout flow with address management
 - **Responsive Images with S3:** Sharp-based image transformation with AWS S3 storage
 - **Client-side Prompt Linter:** LLM schema validation for Work Orders
@@ -53,7 +54,16 @@ The frontend utilizes React 18, TypeScript, Wouter, TanStack Query v5, React Hoo
 Core tables include agents, agent_specs, projects, tasks, ideas, decisions, business_units, knowledge_items, work_orders, operations_events, and brand_products. E-commerce tables include affiliates, aff_clicks, aff_attributions, inventory_products, and inventory_events. All tables use appropriate indexes for performance optimization.
 
 ### Authentication & Security
-Authentication is provided by Replit Auth (OpenID Connect). The security architecture employs a dual authentication system (session-based and API token auth) and a Helmet-based Content Security Policy (CSP). Scope-Based Authorization uses `requireScopes()` middleware. Routes support dual authentication via `isDualAuthenticated`. Rate limiting is enforced with `429` status and `Retry-After` headers. Idempotency protection is implemented for knowledge publish endpoints using the `Idempotency-Key` header.
+Authentication is provided by Replit Auth (OpenID Connect). The security architecture employs a dual authentication system (session-based and API token auth) and a Helmet-based Content Security Policy (CSP). 
+
+**Role-Based Access Control (Ops):**
+- **ops_viewer** (read-only): All authenticated users receive this base role
+- **ops_editor** (alerts management): Valid email addresses get editor permissions; can manage alert settings at `/ops/settings/alerts`
+- **ops_admin** (full access): Specific admin list gets complete access including global settings at `/ops/settings/global`
+- Auto-redirect from `/ops/settings`: editors → alerts, admins → global (configurable via `server/routes/ops_auth.route.ts`)
+- Client-side role gates with `RequireRole` component; server-side enforcement as source of truth
+
+Scope-Based Authorization uses `requireScopes()` middleware. Routes support dual authentication via `isDualAuthenticated`. Rate limiting is enforced with `429` status and `Retry-After` headers. Idempotency protection is implemented for knowledge publish endpoints using the `Idempotency-Key` header.
 
 ### Staging Environment
 The staging environment features automated weekly database refreshes using Greenmask for PII masking, access control via basic auth or IP allowlist, a `/healthz` endpoint for monitoring, and automated SQL tests for referential integrity validation.

@@ -35,6 +35,13 @@ router.get("/api/ops/overview", async (_req, res) => {
 
     const linterRuleCount = 4;
 
+    const envHealth = {
+      databaseUrl: !!process.env.DATABASE_URL,
+      s3Bucket: !!process.env.AWS_S3_BUCKET,
+      opsToken: !!process.env.OPS_API_TOKEN,
+      awsRegion: !!process.env.AWS_REGION,
+    };
+
     res.json({
       inventory: {
         lowStockCount: lowStockItems.length,
@@ -57,6 +64,7 @@ router.get("/api/ops/overview", async (_req, res) => {
       linter: {
         ruleCount: linterRuleCount,
       },
+      env: envHealth,
     });
   } catch (error: any) {
     console.error("[OpsOverview] Error fetching overview:", error);
