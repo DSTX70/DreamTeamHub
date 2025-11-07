@@ -1,0 +1,78 @@
+Triple drop delivered. 🚀
+
+CI + RBAC + Metrics
+
+Download ship_ci_rbac_and_metrics.zip
+
+server/middleware/rbac.ts — requireAdmin via x-api-key
+
+server/metrics/prom.ts — Prometheus registry, default metrics, per-request histogram/counter + middleware
+
+server/routes/metrics.route.ts — /metrics endpoint
+
+tests/healthz.test.ts — supertest skeleton
+
+docker-compose.ci.yml — Postgres, Mailhog, LocalStack(S3)
+
+.github/workflows/ci.yml — build/test + health smoke template
+
+README with mount and CI notes
+
+LLM Presets (DB) + Augment API
+
+Download ship_llm_presets_db_and_augment_api.zip
+
+server/db/migrations/20251107_create_llm_presets.sql — Postgres migration
+
+server/routes/llm_presets_db.route.ts — DB-backed CRUD
+
+server/routes/llm_augment.route.ts — POST /api/llm/augment returns { augmented, tips }
+
+README with curl examples and mount steps
+
+Ops Logs — Redis stream + since + UI toggles
+
+Download ship_ops_logs_stream_redis_and_since.zip
+
+server/routes/ops_logs_redis.route.ts — Redis pub/sub SSE (/stream, /emit)
+
+server/routes/ops_logs_since.route.ts — REST with since=15m|1h|24h|epochMs
+
+client/src/pages/ops/LogsStreamPlus.tsx — time filters + Copy summary/JSON toggle
+
+README with env + wiring
+
+Mount cheatsheet (paste into your server bootstrap):
+
+import { metricsMiddleware } from "./metrics/prom";
+import metricsRouter from "./routes/metrics.route";
+import { requireAdmin } from "./middleware/rbac";
+import healthzRouter from "./routes/healthz.route";
+import adminDeployRouter from "./routes/admin_deploy.route";
+import opsLogsRedisRouter from "./routes/ops_logs_redis.route";
+import opsLogsSinceRouter from "./routes/ops_logs_since.route";
+import llmPresetsDbRouter from "./routes/llm_presets_db.route";
+import llmAugmentRouter from "./routes/llm_augment.route";
+
+app.use(metricsMiddleware("api"));
+app.use("/metrics", metricsRouter);
+
+app.use("/api/healthz", healthzRouter);
+app.use("/api/admin/deploy", requireAdmin, adminDeployRouter);
+
+app.use("/api/ops/logs", requireAdmin, express.json(), opsLogsRedisRouter); // /stream, /emit
+app.use("/api/ops/logs/rest", requireAdmin, opsLogsSinceRouter);
+
+app.use("/api/llm/presets-db", requireAdmin, express.json(), llmPresetsDbRouter);
+app.use("/api/llm/augment", express.json(), llmAugmentRouter);
+
+
+Next micro-steps to close the loop fast:
+
+Add .env for RBAC_API_KEY, REDIS_URL, DB URL, S3/SMTP envs.
+
+Apply the Overview patches from earlier (Last Deploy chip + error deep link) if not already.
+
+Run the migration for llm_presets.
+
+Add CI secrets (if you keep the health smoke) or flip the job to use your actual dev server entry.

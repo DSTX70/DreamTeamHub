@@ -1,0 +1,23 @@
+# ops/alertmanager/rules.yml
+# Example Prometheus alerting rules for latency and error rate.
+groups:
+- name: api-alerts
+  rules:
+  - alert: HighP95Latency
+    expr: histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket{app="api"}[5m])) by (le)) > 0.75
+    for: 10m
+    labels:
+      severity: warning
+      team: platform
+    annotations:
+      summary: "High p95 latency (>750ms)"
+      description: "p95 latency over 5m exceeds threshold for app=api"
+  - alert: HighErrorRate
+    expr: sum(rate(http_requests_total{app="api",status=~"5.."}[5m])) / sum(rate(http_requests_total{app="api"}[5m])) > 0.05
+    for: 10m
+    labels:
+      severity: critical
+      team: platform
+    annotations:
+      summary: "HTTP 5xx error rate > 5%"
+      description: "5xx ratio over 5m exceeds 5% for app=api"

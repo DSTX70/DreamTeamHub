@@ -1,0 +1,15 @@
+*** a/client/src/pages/ops/Overview.tsx
+--- b/client/src/pages/ops/Overview.tsx
+@@
+-import React from "react";
++import React from "react";
++import LastDeployChip from "../../components/ops/LastDeployChip";
+@@
+ export default function Overview() {
+   return (
+     <div className="space-y-6">
++      <LastDeployChip />
+       {/* existing overview content */}
+     </div>
+   );
+ }

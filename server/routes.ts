@@ -172,6 +172,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   const healthzRoute = await import("./routes/healthz.route");
   app.use("/api/healthz", healthzRoute.default);
 
+  // Admin Deploy - Deployment tracking (public for CI/CD)
+  const adminDeployRoute = await import("./routes/admin_deploy.route");
+  app.use("/api/admin/deploy", adminDeployRoute.default);
+
   // ===========================
   // FEATURE BUNDLE: NEW ROUTES
   // ===========================
