@@ -1,7 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
 import StatCard from "./components/StatCard";
-import { Package, Image, UserCheck, FileCheck } from "lucide-react";
+import { Package, Image, UserCheck, FileCheck, Shield } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Badge } from "@/components/ui/badge";
 
 type OverviewData = {
   inventory: { lowStockCount: number };
@@ -21,6 +22,12 @@ type OverviewData = {
     window: { fromISO: string; toISO: string };
   };
   linter: { ruleCount: number };
+  env?: {
+    databaseUrl: boolean;
+    s3Bucket: boolean;
+    opsToken: boolean;
+    awsRegion: boolean;
+  };
 };
 
 export default function OpsOverview() {
@@ -72,6 +79,15 @@ export default function OpsOverview() {
     { label: "Active Rules", value: data.linter.ruleCount },
   ];
 
+  const EnvBadge = ({ label, ok }: { label: string; ok: boolean }) => (
+    <div className="flex items-center justify-between text-sm" data-testid={`env-${label.toLowerCase().replace(/\s+/g, '-')}`}>
+      <span className="text-muted-foreground">{label}</span>
+      <Badge variant={ok ? "default" : "destructive"} className="ml-2">
+        {ok ? "OK" : "Missing"}
+      </Badge>
+    </div>
+  );
+
   return (
     <div className="p-6 space-y-6" data-testid="page-ops-overview">
       <h1 className="text-2xl font-bold">Ops Overview</h1>
@@ -101,6 +117,21 @@ export default function OpsOverview() {
           href="/llm/provider/linter"
         />
       </div>
+      
+      {data.env && (
+        <div className="border rounded-lg p-4 space-y-3" data-testid="card-env-health">
+          <div className="flex items-center gap-2 mb-3">
+            <Shield className="h-5 w-5 text-muted-foreground" />
+            <h2 className="font-semibold">Environment Health</h2>
+          </div>
+          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+            <EnvBadge label="Database URL" ok={data.env.databaseUrl} />
+            <EnvBadge label="S3 Bucket" ok={data.env.s3Bucket} />
+            <EnvBadge label="Ops API Token" ok={data.env.opsToken} />
+            <EnvBadge label="AWS Region" ok={data.env.awsRegion} />
+          </div>
+        </div>
+      )}
     </div>
   );
 }
