@@ -48,16 +48,30 @@ export function formFromSchema(schema: JSONSchema, prefix = ""): FormModel {
 }
 
 export function renderFormSnippet(model: FormModel): string {
+  // Helper to safely access nested paths with optional chaining
+  const getPath = (name: string) => {
+    if (!name.includes('.')) return `form.${name}`;
+    const parts = name.split('.');
+    return parts.map((p, i) => i === 0 ? `form?.${p}` : p).join('?.');
+  };
+  
+  // Helper to safely set nested values (quote dotted keys)
+  const setPath = (name: string, value: string) => {
+    if (!name.includes('.')) return `{...prev, ${name}: ${value}}`;
+    return `{...prev, "${name}": ${value}}`;
+  };
+
   const rows = model.fields.map(f => {
+    const access = getPath(f.name);
     if (f.enum && f.enum.length) {
       const options = f.enum.map(v=>`<option value=\"${v}\">${v}</option>`).join("");
-      return `<label className=\"flex flex-col text-sm\"><span className=\"text-xs text-gray-600\">${f.label}</span><select className=\"border rounded px-2 py-1\" value={form.${f.name}||\""} onChange={e=>setForm(prev=>({...prev, ${f.name}: e.target.value}))}>${options}</select></label>`;
+      return `<label className=\"flex flex-col text-sm\"><span className=\"text-xs text-gray-600\">${f.label}</span><select className=\"border rounded px-2 py-1\" value={${access}||\""} onChange={e=>setForm(prev=>(${setPath(f.name, "e.target.value")}))}>${options}</select></label>`;
     }
-    if (f.kind === "string") return `<label className=\"flex flex-col text-sm\"><span className=\"text-xs text-gray-600\">${f.label}</span><input className=\"border rounded px-2 py-1\" value={form.${f.name}||\""} onChange={e=>setForm(prev=>({...prev, ${f.name}: e.target.value}))} /></label>`;
-    if (f.kind === "number") return `<label className=\"flex flex-col text-sm\"><span className=\"text-xs text-gray-600\">${f.label}</span><input type=\"number\" className=\"border rounded px-2 py-1\" value={form.${f.name}??\""} onChange={e=>setForm(prev=>({...prev, ${f.name}: Number(e.target.value)}))} /></label>`;
-    if (f.kind === "boolean") return `<label className=\"inline-flex items-center gap-2 text-sm\"><input type=\"checkbox\" checked={!!form.${f.name}} onChange={e=>setForm(prev=>({...prev, ${f.name}: e.target.checked}))} /><span>${f.label}</span></label>`;
-    if (f.kind === "array<string>") return `<label className=\"flex flex-col text-sm\"><span className=\"text-xs text-gray-600\">${f.label} (CSV)</span><input className=\"border rounded px-2 py-1\" value={(form.${f.name}||[]).join(",")} onChange={e=>setForm(prev=>({...prev, ${f.name}: e.target.value.split(",").map(s=>s.trim()).filter(Boolean)}))} /></label>`;
-    if (f.kind === "array<number>") return `<label className=\"flex flex-col text-sm\"><span className=\"text-xs text-gray-600\">${f.label} (CSV numbers)</span><input className=\"border rounded px-2 py-1\" value={(form.${f.name}||[]).join(",")} onChange={e=>setForm(prev=>({...prev, ${f.name}: e.target.value.split(',').map(s=>Number(s.trim())).filter(n=>Number.isFinite(n))}))} /></label>`;
+    if (f.kind === "string") return `<label className=\"flex flex-col text-sm\"><span className=\"text-xs text-gray-600\">${f.label}</span><input className=\"border rounded px-2 py-1\" value={${access}||\""} onChange={e=>setForm(prev=>(${setPath(f.name, "e.target.value")}))} /></label>`;
+    if (f.kind === "number") return `<label className=\"flex flex-col text-sm\"><span className=\"text-xs text-gray-600\">${f.label}</span><input type=\"number\" className=\"border rounded px-2 py-1\" value={${access}??\""} onChange={e=>setForm(prev=>(${setPath(f.name, "Number(e.target.value)")}))} /></label>`;
+    if (f.kind === "boolean") return `<label className=\"inline-flex items-center gap-2 text-sm\"><input type=\"checkbox\" checked={!!${access}} onChange={e=>setForm(prev=>(${setPath(f.name, "e.target.checked")}))} /><span>${f.label}</span></label>`;
+    if (f.kind === "array<string>") return `<label className=\"flex flex-col text-sm\"><span className=\"text-xs text-gray-600\">${f.label} (CSV)</span><input className=\"border rounded px-2 py-1\" value={(${access}||[]).join(",")} onChange={e=>setForm(prev=>(${setPath(f.name, "e.target.value.split(\",\").map(s=>s.trim()).filter(Boolean)")}))} /></label>`;
+    if (f.kind === "array<number>") return `<label className=\"flex flex-col text-sm\"><span className=\"text-xs text-gray-600\">${f.label} (CSV numbers)</span><input className=\"border rounded px-2 py-1\" value={(${access}||[]).join(",")} onChange={e=>setForm(prev=>(${setPath(f.name, "e.target.value.split(',').map(s=>Number(s.trim())).filter(n=>Number.isFinite(n))")}))} /></label>`;
     return "";
   }).join("\n    ");
   return `// Paste into a React component:\nconst [form, setForm] = React.useState({});\nreturn (\n  <form className=\"grid grid-cols-1 md:grid-cols-2 gap-3\">\n    ${rows}\n  </form>\n);`;

@@ -1,5 +1,17 @@
 import React from "react";
 
+const CopyBtn: React.FC<{ text: string }> = ({ text }) => {
+  const [copied, setCopied] = React.useState(false);
+  const onCopy = async () => {
+    try { await navigator.clipboard.writeText(text); setCopied(true); setTimeout(()=>setCopied(false), 1000); } catch {}
+  };
+  return (
+    <button onClick={onCopy} className="text-xs px-2 py-0.5 border rounded bg-gray-800 text-gray-100 hover:bg-gray-700">
+      {copied ? "✓" : "Copy"}
+    </button>
+  );
+};
+
 const OpsLogs: React.FC = () => {
   const [lines, setLines] = React.useState<string[]>([]);
   const [limit, setLimit] = React.useState(200);
@@ -39,10 +51,20 @@ const OpsLogs: React.FC = () => {
           <button className="px-3 py-2 border rounded" onClick={load} disabled={loading}>{loading ? "Refreshing…" : "Refresh"}</button>
         </div>
       </div>
-      <div className="border rounded p-2 bg-black text-green-200 font-mono text-xs overflow-auto max-h-[70vh]">
-        {lines.length === 0 ? <div className="text-gray-400">No log lines yet.</div> :
-          <pre className="whitespace-pre-wrap">{lines.join("\n")}</pre>
-        }
+
+      <div className="border rounded bg-black text-green-200 font-mono text-xs overflow-auto max-h-[70vh]">
+        {lines.length === 0 ? (
+          <div className="text-gray-400 p-2">No log lines yet.</div>
+        ) : (
+          <ul className="divide-y divide-gray-800">
+            {lines.map((ln, i) => (
+              <li key={i} className="p-2 flex items-start gap-2">
+                <CopyBtn text={ln} />
+                <pre className="whitespace-pre-wrap flex-1">{ln}</pre>
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
     </div>
   );
