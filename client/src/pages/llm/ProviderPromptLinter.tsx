@@ -26,7 +26,20 @@ function validateJsonAgainstSchema(obj: any, schema: any): string[] {
         if (kt === "number" || kt === "integer") { if (typeof obj[k] !== "number") errs.push(`Field ${k} should be number`); }
         else if (kt === "string") { if (typeof obj[k] !== "string") errs.push(`Field ${k} should be string`); }
         else if (kt === "boolean") { if (typeof obj[k] !== "boolean") errs.push(`Field ${k} should be boolean`); }
-        else if (kt === "array") { if (!Array.isArray(obj[k])) errs.push(`Field ${k} should be array`); }
+        else if (kt === "array") {
+          if (!Array.isArray(obj[k])) errs.push(`Field ${k} should be array`);
+          else if (v.items) {
+            const itemSchema = v.items;
+            const itemType = Array.isArray(itemSchema.type) ? itemSchema.type[0] : itemSchema.type;
+            obj[k].forEach((item: any, idx: number) => {
+              if (itemType === "string" && typeof item !== "string") errs.push(`${k}[${idx}] should be string`);
+              else if ((itemType === "number" || itemType === "integer") && typeof item !== "number") errs.push(`${k}[${idx}] should be number`);
+              else if (itemType === "boolean" && typeof item !== "boolean") errs.push(`${k}[${idx}] should be boolean`);
+              else if (itemType === "object") errs.push(...validateJsonAgainstSchema(item, itemSchema).map(e => `${k}[${idx}].${e}`));
+              if (itemSchema.enum && Array.isArray(itemSchema.enum) && !itemSchema.enum.includes(item)) errs.push(`${k}[${idx}] not in enum`);
+            });
+          }
+        }
         else if (kt === "object") { if (typeof obj[k] !== "object") errs.push(`Field ${k} should be object`); else errs.push(...validateJsonAgainstSchema(obj[k], v)); }
         if (v.enum && Array.isArray(v.enum)) { if (!v.enum.includes(obj[k])) errs.push(`Field ${k} not in enum`); }
       }

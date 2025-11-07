@@ -70,7 +70,7 @@ const HeaderOpsMenu: React.FC = () => {
       <button className="inline-flex items-center gap-2 px-3 py-1.5 border rounded-lg text-sm hover:shadow-sm" onClick={()=>setOpen(v=>!v)} aria-expanded={open} aria-haspopup="menu">
         <span className="inline-flex items-center gap-2">
           <span>Ops</span>
-          <span className="inline-flex items-center gap-1">
+          <span className="inline-flex items-center gap-1 flex-wrap">
             {roles.slice(0,3).map(r => <Chip key={r} role={r} />)}
             {roles.length > 3 && <span className="text-[10px] px-1 py-0.5 rounded bg-gray-100 text-gray-700 border border-gray-200">+{roles.length-3}</span>}
           </span>

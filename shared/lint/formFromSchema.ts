@@ -52,7 +52,7 @@ export function renderFormSnippet(model: FormModel): string {
   const getPath = (name: string) => {
     if (!name.includes('.')) return `form.${name}`;
     const parts = name.split('.');
-    return parts.map((p, i) => i === 0 ? `form?.${p}` : p).join('?.');
+    return parts.map((p, i) => i === 0 ? `form.${p}` : p).join('?.');
   };
   
   // Helper to safely set nested values (quote dotted keys)
