@@ -2171,6 +2171,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   const affiliateRoute = await import("./routes/affiliate.route.db");
   app.use(affiliateRoute.router);
 
+  // Affiliate Rates - Per-affiliate commission rates and status management (public for demo)
+  const affiliateRatesRoute = await import("./routes/affiliate.rates.route");
+  app.use(affiliateRatesRoute.router);
+
+  // Affiliate Payouts - Commission payout calculations and CSV export (public for demo)
+  const affiliatePayoutsRoute = await import("./routes/affiliate.payouts.route");
+  app.use(affiliatePayoutsRoute.router);
+
   // Inventory - Low-stock monitoring and threshold management (DB-backed, public for demo)
   const inventoryRoute = await import("./routes/inventory.route.db");
   app.use(inventoryRoute.router);

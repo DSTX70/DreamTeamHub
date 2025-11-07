@@ -41,7 +41,9 @@ import PlaybookPreview from "@/pages/wo/PlaybookPreview";
 import OnboardingSuccess from "@/pages/onboarding/Success";
 import CoverageDeepDive from "@/pages/coverage/DeepDive";
 import OpsAlertHooksDemo from "@/pages/ops/AlertHooksDemo";
-import AffiliatesReport from "@/pages/ops/AffiliatesReport";
+import AffiliatesReport from "@/pages/ops/AffiliateReport";
+import AffiliatesAdmin from "@/pages/ops/AffiliatesAdmin";
+import AffiliatePayouts from "@/pages/ops/AffiliatePayouts";
 import InventoryLowStock from "@/pages/ops/InventoryLowStock";
 import ImagesAdmin from "@/pages/ops/ImagesAdmin";
 import SettingsLayout from "@/pages/ops/settings/SettingsLayout";
@@ -96,6 +98,8 @@ function AuthenticatedRoutes() {
       <Route path="/ops/overview" component={OpsOverview} />
       <Route path="/ops/alerts" component={OpsAlertHooksDemo} />
       <Route path="/ops/affiliates" component={AffiliatesReport} />
+      <Route path="/ops/affiliates/admin" component={AffiliatesAdmin} />
+      <Route path="/ops/affiliates/payouts" component={AffiliatePayouts} />
       <Route path="/ops/inventory" component={InventoryLowStock} />
       <Route path="/ops/images" component={ImagesAdmin} />
       <Route path="/ops/settings/:rest*" component={SettingsLayout} />

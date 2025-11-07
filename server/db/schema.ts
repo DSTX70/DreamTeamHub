@@ -3,8 +3,12 @@ import { pgTable, serial, text, varchar, integer, timestamp, numeric, index, uni
 export const affiliates = pgTable("affiliates", {
   id: serial("id").primaryKey(),
   code: varchar("code", { length: 64 }).notNull().unique(),
-  // for future: name, contact, custom rate, status
-});
+  name: text("name"),
+  commissionRate: numeric("commission_rate", { precision: 6, scale: 4 }),
+  status: varchar("status", { length: 32 }).default("active"),
+}, (t) => ({
+  idxStatus: index("affiliates_status_idx").on(t.status),
+}));
 
 export const affClicks = pgTable("aff_clicks", {
   id: serial("id").primaryKey(),
