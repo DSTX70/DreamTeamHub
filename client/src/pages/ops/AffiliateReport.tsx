@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
+import { ExternalLink } from "lucide-react";
 import SummaryCards from "./components/SummaryCards";
 
 type ReportItem = {
@@ -149,7 +150,12 @@ const Table: React.FC<{
               <td className="px-3 py-2 text-right">{fmtCurrency(r.revenue)}</td>
               <td className="px-3 py-2 text-right">{fmtCurrency(r.commission)}</td>
               <td className="px-3 py-2">
-                <a className="text-xs underline text-gray-700 hover:text-black" href={`/ops/affiliates/admin?code=${encodeURIComponent(r.code)}`} data-testid={`link-edit-${r.code}`}>Edit</a>
+                <div className="flex items-center gap-2">
+                  <a className="text-xs underline text-gray-700 hover:text-black" href={`/ops/affiliates/admin?code=${encodeURIComponent(r.code)}`} data-testid={`link-edit-${r.code}`}>Edit</a>
+                  <a href={`/ops/affiliates/admin?code=${encodeURIComponent(r.code)}`} target="_blank" rel="noopener noreferrer" className="text-gray-500 hover:text-gray-700" title="Open in new tab" data-testid={`link-edit-new-tab-${r.code}`}>
+                    <ExternalLink className="w-3 h-3" />
+                  </a>
+                </div>
               </td>
             </tr>
           ))}

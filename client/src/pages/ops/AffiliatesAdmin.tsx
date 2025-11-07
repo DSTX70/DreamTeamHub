@@ -1,4 +1,5 @@
 import React from "react";
+import { ArrowLeft } from "lucide-react";
 
 type Row = { code: string; name?: string; commissionRate: number|null; status: string };
 
@@ -43,10 +44,19 @@ const AffiliatesAdmin: React.FC = () => {
   };
 
   const filtered = rows.filter(r => !filter || r.code.toUpperCase().includes(filter));
+  const hasCodeParam = !!qp.get("code");
 
   return (
     <div className="p-4 space-y-4">
-      <h1 className="text-xl font-semibold">Affiliates — Rates & Status</h1>
+      <div className="flex items-center gap-3">
+        {hasCodeParam && (
+          <a href="/ops/affiliates" className="flex items-center gap-1 text-sm text-gray-600 hover:text-gray-900" data-testid="link-back-to-report">
+            <ArrowLeft className="w-4 h-4" />
+            <span>Back to Report</span>
+          </a>
+        )}
+        <h1 className="text-xl font-semibold">Affiliates — Rates & Status</h1>
+      </div>
 
       <div className="flex items-end gap-2">
         <label className="flex flex-col text-sm">

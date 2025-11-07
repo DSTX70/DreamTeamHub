@@ -1,5 +1,6 @@
 import React from "react";
 import { Link } from "wouter";
+import { ExternalLink } from "lucide-react";
 import Breadcrumbs from "@/components/Breadcrumbs";
 import ThresholdCell from "./components/ThresholdCell";
 import NotifierBadge from "./components/NotifierBadge";
@@ -113,9 +114,14 @@ const InventoryLowStock: React.FC = () => {
             active={emailActive}
             href="/ops/settings"
           />
-          <Link href="/ops/settings" className="text-xs underline text-muted-foreground hover:text-foreground">
-            Settings
-          </Link>
+          <div className="flex items-center gap-2">
+            <Link href="/ops/settings" className="text-xs underline text-muted-foreground hover:text-foreground">
+              Settings
+            </Link>
+            <a href="/ops/settings" target="_blank" rel="noopener noreferrer" className="text-gray-500 hover:text-gray-700" title="Open Settings in new tab" data-testid="link-settings-new-tab">
+              <ExternalLink className="w-3 h-3" />
+            </a>
+          </div>
         </div>
       </div>
 
