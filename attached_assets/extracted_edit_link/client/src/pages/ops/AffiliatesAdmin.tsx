@@ -42,7 +42,7 @@ const AffiliatesAdmin: React.FC = () => {
     } finally { setSaving(false); }
   };
 
-  const filtered = rows.filter(r => !filter || r.code.toUpperCase().includes(filter));
+  const filtered = rows.filter(r => !filter || r.code.includes(filter));
 
   return (
     <div className="p-4 space-y-4">
@@ -51,9 +51,9 @@ const AffiliatesAdmin: React.FC = () => {
       <div className="flex items-end gap-2">
         <label className="flex flex-col text-sm">
           <span className="text-xs text-gray-600">Filter by code</span>
-          <input className="border rounded px-2 py-1 w-56" value={filter} onChange={e=>setFilter(e.target.value.toUpperCase())} placeholder="AFF123" data-testid="input-filter-code" />
+          <input className="border rounded px-2 py-1 w-56" value={filter} onChange={e=>setFilter(e.target.value.toUpperCase())} placeholder="AFF123" />
         </label>
-        <button className="px-3 py-2 border rounded" onClick={()=>setFilter("")} data-testid="button-clear-filter">Clear</button>
+        <button className="px-3 py-2 border rounded" onClick={()=>setFilter("")}>Clear</button>
       </div>
 
       <div className="border rounded overflow-auto">
@@ -68,10 +68,10 @@ const AffiliatesAdmin: React.FC = () => {
           </thead>
           <tbody>
             {filtered.map(r => (
-              <tr key={r.code} className="odd:bg-white even:bg-gray-50" id={`row-${r.code}`} data-testid={`row-affiliate-${r.code}`}>
+              <tr key={r.code} className="odd:bg-white even:bg-gray-50" id={`row-${r.code}`}>
                 <td className="px-3 py-2 font-mono">{r.code}</td>
                 <td className="px-3 py-2">
-                  <input className="border rounded px-2 py-1 w-56" value={r.name||""} onChange={e=>onChange(r.code,{ name: e.target.value })} data-testid={`input-name-${r.code}`} />
+                  <input className="border rounded px-2 py-1 w-56" value={r.name||""} onChange={e=>onChange(r.code,{ name: e.target.value })} />
                 </td>
                 <td className="px-3 py-2 text-right">
                   <input className="border rounded px-2 py-1 w-24 text-right" placeholder="(default)"
@@ -80,11 +80,10 @@ const AffiliatesAdmin: React.FC = () => {
                            const v=e.target.value.trim();
                            onChange(r.code,{ commissionRate: v===""? null : (Number(v)/100) })
                          }}
-                         data-testid={`input-rate-${r.code}`}
                   />
                 </td>
                 <td className="px-3 py-2">
-                  <select className="border rounded px-2 py-1" value={r.status} onChange={e=>onChange(r.code,{ status: e.target.value })} data-testid={`select-status-${r.code}`}>
+                  <select className="border rounded px-2 py-1" value={r.status} onChange={e=>onChange(r.code,{ status: e.target.value })}>
                     <option value="active">active</option>
                     <option value="suspended">suspended</option>
                   </select>
@@ -94,7 +93,7 @@ const AffiliatesAdmin: React.FC = () => {
           </tbody>
         </table>
       </div>
-      <button className="px-3 py-2 border rounded" onClick={save} disabled={saving} data-testid="button-save">{saving ? "Saving…" : "Save changes"}</button>
+      <button className="px-3 py-2 border rounded" onClick={save} disabled={saving}>{saving ? "Saving…" : "Save changes"}</button>
     </div>
   );
 };
