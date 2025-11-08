@@ -52,7 +52,7 @@ jobs:
           AWS_S3_BUCKET: test-bucket
           AWS_REGION: us-east-1
           SESSION_SECRET: test-session-secret
-          HEALTHZ_PROBE_TIMEOUT_MS: 3000
+          HEALTHZ_PROBE_TIMEOUT_MS: 5000
           HEALTHZ_GLOBAL_CAP_MS: 2500
           HEALTHZ_CACHE_TTL_MS: 60000
         run: |

@@ -52,7 +52,7 @@ spec:
     
     env:
     - name: HEALTHZ_PROBE_TIMEOUT_MS
-      value: "3000"
+      value: "5000"
     - name: HEALTHZ_GLOBAL_CAP_MS
       value: "2500"
     - name: HEALTHZ_CACHE_TTL_MS
