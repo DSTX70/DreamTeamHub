@@ -34,6 +34,7 @@ import type { SummonPayload, MirrorBackPayload } from "./comms-service";
 import { metricsMiddleware } from "./metrics/prom";
 import { requireAdmin } from "./middleware/rbac";
 import { rateLimit } from "./middleware/rateLimit";
+import { stagingAuth, stagingBanner } from "./middleware/staging_auth";
 
 // ===========================
 // DUAL AUTHENTICATION MIDDLEWARE
@@ -97,6 +98,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // ===========================
   
   await setupAuth(app);
+
+  // ===========================
+  // STAGING ENVIRONMENT PROTECTION
+  // ===========================
+  
+  // Basic auth for staging environment (activates when NODE_ENV=staging)
+  app.use(stagingAuth);
+  
+  // Optional: Add staging banner to HTML responses
+  app.use(stagingBanner);
 
   // ===========================
   // METRICS MIDDLEWARE (Prometheus)

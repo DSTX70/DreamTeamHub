@@ -94,7 +94,7 @@ Scope-Based Authorization uses `requireScopes()` middleware. Routes support dual
 - Exit code 1 on validation failure, 0 on success
 
 ### Staging Environment
-The staging environment features automated weekly database refreshes using Greenmask for PII masking, access control via basic auth or IP allowlist, production-ready health check endpoints (`/api/healthz` for readiness, `/api/healthz/livez` for liveness) with per-probe timeouts and bounded latency, and automated SQL tests for referential integrity validation.
+The staging environment features comprehensive testing infrastructure with multiple authentication options (basic auth, Cloudflare Access, or Okta SSO), isolated resources (separate DB/Redis/S3), production-ready health check endpoints (`/api/healthz` for readiness, `/api/healthz/livez` for liveness) with per-probe timeouts and bounded latency, and automated smoke testing. Built-in staging protection includes basic auth middleware (activated via `NODE_ENV=staging`), visual staging banner, and comprehensive testing checklist. The environment supports negative health check testing, synthetic error injection, and dashboard verification workflows. See `docs/ops/STAGING_SETUP.md` for complete deployment guide and `docs/ops/STAGING_TESTING_CHECKLIST.md` for verification procedures.
 
 **Health Check Infrastructure:**
 - **Readiness Endpoint** (`/api/healthz`): Aggregates DB/S3/SMTP probe results with configurable timeouts (default 5000ms via HEALTHZ_PROBE_TIMEOUT_MS), returns 200 OK when all probes pass or 503 Service Unavailable with detailed probe failures
