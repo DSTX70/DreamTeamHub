@@ -15,11 +15,19 @@ function parseSince(s: Since): number | null {
 }
 
 export default function LogsStreamPlus() {
-  const [level, setLevel] = useState<string>("");
-  const [owner, setOwner] = useState<string>("");
-  const [kind, setKind] = useState<string>("");
-  const [since, setSince] = useState<Since>("15m");
-  const [copyMode, setCopyMode] = useState<CopyMode>("summary");
+  // Load from localStorage or use defaults
+  const [level, setLevel] = useState<string>(() => localStorage.getItem("ops-logs-level") || "");
+  const [owner, setOwner] = useState<string>(() => localStorage.getItem("ops-logs-owner") || "");
+  const [kind, setKind] = useState<string>(() => localStorage.getItem("ops-logs-kind") || "");
+  const [since, setSince] = useState<Since>(() => (localStorage.getItem("ops-logs-since") || "15m") as Since);
+  const [copyMode, setCopyMode] = useState<CopyMode>(() => (localStorage.getItem("ops-logs-copymode") || "summary") as CopyMode);
+
+  // Persist to localStorage on change
+  useEffect(() => { localStorage.setItem("ops-logs-level", level); }, [level]);
+  useEffect(() => { localStorage.setItem("ops-logs-owner", owner); }, [owner]);
+  useEffect(() => { localStorage.setItem("ops-logs-kind", kind); }, [kind]);
+  useEffect(() => { localStorage.setItem("ops-logs-since", since); }, [since]);
+  useEffect(() => { localStorage.setItem("ops-logs-copymode", copyMode); }, [copyMode]);
 
   const [events, setEvents] = useState<OpsEvent[]>([]);
   const cutoff = useMemo(() => parseSince(since), [since]);

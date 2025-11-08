@@ -1,0 +1,77 @@
+# k8s/probes.yaml
+# Kubernetes probe configuration for Dream Team Hub
+
+apiVersion: v1
+kind: Pod
+metadata:
+  name: dream-team-hub
+  labels:
+    app: dream-team-hub
+spec:
+  containers:
+  - name: app
+    image: dream-team-hub:latest
+    ports:
+    - containerPort: 5000
+      name: http
+    
+    # Liveness probe - fast check without dependencies
+    # Fails only if the process is completely unresponsive
+    livenessProbe:
+      httpGet:
+        path: /api/healthz/livez
+        port: http
+      initialDelaySeconds: 10
+      periodSeconds: 10
+      timeoutSeconds: 2
+      successThreshold: 1
+      failureThreshold: 3
+    
+    # Readiness probe - checks all dependencies (DB/S3/SMTP)
+    # Pod removed from service if this fails
+    readinessProbe:
+      httpGet:
+        path: /api/healthz
+        port: http
+      initialDelaySeconds: 15
+      periodSeconds: 30
+      timeoutSeconds: 5
+      successThreshold: 1
+      failureThreshold: 2
+    
+    # Startup probe - gives app time to initialize on first start
+    startupProbe:
+      httpGet:
+        path: /api/healthz/livez
+        port: http
+      initialDelaySeconds: 0
+      periodSeconds: 5
+      timeoutSeconds: 2
+      successThreshold: 1
+      failureThreshold: 12  # 60 seconds total (12 * 5s)
+    
+    env:
+    - name: HEALTHZ_PROBE_TIMEOUT_MS
+      value: "3000"
+    - name: HEALTHZ_GLOBAL_CAP_MS
+      value: "2500"
+    - name: HEALTHZ_CACHE_TTL_MS
+      value: "7000"
+    - name: DATABASE_URL
+      valueFrom:
+        secretKeyRef:
+          name: dth-secrets
+          key: database-url
+    - name: RBAC_API_KEY
+      valueFrom:
+        secretKeyRef:
+          name: dth-secrets
+          key: rbac-api-key
+    
+    resources:
+      requests:
+        memory: "512Mi"
+        cpu: "250m"
+      limits:
+        memory: "1Gi"
+        cpu: "500m"

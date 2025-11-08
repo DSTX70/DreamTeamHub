@@ -33,6 +33,7 @@ import { postSummon, postMirrorBack } from "./comms-service";
 import type { SummonPayload, MirrorBackPayload } from "./comms-service";
 import { metricsMiddleware } from "./metrics/prom";
 import { requireAdmin } from "./middleware/rbac";
+import { rateLimit } from "./middleware/rateLimit";
 
 // ===========================
 // DUAL AUTHENTICATION MIDDLEWARE
@@ -184,8 +185,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   const healthzRoute = await import("./routes/healthz.route");
   app.use("/api/healthz", healthzRoute.default);
 
-  // Admin Deploy - Deployment tracking (requires RBAC API key)
+  // Admin Deploy - Deployment tracking (requires RBAC API key + rate limit)
   const adminDeployRoute = await import("./routes/admin_deploy.route");
+  app.use("/api/admin/deploy/mark", requireAdmin, rateLimit(30), adminDeployRoute.default);
   app.use("/api/admin/deploy", requireAdmin, adminDeployRoute.default);
 
   // LLM Routes - Must be mounted BEFORE isDualAuthenticated block
@@ -200,6 +202,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Ops Logs - Redis stream + REST with time filters (requires RBAC API key)
   const opsLogsRedisRoute = await import("./routes/ops_logs_redis.route");
   const opsLogsSinceRoute = await import("./routes/ops_logs_since.route");
+  app.use("/api/ops/logs/emit", requireAdmin, rateLimit(30)); // Rate limit emit endpoint
   app.use("/api/ops/logs", requireAdmin, opsLogsRedisRoute.default); // /stream, /emit
   app.use("/api/ops/logs/rest", requireAdmin, opsLogsSinceRoute.default);
 

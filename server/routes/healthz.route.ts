@@ -10,6 +10,11 @@ const router = Router();
 
 // ---- helpers ----
 const DEFAULT_TIMEOUT_MS = Number(process.env.HEALTHZ_PROBE_TIMEOUT_MS || 3000);
+const GLOBAL_CAP_MS = Number(process.env.HEALTHZ_GLOBAL_CAP_MS || 2500);
+const CACHE_TTL_MS = Number(process.env.HEALTHZ_CACHE_TTL_MS || 7000);
+
+// Simple cache for readiness checks
+let cachedResponse: { payload: any; timestamp: number } | null = null;
 
 async function withTimeout<T>(p: Promise<T>, ms: number, label: string): Promise<T> {
   return await Promise.race([
@@ -54,14 +59,43 @@ async function checkSMTP() {
   await transporter.verify();
 }
 
-// readiness: aggregates probes, returns 503 if any fail
+// readiness: aggregates probes with caching and global cap
 router.get("/", async (_req: Request, res: Response) => {
+  const now = Date.now();
+  
+  // Return cached response if still valid
+  if (cachedResponse && (now - cachedResponse.timestamp) < CACHE_TTL_MS) {
+    return res.status(cachedResponse.payload.ok ? 200 : 503).json({
+      ...cachedResponse.payload,
+      cached: true
+    });
+  }
+  
   const t0 = performance.now();
-  const results = await Promise.all([
+  
+  // Run all probes with global cap
+  const probesPromise = Promise.all([
     timeProbe("db", checkDB),
     timeProbe("s3", checkS3),
     timeProbe("smtp", checkSMTP),
   ]);
+  
+  let results: CheckResult[];
+  try {
+    results = await withTimeout(probesPromise, GLOBAL_CAP_MS, "global health check");
+  } catch (err: any) {
+    // Global timeout exceeded - return partial results
+    const t1 = performance.now();
+    const payload: HealthResponse = {
+      ok: false,
+      latencyMs: Math.round(t1 - t0),
+      checks: [],
+      ts: new Date().toISOString(),
+      error: `Global health check timeout after ${GLOBAL_CAP_MS}ms`
+    };
+    return res.status(503).json(payload);
+  }
+  
   const t1 = performance.now();
   const payload: HealthResponse = {
     ok: results.every(r => r.ok),
@@ -69,6 +103,10 @@ router.get("/", async (_req: Request, res: Response) => {
     checks: results,
     ts: new Date().toISOString(),
   };
+  
+  // Cache the response
+  cachedResponse = { payload, timestamp: now };
+  
   res.status(payload.ok ? 200 : 503).json(payload);
 });
 
