@@ -81,7 +81,13 @@ const HeaderOpsMenu: React.FC = () => {
         <div role="menu" className="absolute right-0 mt-2 w-72 bg-white border rounded-lg shadow-lg p-2 z-50">
           <div className="flex items-center justify-between px-1 py-1">
             <div className="text-xs uppercase tracking-wide text-gray-500">Operations</div>
-            <Tooltip muted={!hotkeysEnabled} content={hotkeysEnabled ? (<div className="text-xs">g o — Overview<br/>g i — Inventory<br/>g m — Images<br/>g a — Affiliates<br/>g s — Settings</div>) : <div className="text-gray-500 text-xs">Hotkeys disabled by Ops</div>} />
+            <Tooltip muted={!hotkeysEnabled} content={hotkeysEnabled ? (<div className="text-xs">g o — Overview<br/>g i — Inventory<br/>g m — Images<br/>g a — Affiliates<br/>g s — Settings</div>) : <div className="text-gray-500 text-xs">Hotkeys disabled by Ops</div>}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="opacity-50">
+                <circle cx="12" cy="12" r="10"></circle>
+                <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
+                <line x1="12" y1="17" x2="12.01" y2="17"></line>
+              </svg>
+            </Tooltip>
           </div>
           <Item href="/ops/overview"   label="Overview"   desc="Ops dashboard & health" />
           <Item href="/ops/inventory"  label="Inventory"  desc="Low stock & thresholds" />

@@ -1,6 +1,6 @@
 import { useLocation } from "wouter";
 import { useHotkeys } from "@/hooks/useHotkeys";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import Toast from "@/components/Toast";
 
 type OpsHotkeysProps = {
@@ -28,7 +28,7 @@ export default function OpsHotkeys({ navigate: customNavigate }: OpsHotkeysProps
     fetchSettings();
   }, []);
 
-  const handleHotkeyNavigation = (path: string) => {
+  const handleHotkeyNavigation = useCallback((path: string) => {
     // Show toast on first use
     const seen = localStorage.getItem("opsHotkeysSeen");
     if (!seen) {
@@ -38,22 +38,26 @@ export default function OpsHotkeys({ navigate: customNavigate }: OpsHotkeysProps
     
     // Navigate
     navigate(path);
-  };
+  }, [navigate]);
 
-  // Only register hotkeys if enabled
-  useHotkeys(
-    hotkeysEnabled
-      ? {
-          g: {
-            o: () => handleHotkeyNavigation("/ops/overview"),
-            i: () => handleHotkeyNavigation("/ops/inventory"),
-            m: () => handleHotkeyNavigation("/ops/images"),
-            a: () => handleHotkeyNavigation("/ops/affiliates"),
-            s: () => handleHotkeyNavigation("/ops/settings"),
-          },
-        }
-      : {}
+  // Only register hotkeys if enabled - memoize to prevent infinite loops
+  const chords = useMemo(
+    () =>
+      hotkeysEnabled
+        ? {
+            g: {
+              o: () => handleHotkeyNavigation("/ops/overview"),
+              i: () => handleHotkeyNavigation("/ops/inventory"),
+              m: () => handleHotkeyNavigation("/ops/images"),
+              a: () => handleHotkeyNavigation("/ops/affiliates"),
+              s: () => handleHotkeyNavigation("/ops/settings"),
+            },
+          }
+        : ({} as Record<string, Record<string, () => void>>),
+    [hotkeysEnabled, handleHotkeyNavigation]
   );
+
+  useHotkeys(chords);
 
   return (
     <>
