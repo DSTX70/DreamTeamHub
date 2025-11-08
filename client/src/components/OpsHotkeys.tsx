@@ -59,13 +59,17 @@ export default function OpsHotkeys({ navigate: customNavigate }: OpsHotkeysProps
 
   useHotkeys(chords);
 
+  const handleCloseToast = useCallback(() => {
+    setShowToast(false);
+  }, []);
+
   return (
     <>
       {showToast && (
         <Toast
           message="Hotkeys active — press ? for help"
           duration={3000}
-          onClose={() => setShowToast(false)}
+          onClose={handleCloseToast}
         />
       )}
     </>
