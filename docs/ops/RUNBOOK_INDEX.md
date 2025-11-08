@@ -14,12 +14,19 @@ Central index for Ops runbooks and references. Keep this file updated as new run
 - Alerting Templates: see `alert_tuning.yml`
 
 ## Quick Links
+
+### Public / Session-Authenticated Endpoints
 - Readiness: `GET /api/healthz`
 - Liveness:  `GET /api/healthz/livez`
 - Metrics:   `GET /metrics`
-- Logs SSE:  `GET /api/ops/logs/stream`
-- Logs REST: `GET /api/ops/logs/rest?since=15m`
-- Presets DB: `GET/POST /api/llm/presets-db`
-- Augment:   `POST /api/llm/augment`
+- Recent Logs: `GET /api/ops/logs/recent/` (session-auth, 15min window)
+- Last Deploy: `GET /api/ops/deploy/last` (session-auth)
+
+### Admin Endpoints (require DTH_API_TOKEN)
+- Deploy Mark: `POST /api/admin/deploy/mark` (x-api-key)
+- Logs SSE:  `GET /api/ops/logs/stream` (x-api-key)
+- Logs REST: `GET /api/ops/logs/rest?since=15m` (x-api-key)
+- Presets DB: `GET/POST /api/llm/presets-db` (x-api-key)
+- Augment:   `POST /api/llm/augment` (x-api-key)
 
 > Tip: bookmark this page in GitHub so the team can jump straight to the right runbook during incidents.

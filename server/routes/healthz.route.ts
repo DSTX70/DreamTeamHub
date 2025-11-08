@@ -9,7 +9,7 @@ import { db } from "../db";
 const router = Router();
 
 // ---- helpers ----
-const DEFAULT_TIMEOUT_MS = Number(process.env.HEALTHZ_PROBE_TIMEOUT_MS || 3000);
+const DEFAULT_TIMEOUT_MS = Number(process.env.HEALTHZ_PROBE_TIMEOUT_MS || 5000);
 const GLOBAL_CAP_MS = Number(process.env.HEALTHZ_GLOBAL_CAP_MS || 2500);
 const CACHE_TTL_MS = Number(process.env.HEALTHZ_CACHE_TTL_MS || 60000);
 
