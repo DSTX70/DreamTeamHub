@@ -189,6 +189,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   const adminDeployRoute = await import("./routes/admin_deploy.route");
   app.use("/api/admin/deploy/mark", requireAdmin, rateLimit(30), adminDeployRoute.default);
   app.use("/api/admin/deploy", requireAdmin, adminDeployRoute.default);
+  
+  // Ops Deploy - Read-only deployment info (session-authenticated)
+  const opsDeployLastRoute = await import("./routes/ops_deploy_last.route");
+  app.use("/api/ops/deploy", isAuthenticated, opsDeployLastRoute.default);
 
   // LLM Routes - Must be mounted BEFORE isDualAuthenticated block
   // LLM Augment - Public endpoint for prompt augmentation
@@ -199,7 +203,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   const llmPresetsDbRoute = await import("./routes/llm_presets_db.route");
   app.use("/api/llm/presets-db", requireAdmin, llmPresetsDbRoute.default);
   
-  // Ops Logs - Redis stream + REST with time filters (requires RBAC API key)
+  // Ops Logs - Session-authenticated read endpoints (more specific routes first)
+  const opsLogsRecentRoute = await import("./routes/ops_logs_recent.route");
+  app.use("/api/ops/logs/recent", isAuthenticated, opsLogsRecentRoute.default); // /recent (session-auth, read-only)
+  
+  // Ops Logs - Admin endpoints (RBAC protected)
   const opsLogsRedisRoute = await import("./routes/ops_logs_redis.route");
   const opsLogsSinceRoute = await import("./routes/ops_logs_since.route");
   app.use("/api/ops/logs/emit", requireAdmin, rateLimit(30)); // Rate limit emit endpoint

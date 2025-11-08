@@ -56,17 +56,17 @@ spec:
     - name: HEALTHZ_GLOBAL_CAP_MS
       value: "2500"
     - name: HEALTHZ_CACHE_TTL_MS
-      value: "7000"
+      value: "60000"
     - name: DATABASE_URL
       valueFrom:
         secretKeyRef:
           name: dth-secrets
           key: database-url
-    - name: RBAC_API_KEY
+    - name: DTH_API_TOKEN
       valueFrom:
         secretKeyRef:
           name: dth-secrets
-          key: rbac-api-key
+          key: dth-api-token
     
     resources:
       requests:

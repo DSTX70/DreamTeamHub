@@ -49,17 +49,15 @@ jobs:
         env:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/test_db
           DTH_API_TOKEN: ${{ secrets.DTH_API_TOKEN || 'test-token-for-ci' }}
-          RBAC_API_KEY: ${{ secrets.RBAC_API_KEY || 'test-rbac-key' }}
           AWS_S3_BUCKET: test-bucket
           AWS_REGION: us-east-1
           SESSION_SECRET: test-session-secret
           HEALTHZ_PROBE_TIMEOUT_MS: 3000
           HEALTHZ_GLOBAL_CAP_MS: 2500
-          HEALTHZ_CACHE_TTL_MS: 7000
+          HEALTHZ_CACHE_TTL_MS: 60000
         run: |
           echo "DATABASE_URL=$DATABASE_URL" >> $GITHUB_ENV
           echo "DTH_API_TOKEN=$DTH_API_TOKEN" >> $GITHUB_ENV
-          echo "RBAC_API_KEY=$RBAC_API_KEY" >> $GITHUB_ENV
           echo "AWS_S3_BUCKET=$AWS_S3_BUCKET" >> $GITHUB_ENV
           echo "AWS_REGION=$AWS_REGION" >> $GITHUB_ENV
           echo "SESSION_SECRET=$SESSION_SECRET" >> $GITHUB_ENV

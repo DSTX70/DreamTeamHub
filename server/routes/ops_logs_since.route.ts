@@ -12,6 +12,12 @@ export function appendOpsEvent(e: OpsEvent) {
   if (buffer.length > BUF_MAX) buffer.splice(0, buffer.length - BUF_MAX);
 }
 
+// Helper function to get events since a given time (in milliseconds)
+export function getOpsEventsSince(sinceMs: number): OpsEvent[] {
+  const cutoff = Date.now() - sinceMs;
+  return buffer.filter(e => new Date(e.ts).getTime() >= cutoff).slice(-1000);
+}
+
 const router = Router();
 
 // GET /api/ops/logs/rest?since=15m|1h|24h|epochMs&level=&owner=&kind=

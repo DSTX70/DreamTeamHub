@@ -1,21 +1,21 @@
 import { Link } from "wouter";
-import useSWR from "swr";
+import { useQuery } from "@tanstack/react-query";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { AlertCircle } from "lucide-react";
 
 export function OverviewHeader() {
-  // Fetch recent logs summary
-  const { data: logsData } = useSWR<{ events: any[] }>(
-    "/api/ops/logs/rest?since=15m",
-    { refreshInterval: 30000 }
-  );
+  // Fetch recent logs summary (session-authenticated)
+  const { data: logsData } = useQuery<{ events: any[] }>({
+    queryKey: ["/api/ops/logs/recent/"],
+    refetchInterval: 30000,
+  });
   
-  // Fetch last deployment
-  const { data: deployData } = useSWR<{ lastDeploy: { ts: string; sha?: string; tag?: string; actor?: string } | null }>(
-    "/api/admin/deploy/last",
-    { refreshInterval: 60000 }
-  );
+  // Fetch last deployment (session-authenticated)
+  const { data: deployData } = useQuery<{ lastDeploy: { ts: string; sha?: string; tag?: string; actor?: string } | null }>({
+    queryKey: ["/api/ops/deploy/last"],
+    refetchInterval: 60000,
+  });
   
   const totalLogs = logsData?.events?.length || 0;
   const errorLogs = logsData?.events?.filter(e => e.level === "error").length || 0;

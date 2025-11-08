@@ -11,7 +11,7 @@ const router = Router();
 // ---- helpers ----
 const DEFAULT_TIMEOUT_MS = Number(process.env.HEALTHZ_PROBE_TIMEOUT_MS || 3000);
 const GLOBAL_CAP_MS = Number(process.env.HEALTHZ_GLOBAL_CAP_MS || 2500);
-const CACHE_TTL_MS = Number(process.env.HEALTHZ_CACHE_TTL_MS || 7000);
+const CACHE_TTL_MS = Number(process.env.HEALTHZ_CACHE_TTL_MS || 60000);
 
 // Simple cache for readiness checks
 let cachedResponse: { payload: any; timestamp: number } | null = null;
