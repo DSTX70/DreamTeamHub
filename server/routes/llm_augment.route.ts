@@ -1,7 +1,7 @@
 // server/routes/llm_augment.route.ts
 import type { Request, Response } from "express";
 import { Router } from "express";
-import { db } from "../db";
+import { pool } from "../db";
 
 const router = Router();
 
@@ -12,7 +12,7 @@ const router = Router();
  */
 router.post("/", async (req: Request, res: Response) => {
   const { family = "gpt", prompt = "" } = req.body || {};
-  const { rows } = await db.query(
+  const { rows } = await pool.query(
     `SELECT augment_lines AS "augmentLines", tips FROM llm_presets WHERE family=$1 AND enabled=true ORDER BY updated_at DESC LIMIT 1`,
     [family]
   );

@@ -188,6 +188,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
   const adminDeployRoute = await import("./routes/admin_deploy.route");
   app.use("/api/admin/deploy", requireAdmin, adminDeployRoute.default);
 
+  // LLM Routes - Must be mounted BEFORE isDualAuthenticated block
+  // LLM Augment - Public endpoint for prompt augmentation
+  const llmAugmentRoute = await import("./routes/llm_augment.route");
+  app.use("/api/llm/augment", llmAugmentRoute.default);
+  
+  // LLM Presets - DB-backed CRUD for LLM presets (requires RBAC API key)
+  const llmPresetsDbRoute = await import("./routes/llm_presets_db.route");
+  app.use("/api/llm/presets-db", requireAdmin, llmPresetsDbRoute.default);
+  
+  // Ops Logs - Redis stream + REST with time filters (requires RBAC API key)
+  const opsLogsRedisRoute = await import("./routes/ops_logs_redis.route");
+  const opsLogsSinceRoute = await import("./routes/ops_logs_since.route");
+  app.use("/api/ops/logs", requireAdmin, opsLogsRedisRoute.default); // /stream, /emit
+  app.use("/api/ops/logs/rest", requireAdmin, opsLogsSinceRoute.default);
+
   // ===========================
   // FEATURE BUNDLE: NEW ROUTES
   // ===========================
@@ -200,18 +215,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.use(isDualAuthenticated, llmInferRouter);
   app.use("/api/evidence-packs", isDualAuthenticated, evidencePacksRouter);
   app.use(isDualAuthenticated, coverageTrendsRouter);
-  
-  // Ops Logs - Redis stream + REST with time filters (requires RBAC API key)
-  const opsLogsRedisRoute = await import("./routes/ops_logs_redis.route");
-  const opsLogsSinceRoute = await import("./routes/ops_logs_since.route");
-  app.use("/api/ops/logs", requireAdmin, opsLogsRedisRoute.default); // /stream, /emit
-  app.use("/api/ops/logs/rest", requireAdmin, opsLogsSinceRoute.default);
-  
-  // LLM Presets - DB-backed CRUD for LLM presets (requires RBAC API key)
-  const llmPresetsDbRoute = await import("./routes/llm_presets_db.route");
-  const llmAugmentRoute = await import("./routes/llm_augment.route");
-  app.use("/api/llm/presets-db", requireAdmin, llmPresetsDbRoute.default);
-  app.use("/api/llm/augment", llmAugmentRoute.default);
 
   // ===========================
   // CONTROL TOWER

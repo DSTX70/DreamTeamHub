@@ -3,6 +3,7 @@ import type { Request, Response } from "express";
 import { Router } from "express";
 import Redis from "ioredis";
 import type { OpsEvent } from "../../shared/types/ops";
+import { appendOpsEvent } from "./ops_logs_since.route";
 
 const router = Router();
 
@@ -57,12 +58,16 @@ router.get("/stream", (req: Request, res: Response) => {
 });
 
 router.post("/emit", (req: Request, res: Response) => {
-  if (!pub) {
-    return res.status(503).json({ error: "Redis not configured" });
+  const evt = req.body as OpsEvent;
+  
+  if (pub) {
+    // If Redis is available, publish to channel
+    pub.publish(CHANNEL, JSON.stringify(evt));
   }
   
-  const evt = req.body as OpsEvent;
-  pub.publish(CHANNEL, JSON.stringify(evt));
+  // Always append to in-memory buffer (for ops_logs_since.route.ts)
+  appendOpsEvent(evt);
+  
   res.json({ ok: true });
 });
 
