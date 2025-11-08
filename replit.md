@@ -53,7 +53,11 @@ Future phases include an Onboarding Wizard for brand/product creation and Covera
 - **CI/CD Pipeline:** GitHub Actions workflow with Node 20, pnpm, type-checking, tests, and environment health validation (with forked PR support)
 - **Environment Health Monitoring:** Real-time dashboard display and validation script for critical environment variables
 - **Production Health Checks:** Enhanced `/api/healthz` readiness endpoint with per-probe timeouts (configurable via HEALTHZ_PROBE_TIMEOUT_MS), DB/S3/SMTP probes with bounded latency, and `/api/healthz/livez` liveness endpoint for fast health checks; LiveHealthCard component with SWR auto-refresh displays probe status on OpsOverview
-- **Deployment Tracking:** POST `/api/admin/deploy/mark` (secured with DTH_API_TOKEN Bearer authentication) and GET `/api/admin/deploy/last` endpoints for deployment observability; LastDeployChip component with SWR auto-refresh displays latest deployment metadata (sha, tag, actor, timestamp) on OpsOverview; Prometheus alertmanager rules.yml reference for production monitoring
+- **Deployment Tracking:** POST `/api/admin/deploy/mark` (secured with DTH_API_TOKEN x-api-key authentication) and GET `/api/admin/deploy/last` endpoints for deployment observability; LastDeployChip component with SWR auto-refresh displays latest deployment metadata (sha, tag, actor, timestamp) on OpsOverview; Prometheus alertmanager rules.yml reference for production monitoring
+- **Prometheus Metrics:** `/metrics` endpoint exposes HTTP request duration histograms and default Node.js system metrics for production monitoring and alerting
+- **RBAC Middleware:** x-api-key header authentication via `requireAdmin` middleware protects admin endpoints against DTH_API_TOKEN
+- **LLM Presets System:** Database-backed preset management at `/api/llm/presets-db` with CRUD operations; `/api/llm/augment` API injects family-specific tips and augment lines into user prompts; supports gpt/claude/gemini families
+- **Ops Logs Infrastructure:** Redis-backed event streaming via `/api/ops/logs/stream` (SSE) and `/api/ops/logs/emit` for real-time operational telemetry; REST API at `/api/ops/logs/rest?since=15m|1h|24h` for time-based queries; graceful fallback to in-memory buffer (5000 events) when Redis unavailable; LogsStreamPlus UI component with auto-reconnect and error handling
 
 ### Technology Stack
 The frontend utilizes React 18, TypeScript, Wouter, TanStack Query v5, React Hook Form, Zod, Shadcn UI, and Tailwind CSS. The backend is built with Express.js, TypeScript, and Drizzle ORM. PostgreSQL, backed by Neon, serves as the primary database with a comprehensive relational model.
@@ -95,7 +99,7 @@ The staging environment features automated weekly database refreshes using Green
 **Health Check Infrastructure:**
 - **Readiness Endpoint** (`/api/healthz`): Aggregates DB/S3/SMTP probe results with configurable timeouts (default 5000ms via HEALTHZ_PROBE_TIMEOUT_MS), returns 200 OK when all probes pass or 503 Service Unavailable with detailed probe failures
 - **Liveness Endpoint** (`/api/healthz/livez`): Fast dependency-free check for process health, returns instant 200 OK
-- **Deployment Tracking** (`/api/admin/deploy/mark`): Bearer token-authenticated endpoint (DTH_API_TOKEN or DEPLOY_TOKEN) for CI/CD pipelines to mark deployments with sha/tag/actor metadata
+- **Deployment Tracking** (`/api/admin/deploy/mark`): x-api-key authenticated endpoint (DTH_API_TOKEN) for CI/CD pipelines to mark deployments with sha/tag/actor metadata
 - **Monitoring Integration**: Prometheus alertmanager rules.yml reference for production alerts on probe failures and deployment tracking
 
 ## External Dependencies
