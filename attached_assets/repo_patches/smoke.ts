@@ -65,7 +65,7 @@ async function main() {
   log("deploy mark ok");
 
   log("GET /api/admin/deploy/last");
-  r = await fetch(url("/api/admin/deploy/last"));
+  r = await fetch(url("/api/admin/deploy/last"), { headers: hdrs(false) });
   const last = await j(r);
   assert(last.lastDeploy && last.lastDeploy.ts, "has lastDeploy");
   log("last deploy", { label: last.lastDeploy.tag || (last.lastDeploy.sha || "").slice(0,7) });
@@ -118,7 +118,7 @@ async function main() {
   log("emit ok");
 
   log("GET /api/ops/logs/rest?since=15m");
-  r = await fetch(url("/api/ops/logs/rest?since=15m"));
+  r = await fetch(url("/api/ops/logs/rest?since=15m"), { headers: hdrs(false) });
   const restLogs = await j(r);
   assert(Array.isArray(restLogs.events), "rest logs returns events array");
   log("rest logs ok", { sample: restLogs.events.slice(-1)[0] });
