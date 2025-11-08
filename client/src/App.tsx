@@ -49,8 +49,10 @@ import ImagesAdmin from "@/pages/ops/ImagesAdmin";
 import SettingsLayout from "@/pages/ops/settings/SettingsLayout";
 import OpsOverview from "@/pages/ops/OpsOverview";
 import OpsLogs from "@/pages/ops/OpsLogs";
+import LogsStreamPlus from "@/pages/ops/LogsStreamPlus";
 import LLMProviderSelect from "@/pages/llm/ProviderSelect";
 import ProviderPromptLinter from "@/pages/llm/ProviderPromptLinter";
+import LinterAugment from "@/pages/llm/Linter_Augment";
 import Checkout from "@/pages/checkout/Checkout";
 import { Button } from "@/components/ui/button";
 import { LogOut, User as UserIcon, Search } from "lucide-react";
@@ -104,9 +106,11 @@ function AuthenticatedRoutes() {
       <Route path="/ops/inventory" component={InventoryLowStock} />
       <Route path="/ops/images" component={ImagesAdmin} />
       <Route path="/ops/logs" component={OpsLogs} />
+      <Route path="/ops/logs-stream-plus" component={LogsStreamPlus} />
       <Route path="/ops/settings/:rest*" component={SettingsLayout} />
       <Route path="/llm/provider" component={LLMProviderSelect} />
       <Route path="/llm/provider/linter" component={ProviderPromptLinter} />
+      <Route path="/llm/linter/augment" component={LinterAugment} />
       <Route path="/bu/:slug" component={BUHomePage} />
       <Route path="/checkout" component={Checkout} />
       <Route path="/help" component={HelpPage} />
