@@ -231,12 +231,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // Mount new feature routes (WO Playbook Preview, Coverage Report, Ops Alerts, LLM Infer, Evidence Packs)
   // Using isDualAuthenticated to support both API token and session authentication
-  app.use(isDualAuthenticated, woPlaybookPreviewRouter);
-  app.use(isDualAuthenticated, coverageReportRouter);
-  app.use(isDualAuthenticated, opsAlertHooksRouter);
-  app.use(isDualAuthenticated, llmInferRouter);
+  // Mount at /api to prevent matching non-API routes
+  app.use("/api", isDualAuthenticated, woPlaybookPreviewRouter);
+  app.use("/api", isDualAuthenticated, coverageReportRouter);
+  app.use("/api", isDualAuthenticated, opsAlertHooksRouter);
+  app.use("/api", isDualAuthenticated, llmInferRouter);
   app.use("/api/evidence-packs", isDualAuthenticated, evidencePacksRouter);
-  app.use(isDualAuthenticated, coverageTrendsRouter);
+  app.use("/api", isDualAuthenticated, coverageTrendsRouter);
 
   // ===========================
   // CONTROL TOWER
@@ -2214,7 +2215,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Images Re-encode - Re-encode and replace existing S3 variants (ops_admin only)
   const imagesReencodeRoute = await import("./routes/images.reencode.route");
-  app.use(isAuthenticated, imagesReencodeRoute.router);
+  app.use("/api", isAuthenticated, imagesReencodeRoute.router);
 
   // Image CDN - Optional app-based passthrough with cache headers (public)
   const imgCdnRoute = await import("./routes/img_cdn.route");
@@ -2254,7 +2255,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Inventory Notify - Per-SKU notification flags (requires ops_admin)
   const inventoryNotifyRoute = await import("./routes/inventory.notify.route");
-  app.use(isAuthenticated, inventoryNotifyRoute.router);
+  app.use("/api", isAuthenticated, inventoryNotifyRoute.router);
 
   // Inventory Scheduler - Manual scan trigger (public for demo)
   const inventorySchedulerRoute = await import("./routes/inventory.scheduler.route");
