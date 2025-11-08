@@ -1,7 +1,7 @@
 // server/routes/llm_augment.route.ts
 import type { Request, Response } from "express";
 import { Router } from "express";
-import { db } from "../drizzle/db";
+import { db } from "../db";
 
 const router = Router();
 
@@ -18,7 +18,7 @@ router.post("/", async (req: Request, res: Response) => {
   );
   const preset = rows[0] || { augmentLines: [], tips: [] };
   const lines: string[] = Array.isArray(preset.augmentLines) ? preset.augmentLines : [];
-  const augmented = [prompt, *lines].join("\n");
+  const augmented = [prompt, ...lines].join("\n");
   res.json({ augmented, tips: preset.tips || [] });
 });
 

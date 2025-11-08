@@ -1,7 +1,7 @@
 // server/routes/llm_presets_db.route.ts
 import type { Request, Response } from "express";
 import { Router } from "express";
-import { db } from "../drizzle/db"; // adjust import for your DB layer
+import { db } from "../db";
 
 const router = Router();
 

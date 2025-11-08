@@ -6,26 +6,42 @@ import type { OpsEvent } from "../../shared/types/ops";
 
 const router = Router();
 
-const REDIS_URL = process.env.REDIS_URL || "redis://localhost:6379";
-const pub = new Redis(REDIS_URL);
-const sub = new Redis(REDIS_URL);
-
+const REDIS_URL = process.env.REDIS_URL;
 const CHANNEL = process.env.OPS_LOGS_CHANNEL || "ops:logs";
 
 type Client = { id: number; res: Response };
 const clients: Client[] = [];
 let counter = 0;
 
-sub.subscribe(CHANNEL);
-sub.on("message", (_chan, msg) => {
-  try {
-    const evt = JSON.parse(msg);
-    const data = { event: evt };
-    for (const c of clients) c.res.write(`data: ${JSON.stringify(data)}\n\n`);
-  } catch {}
-});
+let pub: Redis | null = null;
+let sub: Redis | null = null;
+
+// Only initialize Redis if REDIS_URL is configured
+if (REDIS_URL) {
+  pub = new Redis(REDIS_URL);
+  sub = new Redis(REDIS_URL);
+  
+  // Silence connection errors
+  pub.on('error', (err) => console.warn('[Redis] Pub error:', err.message));
+  sub.on('error', (err) => console.warn('[Redis] Sub error:', err.message));
+  
+  sub.subscribe(CHANNEL);
+  sub.on("message", (_chan, msg) => {
+    try {
+      const evt = JSON.parse(msg);
+      const data = { event: evt };
+      for (const c of clients) c.res.write(`data: ${JSON.stringify(data)}\n\n`);
+    } catch {}
+  });
+} else {
+  console.warn('[Redis] REDIS_URL not configured, ops logs streaming disabled');
+}
 
 router.get("/stream", (req: Request, res: Response) => {
+  if (!sub) {
+    return res.status(503).json({ error: "Redis not configured" });
+  }
+  
   res.setHeader("Content-Type", "text/event-stream");
   res.setHeader("Cache-Control", "no-cache");
   res.setHeader("Connection", "keep-alive");
@@ -41,6 +57,10 @@ router.get("/stream", (req: Request, res: Response) => {
 });
 
 router.post("/emit", (req: Request, res: Response) => {
+  if (!pub) {
+    return res.status(503).json({ error: "Redis not configured" });
+  }
+  
   const evt = req.body as OpsEvent;
   pub.publish(CHANNEL, JSON.stringify(evt));
   res.json({ ok: true });

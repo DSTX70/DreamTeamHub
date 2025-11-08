@@ -31,6 +31,8 @@ import { generatePersonaResponse } from "./openai-service";
 import { buildAgentContext, recordAgentRun, recordFeedback } from "./agent-context";
 import { postSummon, postMirrorBack } from "./comms-service";
 import type { SummonPayload, MirrorBackPayload } from "./comms-service";
+import { metricsMiddleware } from "./metrics/prom";
+import { requireAdmin } from "./middleware/rbac";
 
 // ===========================
 // DUAL AUTHENTICATION MIDDLEWARE
@@ -94,6 +96,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // ===========================
   
   await setupAuth(app);
+
+  // ===========================
+  // METRICS MIDDLEWARE (Prometheus)
+  // ===========================
+  
+  app.use(metricsMiddleware("api"));
 
   // Auth user endpoint
   app.get('/api/auth/user', isAuthenticated, async (req: any, res) => {
@@ -168,13 +176,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // PUBLIC ROUTES (no auth required)
   // ===========================
   
+  // Metrics - Prometheus metrics endpoint (public for monitoring)
+  const metricsRoute = await import("./routes/metrics.route");
+  app.use("/metrics", metricsRoute.default);
+  
   // Health Check - DB/S3/SMTP probes (public for monitoring)
   const healthzRoute = await import("./routes/healthz.route");
   app.use("/api/healthz", healthzRoute.default);
 
-  // Admin Deploy - Deployment tracking (public for CI/CD)
+  // Admin Deploy - Deployment tracking (requires RBAC API key)
   const adminDeployRoute = await import("./routes/admin_deploy.route");
-  app.use("/api/admin/deploy", adminDeployRoute.default);
+  app.use("/api/admin/deploy", requireAdmin, adminDeployRoute.default);
 
   // ===========================
   // FEATURE BUNDLE: NEW ROUTES
@@ -188,6 +200,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.use(isDualAuthenticated, llmInferRouter);
   app.use("/api/evidence-packs", isDualAuthenticated, evidencePacksRouter);
   app.use(isDualAuthenticated, coverageTrendsRouter);
+  
+  // Ops Logs - Redis stream + REST with time filters (requires RBAC API key)
+  const opsLogsRedisRoute = await import("./routes/ops_logs_redis.route");
+  const opsLogsSinceRoute = await import("./routes/ops_logs_since.route");
+  app.use("/api/ops/logs", requireAdmin, opsLogsRedisRoute.default); // /stream, /emit
+  app.use("/api/ops/logs/rest", requireAdmin, opsLogsSinceRoute.default);
+  
+  // LLM Presets - DB-backed CRUD for LLM presets (requires RBAC API key)
+  const llmPresetsDbRoute = await import("./routes/llm_presets_db.route");
+  const llmAugmentRoute = await import("./routes/llm_augment.route");
+  app.use("/api/llm/presets-db", requireAdmin, llmPresetsDbRoute.default);
+  app.use("/api/llm/augment", llmAugmentRoute.default);
 
   // ===========================
   // CONTROL TOWER
