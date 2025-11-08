@@ -1,0 +1,79 @@
+Here’s the final all-in “tidy bundle” that covers the 8 tasks:
+
+Download ship_hardening_and_ux_tidy.zip
+
+What’s inside:
+
+Healthz hardening
+
+server/routes/healthz.route.ts — adds global cap (default 2500 ms) and a short cache (default 7 s) + keeps /livez.
+
+k8s/probes.yaml — readiness/liveness examples.
+
+RBAC + rate-limit on admin surfaces
+
+server/middleware/rateLimit.ts — tiny per-IP/key/path limiter (default 30/min). Use on /api/admin/deploy/mark and /api/ops/logs/emit.
+
+Overview header bar
+
+client/src/components/ops/OverviewHeader.tsx — single row with Logs count, Err deep-link, and Last Deploy chip.
+
+patches/ops_overview_header.diff — drop-in patch to render it on /ops/overview.
+
+LLM linter augment UI
+
+client/src/pages/llm/Linter_Augment.tsx — calls /api/llm/augment, shows inline “Apply suggested fixes” (prompt autofix) and Copy.
+
+Ops logs sticky prefs
+
+client/src/pages/ops/LogsStreamPlus.tsx — SSE stream with time window + “Copy summary/JSON,” persisted via localStorage.
+
+LLM presets seed
+
+server/db/seeds/20251107_llm_presets_seed.sql — default strict-JSON presets for GPT/Claude/Gemini.
+
+CI smoke
+
+.github/workflows/ci-smoke.yml — runs your smoke.ts headless after starting the server.
+
+How to wire (quick paste):
+
+Server
+
+// rate-limit sensitive endpoints
+import { rateLimit } from "./middleware/rateLimit";
+app.use("/api/admin/deploy/mark", rateLimit(30));
+app.use("/api/ops/logs/emit", rateLimit(30));
+
+
+Client
+
+Route /ops/logs-stream-plus → LogsStreamPlus.tsx
+
+Route /llm/linter/augment → Linter_Augment.tsx
+
+Apply patches/ops_overview_header.diff to show the new header row on /ops/overview.
+
+Env (add/confirm)
+
+HEALTHZ_PROBE_TIMEOUT_MS=3000
+HEALTHZ_GLOBAL_CAP_MS=2500
+HEALTHZ_CACHE_TTL_MS=7000
+RBAC_API_KEY=...
+REDIS_URL=...
+# plus DB/S3/SMTP already in use
+
+
+Definition of Done checklist
+
+Health: bounded & cached readiness; /livez always 200; probes wired.
+
+Admin: RBAC + rate-limit enforced.
+
+Observability: Overview header shows Logs and Err (links) + Last Deploy.
+
+LLM: presets seeded; augment works from the UI; suggested fixes apply.
+
+Ops Logs: SSE stream live; sticky prefs for filters & copy mode.
+
+CI: smoke pack runs and passes.
