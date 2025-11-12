@@ -5,10 +5,23 @@ import {
   Users, Target, Lightbulb, FileCheck, 
   MessageSquare, Workflow, Shield, TrendingUp 
 } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { HeadHome } from "@/components/HeadHome";
 
 export default function Landing() {
+  // Fetch SEO metadata for the homepage
+  const { data: seoData } = useQuery({
+    queryKey: ['/api/seo/meta/section', '/', 'home.lifestyle_ol1'],
+    queryFn: async () => {
+      const response = await fetch('/api/seo/meta/section?route=/&section_key=home.lifestyle_ol1&locale=en');
+      const json = await response.json();
+      return json.seo;
+    },
+  });
+
   return (
     <div className="min-h-screen bg-brand-dark">
+      <HeadHome seo={seoData} />
       {/* Hero Section */}
       <div className="relative overflow-hidden">
         <div className="absolute inset-0 bg-grad-orchestra opacity-10"></div>
