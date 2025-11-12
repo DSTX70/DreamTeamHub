@@ -6,7 +6,7 @@ import RequireRole from "@/components/RequireRole";
 import SettingsAlerts from "@/pages/ops/settings/SettingsAlerts";
 import SettingsGlobal from "@/pages/ops/settings/SettingsGlobal";
 import SettingsIndexRedirect from "@/pages/ops/settings/SettingsIndexRedirect";
-import UploaderSettings from "@/pages/uploader-settings";
+import UploaderAdmin from "@/pages/ops/UploaderAdmin";
 
 export default function SettingsLayout() {
   const [location, setLocation] = useLocation();
@@ -93,7 +93,7 @@ export default function SettingsLayout() {
         </Route>
         <Route path="/ops/settings/uploader">
           <RequireRole roles={["ops_admin"]}>
-            <UploaderSettings />
+            <UploaderAdmin />
           </RequireRole>
         </Route>
       </Switch>
