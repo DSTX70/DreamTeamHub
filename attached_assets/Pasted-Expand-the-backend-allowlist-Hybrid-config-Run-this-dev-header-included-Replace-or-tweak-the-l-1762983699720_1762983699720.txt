@@ -1,0 +1,90 @@
+Expand the backend allowlist (Hybrid config)
+
+Run this (dev header included). Replace or tweak the list as you like.
+
+curl -s -X POST http://localhost:5000/api/ops/uploader/config \
+  -H 'x-role: ops_admin' -H 'Content-Type: application/json' \
+  -d '{
+    "allowed_types":[
+      "image/webp","image/png","image/jpeg","image/svg+xml",
+      "application/pdf","application/zip",
+      "text/csv","text/plain",
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      "application/vnd.ms-excel","application/octet-stream"
+    ],
+    "max_file_mb": 150,
+    "list_page_size": 75
+  }' | jq
+
+
+Notes:
+• text/csv and also application/vnd.ms-excel catch how browsers label CSV.
+• application/octet-stream is a safety net for odd server/browser MIME guesses (optional).
+
+Reply “config updated” once that returns ok:true.
+
+Step 2 — Make the Intake/Attachments widget respect config
+
+Your Work Item “Attachments” input probably has a static accept and a static “Allowed:” label. Swap both to use the Hybrid config.
+
+A) Pull config on mount
+
+// app/client/lib/uploader/api.ts already has getConfig(); reuse it.
+import { getConfig } from '@/client/lib/uploader/api';
+
+const [allowed, setAllowed] = useState<string[]>([]);
+
+useEffect(() => {
+  (async () => {
+    try {
+      const cfg = await getConfig();
+      setAllowed(cfg.allowed_types ?? []);
+    } catch {}
+  })();
+}, []);
+
+
+B) Build the <input type="file" accept="..."> string
+
+function toAcceptAttr(mimes: string[]) {
+  // If you prefer extensions, map known mimes to extensions here.
+  // Browsers happily accept MIME strings, so we can pass them through.
+  return mimes.join(',');
+}
+
+
+C) Use it in the Attachment field
+
+<input
+  type="file"
+  accept={toAcceptAttr(allowed.length ? allowed : [
+    'image/webp','image/png','image/jpeg','image/svg+xml',
+    'application/pdf','application/zip','text/csv','text/plain',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    'application/vnd.ms-excel'
+  ])}
+/>
+
+
+D) Replace the static helper text
+
+<p className="text-xs text-muted-foreground">
+  Allowed: { (allowed.length ? allowed : ['image/webp','image/png','image/jpeg','image/svg+xml','application/pdf','application/zip','text/csv','text/plain','…']).join(', ') }
+  · Max size: {effectiveMaxMb ?? 150}MB
+</p>
+
+Step 3 — Ensure server validation uses the same list
+
+In your upload handler (the one behind /api/ops/uploader/upload), make sure the MIME check reads from config rather than a local constant.
+
+// pseudo inside upload route
+const cfg = await getUploaderConfig(); // from DB (Hybrid)
+const allowed = new Set((cfg.allowed_types ?? []).map(s => s.toLowerCase()));
+const mime = (detectedMime || req.file?.mimetype || '').toLowerCase();
+
+if (![...allowed].some(a => a === mime || (a.endsWith('/*') && mime.startsWith(a.replace('/*','/'))))) {
+  return res.status(415).json({ ok:false, error:`Unsupported type ${mime}` });
+}
+
+
+Tip: add support for wildcards like image/* if you want broader categories.
