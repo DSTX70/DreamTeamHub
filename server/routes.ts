@@ -19,6 +19,8 @@ import { router as opsAlertHooksRouter } from "./api/ops_alert_hooks.route";
 import { router as llmInferRouter } from "./api/llm_infer.route";
 import { router as evidencePacksRouter } from "./api/evidence_packs.route";
 import { router as coverageTrendsRouter } from "./api/coverage_trends.route";
+import multer from "multer";
+import { uploadFileToS3, getWorkItemFiles, getUploaderConfig } from "./services/uploader";
 import { 
   insertPodSchema, insertPodAgentSchema, insertAgentSchema, insertPersonSchema, insertRoleCardSchema, insertRoleRaciSchema, insertAgentSpecSchema,
   insertWorkItemSchema, insertDecisionSchema, insertIdeaSparkSchema, insertBrainstormSessionSchema,
@@ -1032,6 +1034,50 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Error deleting work item:', error);
       res.status(500).json({ error: 'Failed to delete work item' });
+    }
+  });
+
+  // ===========================
+  // WORK ITEM FILES
+  // ===========================
+
+  const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 100 * 1024 * 1024 } });
+
+  app.post("/api/work-items/:id/files", isAuthenticated, upload.single('file'), async (req, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ error: 'No file uploaded' });
+      }
+
+      const workItemId = parseInt(req.params.id);
+      const userId = req.user!.id;
+
+      const result = await uploadFileToS3(req.file, workItemId, userId);
+      res.status(201).json({ ok: true, ...result });
+    } catch (error: any) {
+      console.error('Error uploading file:', error);
+      res.status(400).json({ error: error.message || 'Failed to upload file' });
+    }
+  });
+
+  app.get("/api/work-items/:id/files", isAuthenticated, async (req, res) => {
+    try {
+      const workItemId = parseInt(req.params.id);
+      const files = await getWorkItemFiles(workItemId);
+      res.json({ ok: true, files });
+    } catch (error) {
+      console.error('Error fetching files:', error);
+      res.status(500).json({ error: 'Failed to fetch files' });
+    }
+  });
+
+  app.get("/api/ops/uploader/config", isAuthenticated, async (_req, res) => {
+    try {
+      const config = getUploaderConfig();
+      res.json(config);
+    } catch (error) {
+      console.error('Error fetching uploader config:', error);
+      res.status(500).json({ error: 'Failed to fetch uploader config' });
     }
   });
 
