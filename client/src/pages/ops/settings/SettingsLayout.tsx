@@ -6,6 +6,7 @@ import RequireRole from "@/components/RequireRole";
 import SettingsAlerts from "@/pages/ops/settings/SettingsAlerts";
 import SettingsGlobal from "@/pages/ops/settings/SettingsGlobal";
 import SettingsIndexRedirect from "@/pages/ops/settings/SettingsIndexRedirect";
+import UploaderSettings from "@/pages/uploader-settings";
 
 export default function SettingsLayout() {
   const [location, setLocation] = useLocation();
@@ -26,8 +27,18 @@ export default function SettingsLayout() {
   }, []);
 
   // Determine breadcrumb tail based on current path
-  const tail = location.endsWith("/global") ? "Global" : location.endsWith("/alerts") ? "Alerts" : "Settings";
-  const currentTab = location.includes("/ops/settings/global") ? "global" : "alerts";
+  const tail = location.endsWith("/global") 
+    ? "Global" 
+    : location.endsWith("/alerts") 
+    ? "Alerts"
+    : location.endsWith("/uploader")
+    ? "Uploader"
+    : "Settings";
+  const currentTab = location.includes("/ops/settings/global") 
+    ? "global" 
+    : location.includes("/ops/settings/uploader")
+    ? "uploader"
+    : "alerts";
   const hasAlertAccess = userRoles.includes("ops_editor") || userRoles.includes("ops_admin");
   const hasGlobalAccess = userRoles.includes("ops_admin");
 
@@ -58,6 +69,13 @@ export default function SettingsLayout() {
               </TabsTrigger>
             </Link>
           )}
+          {hasGlobalAccess && (
+            <Link href="/ops/settings/uploader">
+              <TabsTrigger value="uploader" data-testid="tab-uploader">
+                Uploader
+              </TabsTrigger>
+            </Link>
+          )}
         </TabsList>
       </Tabs>
 
@@ -71,6 +89,11 @@ export default function SettingsLayout() {
         <Route path="/ops/settings/global">
           <RequireRole roles={["ops_admin"]}>
             <SettingsGlobal />
+          </RequireRole>
+        </Route>
+        <Route path="/ops/settings/uploader">
+          <RequireRole roles={["ops_admin"]}>
+            <UploaderSettings />
           </RequireRole>
         </Route>
       </Switch>
