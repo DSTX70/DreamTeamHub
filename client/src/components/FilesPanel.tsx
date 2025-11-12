@@ -20,9 +20,17 @@ interface WorkItemFile {
   uploadedAt: Date;
 }
 
-interface UploaderConfig {
-  allowlist: string[];
+interface EffectiveUploads {
+  enabled: boolean;
+  allowlist: string;
   maxSizeMB: number;
+  visibleTo: 'owner' | 'pod' | 'approvers' | 'org';
+}
+
+interface UploaderConfig {
+  backend: 'local' | 'drive' | 's3';
+  effective: EffectiveUploads;
+  locked: { backend: boolean };
 }
 
 interface FilesPanelProps {
@@ -33,9 +41,11 @@ export function FilesPanel({ workItemId }: FilesPanelProps) {
   const { toast } = useToast();
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
-  const { data: config } = useQuery<UploaderConfig>({
+  const { data: configData } = useQuery<UploaderConfig>({
     queryKey: ['/api/ops/uploader/config'],
   });
+  
+  const config = configData?.effective;
 
   const { data: filesData, isLoading } = useQuery<{ ok: boolean; files: WorkItemFile[] }>({
     queryKey: ['/api/work-items', workItemId, 'files'],
@@ -80,11 +90,21 @@ export function FilesPanel({ workItemId }: FilesPanelProps) {
     const file = e.target.files?.[0];
     if (!file || !config) return;
 
+    if (!config.enabled) {
+      toast({
+        title: 'Uploads disabled',
+        description: 'File uploads are currently disabled',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    const allowlistArray = config.allowlist.split(',').filter(Boolean);
     const extension = file.name.split('.').pop()?.toLowerCase();
-    if (extension && !config.allowlist.includes(extension)) {
+    if (extension && !allowlistArray.includes(extension)) {
       toast({
         title: 'Invalid file type',
-        description: `Only ${config.allowlist.join(', ')} files are allowed`,
+        description: `Only ${allowlistArray.join(', ')} files are allowed`,
         variant: 'destructive',
       });
       return;
@@ -128,7 +148,7 @@ export function FilesPanel({ workItemId }: FilesPanelProps) {
         <Alert data-testid="alert-upload-info">
           <AlertCircle className="h-4 w-4" />
           <AlertDescription className="text-xs">
-            Allowed: {config.allowlist.join(', ')} • Max size: {config.maxSizeMB}MB
+            Allowed: {config.allowlist.split(',').filter(Boolean).join(', ')} • Max size: {config.maxSizeMB}MB
           </AlertDescription>
         </Alert>
       )}

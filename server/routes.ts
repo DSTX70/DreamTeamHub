@@ -35,7 +35,7 @@ import { buildAgentContext, recordAgentRun, recordFeedback } from "./agent-conte
 import { postSummon, postMirrorBack } from "./comms-service";
 import type { SummonPayload, MirrorBackPayload } from "./comms-service";
 import { metricsMiddleware } from "./metrics/prom";
-import { requireAdmin } from "./middleware/rbac";
+import { requireAdmin, requireOpsRole } from "./middleware/rbac";
 import { rateLimit } from "./middleware/rateLimit";
 import { stagingAuth, stagingBanner } from "./middleware/staging_auth";
 
@@ -1082,7 +1082,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/ops/uploader/config", isAuthenticated, requireAdmin, async (req: any, res) => {
+  app.post("/api/ops/uploader/config", isAuthenticated, requireOpsRole('ops_admin'), async (req: any, res) => {
     try {
       const userId = req.user?.claims?.sub || 'admin';
       const config = await updateUploadsConfig(req.body, userId);
