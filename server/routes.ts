@@ -1458,8 +1458,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/conversations", isAuthenticated, async (req, res) => {
     try {
-      const data = insertConversationSchema.parse(req.body);
+      const { roleHandles, ...rest } = req.body;
+      const handles = Array.isArray(roleHandles) && roleHandles.length > 0 
+        ? roleHandles 
+        : [rest.roleHandle || 'general'];
+      
+      // Create conversation with first role as primary (for backward compatibility)
+      const data = insertConversationSchema.parse({ ...rest, roleHandle: handles[0] });
       const conversation = await storage.createConversation(data);
+      
+      // Insert all role handles into conversation_roles junction table
+      if (conversation.id) {
+        for (const handle of handles) {
+          await db.execute(sql`
+            INSERT INTO conversation_roles (conversation_id, role_handle, added_by)
+            VALUES (${conversation.id}, ${handle}, ${(req as any).user?.id})
+            ON CONFLICT (conversation_id, role_handle) DO NOTHING
+          `);
+        }
+      }
+      
       res.status(201).json(conversation);
     } catch (error: any) {
       console.error('Error creating conversation:', error);

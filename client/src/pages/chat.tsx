@@ -10,7 +10,6 @@ import { useToast } from '@/hooks/use-toast';
 import type { RoleCard, Conversation, Message } from '@shared/schema';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { getPodColor } from '@/lib/pod-utils';
 
 export default function ChatPage() {
@@ -40,7 +39,7 @@ export default function ChatPage() {
 
   // Create new conversation
   const createConversationMutation = useMutation({
-    mutationFn: async (data: { title: string; roleHandle: string; userId?: number | null }) => {
+    mutationFn: async (data: { title: string; roleHandles: string[]; userId?: number | null }) => {
       const response = await apiRequest('POST', '/api/conversations', data);
       return response as unknown as Conversation;
     },
@@ -90,11 +89,9 @@ export default function ChatPage() {
 
   const handleCreateConversation = () => {
     if (!newConvTitle.trim() || selectedRoles.length === 0) return;
-    // For now, use the first selected role as the primary role_handle
-    // TODO: Update backend to support multiple roles per conversation
     createConversationMutation.mutate({
       title: newConvTitle,
-      roleHandle: selectedRoles[0],
+      roleHandles: selectedRoles,
       userId: null,
     });
   };
@@ -160,26 +157,48 @@ export default function ChatPage() {
                     />
                   </div>
                   <div>
-                    <Label htmlFor="persona">Dream Team Member</Label>
-                    <Select value={newConvRole} onValueChange={setNewConvRole}>
-                      <SelectTrigger id="persona" data-testid="select-persona">
-                        <SelectValue placeholder="Select a persona..." />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {roleCards.map(role => (
-                          <SelectItem key={role.id} value={role.handle} data-testid={`option-persona-${role.handle}`}>
-                            <div className="flex items-center gap-2">
-                              <span className="font-medium">{role.handle}</span>
-                              <span className="text-sm text-muted-foreground">- {role.title}</span>
+                    <Label>Dream Team Members ({selectedRoles.length} selected)</Label>
+                    <Input
+                      placeholder="Search personas..."
+                      value={roleSearchQuery}
+                      onChange={(e) => setRoleSearchQuery(e.target.value)}
+                      className="mb-2"
+                      data-testid="input-search-roles"
+                    />
+                    <ScrollArea className="h-64 border rounded-md p-2">
+                      <div className="space-y-1">
+                        {roleCards
+                          .filter(role => 
+                            role.handle.toLowerCase().includes(roleSearchQuery.toLowerCase()) ||
+                            role.title?.toLowerCase().includes(roleSearchQuery.toLowerCase())
+                          )
+                          .map(role => (
+                            <div
+                              key={role.id}
+                              className="flex items-center gap-2 p-2 rounded-md hover-elevate cursor-pointer"
+                              onClick={() => toggleRole(role.handle)}
+                              data-testid={`role-option-${role.handle}`}
+                            >
+                              <input
+                                type="checkbox"
+                                checked={selectedRoles.includes(role.handle)}
+                                onChange={() => toggleRole(role.handle)}
+                                onClick={(e) => e.stopPropagation()}
+                                className="h-4 w-4"
+                                data-testid={`checkbox-role-${role.handle}`}
+                              />
+                              <div className="flex-1">
+                                <div className="font-medium text-sm">{role.handle}</div>
+                                <div className="text-xs text-text-muted">{role.title}</div>
+                              </div>
                             </div>
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                          ))}
+                      </div>
+                    </ScrollArea>
                   </div>
                   <Button
                     onClick={handleCreateConversation}
-                    disabled={!newConvTitle.trim() || !newConvRole || createConversationMutation.isPending}
+                    disabled={!newConvTitle.trim() || selectedRoles.length === 0 || createConversationMutation.isPending}
                     className="w-full"
                     data-testid="button-start-conversation"
                   >
