@@ -1093,6 +1093,46 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Audit Trail Monitoring API
+  app.get("/api/ops/audit/verify", isAuthenticated, requireOpsRole('ops_viewer'), async (_req, res) => {
+    try {
+      const { verifyAuditTrigger } = await import("./utils/auditTrailMonitor");
+      const verification = await verifyAuditTrigger();
+      res.json(verification);
+    } catch (error: any) {
+      console.error('Error verifying audit trigger:', error);
+      res.status(500).json({ ok: false, error: error.message });
+    }
+  });
+
+  app.get("/api/ops/audit/summary", isAuthenticated, requireOpsRole('ops_viewer'), async (_req, res) => {
+    try {
+      const { getAuditSummary } = await import("./utils/auditTrailMonitor");
+      const summary = await getAuditSummary();
+      res.json(summary);
+    } catch (error: any) {
+      console.error('Error fetching audit summary:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.get("/api/ops/audit/trail/:settingKey?", isAuthenticated, requireOpsRole('ops_viewer'), async (req, res) => {
+    try {
+      const { getAuditTrail, getAllAuditTrail } = await import("./utils/auditTrailMonitor");
+      const settingKey = req.params.settingKey;
+      const limit = parseInt(req.query.limit as string || '50', 10);
+      
+      const records = settingKey 
+        ? await getAuditTrail(settingKey, limit)
+        : await getAllAuditTrail(limit);
+      
+      res.json(records);
+    } catch (error: any) {
+      console.error('Error fetching audit trail:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   // ===========================
   // DECISIONS
   // ===========================
