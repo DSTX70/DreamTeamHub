@@ -18,7 +18,15 @@ The design system is professional, inspired by Linear and Notion, utilizing Shad
 ### Technical Implementations
 The platform includes core modules for operational oversight (Control Tower), dedicated Business Unit Home Pages (IMAGINATION, INNOVATION, IMPACT) with real-time data, and comprehensive Project management. Key features include a global Idea Spark for quick idea capture, a Role Cards System for managing Dream Team personas with RACI Matrix integration, and the Agent Lab Academy for role management.
 
-AI-powered features consist of Brainstorm Studio (LLM-assisted ideation), Dream Team Chat (OpenAI GPT-4 with 32 role-based personas and context awareness), and DTH Copilot (AI assistant with OpenAI tool-calling, quick actions, and "Findings at a Glance" analytics).
+AI-powered features consist of Brainstorm Studio (LLM-assisted ideation), Dream Team Chat (OpenAI GPT-4 with 32 role-based personas, context awareness, and multi-participant conversations with pod expansion), and DTH Copilot (AI assistant with OpenAI tool-calling, quick actions, and "Findings at a Glance" analytics).
+
+**Chat Participants Enhancement**: The chat system now supports multi-participant conversation creation with flexible participant selection (individual persons or entire pods). Key features include:
+- ParticipantsMultiSelect component with search and multi-select UI for both people and pods
+- Automatic pod member expansion (selecting a pod adds all its members as participants)
+- Conversation kickoff messages for context setting
+- Database schema with conversation_participants table supporting dual principal types ('user'|'pod')
+- Transaction-safe API endpoints (POST /api/chat/conversations, GET /api/chat/conversations/:id/participants)
+- Comprehensive e2e test coverage verifying participant storage and retrieval
 
 Core operational systems include a Universal Search (Cmd+K), auto-generating Breadcrumb Navigation, and an Operations Events Logging system for telemetry and audit trails. Knowledge management is supported by a Knowledge Publishing System with database-level idempotency and Google Drive Integration. A Work Orders System enables real LLM execution via OpenAI, Anthropic, and Vertex AI with budget caps, rate limiting, and cost tracking, supported by an LLM Provider Infrastructure.
 
