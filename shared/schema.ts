@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, integer, timestamp, jsonb, boolean, index } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, integer, timestamp, jsonb, boolean, index, primaryKey } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
@@ -420,11 +420,21 @@ export const events = pgTable("events", {
 export const conversations = pgTable("conversations", {
   id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
   title: text("title").notNull(),
-  roleHandle: text("role_handle").notNull(), // Which Dream Team persona
+  roleHandle: text("role_handle").notNull(), // Legacy: single persona (kept for backward compatibility)
   userId: integer("user_id").references(() => persons.id),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
+
+// Junction table for multi-persona conversations
+export const conversationRoles = pgTable("conversation_roles", {
+  conversationId: integer("conversation_id").notNull().references(() => conversations.id, { onDelete: 'cascade' }),
+  roleHandle: text("role_handle").notNull(),
+  addedAt: timestamp("added_at", { withTimezone: true }).defaultNow(),
+  addedBy: text("added_by"),
+}, (table) => [
+  primaryKey({ name: 'conversation_roles_pkey', columns: [table.conversationId, table.roleHandle] }),
+]);
 
 export const messages = pgTable("messages", {
   id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
@@ -705,6 +715,14 @@ export const conversationsRelations = relations(conversations, ({ one, many }) =
     references: [persons.id],
   }),
   messages: many(messages),
+  roles: many(conversationRoles),
+}));
+
+export const conversationRolesRelations = relations(conversationRoles, ({ one }) => ({
+  conversation: one(conversations, {
+    fields: [conversationRoles.conversationId],
+    references: [conversations.id],
+  }),
 }));
 
 export const messagesRelations = relations(messages, ({ one }) => ({
@@ -934,6 +952,10 @@ export type Event = typeof events.$inferSelect;
 export const insertConversationSchema = createInsertSchema(conversations).omit({ id: true, createdAt: true, updatedAt: true });
 export type InsertConversation = z.infer<typeof insertConversationSchema>;
 export type Conversation = typeof conversations.$inferSelect;
+
+export const insertConversationRoleSchema = createInsertSchema(conversationRoles).omit({ addedAt: true });
+export type InsertConversationRole = z.infer<typeof insertConversationRoleSchema>;
+export type ConversationRole = typeof conversationRoles.$inferSelect;
 
 // Messages
 export const insertMessageSchema = createInsertSchema(messages).omit({ id: true, createdAt: true });
