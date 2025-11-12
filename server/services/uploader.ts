@@ -9,7 +9,7 @@ const DEFAULT_MAX_MB = 25;
 
 export interface UploaderConfig {
   allowlist: string[];
-  maxMb: number;
+  maxSizeMB: number;
 }
 
 export function getUploaderConfig(): UploaderConfig {
@@ -18,7 +18,7 @@ export function getUploaderConfig(): UploaderConfig {
 
   return {
     allowlist: allowlistEnv ? allowlistEnv.split(',').map(s => s.trim().toLowerCase()).filter(Boolean) : DEFAULT_ALLOWLIST,
-    maxMb: maxMbEnv || DEFAULT_MAX_MB,
+    maxSizeMB: maxMbEnv || DEFAULT_MAX_MB,
   };
 }
 
