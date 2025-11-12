@@ -1050,7 +1050,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const workItemId = parseInt(req.params.id);
-      const userId = req.user!.id;
+      const userId = req.user.claims.sub;
 
       const result = await uploadFileToS3(req.file, workItemId, userId);
       res.status(201).json({ ok: true, ...result });
