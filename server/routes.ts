@@ -2391,6 +2391,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   const { workOrders } = await import("./work_orders");
   app.use("/api/work-orders", isAuthenticated, workOrders);
 
+  // Chat Conversations - Multi-select participants with pod support
+  const { chatConversationsRouter } = await import("./routes/chat_conversations");
+  app.use("/api", isAuthenticated, chatConversationsRouter);
+
   // Brands - Business Unit brands and products
   app.get("/api/brands", isAuthenticated, async (req, res) => {
     try {
