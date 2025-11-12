@@ -1,0 +1,220 @@
+roll straight into the alt_text.csv pipeline. I’ll keep this tight and step-gated.
+
+Step 1 — DB table (alt text registry)
+
+Migration
+
+-- migrations/004_alt_texts.sql
+CREATE TABLE IF NOT EXISTS alt_texts (
+  id BIGSERIAL PRIMARY KEY,
+  image_key TEXT NOT NULL,            -- stable key/filename/path
+  alt_text  TEXT NOT NULL,
+  context   TEXT,                     -- page/slot ("home/hero-1")
+  locale    TEXT NOT NULL DEFAULT 'en',
+  reviewed_by TEXT,
+  reviewed_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE (image_key, locale)
+);
+
+CREATE INDEX IF NOT EXISTS idx_alt_texts_image_locale
+  ON alt_texts(image_key, locale);
+
+
+Run:
+
+psql "$DATABASE_URL" -f migrations/004_alt_texts.sql
+
+Step 2 — CSV contract (simple, human-friendly)
+
+alt_text.csv (headers exactly):
+
+image_key,alt_text,context,locale,reviewed_by,reviewed_at
+
+
+image_key: your stable key (e.g., home/hero_01.webp or s3://…/hero_01.webp)
+
+alt_text: the sentence users/readers need
+
+context: optional hint (home/hero-1, PDP/gallery-3)
+
+locale: en, es-MX, etc. (default en)
+
+reviewed_by, reviewed_at: optional audit
+
+Step 3 — Import API (reads a CSV you already uploaded)
+
+Server route (TypeScript/Express)
+
+// app/server/routes/seo_alt_text.ts
+import { Router } from 'express';
+import { pool } from '../db';
+import { parse } from 'csv-parse/sync';
+import * as z from 'zod';
+import fs from 'node:fs';
+
+const AltRow = z.object({
+  image_key: z.string().min(1),
+  alt_text:  z.string().min(2),
+  context:   z.string().optional().nullable(),
+  locale:    z.string().min(2).default('en'),
+  reviewed_by: z.string().optional().nullable(),
+  reviewed_at: z.string().optional().nullable(), // ISO
+});
+type AltRow = z.infer<typeof AltRow>;
+
+export const seoAltTextRouter = Router();
+
+/**
+ * POST /api/seo/alt-text/import
+ * Body: { work_item_id:number, filename?:string }  // finds the file in work_item_files
+ * OR   : { path:string }                           // absolute path (dev/local)
+ */
+seoAltTextRouter.post('/seo/alt-text/import', async (req, res) => {
+  const { work_item_id, filename, path } = req.body || {};
+  try {
+    let csvPath = path as string | undefined;
+
+    if (!csvPath) {
+      // Pull from your existing files table; adjust names to your schema.
+      const q = filename
+        ? `SELECT storage_uri FROM work_item_files WHERE work_item_id=$1 AND name=$2 ORDER BY created_at DESC LIMIT 1`
+        : `SELECT storage_uri FROM work_item_files WHERE work_item_id=$1 AND name ILIKE 'alt_text%.csv' ORDER BY created_at DESC LIMIT 1`;
+      const args = filename ? [work_item_id, filename] : [work_item_id];
+      const r = await pool.query(q, args);
+      if (!r.rowCount) return res.status(404).json({ ok:false, error:'CSV not found for this Work Item' });
+
+      const uri = r.rows[0].storage_uri as string; // e.g., file://uploads/..., s3://..., drive://...
+      // Minimal resolver for local backend
+      if (uri.startsWith('file://')) {
+        csvPath = uri.replace('file://','');
+      } else {
+        return res.status(400).json({ ok:false, error:'Non-local backends: add S3/Drive resolver here' });
+      }
+    }
+
+    const raw = fs.readFileSync(csvPath!, 'utf8');
+    const rows = parse(raw, { columns: true, skip_empty_lines: true, trim: true }) as Record<string,string>[];
+    const valid: AltRow[] = [];
+    const errors: Array<{line:number; error:string}> = [];
+
+    rows.forEach((r, i) => {
+      const v = AltRow.safeParse({
+        image_key:  r.image_key,
+        alt_text:   r.alt_text,
+        context:    r.context || null,
+        locale:     r.locale || 'en',
+        reviewed_by:r.reviewed_by || null,
+        reviewed_at:r.reviewed_at || null,
+      });
+      if (v.success) valid.push(v.data);
+      else errors.push({ line: i+2, error: v.error.issues.map(x=>x.message).join('; ') });
+    });
+
+    // Upsert
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+      for (const r of valid) {
+        await client.query(
+          `INSERT INTO alt_texts (image_key, alt_text, context, locale, reviewed_by, reviewed_at)
+           VALUES ($1,$2,$3,$4,$5,COALESCE($6::timestamptz, NULL))
+           ON CONFLICT (image_key, locale) DO UPDATE SET
+             alt_text=EXCLUDED.alt_text,
+             context=EXCLUDED.context,
+             reviewed_by=EXCLUDED.reviewed_by,
+             reviewed_at=EXCLUDED.reviewed_at,
+             updated_at=NOW()`,
+          [r.image_key, r.alt_text, r.context ?? null, r.locale, r.reviewed_by ?? null, r.reviewed_at ?? null]
+        );
+      }
+      await client.query('COMMIT');
+    } catch (e) { await client.query('ROLLBACK'); throw e; }
+    finally { client.release(); }
+
+    return res.json({ ok:true, imported: valid.length, errors });
+  } catch (e:any) {
+    return res.status(500).json({ ok:false, error: e.message });
+  }
+});
+
+
+Mount it
+
+// app/server/index.ts
+import { seoAltTextRouter } from './routes/seo_alt_text';
+app.use('/api', seoAltTextRouter);
+
+Step 4 — UI: tiny Ops panel to import & see a summary
+// app/client/pages/ops/AltTextImport.tsx
+import * as React from 'react';
+
+export default function AltTextImport() {
+  const [wi, setWi] = React.useState<string>('7'); // default to WI #7
+  const [filename, setFilename] = React.useState<string>('alt_text.csv');
+  const [result, setResult] = React.useState<any>(null);
+  const run = async () => {
+    const res = await fetch('/api/seo/alt-text/import', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ work_item_id: Number(wi), filename })
+    });
+    setResult(await res.json());
+  };
+  return (
+    <div className="max-w-xl space-y-4 p-6">
+      <h2 className="text-lg font-semibold">Alt Text Import</h2>
+      <div className="grid grid-cols-2 gap-3">
+        <input className="border p-2 rounded" value={wi} onChange={e=>setWi(e.target.value)} placeholder="Work Item ID (e.g., 7)" />
+        <input className="border p-2 rounded" value={filename} onChange={e=>setFilename(e.target.value)} placeholder="Filename (alt_text.csv)" />
+      </div>
+      <button className="px-3 py-2 border rounded" onClick={run}>Import</button>
+      {result && (
+        <pre className="text-xs bg-neutral-50 border p-3 rounded overflow-auto">
+{JSON.stringify(result,null,2)}
+        </pre>
+      )}
+    </div>
+  );
+}
+
+Step 5 — Smoke test (use your already-uploaded CSV on WI #7)
+# If your file is named alt_text.csv and attached to WI #7:
+curl -s -X POST http://localhost:5000/api/seo/alt-text/import \
+  -H 'Content-Type: application/json' \
+  -d '{"work_item_id":7,"filename":"alt_text.csv"}' | jq
+
+
+✅ Expect { ok:true, imported:<N>, errors:[...] }
+
+Query a row:
+
+SELECT * FROM alt_texts ORDER BY updated_at DESC LIMIT 3;
+
+Step 6 — Hook into rendering (so pages pick up alt text)
+
+Where you render images, add a small resolver the first time you need it:
+
+// app/server/lib/altText.ts
+import { pool } from '../db';
+export async function getAlt(image_key: string, locale='en'): Promise<string|undefined> {
+  const r = await pool.query(
+    `SELECT alt_text FROM alt_texts WHERE image_key=$1 AND locale=$2`,
+    [image_key, locale]
+  );
+  return r.rowCount ? r.rows[0].alt_text : undefined;
+}
+
+
+Then in your controller/page loader, fetch the alt once and pass it to the client/UI.
+
+Definition of Done (for alt_text.csv)
+
+ Table alt_texts created (unique on image_key+locale).
+
+ /api/seo/alt-text/import imports from your WI file.
+
+ Ops panel runs an import and shows a summary.
+
+ A page renders images with real alt from the registry.

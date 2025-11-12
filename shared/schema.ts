@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, integer, timestamp, jsonb, boolean, index, primaryKey } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, integer, timestamp, jsonb, boolean, index, primaryKey, unique } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
@@ -259,6 +259,29 @@ export const workItemFiles = pgTable("work_item_files", {
   uploadedByUserId: varchar("uploaded_by_user_id", { length: 255 }).notNull(),
   uploadedAt: timestamp("uploaded_at").defaultNow(),
 });
+
+// ===========================
+// ALT TEXT REGISTRY
+// ===========================
+
+export const altTexts = pgTable("alt_texts", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  imageKey: text("image_key").notNull(),
+  altText: text("alt_text").notNull(),
+  context: text("context"),
+  locale: text("locale").notNull().default('en'),
+  reviewedBy: text("reviewed_by"),
+  reviewedAt: timestamp("reviewed_at", { withTimezone: true }),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => ({
+  uniqueImageLocale: unique().on(table.imageKey, table.locale),
+  imageLocaleIdx: index("idx_alt_texts_image_locale").on(table.imageKey, table.locale),
+}));
+
+export type AltText = typeof altTexts.$inferSelect;
+export const insertAltTextSchema = createInsertSchema(altTexts).omit({ id: true, createdAt: true, updatedAt: true });
+export type InsertAltText = z.infer<typeof insertAltTextSchema>;
 
 // ===========================
 // DECISIONS
