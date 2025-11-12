@@ -20,20 +20,36 @@ type AltRow = z.infer<typeof AltRow>;
 export const seoAltTextRouter = Router();
 
 // S3 client for downloading CSV files from S3
-const s3Client = new S3Client({
-  region: process.env.AWS_REGION || 'us-east-1',
-  credentials: {
-    accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
-    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!,
-  },
-});
+let s3Client: S3Client | null = null;
+
+function getS3Client(): S3Client {
+  if (!s3Client) {
+    if (!process.env.AWS_ACCESS_KEY_ID || !process.env.AWS_SECRET_ACCESS_KEY || !process.env.AWS_S3_BUCKET) {
+      throw new Error('S3 credentials not configured. Set AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, and AWS_S3_BUCKET environment variables.');
+    }
+    
+    // Extract region code from full region string (e.g., "US East (Ohio) us-east-2" -> "us-east-2")
+    const rawRegion = process.env.AWS_REGION || 'us-east-1';
+    const region = rawRegion.match(/[a-z]{2}-[a-z]+-\d+/)?.[0] || rawRegion;
+    
+    s3Client = new S3Client({
+      region,
+      credentials: {
+        accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+        secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+      },
+    });
+  }
+  return s3Client;
+}
 
 async function downloadS3File(s3Key: string): Promise<string> {
+  const client = getS3Client();
   const command = new GetObjectCommand({
     Bucket: process.env.AWS_S3_BUCKET!,
     Key: s3Key,
   });
-  const response = await s3Client.send(command);
+  const response = await client.send(command);
   const stream = response.Body as Readable;
   const chunks: Buffer[] = [];
   for await (const chunk of stream) {
