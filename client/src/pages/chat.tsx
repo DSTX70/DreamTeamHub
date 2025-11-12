@@ -17,8 +17,9 @@ export default function ChatPage() {
   const [selectedConversationId, setSelectedConversationId] = useState<number | null>(null);
   const [messageInput, setMessageInput] = useState('');
   const [newConvTitle, setNewConvTitle] = useState('');
-  const [newConvRole, setNewConvRole] = useState('');
+  const [selectedRoles, setSelectedRoles] = useState<string[]>([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [roleSearchQuery, setRoleSearchQuery] = useState('');
   const { toast } = useToast();
 
   // Fetch all role cards for persona selection
@@ -48,10 +49,11 @@ export default function ChatPage() {
       setSelectedConversationId(newConversation.id);
       setIsDialogOpen(false);
       setNewConvTitle('');
-      setNewConvRole('');
+      setSelectedRoles([]);
+      setRoleSearchQuery('');
       toast({
         title: 'Conversation started',
-        description: `Now chatting with ${newConversation.roleHandle}`,
+        description: `Now chatting with ${selectedRoles.length} Dream Team member${selectedRoles.length > 1 ? 's' : ''}`,
       });
     },
     onError: (error: any) => {
@@ -87,12 +89,22 @@ export default function ChatPage() {
   };
 
   const handleCreateConversation = () => {
-    if (!newConvTitle.trim() || !newConvRole) return;
+    if (!newConvTitle.trim() || selectedRoles.length === 0) return;
+    // For now, use the first selected role as the primary role_handle
+    // TODO: Update backend to support multiple roles per conversation
     createConversationMutation.mutate({
       title: newConvTitle,
-      roleHandle: newConvRole,
+      roleHandle: selectedRoles[0],
       userId: null,
     });
+  };
+
+  const toggleRole = (handle: string) => {
+    setSelectedRoles(prev =>
+      prev.includes(handle)
+        ? prev.filter(h => h !== handle)
+        : [...prev, handle]
+    );
   };
 
   const selectedConversation = conversations.find(c => c.id === selectedConversationId);
