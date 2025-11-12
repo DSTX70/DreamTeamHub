@@ -28,6 +28,8 @@ Completed e-commerce features include Affiliate E2E Tracking, Affiliate Rates & 
 
 A Hybrid Uploader Configuration System provides runtime-editable file upload settings with environment-locked sensitive settings (storage backend) and database-stored operational settings (allowlist, size limits, visibility) with full audit trail and ops_admin RBAC protection. Includes comprehensive automated testing infrastructure (backend validation tests, audit trail monitoring utilities, and e2e test specifications), Audit Trail page at `/ops/audit` for real-time config change monitoring with trigger verification, summary statistics, and filterable records.
 
+A Work Order File Linkage System connects work_orders to work_items for file management, keeping files anchored to work_items while providing WO-scoped views. The system includes a work_order_id column in work_items (varchar FK to work_orders.id with SET NULL/CASCADE semantics), a work_order_files database view for aggregated file listing, GET /api/work-orders/:woId/files endpoint for querying files, and client helpers (listWorkOrderFiles, getConfig, getDefaultVisibility) in client/src/lib/workOrderFiles.ts. This architecture avoids parallel attachment systems while enabling both WO-level and WI-level file views.
+
 The CI/CD pipeline uses GitHub Actions for automated testing and environment health validation. Production health checks include `/api/healthz` (readiness) and `/api/healthz/livez` (liveness) endpoints, with Prometheus metrics and deployment tracking for observability.
 
 ### Technology Stack
