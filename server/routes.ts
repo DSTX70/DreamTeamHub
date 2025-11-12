@@ -22,7 +22,7 @@ import { router as llmInferRouter } from "./api/llm_infer.route";
 import { router as evidencePacksRouter } from "./api/evidence_packs.route";
 import { router as coverageTrendsRouter } from "./api/coverage_trends.route";
 import { seoAltTextRouter } from "./routes/seo_alt_text";
-import { seoMetaRouter } from "./routes/seo_meta";
+import { seoMetaRouter, seoMetaPublicRouter } from "./routes/seo_meta";
 import multer from "multer";
 import { uploadFileToS3, getWorkItemFiles, getUploaderConfig } from "./services/uploader";
 import { getEffectiveUploadsConfig, updateUploadsConfig } from "./services/opsUploadsConfig";
@@ -235,6 +235,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // ===========================
   // FEATURE BUNDLE: NEW ROUTES
   // ===========================
+  
+  // Public SEO endpoints (no auth required for landing page) - MUST BE FIRST
+  app.use("/api", seoMetaPublicRouter);
   
   // Mount new feature routes (WO Playbook Preview, Coverage Report, Ops Alerts, LLM Infer, Evidence Packs)
   // Using isDualAuthenticated to support both API token and session authentication

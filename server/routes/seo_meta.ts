@@ -20,6 +20,7 @@ const SeoMetaRow = z.object({
 type SeoMetaRow = z.infer<typeof SeoMetaRow>;
 
 export const seoMetaRouter = Router();
+export const seoMetaPublicRouter = Router();
 
 // S3 client for downloading CSV files from S3
 let s3Client: S3Client | null = null;
@@ -179,8 +180,9 @@ seoMetaRouter.post('/seo/meta/import', async (req, res) => {
 /**
  * GET /api/seo/meta?route=/&locale=en
  * Query all SEO meta entries for a route
+ * Public endpoint - no auth required
  */
-seoMetaRouter.get('/seo/meta', async (req, res) => {
+seoMetaPublicRouter.get('/seo/meta', async (req, res) => {
   try {
     const { route, locale = 'en' } = req.query;
     
@@ -204,8 +206,9 @@ seoMetaRouter.get('/seo/meta', async (req, res) => {
 /**
  * GET /api/seo/meta/section?route=/&section_key=home.lifestyle_ol1&locale=en
  * Get a specific SEO section
+ * Public endpoint - no auth required
  */
-seoMetaRouter.get('/seo/meta/section', async (req, res) => {
+seoMetaPublicRouter.get('/seo/meta/section', async (req, res) => {
   try {
     const { route, section_key, locale = 'en' } = req.query;
     
