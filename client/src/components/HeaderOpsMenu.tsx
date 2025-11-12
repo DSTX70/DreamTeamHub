@@ -94,6 +94,7 @@ const HeaderOpsMenu: React.FC = () => {
           <Item href="/ops/images"     label="Images"     desc="Allowlist & uploader" />
           <Item href="/ops/affiliates" label="Affiliates" desc="E2E & Ops report" />
           <Item href="/ops/logs"       label="Logs"       desc="Live tail & CSV" right={logsBadge} />
+          {roles.includes("ops_admin") && <Item href="/ops/content-imports" label="Content Imports" desc="SEO meta & alt text CSV" />}
           <div className="h-px bg-gray-200 my-1" />
           {roles.includes("ops_admin") && <Item href="/ops/settings"   label="Settings"   desc="Alerts & notifications" />}
         </div>
