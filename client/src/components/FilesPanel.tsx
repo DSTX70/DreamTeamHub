@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { apiRequest, queryClient } from '@/lib/queryClient';
 import { Button } from '@/components/ui/button';
@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { Upload, File, AlertCircle } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { getDefaultVisibility } from '@/lib/workOrderFiles';
 
 interface WorkItemFile {
   id: number;
@@ -40,12 +41,24 @@ interface FilesPanelProps {
 export function FilesPanel({ workItemId }: FilesPanelProps) {
   const { toast } = useToast();
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [visibleTo, setVisibleTo] = useState<'owner' | 'pod' | 'approvers' | 'org'>('org');
 
   const { data: configData } = useQuery<UploaderConfig>({
     queryKey: ['/api/ops/uploader/config'],
   });
   
   const config = configData?.effective;
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const defaultVis = await getDefaultVisibility();
+        setVisibleTo(defaultVis);
+      } catch (e) {
+        console.error('Failed to get default visibility:', e);
+      }
+    })();
+  }, []);
 
   const { data: filesData, isLoading } = useQuery<{ ok: boolean; files: WorkItemFile[] }>({
     queryKey: ['/api/work-items', workItemId, 'files'],
@@ -55,6 +68,7 @@ export function FilesPanel({ workItemId }: FilesPanelProps) {
     mutationFn: async (file: File) => {
       const formData = new FormData();
       formData.append('file', file);
+      formData.append('visible_to', visibleTo);
       
       const response = await fetch(`/api/work-items/${workItemId}/files`, {
         method: 'POST',

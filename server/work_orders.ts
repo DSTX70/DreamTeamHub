@@ -136,7 +136,7 @@ workOrders.get("/:woId/files", async (req, res) => {
     const files = await db.execute(sql`
       SELECT * FROM work_order_files 
       WHERE work_order_id = ${woId} 
-      ORDER BY created_at DESC
+      ORDER BY created_at DESC, file_id DESC
     `);
     
     res.json({ ok: true, work_order_id: woId, files: files.rows });

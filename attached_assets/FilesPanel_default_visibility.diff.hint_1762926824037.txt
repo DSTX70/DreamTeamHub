@@ -1,0 +1,5 @@
+
+// Diff hint for FilesPanel.tsx (ensure default visibility from config):
+// import { getDefaultVisibility } from '@/client/lib/uploader/api';
+// const [visibleTo, setVisibleTo] = React.useState<'owner'|'pod'|'approvers'|'org'>('org');
+// React.useEffect(()=>{ (async()=>{ setVisibleTo(await getDefaultVisibility()); })(); }, []);
