@@ -308,12 +308,12 @@ export default function AuditTrail() {
       </Card>
 
       {/* Audit Records */}
-      <div className="space-y-3">
-        <h2 className="text-xl font-semibold">
+      <div className="space-y-3" data-testid="audit-records-section">
+        <h2 className="text-xl font-semibold" data-testid="text-recent-changes-heading">
           Recent Changes ({records.length})
         </h2>
         {records.length === 0 ? (
-          <Card>
+          <Card data-testid="card-no-records">
             <CardContent className="p-6 text-center text-muted-foreground">
               <AlertCircle className="w-12 h-12 mx-auto mb-2 opacity-50" />
               No audit records found for the selected filter

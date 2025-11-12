@@ -26,7 +26,7 @@ The platform also features an Alert Notification System, an Evidence Pack System
 
 Completed e-commerce features include Affiliate E2E Tracking, Affiliate Rates & Payouts, Inventory Notification Overrides, Low-Stock Inventory Scheduler, and an Ops Settings UI. Responsive Images with S3 integration and client-side LLM Prompt Linter are also implemented.
 
-A Hybrid Uploader Configuration System provides runtime-editable file upload settings with environment-locked sensitive settings (storage backend) and database-stored operational settings (allowlist, size limits, visibility) with full audit trail and ops_admin RBAC protection.
+A Hybrid Uploader Configuration System provides runtime-editable file upload settings with environment-locked sensitive settings (storage backend) and database-stored operational settings (allowlist, size limits, visibility) with full audit trail and ops_admin RBAC protection. Includes comprehensive automated testing infrastructure (backend validation tests, audit trail monitoring utilities, and e2e test specifications), Audit Trail page at `/ops/audit` for real-time config change monitoring with trigger verification, summary statistics, and filterable records.
 
 The CI/CD pipeline uses GitHub Actions for automated testing and environment health validation. Production health checks include `/api/healthz` (readiness) and `/api/healthz/livez` (liveness) endpoints, with Prometheus metrics and deployment tracking for observability.
 
