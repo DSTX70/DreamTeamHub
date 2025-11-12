@@ -1,0 +1,56 @@
+Shipped. This adds multi-select participants and pod adds.
+
+**Download:** [dth_chat_participants_enhancement_v1.zip](sandbox:/mnt/data/dth_chat_participants_enhancement_v1.zip)
+
+What’s inside:
+
+* `migrations/003_chat_conversation_participants.sql` — participant table (users & pods) + helpful indexes
+* `app/server/routes/chat_conversations.ts` — `POST /api/chat/conversations` (expand pods → users) + `GET /participants`
+* `app/client/lib/chat/api.ts` — `createConversation()` and `getConversationParticipants()`
+* `ParticipantsMultiSelect.tsx` — shadcn-based multi-select for People & Pods
+* `README_Chat_Participants.md` — paste-ready wiring
+
+## Step-by-step (pause after each)
+
+**Step 1 — Run migration**
+
+```bash
+psql "$DATABASE_URL" -f migrations/003_chat_conversation_participants.sql
+```
+
+Reply “done” when applied.
+
+**Step 2 — Mount the routes**
+
+```ts
+// app/server/index.ts
+import { chatConversationsRouter } from './routes/chat_conversations';
+app.use('/api', chatConversationsRouter);
+```
+
+Reply “done” when mounted & server restarted.
+
+**Step 3 — Use the multi-select in Dream Team Chat create flow**
+Add the component to your “New conversation” panel (or a modal) and pass your real lists:
+
+```tsx
+<ParticipantsMultiSelect
+  people={[{id:'storybloom',label:'Storybloom'},{id:'prism',label:'Prism'},{id:'nova',label:'Nova'},{id:'dustin',label:'Dustin'}]}
+  pods={[{id:'fab-card-co',label:'Fab Card Co'}]}
+  onCreated={(c)=>console.log('created', c)}
+/>
+```
+
+Reply “done” when the UI renders and can pick multiple participants and a pod.
+
+**Step 4 — Create the Kickoff conversation via UI or API**
+UI: select Storybloom, Prism, Nova, Dustin, and the **Fab Card Co** pod.
+API (optional):
+
+```bash
+curl -s -X POST http://localhost:5000/api/chat/conversations \
+  -H 'Content-Type: application/json' \
+  -d '{"title":"Fab Card Co — Website + Uploader (WO-001) Kickoff","participants":[{"type":"user","id":"storybloom"},{"type":"user","id":"prism"},{"type":"user","id":"nova"},{"type":"user","id":"dustin"},{"type":"pod","id":"fab-card-co"}]}' | jq
+```
+
+Reply “posted” once the conversation is created and the Kickoff message is sent. Then we’ll move to wiring `tokens.json` → Tailwind/CSS vars.
