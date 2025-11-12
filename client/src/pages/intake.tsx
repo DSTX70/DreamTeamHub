@@ -12,6 +12,7 @@ import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, For
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/empty-state";
 import { StatusBadge } from "@/components/status-badge";
+import { FilesPanel } from "@/components/FilesPanel";
 import { Plus, Inbox, Calendar } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -307,6 +308,12 @@ export default function Intake() {
                     )}
                   />
                 </div>
+
+                {editingItem && (
+                  <div className="pt-6 border-t">
+                    <FilesPanel workItemId={editingItem.id} />
+                  </div>
+                )}
 
                 <div className="flex justify-end gap-3">
                   <Button 
