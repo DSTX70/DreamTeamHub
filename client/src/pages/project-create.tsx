@@ -320,15 +320,17 @@ export default function ProjectCreate() {
                         {pods.map((pod) => (
                           <div
                             key={pod.id}
-                            className="flex items-center space-x-2 p-3 rounded-md border cursor-pointer hover-elevate"
-                            onClick={() => togglePod(pod.id)}
+                            className="flex items-center space-x-2 p-3 rounded-md border"
                             data-testid={`pod-option-${pod.id}`}
                           >
                             <Checkbox
                               checked={selectedPods.includes(pod.id)}
                               onCheckedChange={() => togglePod(pod.id)}
                             />
-                            <label className="flex-1 cursor-pointer">
+                            <label 
+                              className="flex-1 cursor-pointer"
+                              onClick={() => togglePod(pod.id)}
+                            >
                               <div className="font-medium">{pod.name}</div>
                               {pod.purpose && (
                                 <div className="text-sm text-muted-foreground line-clamp-1">{pod.purpose}</div>
@@ -378,15 +380,17 @@ export default function ProjectCreate() {
                         {agents.map((agent) => (
                           <div
                             key={agent.id}
-                            className="flex items-center space-x-2 p-3 rounded-md border cursor-pointer hover-elevate"
-                            onClick={() => toggleAgent(agent.id)}
+                            className="flex items-center space-x-2 p-3 rounded-md border"
                             data-testid={`agent-option-${agent.id}`}
                           >
                             <Checkbox
                               checked={selectedAgents.includes(agent.id)}
                               onCheckedChange={() => toggleAgent(agent.id)}
                             />
-                            <label className="flex-1 cursor-pointer">
+                            <label 
+                              className="flex-1 cursor-pointer"
+                              onClick={() => toggleAgent(agent.id)}
+                            >
                               <div className="font-medium">{agent.title}</div>
                               {agent.pillar && (
                                 <div className="text-sm text-muted-foreground line-clamp-1">{agent.pillar}</div>
