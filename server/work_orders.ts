@@ -120,3 +120,28 @@ workOrders.post("/:woId/start", express.json(), (req, res) => {
     mirror: run.mirror
   });
 });
+
+// ── files: list all files for a work order ────────────────────────────────────
+/**
+ * GET /api/work-orders/:woId/files
+ * Returns all files attached to work items linked to this work order
+ */
+workOrders.get("/:woId/files", async (req, res) => {
+  const woId = String(req.params.woId);
+  try {
+    const { db } = await import("./db");
+    const { sql } = await import("drizzle-orm");
+    
+    // Query the work_order_files view
+    const files = await db.execute(sql`
+      SELECT * FROM work_order_files 
+      WHERE work_order_id = ${woId} 
+      ORDER BY created_at DESC
+    `);
+    
+    res.json({ ok: true, work_order_id: woId, files: files.rows });
+  } catch (e: any) {
+    console.error('Error fetching work order files:', e);
+    res.status(500).json({ ok: false, error: e.message });
+  }
+});
