@@ -1,0 +1,85 @@
+great—next step in WO-001 is wiring **`tokens.json` → Tailwind/CSS vars**. We’ll do this in tiny moves and I’ll wait for your confirmation before moving on.
+
+## Step 1 — Generate CSS variables from `tokens.json`
+
+In your Replit project shell:
+
+```bash
+# If your tokens live at repo root:
+node scripts/tokens_to_css.mjs ./tokens.json ./app/styles/tokens.css
+
+# OR if they live under app/design:
+node scripts/tokens_to_css.mjs ./app/design/tokens.json ./app/styles/tokens.css
+```
+
+✅ Expected result in terminal: `Wrote <N> variables → ./app/styles/tokens.css`
+✅ File created/updated: `app/styles/tokens.css`
+
+## Step 2 — Import tokens.css once (app entry)
+
+Open your main client entry (e.g., `src/main.tsx`, `app/client/main.tsx`, or your global CSS import spot) and add:
+
+```ts
+import '@/styles/tokens.css';
+```
+
+> Path alias `@/` should point to `app/client` (or your src root). If not, import relatively:
+> `import '../styles/tokens.css'` (adjust as needed).
+
+## Step 3 — Extend Tailwind to read the vars
+
+Open `tailwind.config.ts` and add these extensions (keep your existing config):
+
+```ts
+// tailwind.config.ts
+import type { Config } from 'tailwindcss';
+
+const config: Config = {
+  content: [
+    './index.html',
+    './app/**/*.{ts,tsx,js,jsx,mdx,html}',
+    './src/**/*.{ts,tsx,js,jsx,mdx,html}',
+  ],
+  theme: {
+    extend: {
+      colors: {
+        brand: {
+          primary: 'var(--colors-brand-primary)',
+        },
+        accent: 'var(--colors-accent)',
+      },
+      borderRadius: {
+        card: 'var(--radius-card)',
+      },
+      fontSize: {
+        lg: 'var(--font-size-lg)',
+      },
+    },
+  },
+  plugins: [],
+};
+export default config;
+```
+
+## Step 4 — Quick smoke test in UI
+
+Drop a tiny test block anywhere visible (e.g., a sandbox page or your dashboard):
+
+```tsx
+<div className="bg-brand-primary text-white rounded-card text-lg p-4">
+  Brand token test: primary bg, card radius, lg font
+</div>
+```
+
+Then reload the app.
+✅ Expected: the block uses your brand primary color, larger font, and rounded corners that match your tokens.
+
+---
+
+Reply **“tokens wired”** once:
+
+* the script ran (CSS generated),
+* the import is in place,
+* Tailwind is reading the vars (you see the styled test block).
+
+I’ll then guide the **Alt-text pipeline (`alt_text.csv`)** as the next step.

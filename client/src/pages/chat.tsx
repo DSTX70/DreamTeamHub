@@ -54,7 +54,9 @@ export default function ChatPage() {
     },
     onSuccess: (newConversation: Conversation) => {
       queryClient.invalidateQueries({ queryKey: ['/api/conversations'] });
-      selectConversation(newConversation.id);
+      if (newConversation?.id) {
+        selectConversation(newConversation.id);
+      }
       setIsDialogOpen(false);
       setNewConvTitle('');
       setSelectedRoles([]);
