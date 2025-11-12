@@ -284,6 +284,30 @@ export const insertAltTextSchema = createInsertSchema(altTexts).omit({ id: true,
 export type InsertAltText = z.infer<typeof insertAltTextSchema>;
 
 // ===========================
+// SEO METADATA
+// ===========================
+
+export const seoMeta = pgTable("seo_meta", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  route: text("route").notNull(),
+  sectionKey: text("section_key").notNull(),
+  title: text("title").notNull(),
+  description: text("description").notNull(),
+  ogImage: text("og_image"),
+  keywords: text("keywords"),
+  locale: text("locale").notNull().default('en'),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => ({
+  uniqueRouteSectionLocale: unique().on(table.route, table.sectionKey, table.locale),
+  routeLocaleIdx: index("idx_seo_meta_route_locale").on(table.route, table.locale),
+}));
+
+export type SeoMeta = typeof seoMeta.$inferSelect;
+export const insertSeoMetaSchema = createInsertSchema(seoMeta).omit({ id: true, createdAt: true, updatedAt: true });
+export type InsertSeoMeta = z.infer<typeof insertSeoMetaSchema>;
+
+// ===========================
 // DECISIONS
 // ===========================
 
