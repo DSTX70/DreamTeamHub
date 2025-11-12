@@ -52,6 +52,7 @@ import OpsLogs from "@/pages/ops/OpsLogs";
 import AuditTrail from "@/pages/ops/AuditTrail";
 import LogsStreamPlus from "@/pages/ops/LogsStreamPlus";
 import AltTextImport from "@/pages/ops/AltTextImport";
+import ContentImports from "@/pages/ops/ContentImports";
 import LLMProviderSelect from "@/pages/llm/ProviderSelect";
 import ProviderPromptLinter from "@/pages/llm/ProviderPromptLinter";
 import LinterAugment from "@/pages/llm/Linter_Augment";
@@ -113,6 +114,7 @@ function AuthenticatedRoutes() {
       <Route path="/ops/logs-stream-plus" component={LogsStreamPlus} />
       <Route path="/ops/audit" component={AuditTrail} />
       <Route path="/ops/alt-text" component={AltTextImport} />
+      <Route path="/ops/content-imports" component={ContentImports} />
       <Route path="/ops/settings/:rest*" component={SettingsLayout} />
       <Route path="/llm/provider" component={LLMProviderSelect} />
       <Route path="/llm/provider/linter" component={ProviderPromptLinter} />
