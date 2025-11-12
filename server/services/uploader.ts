@@ -3,6 +3,7 @@ import { s3Put } from '../images/s3';
 import { db } from '../db';
 import { workItemFiles, insertWorkItemFileSchema } from '@shared/schema';
 import { eq } from 'drizzle-orm';
+import { getEffectiveUploadsConfig } from './opsUploadsConfig';
 
 const DEFAULT_ALLOWLIST = ['pdf', 'doc', 'docx', 'xls', 'xlsx', 'csv', 'json', 'txt', 'md', 'zip', 'png', 'jpg', 'jpeg', 'webp', 'svg'];
 const DEFAULT_MAX_MB = 25;
@@ -27,16 +28,43 @@ export async function uploadFileToS3(
   workItemId: number,
   userId: string
 ): Promise<{ id: string; url: string }> {
-  const config = getUploaderConfig();
+  // Fetch config from database (includes both legacy allowlist and new allowed_types)
+  const { effective: dbConfig } = await getEffectiveUploadsConfig();
 
-  const ext = file.originalname.split('.').pop()?.toLowerCase() || '';
-  if (config.allowlist.length > 0 && !config.allowlist.includes(ext)) {
-    throw new Error(`File extension .${ext} not allowed. Allowed: ${config.allowlist.join(', ')}`);
+  // Check if uploads are enabled
+  if (!dbConfig.enabled) {
+    throw new Error('File uploads are currently disabled');
   }
 
-  const maxBytes = config.maxSizeMB * 1024 * 1024;
+  // Validate using MIME type first, then fall back to extension
+  const allowlist = dbConfig.allowlist.split(',').map(s => s.trim().toLowerCase()).filter(Boolean);
+  const ext = file.originalname.split('.').pop()?.toLowerCase() || '';
+  let isValidType = false;
+
+  // Try MIME type validation first (when configured)
+  if (dbConfig.allowed_types && dbConfig.allowed_types.length > 0 && file.mimetype) {
+    const mimeType = file.mimetype.toLowerCase();
+    if (dbConfig.allowed_types.includes(mimeType)) {
+      isValidType = true;
+    }
+  }
+
+  // Fall back to extension validation if MIME check didn't pass
+  if (!isValidType && ext && allowlist.includes(ext)) {
+    isValidType = true;
+  }
+
+  // Reject if neither validation passed
+  if (!isValidType) {
+    const allowedFormats = dbConfig.allowed_types && dbConfig.allowed_types.length > 0
+      ? `MIME types: ${dbConfig.allowed_types.join(', ')} OR extensions: ${allowlist.join(', ')}`
+      : `extensions: ${allowlist.join(', ')}`;
+    throw new Error(`File type not allowed. Allowed ${allowedFormats}`);
+  }
+
+  const maxBytes = dbConfig.maxSizeMB * 1024 * 1024;
   if (file.size > maxBytes) {
-    throw new Error(`File too large. Max size: ${config.maxSizeMB}MB`);
+    throw new Error(`File too large. Max size: ${dbConfig.maxSizeMB}MB`);
   }
 
   const fileId = uuid();

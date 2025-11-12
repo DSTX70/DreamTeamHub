@@ -23,9 +23,11 @@ interface WorkItemFile {
 
 interface EffectiveUploads {
   enabled: boolean;
-  allowlist: string;
+  allowlist: string; // Legacy: comma-separated file extensions
+  allowed_types?: string[]; // New: array of MIME types
   maxSizeMB: number;
   visibleTo: 'owner' | 'pod' | 'approvers' | 'org';
+  list_page_size?: number;
 }
 
 interface UploaderConfig {
@@ -113,12 +115,32 @@ export function FilesPanel({ workItemId }: FilesPanelProps) {
       return;
     }
 
+    // Validate file type using MIME type first, then fall back to extension
     const allowlistArray = config.allowlist.split(',').filter(Boolean);
     const extension = file.name.split('.').pop()?.toLowerCase();
-    if (extension && !allowlistArray.includes(extension)) {
+    let isValidType = false;
+
+    // Try MIME type validation first (when configured)
+    if (config.allowed_types && config.allowed_types.length > 0 && file.type) {
+      const fileType = file.type.toLowerCase();
+      if (config.allowed_types.includes(fileType)) {
+        isValidType = true;
+      }
+    }
+
+    // Fall back to extension validation if MIME check didn't pass
+    if (!isValidType && extension && allowlistArray.includes(extension)) {
+      isValidType = true;
+    }
+
+    // Reject if neither validation passed
+    if (!isValidType) {
+      const allowedFormats = config.allowed_types && config.allowed_types.length > 0
+        ? `MIME types: ${config.allowed_types.join(', ')} OR extensions: ${allowlistArray.join(', ')}`
+        : `extensions: ${allowlistArray.join(', ')}`;
       toast({
         title: 'Invalid file type',
-        description: `Only ${allowlistArray.join(', ')} files are allowed`,
+        description: `Allowed ${allowedFormats}`,
         variant: 'destructive',
       });
       return;
@@ -162,7 +184,11 @@ export function FilesPanel({ workItemId }: FilesPanelProps) {
         <Alert data-testid="alert-upload-info">
           <AlertCircle className="h-4 w-4" />
           <AlertDescription className="text-xs">
-            Allowed: {config.allowlist.split(',').filter(Boolean).join(', ')} • Max size: {config.maxSizeMB}MB
+            {config.allowed_types && config.allowed_types.length > 0 ? (
+              <>Allowed MIME types: {config.allowed_types.join(', ')} • Max size: {config.maxSizeMB}MB</>
+            ) : (
+              <>Allowed: {config.allowlist.split(',').filter(Boolean).join(', ')} • Max size: {config.maxSizeMB}MB</>
+            )}
           </AlertDescription>
         </Alert>
       )}
@@ -175,6 +201,7 @@ export function FilesPanel({ workItemId }: FilesPanelProps) {
             disabled={uploadMutation.isPending}
             className="flex-1"
             data-testid="input-file-upload"
+            accept={config?.allowed_types && config.allowed_types.length > 0 ? config.allowed_types.join(',') : undefined}
           />
           <Button
             onClick={handleUpload}
