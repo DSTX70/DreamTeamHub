@@ -20,87 +20,26 @@ The platform includes core modules for operational oversight (Control Tower), de
 
 AI-powered features consist of Brainstorm Studio (LLM-assisted ideation), Dream Team Chat (OpenAI GPT-4 with 32 role-based personas and context awareness), and DTH Copilot (AI assistant with OpenAI tool-calling, quick actions, and "Findings at a Glance" analytics).
 
-Core operational systems include a Universal Search (Cmd+K), auto-generating Breadcrumb Navigation (deployed across all Ops pages with role badge indicators), and an Operations Events Logging system for telemetry and audit trails, viewable via the Operations Logs Admin Page.
+Core operational systems include a Universal Search (Cmd+K), auto-generating Breadcrumb Navigation, and an Operations Events Logging system for telemetry and audit trails. Knowledge management is supported by a Knowledge Publishing System with database-level idempotency and Google Drive Integration. A Work Orders System enables real LLM execution via OpenAI, Anthropic, and Vertex AI with budget caps, rate limiting, and cost tracking, supported by an LLM Provider Infrastructure.
 
-Knowledge management is supported by a Knowledge Publishing System with database-level idempotency and Google Drive Integration for Business Unit-specific content. Work Orders System enables real LLM execution via OpenAI, Anthropic, and Vertex AI with budget caps, rate limiting, and cost tracking. An LLM Provider Infrastructure integrates these services with robust error handling and cost tracking.
+The platform also features an Alert Notification System, an Evidence Pack System for agent training evidence management, and an Academy Sidebar. A Two-Reviewer Publish Workflow ensures content approval. An Ops Dashboard & Observability provides real-time operational metrics, including an Ops Overview Dashboard for unified operational command.
 
-The platform also features an Alert Notification System for multi-channel delivery (Slack, webhooks), an Evidence Pack System for agent training evidence management, and an Academy Sidebar for agent training and promotion. A Two-Reviewer Publish Workflow ensures content approval.
+Completed e-commerce features include Affiliate E2E Tracking, Affiliate Rates & Payouts, Inventory Notification Overrides, Low-Stock Inventory Scheduler, and an Ops Settings UI. Responsive Images with S3 integration and client-side LLM Prompt Linter are also implemented.
 
-An Ops Dashboard & Observability provides real-time operational metrics, displaying PUBLISH events, draft uploads, work order runs, and error rates, with lightweight alert rules.
-
-**Ops Overview Dashboard** serves as a unified operational command center, aggregating key metrics from all subsystems:
-- **Inventory**: Displays low-stock SKU count with quick link to `/ops/inventory`
-- **Images**: Shows S3 bucket status, connectivity probe, and Cache-Control configuration with link to `/ops/images`
-- **Affiliates**: Presents 7-day performance metrics (clicks, unique visitors, orders, revenue, commission at 10%) with link to `/ops/affiliates`
-- **LLM Linter**: Displays active rule count for JSON schema validation with link to `/llm/provider/linter`
-- **Environment Health**: Real-time status of critical environment variables (DATABASE_URL, S3_BUCKET, OPS_API_TOKEN, AWS_REGION) with OK/Missing badges
-
-This single-pane view enables rapid assessment of system health and provides one-click navigation to detailed management interfaces.
-
-Future phases include an Onboarding Wizard for brand/product creation and Coverage Views for role staffing analysis.
-
-**Completed E-Commerce Features (November 2025):**
-- **Affiliate E2E Tracking:** Database-backed affiliate management with pixel-based click/conversion tracking, 30-day rolling metrics, and attribution deduplication
-- **Affiliate Rates & Payouts:** Per-affiliate commission rate overrides (nullable, falls back to default), status management (active/suspended), admin UI at `/ops/affiliates/admin` with case-insensitive code filter (URL param and input field), payout calculations with date range filtering and CSV export at `/ops/affiliates/payouts`, visual badges in report for rate overrides and suspension status, Edit links in report that navigate to admin with pre-filtered code, contextual back navigation ("← Back to Report" when filtered), open-in-new-tab icons for cross-page navigation
-- **Inventory Notification Overrides:** Per-SKU Slack/Email toggles with instant-save persistence, weekly digest scheduler (configurable day/hour/recipients), ops_admin-only authorization, optimistic UI updates with rollback on auth failures
-- **Low-Stock Inventory Scheduler:** DB-backed scheduler with webhook (Slack) and email (SMTP) notifiers, 60-second scan interval, 5-minute alert throttling, and comprehensive event logging
-- **Ops Settings UI:** Granular management interface at `/ops/settings` with role-based sub-routes (Alerts for ops_editor, Global for ops_admin), auto-redirect logic, webhook/email configuration, notification testing, and manual inventory scans
-- **Breadcrumb Navigation System:** Reusable breadcrumb component deployed across Ops pages (Settings, Images, Inventory) showing hierarchical path with role badge indicators
-- **Cross-Page Navigation UX:** Consistent open-in-new-tab icons (ExternalLink from lucide-react) on Settings links in Images and Inventory pages, contextual escape hatches for filtered views
-- **Saved Addresses & Checkout:** Complete checkout flow with address management
-- **Responsive Images with S3:** Sharp-based image transformation with AWS S3 storage, preview drawer for in-memory quality/size comparison (POST /api/ops/images/preview), re-encode & replace endpoint for ops_admin-only variant replacement (POST /api/ops/images/reencode), quality sliders (AVIF/WEBP/JPG), custom widths CSV, comparison table showing uploaded vs preview with Δ size and Δ%, role-gated Replace button
-- **Client-side Prompt Linter:** LLM schema validation for Work Orders
-- **CI/CD Pipeline:** GitHub Actions workflow with Node 20, pnpm, type-checking, tests, and environment health validation (with forked PR support)
-- **Environment Health Monitoring:** Real-time dashboard display and validation script for critical environment variables
-- **Production Health Checks:** Enhanced `/api/healthz` readiness endpoint with per-probe timeouts (configurable via HEALTHZ_PROBE_TIMEOUT_MS), DB/S3/SMTP probes with bounded latency, and `/api/healthz/livez` liveness endpoint for fast health checks; LiveHealthCard component with SWR auto-refresh displays probe status on OpsOverview
-- **Deployment Tracking:** POST `/api/admin/deploy/mark` (secured with DTH_API_TOKEN x-api-key authentication) and GET `/api/admin/deploy/last` endpoints for deployment observability; LastDeployChip component with SWR auto-refresh displays latest deployment metadata (sha, tag, actor, timestamp) on OpsOverview; Prometheus alertmanager rules.yml reference for production monitoring
-- **Prometheus Metrics:** `/metrics` endpoint exposes HTTP request duration histograms and default Node.js system metrics for production monitoring and alerting
-- **RBAC Middleware:** x-api-key header authentication via `requireAdmin` middleware protects admin endpoints against DTH_API_TOKEN
-- **LLM Presets System:** Database-backed preset management at `/api/llm/presets-db` with CRUD operations; `/api/llm/augment` API injects family-specific tips and augment lines into user prompts; supports gpt/claude/gemini families
-- **Ops Logs Infrastructure:** Redis-backed event streaming via `/api/ops/logs/stream` (SSE) and `/api/ops/logs/emit` for real-time operational telemetry; REST API at `/api/ops/logs/rest?since=15m|1h|24h` for time-based queries; graceful fallback to in-memory buffer (5000 events) when Redis unavailable; LogsStreamPlus UI component with auto-reconnect and error handling
+The CI/CD pipeline uses GitHub Actions for automated testing and environment health validation. Production health checks include `/api/healthz` (readiness) and `/api/healthz/livez` (liveness) endpoints, with Prometheus metrics and deployment tracking for observability.
 
 ### Technology Stack
-The frontend utilizes React 18, TypeScript, Wouter, TanStack Query v5, React Hook Form, Zod, Shadcn UI, and Tailwind CSS. The backend is built with Express.js, TypeScript, and Drizzle ORM. PostgreSQL, backed by Neon, serves as the primary database with a comprehensive relational model.
+The frontend utilizes React 18, TypeScript, Wouter, TanStack Query v5, React Hook Form, Zod, Shadcn UI, and Tailwind CSS. The backend is built with Express.js, TypeScript, and Drizzle ORM. PostgreSQL, backed by Neon, serves as the primary database.
 
 ### Database Schema
-Core tables include agents, agent_specs, projects, tasks, ideas, decisions, business_units, knowledge_items, work_orders, operations_events, and brand_products. E-commerce tables include affiliates (with name, commission_rate, and status columns), aff_clicks, aff_attributions, inventory_products, and inventory_events. All tables use appropriate indexes for performance optimization.
+Core tables include agents, agent_specs, projects, tasks, ideas, decisions, business_units, knowledge_items, work_orders, operations_events, and brand_products. E-commerce tables include affiliates, aff_clicks, aff_attributions, inventory_products, and inventory_events.
 
 ### Authentication & Security
-Authentication is provided by Replit Auth (OpenID Connect). The security architecture employs a dual authentication system (session-based and API token auth) and a Helmet-based Content Security Policy (CSP). 
-
-**Role-Based Access Control (Ops):**
-- **ops_viewer** (read-only): All authenticated users receive this base role
-- **ops_editor** (alerts management): Valid email addresses get editor permissions; can manage alert settings at `/ops/settings/alerts`
-- **ops_admin** (full access): Specific admin list gets complete access including global settings at `/ops/settings/global`
-- Auto-redirect from `/ops/settings`: editors → alerts, admins → global (configurable via `server/routes/ops_auth.route.ts`)
-- Client-side role gates with `RequireRole` component; server-side enforcement as source of truth
-
-Scope-Based Authorization uses `requireScopes()` middleware. Routes support dual authentication via `isDualAuthenticated`. Rate limiting is enforced with `429` status and `Retry-After` headers. Idempotency protection is implemented for knowledge publish endpoints using the `Idempotency-Key` header.
+Authentication is provided by Replit Auth (OpenID Connect). The security architecture employs a dual authentication system (session-based and API token auth) and a Helmet-based Content Security Policy (CSP). Role-Based Access Control (RBAC) is implemented for operational roles (ops_viewer, ops_editor, ops_admin) with server-side enforcement and client-side role gating. Scope-Based Authorization uses `requireScopes()` middleware. Rate limiting and idempotency protection are also enforced.
 
 ### CI/CD & Deployment
-**GitHub Actions CI Pipeline:**
-- Automated testing on push and pull requests
-- Node 20 with pnpm package management
-- TypeScript type-checking
-- Environment health validation with required variables: DATABASE_URL, AWS_S3_BUCKET, OPS_API_TOKEN
-- Optional variables with defaults: AWS_REGION (defaults to us-east-1)
-- Forked PR support with secret handling safeguards
-- Test suite execution with comprehensive coverage
-
-**Environment Health Script** (`scripts/check-env.ts`):
-- Validates presence of required environment variables
-- Masks sensitive values in output for security
-- CI-aware execution with graceful handling of missing secrets
-- Exit code 1 on validation failure, 0 on success
-
-### Staging Environment
-The staging environment features comprehensive testing infrastructure with multiple authentication options (basic auth, Cloudflare Access, or Okta SSO), isolated resources (separate DB/Redis/S3), production-ready health check endpoints (`/api/healthz` for readiness, `/api/healthz/livez` for liveness) with per-probe timeouts and bounded latency, and automated smoke testing. Built-in staging protection includes basic auth middleware (activated via `NODE_ENV=staging`), visual staging banner, and comprehensive testing checklist. The environment supports negative health check testing, synthetic error injection, and dashboard verification workflows. See `docs/ops/STAGING_SETUP.md` for complete deployment guide and `docs/ops/STAGING_TESTING_CHECKLIST.md` for verification procedures.
-
-**Health Check Infrastructure:**
-- **Readiness Endpoint** (`/api/healthz`): Aggregates DB/S3/SMTP probe results with configurable timeouts (default 5000ms via HEALTHZ_PROBE_TIMEOUT_MS), returns 200 OK when all probes pass or 503 Service Unavailable with detailed probe failures
-- **Liveness Endpoint** (`/api/healthz/livez`): Fast dependency-free check for process health, returns instant 200 OK
-- **Deployment Tracking** (`/api/admin/deploy/mark`): x-api-key authenticated endpoint (DTH_API_TOKEN) for CI/CD pipelines to mark deployments with sha/tag/actor metadata
-- **Monitoring Integration**: Prometheus alertmanager rules.yml reference for production alerts on probe failures and deployment tracking
+A GitHub Actions CI Pipeline automates testing, type-checking, and environment health validation. An Environment Health Script (`scripts/check-env.ts`) validates required environment variables.
+The staging environment features comprehensive testing infrastructure with multiple authentication options, isolated resources, production-ready health check endpoints, and automated smoke testing.
 
 ## External Dependencies
 
