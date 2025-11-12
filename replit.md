@@ -26,13 +26,15 @@ The platform also features an Alert Notification System, an Evidence Pack System
 
 Completed e-commerce features include Affiliate E2E Tracking, Affiliate Rates & Payouts, Inventory Notification Overrides, Low-Stock Inventory Scheduler, and an Ops Settings UI. Responsive Images with S3 integration and client-side LLM Prompt Linter are also implemented.
 
+A Hybrid Uploader Configuration System provides runtime-editable file upload settings with environment-locked sensitive settings (storage backend) and database-stored operational settings (allowlist, size limits, visibility) with full audit trail and ops_admin RBAC protection.
+
 The CI/CD pipeline uses GitHub Actions for automated testing and environment health validation. Production health checks include `/api/healthz` (readiness) and `/api/healthz/livez` (liveness) endpoints, with Prometheus metrics and deployment tracking for observability.
 
 ### Technology Stack
 The frontend utilizes React 18, TypeScript, Wouter, TanStack Query v5, React Hook Form, Zod, Shadcn UI, and Tailwind CSS. The backend is built with Express.js, TypeScript, and Drizzle ORM. PostgreSQL, backed by Neon, serves as the primary database.
 
 ### Database Schema
-Core tables include agents, agent_specs, projects, tasks, ideas, decisions, business_units, knowledge_items, work_orders, operations_events, and brand_products. E-commerce tables include affiliates, aff_clicks, aff_attributions, inventory_products, and inventory_events.
+Core tables include agents, agent_specs, projects, tasks, ideas, decisions, business_units, knowledge_items, work_orders, operations_events, and brand_products. E-commerce tables include affiliates, aff_clicks, aff_attributions, inventory_products, and inventory_events. Operational configuration tables include ops_settings and ops_settings_audit (with triggers for automatic audit logging). File attachment tables include work_item_files for S3-backed file storage.
 
 ### Authentication & Security
 Authentication is provided by Replit Auth (OpenID Connect). The security architecture employs a dual authentication system (session-based and API token auth) and a Helmet-based Content Security Policy (CSP). Role-Based Access Control (RBAC) is implemented for operational roles (ops_viewer, ops_editor, ops_admin) with server-side enforcement and client-side role gating. Scope-Based Authorization uses `requireScopes()` middleware. Rate limiting and idempotency protection are also enforced.
