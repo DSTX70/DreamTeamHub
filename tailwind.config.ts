@@ -42,6 +42,37 @@ export default {
         'pod-finance': 'var(--pod-finance)',
         'pod-rhythm': 'var(--pod-rhythm)',
 
+        // Fab Card Co Brand Lines
+        fcc: {
+          primary: 'var(--brand-parentcolors-deepblack-value)',
+          accent: 'var(--brand-parentcolors-neutralcream-value)',
+        },
+        outLoud: {
+          pridePurple: 'var(--brand-lines-outloud-colors-pridepurple-hex)',
+          hotCoral: 'var(--brand-lines-outloud-colors-hotcoral-hex)',
+          electricTeal: 'var(--brand-lines-outloud-colors-electricteal-hex)',
+          sunlight: 'var(--brand-lines-outloud-colors-sunlightyellow-hex)',
+          creamBlush: 'var(--brand-lines-outloud-colors-creamblush-hex)',
+        },
+        colorCue: {
+          mintTeal: 'var(--brand-lines-colorcue-colors-mintteal-hex)',
+          periwinkle: 'var(--brand-lines-colorcue-colors-periwinkle-hex)',
+          maize: 'var(--brand-lines-colorcue-colors-maizeyellow-hex)',
+          pinkBlush: 'var(--brand-lines-colorcue-colors-pinkblush-hex)',
+          jadeGreen: 'var(--brand-lines-colorcue-colors-jadegreen-hex)',
+        },
+        midnightExpress: {
+          charcoalFoil: 'var(--brand-lines-midnightexpress-colors-charcoalfoil-hex)',
+          goldFoil: 'var(--brand-lines-midnightexpress-colors-goldfoil-hex)',
+          silverFoil: 'var(--brand-lines-midnightexpress-colors-silverfoil-hex)',
+        },
+        heartScript: {
+          coralRed: 'var(--brand-lines-heartscript-colors-coralred-hex)',
+          softLilac: 'var(--brand-lines-heartscript-colors-softlilac-hex)',
+          blushPink: 'var(--brand-lines-heartscript-colors-blushpink-hex)',
+          wineRed: 'var(--brand-lines-heartscript-colors-winered-hex)',
+        },
+
         // Shadcn compatibility (for existing components)
         background: "hsl(var(--background) / <alpha-value>)",
         foreground: "hsl(var(--foreground) / <alpha-value>)",

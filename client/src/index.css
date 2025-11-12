@@ -2,6 +2,10 @@
 @import './dth_tokens.css';
 @import './ui/pod-colors/pod-colors.css';
 
+/* Fab Card Co Brand Tokens */
+@import './styles/brands/fcc.tokens.css';
+@import './styles/brands/fcc.css';
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;

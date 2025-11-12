@@ -1,0 +1,207 @@
+{
+  "$schema": "https://fabcard.co/schemas/design-tokens.schema.json",
+  "version": "1.0.1",
+  "generated_at": "2025-10-04T23:05:54.381546Z",
+  "brand": {
+    "name": "Fab Card Co.",
+    "parentColors": {
+      "deepBlack": {
+        "value": "#1A1A1A",
+        "cmyk": "0,0,0,90",
+        "rgb": "26,26,26",
+        "pantone": "Process Black C"
+      },
+      "neutralCream": {
+        "value": "#F9F5F1",
+        "cmyk": "2,3,5,0",
+        "rgb": "249,245,241",
+        "pantone": "7499 C"
+      }
+    },
+    "lines": {
+      "midnightExpress": {
+        "display": "Playfair Display",
+        "body": "Inter",
+        "colors": {
+          "charcoalFoil": {
+            "hex": "#2B2B2B",
+            "pantone": "Cool Gray 11 C",
+            "cmyk": "0,2,0,68",
+            "rgb": "43,43,43"
+          },
+          "goldFoil": {
+            "hex": "#D4AF37",
+            "pantone": "871 C",
+            "cmyk": "20,25,65,20",
+            "rgb": "212,175,55"
+          },
+          "silverFoil": {
+            "hex": "#C0C0C0",
+            "pantone": "877 C",
+            "cmyk": "35,25,25,0",
+            "rgb": "192,192,192"
+          }
+        }
+      },
+      "colorCue": {
+        "display": "DM Sans",
+        "body": "Open Sans",
+        "colors": {
+          "mintTeal": {
+            "hex": "#2EC5C2",
+            "pantone": "3252 C",
+            "cmyk": "66,0,27,0",
+            "rgb": "46,197,194"
+          },
+          "periwinkle": {
+            "hex": "#7573F8",
+            "pantone": "2725 C",
+            "cmyk": "67,62,0,0",
+            "rgb": "117,115,248"
+          },
+          "maizeYellow": {
+            "hex": "#FFD449",
+            "pantone": "123 C",
+            "cmyk": "0,24,94,0",
+            "rgb": "255,212,73"
+          },
+          "pinkBlush": {
+            "hex": "#F48FBB",
+            "pantone": "1767 C",
+            "cmyk": "0,46,8,0",
+            "rgb": "244,143,187"
+          },
+          "jadeGreen": {
+            "hex": "#34AABB",
+            "pantone": "3255 C",
+            "cmyk": "68,0,22,0",
+            "rgb": "52,170,187"
+          }
+        }
+      },
+      "heartScript": {
+        "display": "Playfair Display",
+        "script": [
+          "Allura",
+          "Dancing Script",
+          "Quimby Script"
+        ],
+        "colors": {
+          "coralRed": {
+            "hex": "#D8514C",
+            "pantone": "2345 C",
+            "cmyk": "0,62,63,15",
+            "rgb": "216,81,76"
+          },
+          "softLilac": {
+            "hex": "#C95CAF",
+            "pantone": "252 C",
+            "cmyk": "18,57,0,0",
+            "rgb": "201,92,175"
+          },
+          "blushPink": {
+            "hex": "#F4C6CB",
+            "pantone": "705 C",
+            "cmyk": "0,18,8,0",
+            "rgb": "244,198,203"
+          },
+          "wineRed": {
+            "hex": "#8C2E3F",
+            "pantone": "4975 C",
+            "cmyk": "30,90,70,60",
+            "rgb": "140,46,63"
+          }
+        }
+      },
+      "outLoud": {
+        "display": "Montserrat",
+        "body": "Inter",
+        "colors": {
+          "pridePurple": {
+            "hex": "#6B1E9C",
+            "pantone": "2597 C",
+            "cmyk": "70,100,0,10",
+            "rgb": "107,30,156"
+          },
+          "hotCoral": {
+            "hex": "#FF4F5E",
+            "pantone": "805 C",
+            "cmyk": "0,80,60,0",
+            "rgb": "255,79,94"
+          },
+          "electricTeal": {
+            "hex": "#1CE6D3",
+            "pantone": "333 C",
+            "cmyk": "68,0,25,0",
+            "rgb": "28,230,211"
+          },
+          "sunlightYellow": {
+            "hex": "#FFCE3D",
+            "pantone": "1235 C",
+            "cmyk": "0,25,100,0",
+            "rgb": "255,206,61"
+          },
+          "creamBlush": {
+            "hex": "#F9F2ED",
+            "pantone": "705 C",
+            "cmyk": "0,8,8,0",
+            "rgb": "249,242,237"
+          }
+        }
+      }
+    },
+    "typography": {
+      "wordmark": {
+        "family": "Inter",
+        "weight": 300,
+        "tracking": 0
+      },
+      "tagline": {
+        "family": "Dancing Script",
+        "weight": 400
+      },
+      "body": {
+        "family": "Open Sans",
+        "weight": 400
+      }
+    }
+  },
+  "components": {
+    "logo": {
+      "minWidthFullLockup": {
+        "value": "32mm"
+      },
+      "minWidthWordmarkOnly": {
+        "value": "18mm"
+      },
+      "clearspace": {
+        "value": "1cap"
+      }
+    },
+    "brandStamp": {
+      "minWidth": {
+        "value": "20mm"
+      },
+      "placement": {
+        "portrait5x7": {
+          "yFromTrim": "6mm",
+          "align": "center"
+        },
+        "landscape7x5": {
+          "yFromTrim": "6mm",
+          "align": "center"
+        }
+      },
+      "urlText": "fabcardco.com",
+      "urlFont": {
+        "family": "Inter",
+        "weight": 400,
+        "size": "6pt"
+      },
+      "urlGap": "2mm"
+    },
+    "collectionAccentMarkers": {
+      "rule": "Parent brand accents must include subtle references (dots/dashes/motifs) to at least one additional collection color."
+    }
+  }
+}

@@ -15,6 +15,12 @@ Dream Team Hub is a full-stack application emphasizing a professional and usable
 ### UI/UX Decisions
 The design system is professional, inspired by Linear and Notion, utilizing Shadcn UI with Radix UI primitives. It features Inter, JetBrains Mono, and Space Grotesk fonts, a blue-based professional color scheme with a global dark theme, glass-morphism aesthetics, custom brand colors, and 21 pod-specific colors. Components include a custom elevation system and branded primitives. The design follows a mobile-first approach with WCAG AAA accessibility standards.
 
+**Brand System Integration**: The platform now supports multi-brand theming with the Fab Card Co (FCC) brand drop fully integrated:
+- Design tokens pipeline: `design/fabcardco.tokens.json` → `scripts/tokens_to_css.mjs` → `client/src/styles/brands/fcc.tokens.css`
+- BrandScope component (`client/src/components/brands/BrandScope.tsx`) enables per-page brand scoping via `data-brand="fcc"` attribute
+- Tailwind-accessible FCC brand lines: outLoud (pridePurple, hotCoral, electricTeal), colorCue (mintTeal, periwinkle, maize), midnightExpress (goldFoil, silverFoil), heartScript (coralRed, softLilac, blushPink, wineRed)
+- Token regeneration: `node scripts/tokens_to_css.mjs ./design/fabcardco.tokens.json ./client/src/styles/brands/fcc.tokens.css`
+
 ### Technical Implementations
 The platform includes core modules for operational oversight (Control Tower), dedicated Business Unit Home Pages (IMAGINATION, INNOVATION, IMPACT) with real-time data, and comprehensive Project management. Key features include a global Idea Spark for quick idea capture, a Role Cards System for managing Dream Team personas with RACI Matrix integration, and the Agent Lab Academy for role management.
 
