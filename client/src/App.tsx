@@ -202,7 +202,7 @@ function AppContent() {
         </div>
         <IdeaSparkButton />
         <SearchModal open={isSearchOpen} onOpenChange={setIsSearchOpen} />
-        {/* <OpsHotkeys /> */}
+        <OpsHotkeys />
       </div>
     </SidebarProvider>
   );

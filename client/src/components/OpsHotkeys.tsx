@@ -1,6 +1,6 @@
 import { useLocation } from "wouter";
 import { useHotkeys } from "@/hooks/useHotkeys";
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import Toast from "@/components/Toast";
 
 type OpsHotkeysProps = {
@@ -9,9 +9,16 @@ type OpsHotkeysProps = {
 
 export default function OpsHotkeys({ navigate: customNavigate }: OpsHotkeysProps = {}) {
   const [, setLocation] = useLocation();
-  const navigate = customNavigate || setLocation;
   const [showToast, setShowToast] = useState(false);
   const [hotkeysEnabled, setHotkeysEnabled] = useState(true);
+  
+  // Use ref to store navigate function to keep it stable
+  const navigateRef = useRef(customNavigate || setLocation);
+  
+  // Update ref if customNavigate changes
+  useEffect(() => {
+    navigateRef.current = customNavigate || setLocation;
+  }, [customNavigate, setLocation]);
 
   useEffect(() => {
     // Fetch hotkeys setting from server
@@ -36,9 +43,9 @@ export default function OpsHotkeys({ navigate: customNavigate }: OpsHotkeysProps
       localStorage.setItem("opsHotkeysSeen", "1");
     }
     
-    // Navigate
-    navigate(path);
-  }, [navigate]);
+    // Navigate using ref to avoid dependency issues
+    navigateRef.current(path);
+  }, []); // No dependencies - uses ref instead
 
   // Only register hotkeys if enabled - memoize to prevent infinite loops
   const chords = useMemo(
