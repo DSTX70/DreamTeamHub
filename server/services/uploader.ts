@@ -60,6 +60,9 @@ export async function uploadFileToS3(
     uploadedByUserId: userId,
   };
 
+  console.log('[Uploader] Inserting file with data:', { ...fileData, s3Url: `${fileData.s3Url.substring(0, 50)}...` });
+  console.log('[Uploader] userId type:', typeof userId, 'value:', userId);
+
   const [inserted] = await db.insert(workItemFiles).values(fileData).returning();
 
   return { id: inserted.id, url: s3Url };
