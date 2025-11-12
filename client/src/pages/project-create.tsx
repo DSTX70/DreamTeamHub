@@ -28,6 +28,8 @@ const projectFormSchema = insertProjectSchema.extend({
 export default function ProjectCreate() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
+  const [selectedPods, setSelectedPods] = useState<number[]>([]);
+  const [selectedAgents, setSelectedAgents] = useState<string[]>([]);
 
   // Fetch pods and agents for selection
   const { data: pods = [] } = useQuery<Pod[]>({
@@ -38,7 +40,7 @@ export default function ProjectCreate() {
     queryKey: ['/api/agents'],
   });
 
-  // Form setup with pod/agent IDs
+  // Form setup
   const form = useForm({
     resolver: zodResolver(projectFormSchema),
     defaultValues: {
@@ -48,8 +50,6 @@ export default function ProjectCreate() {
       status: "planning" as const,
       priority: "medium" as const,
       dueDate: "",
-      podIds: [],
-      agentIds: [],
     },
   });
 
@@ -59,17 +59,15 @@ export default function ProjectCreate() {
       const res = await apiRequest('POST', '/api/projects', data);
       return res.json();
     },
-    onSuccess: async (project, variables) => {
+    onSuccess: async (project) => {
       try {
-        // Create pod assignments
-        const podIds = variables.podIds || [];
-        for (const podId of podIds) {
+        // Create pod assignments using local state
+        for (const podId of selectedPods) {
           await apiRequest('POST', `/api/projects/${project.id}/pods`, { podId });
         }
 
-        // Create agent assignments
-        const agentIds = variables.agentIds || [];
-        for (const agentId of agentIds) {
+        // Create agent assignments using local state
+        for (const agentId of selectedAgents) {
           await apiRequest('POST', `/api/projects/${project.id}/agents`, { agentId });
         }
 
@@ -107,22 +105,22 @@ export default function ProjectCreate() {
     createProjectMutation.mutate(projectData);
   };
 
-  // Handle pod selection - read from and write to form state
+  // Handle pod selection - use local state only
   const togglePod = (podId: number) => {
-    const currentPods = (form.getValues('podIds') as number[] | undefined) || [];
-    const newPods = currentPods.includes(podId)
-      ? currentPods.filter(id => id !== podId)
-      : [...currentPods, podId];
-    form.setValue('podIds', newPods as any);
+    setSelectedPods(prev =>
+      prev.includes(podId)
+        ? prev.filter(id => id !== podId)
+        : [...prev, podId]
+    );
   };
 
-  // Handle agent selection - read from and write to form state
+  // Handle agent selection - use local state only
   const toggleAgent = (agentId: string) => {
-    const currentAgents = (form.getValues('agentIds') as string[] | undefined) || [];
-    const newAgents = currentAgents.includes(agentId)
-      ? currentAgents.filter(id => id !== agentId)
-      : [...currentAgents, agentId];
-    form.setValue('agentIds', newAgents as any);
+    setSelectedAgents(prev =>
+      prev.includes(agentId)
+        ? prev.filter(id => id !== agentId)
+        : [...prev, agentId]
+    );
   };
 
   return (
@@ -300,7 +298,7 @@ export default function ProjectCreate() {
                   ) : (
                     <>
                       <div className="flex flex-wrap gap-2 mb-4">
-                        {((form.watch('podIds') as number[] | undefined) || []).map(podId => {
+                        {selectedPods.map(podId => {
                           const pod = pods.find(p => p.id === podId);
                           return pod ? (
                             <Badge
@@ -327,7 +325,7 @@ export default function ProjectCreate() {
                             data-testid={`pod-option-${pod.id}`}
                           >
                             <Checkbox
-                              checked={((form.watch('podIds') as number[] | undefined) || []).includes(pod.id)}
+                              checked={selectedPods.includes(pod.id)}
                               onClick={(e) => e.stopPropagation()}
                             />
                             <label className="flex-1 cursor-pointer">
@@ -358,7 +356,7 @@ export default function ProjectCreate() {
                   ) : (
                     <>
                       <div className="flex flex-wrap gap-2 mb-4">
-                        {((form.watch('agentIds') as string[] | undefined) || []).map(agentId => {
+                        {selectedAgents.map(agentId => {
                           const agent = agents.find(a => a.id === agentId);
                           return agent ? (
                             <Badge
@@ -385,7 +383,7 @@ export default function ProjectCreate() {
                             data-testid={`agent-option-${agent.id}`}
                           >
                             <Checkbox
-                              checked={((form.watch('agentIds') as string[] | undefined) || []).includes(agent.id)}
+                              checked={selectedAgents.includes(agent.id)}
                               onClick={(e) => e.stopPropagation()}
                             />
                             <label className="flex-1 cursor-pointer">
