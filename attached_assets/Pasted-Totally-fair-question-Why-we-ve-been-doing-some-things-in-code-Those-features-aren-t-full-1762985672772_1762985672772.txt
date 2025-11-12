@@ -1,0 +1,111 @@
+Totally fair question.
+
+### Why we’ve been doing some things in code
+
+* **Those features aren’t fully shipped in the UI yet.** We added the Files panel and Hybrid Config in-app, but we don’t have native screens for CSV **imports** (alt text / SEO) or URL-permalinks yet.
+* **Speed + traceability.** Schema changes (new tables) and import logic are safer to land via code first (versioned, reviewed, repeatable), then expose with a simple UI.
+* **Hybrid model by design.** Secrets + engines live in env/code; day-to-day knobs live in the app. We’re steadily moving the “knobs” in-app.
+
+### Will it be like this every time?
+
+**No.** The goal is **app-first** for routine operations. We only touch code when:
+
+* we add a new schema/table or a brand-new capability, and
+* we finalize the API that the app will call.
+
+---
+
+## Do this now: add an in-app “Content Imports” screen (one-click)
+
+I’ll keep it tiny and aligned to your RBAC (`ops_admin`).
+
+### 1) Add a page: **Ops → Content Imports**
+
+```tsx
+// app/client/pages/ops/ContentImports.tsx
+import * as React from 'react';
+
+async function postJSON(url: string, body: any) {
+  const res = await fetch(url, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) });
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}
+
+export default function ContentImports() {
+  const [wi, setWi] = React.useState('7'); // WI #7 (Assets hub)
+  const [seoResult, setSeoResult] = React.useState<any>(null);
+  const [altResult, setAltResult] = React.useState<any>(null);
+  const [busy, setBusy] = React.useState(false);
+
+  const runSeo = async () => {
+    setBusy(true);
+    try { setSeoResult(await postJSON('/api/seo/meta/import', { work_item_id: Number(wi), filename: 'seo_meta.csv' })); }
+    catch (e:any) { setSeoResult({ ok:false, error:String(e) }); }
+    finally { setBusy(false); }
+  };
+
+  const runAlt = async () => {
+    setBusy(true);
+    try { setAltResult(await postJSON('/api/seo/alt-text/import', { work_item_id: Number(wi), filename: 'alt_text.csv' })); }
+    catch (e:any) { setAltResult({ ok:false, error:String(e) }); }
+    finally { setBusy(false); }
+  };
+
+  return (
+    <div className="max-w-3xl p-6 space-y-6">
+      <h1 className="text-xl font-semibold">Content Imports</h1>
+
+      <div className="border rounded-lg p-4 space-y-3">
+        <div className="flex items-center gap-3">
+          <label className="text-sm">Work Item ID</label>
+          <input className="border rounded px-2 py-1 text-sm w-24" value={wi} onChange={e=>setWi(e.target.value)} />
+        </div>
+
+        <div className="grid md:grid-cols-2 gap-4">
+          <div className="border rounded p-3">
+            <h2 className="font-medium text-sm mb-2">SEO Meta (seo_meta.csv)</h2>
+            <button disabled={busy} className="border rounded px-3 py-2 text-sm" onClick={runSeo}>
+              {busy ? 'Importing…' : 'Import SEO'}
+            </button>
+            {seoResult && <pre className="text-xs bg-neutral-50 border mt-2 p-2 rounded overflow-auto">{JSON.stringify(seoResult,null,2)}</pre>}
+          </div>
+
+          <div className="border rounded p-3">
+            <h2 className="font-medium text-sm mb-2">Alt Text (alt_text.csv)</h2>
+            <button disabled={busy} className="border rounded px-3 py-2 text-sm" onClick={runAlt}>
+              {busy ? 'Importing…' : 'Import Alt Text'}
+            </button>
+            {altResult && <pre className="text-xs bg-neutral-50 border mt-2 p-2 rounded overflow-auto">{JSON.stringify(altResult,null,2)}</pre>}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+```
+
+### 2) Add a nav link (Ops section)
+
+```tsx
+// app/client/pages/ops/index.tsx or sidebar config
+// Add a route to /ops/content-imports → <ContentImports />
+```
+
+### 3) Ensure the backend routes are mounted (we already drafted them)
+
+* `/api/seo/meta/import` (Drizzle upsert)
+* `/api/seo/alt-text/import` (upsert)
+
+### 4) Gate with `ops_admin`
+
+Wrap the page in your auth guard or hide the nav unless the user has `ops_admin`.
+
+---
+
+### Daily flow after this change (no code required)
+
+1. Team uploads `seo_meta.csv` / `alt_text.csv` to **WI #7**.
+2. Ops opens **Ops → Content Imports**, picks WI `7`, clicks **Import SEO** / **Import Alt Text**.
+3. Done. The homepage reads meta from DB; image components pull alt text.
+
+If you want, I can also add a **one-click “Import latest from WI #7”** button that auto-detects the most recent CSVs and runs both imports at once.
