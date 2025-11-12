@@ -6,6 +6,7 @@ import * as z from 'zod';
 import { eq, and, desc } from 'drizzle-orm';
 import { S3Client, GetObjectCommand } from '@aws-sdk/client-s3';
 import { Readable } from 'stream';
+import { getSeoSection } from '../lib/seo';
 
 const SeoMetaRow = z.object({
   route: z.string().min(1),
@@ -196,6 +197,31 @@ seoMetaRouter.get('/seo/meta', async (req, res) => {
     return res.json({ ok: true, entries });
   } catch (e: any) {
     console.error('SEO meta query error:', e);
+    return res.status(500).json({ ok: false, error: e.message });
+  }
+});
+
+/**
+ * GET /api/seo/meta/section?route=/&section_key=home.lifestyle_ol1&locale=en
+ * Get a specific SEO section
+ */
+seoMetaRouter.get('/seo/meta/section', async (req, res) => {
+  try {
+    const { route, section_key, locale = 'en' } = req.query;
+    
+    if (!route || typeof route !== 'string') {
+      return res.status(400).json({ ok: false, error: 'route parameter is required' });
+    }
+    
+    if (!section_key || typeof section_key !== 'string') {
+      return res.status(400).json({ ok: false, error: 'section_key parameter is required' });
+    }
+
+    const seo = await getSeoSection(route, section_key, locale as string);
+
+    return res.json({ ok: true, seo });
+  } catch (e: any) {
+    console.error('SEO meta section query error:', e);
     return res.status(500).json({ ok: false, error: e.message });
   }
 });
