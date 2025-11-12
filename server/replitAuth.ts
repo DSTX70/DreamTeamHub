@@ -134,6 +134,20 @@ export async function setupAuth(app: Express) {
 }
 
 export const isAuthenticated: RequestHandler = async (req, res, next) => {
+  // Development bypass: allow x-role header for testing
+  if (process.env.NODE_ENV === 'development' && req.header('x-role')) {
+    const mockUser = {
+      claims: {
+        sub: 'dev-user-001',
+        email: 'dev@test.com',
+        roles: [req.header('x-role')]
+      },
+      expires_at: Math.floor(Date.now() / 1000) + 3600
+    };
+    req.user = mockUser as any;
+    return next();
+  }
+
   const user = req.user as any;
 
   if (!req.isAuthenticated() || !user.expires_at) {

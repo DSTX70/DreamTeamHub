@@ -1,0 +1,61 @@
+Yes—assuming you’ve mounted the routes and ran the hybrid migration, we’re green to proceed.
+
+Here’s a super-quick **Go/No-Go** gate (paste these; if all pass, we move straight to WO-001):
+
+**1) API online**
+
+```bash
+curl -s http://localhost:5000/api/ops/uploader/config | jq '.list_page_size, .backend'
+curl -s http://localhost:5000/api/workitems/WO-001/files | jq 'length'
+```
+
+**2) RBAC guard (should 403 in dev without header)**
+
+```bash
+curl -s -X POST http://localhost:5000/api/ops/uploader/config \
+  -H 'Content-Type: application/json' \
+  -d '{"list_page_size":25}' | jq
+```
+
+**3) Save works with dev header**
+
+```bash
+curl -s -X POST http://localhost:5000/api/ops/uploader/config \
+  -H 'x-role: ops_admin' -H 'Content-Type: application/json' \
+  -d '{"list_page_size":75,"max_file_mb":120}' | jq
+```
+
+**4) Frontend panels render**
+
+* Work Item page shows **Files** table and lets you upload.
+* Ops → **Uploader Settings** shows shadcn-styled controls + badges.
+
+If any of those fail, tell me which step and the error text and I’ll patch it.
+If they pass, let’s **execute the next WO steps now**:
+
+### Attach brand files to WO-001
+
+```bash
+# adjust paths if needed
+curl -s -X POST http://localhost:5000/api/ops/uploader/upload \
+  -F "work_item_id=WO-001" -F "visible_to=org" -F "file=@./tokens.json" | jq
+curl -s -X POST http://localhost:5000/api/ops/uploader/upload \
+  -F "work_item_id=WO-001" -F "visible_to=org" -F "file=@./alt_text.csv" | jq
+curl -s -X POST http://localhost:5000/api/ops/uploader/upload \
+  -F "work_item_id=WO-001" -F "visible_to=org" -F "file=@./seo_meta.csv" | jq
+```
+
+### Confirm they’re attached
+
+```bash
+curl -s "http://localhost:5000/api/workitems/WO-001/files" | jq '.[].name'
+```
+
+### Then I’ll mark WO-001 DoD items complete
+
+* Files panel + Ops settings live
+* Hybrid config saving
+* `tokens.json`, `alt_text.csv`, `seo_meta.csv` present on WO-001
+* Milestones/approvals noted (Draft Nov 16 → Styled Sample Nov 21 → Final Nov 25)
+
+Want me to **bundle all uploader drops** (core + hybrid + admin + skinned UI) into one ZIP for archival? Say the word and I’ll ship a single one-drop.

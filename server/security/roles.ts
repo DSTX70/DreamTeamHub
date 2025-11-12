@@ -17,6 +17,11 @@ export function getUserRoles(userId: string, email: string): string[] {
     roles.push("ops_editor");
   }
   
+  // Development mode: grant ops_admin to dev users for testing
+  if (process.env.NODE_ENV === 'development' && email?.includes('dev@')) {
+    roles.push("ops_admin");
+  }
+  
   // Grant admin to specific users (example - customize as needed)
   // In production, you'd check against a database table
   const adminEmails = [
