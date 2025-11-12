@@ -50,15 +50,19 @@ export function ParticipantsMultiSelect({ people, pods, onCreated, defaultTitle 
         ...selectedPods.map(id => ({ type:'pod' as const, id })),
       ];
       const resp = await createConversation({ title, participants, message: message ? { text: message } : undefined });
+      
+      // Close popover and reset state first
+      setOpen(false);
+      setSelectedUsers([]);
+      setSelectedPods([]);
+      setMessage('');
+      
+      // Then show success feedback and call callback
       toast({
         title: 'Conversation created',
         description: `Successfully created "${title}"`,
       });
       onCreated?.(resp);
-      setOpen(false);
-      setSelectedUsers([]);
-      setSelectedPods([]);
-      setMessage('');
     } catch (error: any) {
       toast({
         title: 'Failed to create conversation',
@@ -154,13 +158,20 @@ export function ParticipantsMultiSelect({ people, pods, onCreated, defaultTitle 
                 </Badge>
               ))}
             </div>
-            <div className="mt-3 flex justify-end">
+            <div className="mt-3 flex justify-end gap-2">
+              <Button 
+                variant="outline"
+                onClick={() => setOpen(false)}
+                data-testid="button-cancel-popover"
+              >
+                Close
+              </Button>
               <Button 
                 onClick={onCreate} 
                 disabled={posting || (selectedPods.length+selectedUsers.length)===0}
-                data-testid="button-create-conversation"
+                data-testid="button-create-conversation-popover"
               >
-                {posting ? 'Creating…' : 'Create conversation'}
+                {posting ? 'Creating…' : 'Done'}
               </Button>
             </div>
           </PopoverContent>

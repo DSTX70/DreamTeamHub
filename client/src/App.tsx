@@ -55,6 +55,7 @@ import LLMProviderSelect from "@/pages/llm/ProviderSelect";
 import ProviderPromptLinter from "@/pages/llm/ProviderPromptLinter";
 import LinterAugment from "@/pages/llm/Linter_Augment";
 import Checkout from "@/pages/checkout/Checkout";
+import ChatTest from "@/pages/chat-test";
 import { Button } from "@/components/ui/button";
 import { LogOut, User as UserIcon, Search } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -82,6 +83,7 @@ function AuthenticatedRoutes() {
       <Route path="/projects" component={Projects} />
       <Route path="/projects/:category" component={Projects} />
       <Route path="/chat" component={ChatPage} />
+      <Route path="/chat-test" component={ChatTest} />
       <Route path="/agent-console" component={AgentConsole} />
       <Route path="/summon-mirror" component={SummonMirrorPage} />
       <Route path="/roster-admin" component={RosterAdminPage} />

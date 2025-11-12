@@ -26,31 +26,37 @@ async function expandParticipants(participants: Participant[]) {
 }
 
 chatConversationsRouter.post('/chat/conversations', async (req: Request, res: Response) => {
-  const { title, participants, message } = req.body || {};
+  const { title, participants, message, roleHandle } = req.body || {};
   if (!title) return res.status(400).json({ ok:false, error:'title required' });
 
   try {
     await db.execute(sql`BEGIN`);
     
+    // Use provided roleHandle or default to 'general' for team conversations
+    const handle = roleHandle || 'general';
     const convResult = await db.execute(
-      sql`INSERT INTO conversations (title, created_at) VALUES (${title}, NOW()) RETURNING id`
+      sql`INSERT INTO conversations (title, role_handle, created_at) VALUES (${title}, ${handle}, NOW()) RETURNING id`
     );
     const conversationId = (convResult.rows[0] as any).id;
 
     const { users, pods } = await expandParticipants(Array.isArray(participants) ? participants : []);
 
     for (const p of pods) {
+      const notifyValue = p.notify !== undefined ? p.notify : true;
+      const addedBy = (req as any).user?.id || null;
       await db.execute(
         sql`INSERT INTO conversation_participants (conversation_id, principal_type, principal_id, role, notify, added_by)
-         VALUES (${conversationId},'pod',${p.id},${p.role || 'member'},COALESCE(${p.notify}, true),${(req as any).user?.id || null})
+         VALUES (${conversationId},'pod',${p.id},${p.role || 'member'},${notifyValue},${addedBy})
          ON CONFLICT (conversation_id, principal_type, principal_id) DO NOTHING`
       );
     }
     
     for (const u of users) {
+      const notifyValue = u.notify !== undefined ? u.notify : true;
+      const addedBy = (req as any).user?.id || null;
       await db.execute(
         sql`INSERT INTO conversation_participants (conversation_id, principal_type, principal_id, role, notify, added_by)
-         VALUES (${conversationId},'user',${u.id},${u.role || 'member'},COALESCE(${u.notify}, true),${(req as any).user?.id || null})
+         VALUES (${conversationId},'user',${u.id},${u.role || 'member'},${notifyValue},${addedBy})
          ON CONFLICT (conversation_id, principal_type, principal_id) DO NOTHING`
       );
     }
