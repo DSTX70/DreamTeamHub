@@ -34,9 +34,9 @@ export async function uploadFileToS3(
     throw new Error(`File extension .${ext} not allowed. Allowed: ${config.allowlist.join(', ')}`);
   }
 
-  const maxBytes = config.maxMb * 1024 * 1024;
+  const maxBytes = config.maxSizeMB * 1024 * 1024;
   if (file.size > maxBytes) {
-    throw new Error(`File too large. Max size: ${config.maxMb}MB`);
+    throw new Error(`File too large. Max size: ${config.maxSizeMB}MB`);
   }
 
   const fileId = uuid();
@@ -62,7 +62,7 @@ export async function uploadFileToS3(
 
   const [inserted] = await db.insert(workItemFiles).values(fileData).returning();
 
-  return { id: inserted.id, url: s3Url };
+  return { id: String(inserted.id), url: s3Url };
 }
 
 export async function getWorkItemFiles(workItemId: number) {
