@@ -1,11 +1,11 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { apiRequest, queryClient } from '@/lib/queryClient';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Loader2, Send, MessageSquare, Plus, Upload } from 'lucide-react';
+import { Loader2, Send, MessageSquare, Plus, Upload, Link2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import type { RoleCard, Conversation, Message } from '@shared/schema';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
@@ -20,6 +20,15 @@ export default function ChatPage() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [roleSearchQuery, setRoleSearchQuery] = useState('');
   const { toast } = useToast();
+
+  // Load conversation from URL parameter on mount
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const conversationId = params.get('c');
+    if (conversationId) {
+      setSelectedConversationId(parseInt(conversationId));
+    }
+  }, []);
 
   // Fetch all role cards for persona selection
   const { data: roleCards = [] } = useQuery<RoleCard[]>({
@@ -45,7 +54,7 @@ export default function ChatPage() {
     },
     onSuccess: (newConversation: Conversation) => {
       queryClient.invalidateQueries({ queryKey: ['/api/conversations'] });
-      setSelectedConversationId(newConversation.id);
+      selectConversation(newConversation.id);
       setIsDialogOpen(false);
       setNewConvTitle('');
       setSelectedRoles([]);
@@ -102,6 +111,26 @@ export default function ChatPage() {
         ? prev.filter(h => h !== handle)
         : [...prev, handle]
     );
+  };
+
+  // Update URL and state when selecting a conversation
+  const selectConversation = (id: number) => {
+    setSelectedConversationId(id);
+    const url = new URL(window.location.href);
+    url.searchParams.set('c', String(id));
+    window.history.replaceState({}, '', url.toString());
+  };
+
+  // Copy permalink to clipboard
+  const copyPermalink = () => {
+    if (!selectedConversationId) return;
+    const url = new URL(window.location.href);
+    url.searchParams.set('c', String(selectedConversationId));
+    navigator.clipboard.writeText(url.toString());
+    toast({
+      title: 'Link copied',
+      description: 'Conversation permalink copied to clipboard',
+    });
   };
 
   const selectedConversation = conversations.find(c => c.id === selectedConversationId);
@@ -233,7 +262,7 @@ export default function ChatPage() {
                   return (
                     <button
                       key={conv.id}
-                      onClick={() => setSelectedConversationId(conv.id)}
+                      onClick={() => selectConversation(conv.id)}
                       data-testid={`conversation-${conv.id}`}
                       className={`w-full text-left p-3 rounded-md transition-colors hover-elevate ${
                         selectedConversationId === conv.id
@@ -280,22 +309,34 @@ export default function ChatPage() {
             <>
               {/* Chat Header */}
               <div className="border-b border-brand-line p-4">
-                <div className="flex items-center gap-3">
-                  <Avatar className="h-10 w-10">
-                    <AvatarFallback className="bg-core-teal text-brand-dark font-semibold">
-                      {selectedConversation.roleHandle.slice(0, 2).toUpperCase()}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div>
-                    <h3 className="text-lg font-grotesk text-text-primary">
-                      {selectedConversation.roleHandle}
-                    </h3>
-                    {selectedRoleCard && (
-                      <p className="text-sm text-text-secondary">
-                        {selectedRoleCard.title} • {selectedRoleCard.pod}
-                      </p>
-                    )}
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-3">
+                    <Avatar className="h-10 w-10">
+                      <AvatarFallback className="bg-core-teal text-brand-dark font-semibold">
+                        {selectedConversation.roleHandle.slice(0, 2).toUpperCase()}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div>
+                      <h3 className="text-lg font-grotesk text-text-primary">
+                        {selectedConversation.roleHandle}
+                      </h3>
+                      {selectedRoleCard && (
+                        <p className="text-sm text-text-secondary">
+                          {selectedRoleCard.title} • {selectedRoleCard.pod}
+                        </p>
+                      )}
+                    </div>
                   </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={copyPermalink}
+                    data-testid="button-copy-link"
+                    className="flex items-center gap-2"
+                  >
+                    <Link2 className="h-4 w-4" />
+                    Copy link
+                  </Button>
                 </div>
               </div>
 

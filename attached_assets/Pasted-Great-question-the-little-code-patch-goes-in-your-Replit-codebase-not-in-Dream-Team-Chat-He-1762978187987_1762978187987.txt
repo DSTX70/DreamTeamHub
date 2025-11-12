@@ -1,0 +1,79 @@
+Great question — the little code patch goes in your **Replit codebase**, not in Dream Team Chat.
+
+Here’s the exact, step-by-step:
+
+## Where to paste the code
+
+In Replit (your DTH app):
+
+1. Open `app/client/pages/chat/ChatPage.tsx`
+   (If your file is named differently, open the main chat page component.)
+2. Make these three small edits:
+
+### A) Update URL when a conversation is selected
+
+Paste inside your `onSelectConversation(id)` (or wherever you set the active convo):
+
+```ts
+function onSelectConversation(id: string | number) {
+  setSelectedId(String(id)); // your existing selection
+  const url = new URL(window.location.href);
+  url.searchParams.set('c', String(id));
+  window.history.replaceState({}, '', url);
+}
+```
+
+### B) Open a conversation from the URL on load
+
+Near the top of the component:
+
+```ts
+import { useEffect } from 'react';
+
+useEffect(() => {
+  const c = new URLSearchParams(window.location.search).get('c');
+  if (c) setSelectedId(String(c));
+}, []);
+```
+
+### C) Add a “Copy link” button in the active conversation header
+
+Where you render the current convo header:
+
+```tsx
+<button
+  className="text-xs border rounded px-2 py-1"
+  onClick={() => {
+    const url = new URL(window.location.href);
+    url.searchParams.set('c', String(selectedId));
+    navigator.clipboard.writeText(url.toString());
+  }}
+>
+  Copy link
+</button>
+```
+
+3. Save → rebuild/restart your dev server if needed.
+
+## How to use it after patching
+
+1. In Dream Team Chat, click the **Fab Card Co — Website** conversation.
+
+   * The URL should become `…/chat?c=<someId>`.
+2. Click **Copy link** (or copy the address bar).
+3. Paste that **permalink** into WO-001 at the top as:
+
+```
+Room link: <PASTE URL>
+```
+
+If your router blocks `searchParams`, use the hash fallback instead:
+
+* Replace the URL update line with `location.hash = '#c=' + id;`
+* On load, read it with:
+
+  ```ts
+  const c = location.hash.startsWith('#c=') ? location.hash.slice(3) : null;
+  ```
+
+Give me a quick **“done”** once the patch is in and the permalink works, and I’ll guide the very next work-order step.
