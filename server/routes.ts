@@ -22,6 +22,7 @@ import { router as llmInferRouter } from "./api/llm_infer.route";
 import { router as evidencePacksRouter } from "./api/evidence_packs.route";
 import { router as coverageTrendsRouter } from "./api/coverage_trends.route";
 import { seoAltTextRouter } from "./routes/seo_alt_text";
+import { seoMetaRouter } from "./routes/seo_meta";
 import multer from "multer";
 import { uploadFileToS3, getWorkItemFiles, getUploaderConfig } from "./services/uploader";
 import { getEffectiveUploadsConfig, updateUploadsConfig } from "./services/opsUploadsConfig";
@@ -245,6 +246,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.use("/api/evidence-packs", isDualAuthenticated, evidencePacksRouter);
   app.use("/api", isDualAuthenticated, coverageTrendsRouter);
   app.use("/api", isDualAuthenticated, seoAltTextRouter);
+  app.use("/api", isDualAuthenticated, seoMetaRouter);
 
   // ===========================
   // CONTROL TOWER

@@ -1,0 +1,150 @@
+Fantastic—DB + Drizzle are ready. Let’s import the CSV you uploaded and light up the homepage meta.
+
+I’ll give you two ways (pick one). After you run it, reply **“seo imported”** and I’ll wire the homepage read.
+
+---
+
+## Option A — API route using **Drizzle** (drop-in)
+
+**`app/server/routes/seo_meta.ts`**
+
+```ts
+import { Router } from 'express';
+import fs from 'node:fs';
+import { parse } from 'csv-parse/sync';
+import { db } from '@/server/db';                  // your Drizzle instance
+import { seoMeta } from '@/server/shared/schema';  // your Drizzle table
+import { and, eq } from 'drizzle-orm';
+
+export const seoMetaRouter = Router();
+
+seoMetaRouter.post('/seo/meta/import', async (req, res) => {
+  try {
+    const { work_item_id, filename = 'seo_meta.csv', path } = req.body || {};
+    let csvPath: string | undefined = path;
+
+    if (!csvPath) {
+      // Resolve CSV path from your files table (adjust names if different)
+      // If you already have a helper, replace this with it.
+      const { pool } = await import('@/server/db/pool'); // optional: reuse pool for quick lookup
+      const r = await pool.query(
+        `SELECT storage_uri FROM work_item_files
+         WHERE work_item_id=$1 AND name=$2
+         ORDER BY created_at DESC LIMIT 1`,
+        [work_item_id, filename]
+      );
+      if (!r.rowCount) return res.status(404).json({ ok:false, error:'seo_meta.csv not found for this Work Item' });
+      const uri: string = r.rows[0].storage_uri;
+      if (!uri.startsWith('file://'))
+        return res.status(400).json({ ok:false, error:'Non-local backends: add S3/Drive resolver' });
+      csvPath = uri.replace('file://','');
+    }
+
+    const raw = fs.readFileSync(csvPath!, 'utf8');
+    const rows = parse(raw, { columns: true, trim: true, skip_empty_lines: true }) as Array<{
+      route: string; section_key: string; title: string; description: string;
+      og_image?: string; keywords?: string; locale?: string;
+    }>;
+
+    let imported = 0;
+    for (const r of rows) {
+      const locale = r.locale?.trim() || 'en';
+      // Upsert (replace if exists)
+      const existing = await db.select().from(seoMeta)
+        .where(and(eq(seoMeta.route, r.route), eq(seoMeta.sectionKey, r.section_key), eq(seoMeta.locale, locale)))
+        .limit(1);
+      if (existing.length) {
+        await db.update(seoMeta)
+          .set({
+            title: r.title, description: r.description,
+            ogImage: r.og_image || null, keywords: r.keywords || null, updatedAt: new Date()
+          })
+          .where(and(eq(seoMeta.route, r.route), eq(seoMeta.sectionKey, r.section_key), eq(seoMeta.locale, locale)));
+      } else {
+        await db.insert(seoMeta).values({
+          route: r.route, sectionKey: r.section_key,
+          title: r.title, description: r.description,
+          ogImage: r.og_image || null, keywords: r.keywords || null,
+          locale, createdAt: new Date(), updatedAt: new Date()
+        });
+      }
+      imported++;
+    }
+    return res.json({ ok:true, imported });
+  } catch (e:any) {
+    return res.status(500).json({ ok:false, error: e.message });
+  }
+});
+```
+
+**Mount**
+
+```ts
+import { seoMetaRouter } from '@/server/routes/seo_meta';
+app.use('/api', seoMetaRouter);
+```
+
+**Run import**
+
+```bash
+curl -s -X POST http://localhost:5000/api/seo/meta/import \
+  -H 'Content-Type: application/json' \
+  -d '{"work_item_id":7,"filename":"seo_meta.csv"}' | jq
+```
+
+---
+
+## Option B — One-off script (no API), using **Drizzle**
+
+**`scripts/import_seo_meta.ts`**
+
+```ts
+import fs from 'node:fs';
+import { parse } from 'csv-parse/sync';
+import { db } from '@/server/db';
+import { seoMeta } from '@/server/shared/schema';
+import { and, eq } from 'drizzle-orm';
+
+async function main() {
+  const csvPath = process.argv[2] || './seo_meta.csv';
+  const raw = fs.readFileSync(csvPath, 'utf8');
+  const rows = parse(raw, { columns:true, trim:true, skip_empty_lines:true }) as any[];
+
+  let imported = 0;
+  for (const r of rows) {
+    const locale = (r.locale || 'en').trim();
+    const existing = await db.select().from(seoMeta)
+      .where(and(eq(seoMeta.route, r.route), eq(seoMeta.sectionKey, r.section_key), eq(seoMeta.locale, locale)))
+      .limit(1);
+    if (existing.length) {
+      await db.update(seoMeta).set({
+        title: r.title, description: r.description,
+        ogImage: r.og_image || null, keywords: r.keywords || null, updatedAt: new Date()
+      }).where(and(eq(seoMeta.route, r.route), eq(seoMeta.sectionKey, r.section_key), eq(seoMeta.locale, locale)));
+    } else {
+      await db.insert(seoMeta).values({
+        route: r.route, sectionKey: r.section_key,
+        title: r.title, description: r.description,
+        ogImage: r.og_image || null, keywords: r.keywords || null,
+        locale, createdAt: new Date(), updatedAt: new Date()
+      });
+    }
+    imported++;
+  }
+  console.log(JSON.stringify({ ok:true, imported }));
+}
+main().catch(e => { console.error(e); process.exit(1); });
+```
+
+**Run**
+
+```bash
+# if you downloaded the CSV locally:
+ts-node scripts/import_seo_meta.ts ./seo_meta.csv
+# or point to the path on disk for the WI file if you have it locally
+```
+
+---
+
+When you get `{ ok: true, imported: 6 }` (or your count), reply **“seo imported.”**
+Then I’ll give you the tiny homepage loader snippet to read these blocks and set `<title>`, `<meta>` tags.
