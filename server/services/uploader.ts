@@ -42,10 +42,13 @@ export async function uploadFileToS3(
   const fileId = uuid();
   const s3Key = `work-items/${workItemId}/${fileId}-${file.originalname}`;
   const bucket = process.env.AWS_S3_BUCKET!;
+  
+  const rawRegion = process.env.AWS_REGION || 'us-east-1';
+  const region = rawRegion.split(' ').pop() || 'us-east-1';
 
   await s3Put(s3Key, file.buffer, file.mimetype, 'public, max-age=31536000');
 
-  const s3Url = `https://${bucket}.s3.${process.env.AWS_REGION || 'us-east-1'}.amazonaws.com/${s3Key}`;
+  const s3Url = `https://${bucket}.s3.${region}.amazonaws.com/${s3Key}`;
 
   const fileData = {
     workItemId,

@@ -1,7 +1,8 @@
 import { S3Client, PutObjectCommand, ListObjectsV2Command } from "@aws-sdk/client-s3";
 
 const bucket = process.env.AWS_S3_BUCKET!;
-const region = process.env.AWS_REGION || "us-east-1";
+const rawRegion = process.env.AWS_REGION || "us-east-1";
+const region = rawRegion.split(' ').pop() || "us-east-1";
 
 export const s3 = new S3Client({
   region,
