@@ -847,7 +847,9 @@ export type InsertCoverageHistory = z.infer<typeof insertCoverageHistorySchema>;
 export type CoverageHistory = typeof coverageHistory.$inferSelect;
 
 // Work Items
-export const insertWorkItemSchema = createInsertSchema(workItems).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertWorkItemSchema = createInsertSchema(workItems).omit({ id: true, createdAt: true, updatedAt: true }).extend({
+  dueDate: z.coerce.date().optional(),
+});
 export type InsertWorkItem = z.infer<typeof insertWorkItemSchema>;
 export type WorkItem = typeof workItems.$inferSelect;
 
