@@ -127,23 +127,40 @@ seoAltTextRouter.post('/seo/alt-text/import', async (req, res) => {
       }
     });
 
-    // Upsert into database using Drizzle
+    // Upsert into database using Drizzle with date validation
     let imported = 0;
-    for (const row of valid) {
+    for (let i = 0; i < valid.length; i++) {
+      const row = valid[i];
+      
+      // Validate reviewed_at date if present
+      let reviewedAtDate: Date | null = null;
+      if (row.reviewed_at) {
+        const parsed = new Date(row.reviewed_at);
+        if (isNaN(parsed.getTime())) {
+          // Invalid date - add to errors and skip this row
+          errors.push({
+            line: i + 2, // Line number (accounting for header)
+            error: `Invalid reviewed_at date: "${row.reviewed_at}" is not a valid date format`
+          });
+          continue;
+        }
+        reviewedAtDate = parsed;
+      }
+      
       await db.insert(altTexts).values({
         imageKey: row.image_key,
         altText: row.alt_text,
         context: row.context,
         locale: row.locale,
         reviewedBy: row.reviewed_by,
-        reviewedAt: row.reviewed_at ? new Date(row.reviewed_at) : null,
+        reviewedAt: reviewedAtDate,
       }).onConflictDoUpdate({
         target: [altTexts.imageKey, altTexts.locale],
         set: {
           altText: row.alt_text,
           context: row.context,
           reviewedBy: row.reviewed_by,
-          reviewedAt: row.reviewed_at ? new Date(row.reviewed_at) : null,
+          reviewedAt: reviewedAtDate,
           updatedAt: new Date(),
         },
       });
