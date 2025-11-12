@@ -326,7 +326,7 @@ export default function ProjectCreate() {
                           >
                             <Checkbox
                               checked={selectedPods.includes(pod.id)}
-                              onClick={(e) => e.stopPropagation()}
+                              onCheckedChange={() => togglePod(pod.id)}
                             />
                             <label className="flex-1 cursor-pointer">
                               <div className="font-medium">{pod.name}</div>
@@ -384,7 +384,7 @@ export default function ProjectCreate() {
                           >
                             <Checkbox
                               checked={selectedAgents.includes(agent.id)}
-                              onClick={(e) => e.stopPropagation()}
+                              onCheckedChange={() => toggleAgent(agent.id)}
                             />
                             <label className="flex-1 cursor-pointer">
                               <div className="font-medium">{agent.title}</div>
