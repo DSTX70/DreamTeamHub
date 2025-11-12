@@ -244,6 +244,22 @@ export const workItems = pgTable("work_items", {
 });
 
 // ===========================
+// WORK ITEM FILES
+// ===========================
+
+export const workItemFiles = pgTable("work_item_files", {
+  id: varchar("id").primaryKey(),
+  workItemId: integer("work_item_id").notNull().references(() => workItems.id, { onDelete: 'cascade' }),
+  fileName: text("file_name").notNull(),
+  fileSize: integer("file_size").notNull(),
+  contentType: text("content_type").notNull(),
+  s3Key: text("s3_key").notNull(),
+  s3Url: text("s3_url").notNull(),
+  uploadedBy: varchar("uploaded_by").notNull().references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+// ===========================
 // DECISIONS
 // ===========================
 
@@ -852,6 +868,11 @@ export const insertWorkItemSchema = createInsertSchema(workItems).omit({ id: tru
 });
 export type InsertWorkItem = z.infer<typeof insertWorkItemSchema>;
 export type WorkItem = typeof workItems.$inferSelect;
+
+// Work Item Files
+export const insertWorkItemFileSchema = createInsertSchema(workItemFiles).omit({ createdAt: true });
+export type InsertWorkItemFile = z.infer<typeof insertWorkItemFileSchema>;
+export type WorkItemFile = typeof workItemFiles.$inferSelect;
 
 // Decisions
 export const insertDecisionSchema = createInsertSchema(decisions).omit({ id: true, createdAt: true });
