@@ -21,6 +21,7 @@ import { router as evidencePacksRouter } from "./api/evidence_packs.route";
 import { router as coverageTrendsRouter } from "./api/coverage_trends.route";
 import multer from "multer";
 import { uploadFileToS3, getWorkItemFiles, getUploaderConfig } from "./services/uploader";
+import { getEffectiveUploadsConfig, updateUploadsConfig } from "./services/opsUploadsConfig";
 import { 
   insertPodSchema, insertPodAgentSchema, insertAgentSchema, insertPersonSchema, insertRoleCardSchema, insertRoleRaciSchema, insertAgentSpecSchema,
   insertWorkItemSchema, insertDecisionSchema, insertIdeaSparkSchema, insertBrainstormSessionSchema,
@@ -1073,11 +1074,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/ops/uploader/config", isAuthenticated, async (_req, res) => {
     try {
-      const config = getUploaderConfig();
+      const config = await getEffectiveUploadsConfig();
       res.json(config);
     } catch (error) {
       console.error('Error fetching uploader config:', error);
       res.status(500).json({ error: 'Failed to fetch uploader config' });
+    }
+  });
+
+  app.post("/api/ops/uploader/config", isAuthenticated, requireAdmin, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub || 'admin';
+      const config = await updateUploadsConfig(req.body, userId);
+      res.json({ ok: true, ...config });
+    } catch (error: any) {
+      console.error('Error updating uploader config:', error);
+      res.status(400).json({ error: error.message || 'Failed to update config' });
     }
   });
 
