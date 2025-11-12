@@ -248,15 +248,15 @@ export const workItems = pgTable("work_items", {
 // ===========================
 
 export const workItemFiles = pgTable("work_item_files", {
-  id: varchar("id").primaryKey(),
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
   workItemId: integer("work_item_id").notNull().references(() => workItems.id, { onDelete: 'cascade' }),
-  fileName: text("file_name").notNull(),
-  fileSize: integer("file_size").notNull(),
-  contentType: text("content_type").notNull(),
-  s3Key: text("s3_key").notNull(),
+  filename: varchar("filename", { length: 255 }).notNull(),
+  s3Key: varchar("s3_key", { length: 512 }).notNull(),
   s3Url: text("s3_url").notNull(),
-  uploadedBy: varchar("uploaded_by").notNull().references(() => users.id),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
+  sizeBytes: integer("size_bytes").notNull(),
+  mimeType: varchar("mime_type", { length: 100 }),
+  uploadedByUserId: varchar("uploaded_by_user_id", { length: 255 }).notNull(),
+  uploadedAt: timestamp("uploaded_at").defaultNow(),
 });
 
 // ===========================

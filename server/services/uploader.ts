@@ -47,22 +47,21 @@ export async function uploadFileToS3(
 
   const s3Url = `https://${bucket}.s3.${process.env.AWS_REGION || 'us-east-1'}.amazonaws.com/${s3Key}`;
 
-  const fileData = insertWorkItemFileSchema.parse({
-    id: fileId,
+  const fileData = {
     workItemId,
-    fileName: file.originalname,
-    fileSize: file.size,
-    contentType: file.mimetype,
+    filename: file.originalname,
+    sizeBytes: file.size,
+    mimeType: file.mimetype,
     s3Key,
     s3Url,
-    uploadedBy: userId,
-  });
+    uploadedByUserId: userId,
+  };
 
-  await db.insert(workItemFiles).values(fileData);
+  const [inserted] = await db.insert(workItemFiles).values(fileData).returning();
 
-  return { id: fileId, url: s3Url };
+  return { id: inserted.id, url: s3Url };
 }
 
 export async function getWorkItemFiles(workItemId: number) {
-  return await db.select().from(workItemFiles).where(eq(workItemFiles.workItemId, workItemId)).orderBy(workItemFiles.createdAt);
+  return await db.select().from(workItemFiles).where(eq(workItemFiles.workItemId, workItemId)).orderBy(workItemFiles.uploadedAt);
 }
