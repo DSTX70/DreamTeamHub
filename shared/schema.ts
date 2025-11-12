@@ -234,6 +234,7 @@ export const workItems = pgTable("work_items", {
   description: text("description"),
   podId: integer("pod_id").references(() => pods.id),
   ownerId: integer("owner_id").references(() => persons.id),
+  workOrderId: varchar("work_order_id").references(() => workOrders.id, { onDelete: 'set null', onUpdate: 'cascade' }),
   status: text("status").notNull().default('todo'), // todo, in_progress, blocked, done
   priority: text("priority").default('medium'), // low, medium, high, critical
   dueDate: timestamp("due_date"),

@@ -1,0 +1,286 @@
+Fantastic—thanks for the crisp validation. Given your truths (“Work Items model = live”) and that you already created **work_item #7** for WO-001, the cleanest path is:
+
+# ✅ Decision
+
+**Option 3: Link `work_orders` ↔ `work_items`, keep files anchored to `work_items`, and expose WO-scoped file endpoints.**
+This preserves today’s uploader, avoids a parallel attachment system, and gives you both **WO-level** and **WI-level** views.
+
+Below is a tight, paste-ready patch (SQL + routes) plus a one-time backfill to make **work_item #7** the WO-001 “primary assets” item.
+
+---
+
+# 1) Migration (FK + view + helpful index)
+
+```sql
+-- migrations/002_work_orders_link.sql
+
+-- 1) Add optional link from work_items → work_orders (varchar WO ids, e.g., 'WO-001')
+ALTER TABLE work_items
+  ADD COLUMN IF NOT EXISTS work_order_id TEXT NULL;
+
+-- Optional FK if your work_orders.id is TEXT (recommended)
+-- Comment out if your DB doesn’t allow it yet.
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.table_constraints
+    WHERE table_name='work_items' AND constraint_name='work_items_work_order_fk'
+  ) THEN
+    ALTER TABLE work_items
+      ADD CONSTRAINT work_items_work_order_fk
+      FOREIGN KEY (work_order_id)
+      REFERENCES work_orders(id)
+      ON UPDATE CASCADE ON DELETE SET NULL;
+  END IF;
+END $$;
+
+-- 2) Make filtered lookup fast (wo → items)
+CREATE INDEX IF NOT EXISTS idx_work_items_work_order_id ON work_items(work_order_id);
+
+-- 3) Convenience view to list WO files (aggregates all WI under the WO)
+-- Adjust table/column names to your schema
+CREATE OR REPLACE VIEW work_order_files AS
+SELECT
+  wi.work_order_id,
+  wf.id         AS file_id,
+  wf.work_item_id,
+  wf.name,
+  wf.mime,
+  wf.size_bytes,
+  wf.visible_to,
+  wf.storage_uri,
+  wf.created_at
+FROM work_item_files wf
+JOIN work_items wi ON wi.id = wf.work_item_id
+WHERE wi.work_order_id IS NOT NULL;
+```
+
+**Backfill WO-001 for your current item #7:**
+
+```sql
+UPDATE work_items SET work_order_id = 'WO-001' WHERE id = 7;
+```
+
+---
+
+# 2) API: add WO-level endpoints (alias to WI files)
+
+Keep your existing **WI** endpoints (they’re working), and add WO-scoped routes that aggregate files under a WO.
+
+```ts
+// app/server/routes/work_order_files.ts
+import { Router } from 'express';
+import { pool } from '../db'; // adjust to your DB helper
+import { requireOpsAdmin } from '../middleware/rbac'; // or your guard
+
+export const workOrderFilesRouter = Router();
+
+// GET /api/work-orders/:woId/files
+workOrderFilesRouter.get('/work-orders/:woId/files', async (req, res) => {
+  const { woId } = req.params;
+  try {
+    const { rows } = await pool.query(
+      `SELECT * FROM work_order_files WHERE work_order_id = $1 ORDER BY created_at DESC`,
+      [woId]
+    );
+    res.json({ ok: true, work_order_id: woId, files: rows });
+  } catch (e:any) {
+    res.status(500).json({ ok:false, error: e.message });
+  }
+});
+
+// POST /api/work-orders/:woId/upload
+// Strategy: attach to a designated "primary assets" WI for that WO.
+// If none provided and none exists, auto-create one called "Assets".
+workOrderFilesRouter.post('/work-orders/:woId/upload', async (req, res) => {
+  const { woId } = req.params;
+  // You may already have your multipart file handling in /ops/uploader/upload.
+  // Here we proxy: find/create a WI, then call the same internal handler you use for WI uploads.
+  try {
+    // 1) find primary asset WI for this WO
+    const { rows: existing } = await pool.query(
+      `SELECT id FROM work_items WHERE work_order_id = $1 AND title ILIKE 'Assets%' ORDER BY id LIMIT 1`,
+      [woId]
+    );
+    let workItemId = existing[0]?.id;
+    if (!workItemId) {
+      const ins = await pool.query(
+        `INSERT INTO work_items (title, work_order_id, status) VALUES ($1,$2,$3) RETURNING id`,
+        ['Assets', woId, 'open'] // adjust columns/defaults to your schema
+      );
+      workItemId = ins.rows[0].id;
+    }
+
+    // 2) hand-off to your WI upload flow
+    // If you factor your upload logic into a function (recommended), call it here:
+    // const result = await handleUploadToWorkItem(req, workItemId);
+    // return res.json(result);
+
+    // If you can’t refactor right now: store the workItemId in req and forward to your existing upload handler.
+    // Example (pseudo):
+    (req as any).body = (req as any).body || {};
+    (req as any).body.work_item_id = workItemId;
+
+    // Reuse your existing uploaderRouter POST handler
+    // If that handler is in-process callable, import and call it; otherwise,
+    // simplest is to instruct the client to hit /api/ops/uploader/upload with work_item_id.
+    return res.status(400).json({ ok:false, error:'Wire this to your existing WI upload handler or call /api/ops/uploader/upload with work_item_id.' });
+  } catch (e:any) {
+    res.status(500).json({ ok:false, error: e.message });
+  }
+});
+```
+
+**Mount it:**
+
+```ts
+// app/server/index.ts
+import { workOrderFilesRouter } from './routes/work_order_files';
+app.use('/api', workOrderFilesRouter);
+```
+
+**Optional alias (keeps parity with your path):**
+If you want both styles to work, keep these routes valid:
+
+* `GET /api/work-items/:id/files` (your current)
+* `GET /api/workitems/:id/files` (our earlier example)
+
+---
+
+# 3) Client helpers (WO support + default visibility)
+
+Extend the tiny client so you can fetch/attach at **WO level** or **WI level**.
+
+```ts
+// app/client/lib/uploader/api.ts (additions)
+export async function listWorkOrderFiles(woId: string) {
+  const res = await fetch(`/api/work-orders/${encodeURIComponent(woId)}/files`, { credentials:'include' });
+  if (!res.ok) throw new Error('Failed to list work order files');
+  return res.json();
+}
+
+// visibility default from effective config
+export async function getDefaultVisibility(): Promise<'owner'|'pod'|'approvers'|'org'> {
+  const cfg = await getConfig();
+  const v = (cfg as any)?.effective?.visibleTo ?? 'org';
+  const map = { owner:'owner', pod:'pod', approvers:'approvers', org:'org' } as const;
+  return (map as any)[String(v)] || 'org';
+}
+```
+
+**Note:** Your config shows:
+
+```json
+"effective": { "allowlist": "...", "maxSizeMB": 75, "visibleTo": "pod" }
+```
+
+So the default UI visibility can initialize to **`'pod'`**.
+
+---
+
+# 4) WO page UI (optional aggregate view)
+
+On the **Work Order** page, you can show both:
+
+* A “Primary Files” panel (wired to the designated WI, e.g., `#7`)
+* A “All Files for this WO” table (aggregated)
+
+```tsx
+// app/client/pages/workorders/WorkOrderDetail.tsx
+import { FilesPanel } from '@/components/files/FilesPanel';
+import { useEffect, useState } from 'react';
+import { listWorkOrderFiles } from '@/client/lib/uploader/api';
+
+export default function WorkOrderDetail({ woId, primaryWorkItemId }:{
+  woId: string; primaryWorkItemId: number;
+}) {
+  const [woFiles, setWoFiles] = useState<any[]>([]);
+  useEffect(()=>{ (async()=>{ 
+    try { 
+      const resp = await listWorkOrderFiles(woId);
+      setWoFiles(resp.files || []);
+    } catch (e) {} 
+  })(); }, [woId]);
+
+  return (
+    <div className="space-y-8">
+      <section>
+        <h2 className="text-lg font-semibold">Primary Files</h2>
+        <FilesPanel workItemId={String(primaryWorkItemId)} />
+      </section>
+
+      <section>
+        <h2 className="text-lg font-semibold">All Files for {woId}</h2>
+        <div className="overflow-x-auto border rounded-lg">
+          <table className="w-full text-sm">
+            <thead className="bg-muted/50">
+              <tr>
+                <th className="text-left p-3">Name</th>
+                <th className="text-left p-3">Type</th>
+                <th className="text-left p-3">Size</th>
+                <th className="text-left p-3">Visibility</th>
+                <th className="text-left p-3">Work Item</th>
+                <th className="text-left p-3">Added</th>
+              </tr>
+            </thead>
+            <tbody>
+              {woFiles.map((f)=>(
+                <tr key={f.file_id} className="border-t">
+                  <td className="p-3">{f.name}</td>
+                  <td className="p-3">{f.mime}</td>
+                  <td className="p-3">{(f.size_bytes/1024).toFixed(1)} KB</td>
+                  <td className="p-3"><span className="badge">{f.visible_to}</span></td>
+                  <td className="p-3">#{f.work_item_id}</td>
+                  <td className="p-3">{new Date(f.created_at).toLocaleString()}</td>
+                </tr>
+              ))}
+              {woFiles.length===0 && <tr><td className="p-6 text-muted-foreground" colSpan={6}>No files for this work order yet.</td></tr>}
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </div>
+  );
+}
+```
+
+---
+
+# 5) One-time set-up for WO-001
+
+Since you already created **work_item #7** (“Brand Guidelines – WO-001 Assets”):
+
+```sql
+-- Link the item to the WO
+UPDATE work_items SET work_order_id = 'WO-001' WHERE id = 7;
+
+-- (Optional) make #7 your canonical “primary assets” WI for WO-001 in your app config/state
+```
+
+Now you can:
+
+```bash
+# Upload to the WI (keeps current flow)
+curl -s -X POST http://localhost:5000/api/ops/uploader/upload \
+  -F "work_item_id=7" -F "visible_to=pod" -F "file=@./tokens.json" | jq
+
+# Or list all files under the WO
+curl -s http://localhost:5000/api/work-orders/WO-001/files | jq '.files | length'
+```
+
+---
+
+# 6) Definition of Done (linkage)
+
+* [ ] Migration 002 applied; `work_items.work_order_id` present; view `work_order_files` created.
+* [ ] Backfill done: `work_items.id=7 → work_order_id='WO-001'`.
+* [ ] New routes mounted:
+
+  * `GET /api/work-orders/:woId/files` (aggregates across all items under WO)
+  * `POST /api/work-orders/:woId/upload` (proxies to WI flow; optional shortcut)
+* [ ] WO page shows **Primary Files** (via WI) + **All Files** (aggregate).
+* [ ] Default visibility in UI initializes from config (`effective.visibleTo`, currently `pod`).
+
+---
+
+If you want, I can **package a mini migration + routes ZIP** to drop in (`002_work_orders_link.sql`, `work_order_files.ts`, client additions). Otherwise, you’re clear to proceed: attach `tokens.json`, `alt_text.csv`, `seo_meta.csv` to **WI #7** (WO-001) and we’ll mark WO-001’s file-attachment DoD complete.
