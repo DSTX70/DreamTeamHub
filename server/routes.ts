@@ -1,6 +1,8 @@
 import type { Express, RequestHandler } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
+import { db } from "./db";
+import { sql } from "drizzle-orm";
 import { setupAuth, isAuthenticated } from "./replitAuth";
 import { requireScopes } from "./security/scopes_and_csp";
 import { searchRoute } from "./api_search_route";
@@ -1469,10 +1471,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Insert all role handles into conversation_roles junction table
       if (conversation.id) {
+        const userId = (req as any).user?.id ?? null;
         for (const handle of handles) {
           await db.execute(sql`
             INSERT INTO conversation_roles (conversation_id, role_handle, added_by)
-            VALUES (${conversation.id}, ${handle}, ${(req as any).user?.id})
+            VALUES (${conversation.id}, ${handle}, ${userId})
             ON CONFLICT (conversation_id, role_handle) DO NOTHING
           `);
         }
