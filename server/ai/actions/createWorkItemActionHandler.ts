@@ -38,18 +38,26 @@ export function createWorkItemActionHandler<TOutput>(
         work_item_notes: "",
       };
 
-      console.log(`[${skillName}] Calling LLM with input:`, JSON.stringify(skillInput, null, 2));
+      const DEBUG_LLM = process.env.DEBUG_LLM_ACTIONS === "true";
+      
+      if (DEBUG_LLM) {
+        console.log(`[${skillName}] Calling LLM with input:`, JSON.stringify(skillInput, null, 2));
+      } else {
+        console.log(`[${skillName}] Invoking LLM for work item ${workItemId}`);
+      }
       
       const rawResult = await runSkill({
         skillName,
         input: skillInput,
       });
 
-      console.log(`[${skillName}] LLM returned raw result:`, JSON.stringify(rawResult, null, 2));
+      if (DEBUG_LLM) {
+        console.log(`[${skillName}] LLM returned raw result:`, JSON.stringify(rawResult, null, 2));
+      }
       
       const parsed = outputSchema.parse(rawResult);
       
-      console.log(`[${skillName}] Validation passed, persisting...`);
+      console.log(`[${skillName}] Action completed successfully for work item ${workItemId}`);
 
       await persist(workItemId, parsed);
 
@@ -59,10 +67,12 @@ export function createWorkItemActionHandler<TOutput>(
         pack: parsed,
       });
     } catch (err: any) {
-      console.error(`[${skillName}] Error:`, err);
+      const DEBUG_LLM = process.env.DEBUG_LLM_ACTIONS === "true";
       
-      // If it's a Zod validation error, include details
-      if (err.name === 'ZodError') {
+      console.error(`[${skillName}] Error for work item ${workItemId}:`, err.message);
+      
+      // If it's a Zod validation error, include details only in debug mode
+      if (err.name === 'ZodError' && DEBUG_LLM) {
         console.error(`[${skillName}] Zod validation failed:`, JSON.stringify(err.errors, null, 2));
       }
       
