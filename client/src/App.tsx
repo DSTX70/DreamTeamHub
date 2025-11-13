@@ -69,6 +69,7 @@ import HeaderOpsMenu from "@/components/HeaderOpsMenu";
 import OpsHotkeys from "@/components/OpsHotkeys";
 import FooterStatus from "@/components/FooterStatus";
 import { useState } from "react";
+import { useLocation } from "wouter";
 
 function AuthenticatedRoutes() {
   return (
@@ -119,7 +120,6 @@ function AuthenticatedRoutes() {
       <Route path="/ops/content-imports" component={ContentImports} />
       <Route path="/ops/fcc-sku-switcher" component={FCCSkuSwitcher} />
       <Route path="/ops/settings/:rest*" component={SettingsLayout} />
-      <Route path="/fcc" component={FabCardCoHomePage} />
       <Route path="/llm/provider" component={LLMProviderSelect} />
       <Route path="/llm/provider/linter" component={ProviderPromptLinter} />
       <Route path="/llm/linter/augment" component={LinterAugment} />
@@ -144,6 +144,7 @@ function UnauthenticatedRoutes() {
 function AppContent() {
   const { user, isAuthenticated, isLoading } = useAuth();
   const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [location] = useLocation();
   
   const style = {
     "--sidebar-width": "16rem",
@@ -152,6 +153,11 @@ function AppContent() {
 
   // Setup Cmd+K shortcut
   useSearchShortcut(() => setIsSearchOpen(true));
+
+  // Render standalone brand pages (no DTH layout)
+  if (location === "/fcc") {
+    return <FabCardCoHomePage />;
+  }
 
   // Show landing page without sidebar for unauthenticated users
   if (isLoading || !isAuthenticated) {
