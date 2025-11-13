@@ -3,6 +3,61 @@ import type { PatentClaimsPack } from "./schemas/patentClaimsPack";
 import type { LaunchPlanPack } from "./schemas/launchPlanPack";
 import type { WebsiteAuditPack } from "./schemas/websiteAuditPack";
 import { storage } from "../storage";
+import { db } from "../db/client";
+import { workItemPacks } from "@shared/schema";
+import { eq, and, desc } from "drizzle-orm";
+
+export type PackType = "lifestyle" | "patent" | "launch" | "website_audit";
+
+async function savePackToDB(
+  workItemId: number,
+  packType: PackType,
+  packData: unknown
+): Promise<number> {
+  const existingPacks = await db
+    .select()
+    .from(workItemPacks)
+    .where(
+      and(
+        eq(workItemPacks.workItemId, workItemId),
+        eq(workItemPacks.packType, packType)
+      )
+    )
+    .orderBy(desc(workItemPacks.version));
+
+  const nextVersion = existingPacks.length > 0 ? existingPacks[0].version + 1 : 1;
+
+  const [inserted] = await db
+    .insert(workItemPacks)
+    .values({
+      workItemId,
+      packType,
+      version: nextVersion,
+      packData: packData as any,
+    })
+    .returning();
+
+  return inserted.id;
+}
+
+export async function getLatestPack(
+  workItemId: number,
+  packType: PackType
+): Promise<{ id: number; version: number; packData: any; createdAt: Date } | null> {
+  const packs = await db
+    .select()
+    .from(workItemPacks)
+    .where(
+      and(
+        eq(workItemPacks.workItemId, workItemId),
+        eq(workItemPacks.packType, packType)
+      )
+    )
+    .orderBy(desc(workItemPacks.version))
+    .limit(1);
+
+  return packs.length > 0 ? packs[0] : null;
+}
 
 export async function saveLifestylePackArtifacts(
   workItemId: number,
@@ -10,6 +65,8 @@ export async function saveLifestylePackArtifacts(
 ): Promise<void> {
   const wi = await storage.getWorkItem(workItemId);
   if (!wi) throw new Error("Work item not found");
+
+  await savePackToDB(workItemId, "lifestyle", pack);
 
   const packSummary = `
 
@@ -52,6 +109,8 @@ export async function savePatentClaimsPack(
   const wi = await storage.getWorkItem(workItemId);
   if (!wi) throw new Error("Work item not found");
 
+  await savePackToDB(workItemId, "patent", pack);
+
   const packSummary = `
 
 ---
@@ -92,6 +151,8 @@ export async function saveLaunchPlanPack(
   const wi = await storage.getWorkItem(workItemId);
   if (!wi) throw new Error("Work item not found");
 
+  await savePackToDB(workItemId, "launch", pack);
+
   const packSummary = `
 
 ---
@@ -131,6 +192,8 @@ export async function saveWebsiteAuditPack(
 ): Promise<void> {
   const wi = await storage.getWorkItem(workItemId);
   if (!wi) throw new Error("Work item not found");
+
+  await savePackToDB(workItemId, "website_audit", pack);
 
   const packSummary = `
 

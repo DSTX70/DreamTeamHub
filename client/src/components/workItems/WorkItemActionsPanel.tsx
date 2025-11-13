@@ -3,8 +3,10 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { Sparkles, ChevronDown, ChevronUp, PuzzleIcon, MegaphoneIcon, SearchIcon } from "lucide-react";
+import { SavePackToDriveButton } from "../SavePackToDriveButton";
 
 type ActionKey = "lifestyle" | "patent" | "launch" | "audit";
+type PackType = "lifestyle" | "patent" | "launch" | "website_audit";
 
 type ActionStateStatus = "idle" | "running" | "ok" | "error";
 
@@ -23,27 +25,32 @@ const ACTION_CONFIG: Record<
     label: string;
     Icon: typeof Sparkles;
     endpointSuffix: string;
+    packType: PackType;
   }
 > = {
   lifestyle: {
     label: "Generate Lifestyle Pack",
     Icon: Sparkles,
     endpointSuffix: "generate-lifestyle-pack",
+    packType: "lifestyle",
   },
   patent: {
     label: "Generate Patent Claims Pack",
     Icon: PuzzleIcon,
     endpointSuffix: "generate-patent-claims-pack",
+    packType: "patent",
   },
   launch: {
     label: "Generate Launch Plan Pack",
     Icon: MegaphoneIcon,
     endpointSuffix: "generate-launch-plan-pack",
+    packType: "launch",
   },
   audit: {
     label: "Generate Website Audit Pack",
     Icon: SearchIcon,
     endpointSuffix: "generate-website-audit-pack",
+    packType: "website_audit",
   },
 };
 
@@ -186,16 +193,26 @@ export function WorkItemActionsPanel({ workItemId }: WorkItemActionsPanelProps) 
                     </span>
                   </div>
                 </div>
-                <Button
-                  type="button"
-                  onClick={() => runAction(key)}
-                  disabled={isRunning}
-                  variant="outline"
-                  size="sm"
-                  data-testid={`button-run-${key}`}
-                >
-                  {isRunning ? "Running…" : "Run"}
-                </Button>
+                <div className="flex items-center gap-2">
+                  <Button
+                    type="button"
+                    onClick={() => runAction(key)}
+                    disabled={isRunning}
+                    variant="outline"
+                    size="sm"
+                    data-testid={`button-run-${key}`}
+                  >
+                    {isRunning ? "Running…" : "Run"}
+                  </Button>
+                  {state.status === "ok" && (
+                    <SavePackToDriveButton
+                      workItemId={workItemId}
+                      packType={cfg.packType}
+                      variant="outline"
+                      size="sm"
+                    />
+                  )}
+                </div>
               </div>
             );
           })}

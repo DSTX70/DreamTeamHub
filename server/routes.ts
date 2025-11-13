@@ -1126,6 +1126,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/work-items/:id/actions/generate-patent-claims-pack", isAuthenticated, postGeneratePatentClaimsPack);
   app.post("/api/work-items/:id/actions/generate-launch-plan-pack", isAuthenticated, postGenerateLaunchPlanPack);
   app.post("/api/work-items/:id/actions/generate-website-audit-pack", isAuthenticated, postGenerateWebsiteAuditPack);
+  
+  // Pack to Drive routes
+  const { postSavePackToDrive, getWorkItemDriveFiles } = await import("./api/packToDrive.route");
+  app.post("/api/work-items/:workItemId/packs/:packType/save-to-drive", isAuthenticated, postSavePackToDrive);
+  app.get("/api/work-items/:workItemId/drive-files", isAuthenticated, getWorkItemDriveFiles);
 
   app.get("/api/ops/uploader/config", isAuthenticated, async (_req, res) => {
     try {

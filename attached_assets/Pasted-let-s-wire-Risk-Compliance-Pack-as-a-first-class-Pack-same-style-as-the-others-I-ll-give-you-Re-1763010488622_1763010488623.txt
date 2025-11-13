@@ -1,0 +1,192 @@
+let’s wire Risk & Compliance Pack as a first-class Pack, same style as the others.
+
+I’ll give you Replit-ready drops in this order:
+
+Zod schema + type: RiskCompliancePack
+
+DB helper to save it on a Work Item
+
+Action handler using createWorkItemActionHandler
+
+Route wiring
+
+Skill JSON config: generateRiskCompliancePack.json
+
+You can paste these straight in, adjusting import paths to match your repo.
+
+1️⃣ Zod schema – RiskCompliancePack
+
+File: server/ai/schemas/riskCompliancePack.ts
+
+// server/ai/schemas/riskCompliancePack.ts
+import { z } from "zod";
+
+export const RiskSeveritySchema = z.enum([
+  "low",
+  "medium",
+  "high",
+  "critical",
+]);
+
+export const RiskLikelihoodSchema = z.enum(["low", "medium", "high"]);
+
+export const RiskAreaSchema = z.enum([
+  "Security",
+  "Privacy",
+  "IP",
+  "Compliance",
+  "Brand/Safety",
+  "Ops",
+  "Legal/Contract",
+]);
+
+export const RiskItemSchema = z.object({
+  id: z.string(), // e.g., "RISK-001"
+  area: RiskAreaSchema,
+  severity: RiskSeveritySchema,
+  likelihood: RiskLikelihoodSchema,
+  description: z.string(),
+  impact: z.string(),
+  recommendation: z.string(),
+  owner_role: z.string(), // "Sentinel", "Praetor", "Aegis", etc.
+  time_horizon: z.enum(["now", "near_term", "later"]),
+});
+
+export const ControlItemSchema = z.object({
+  id: z.string(), // "CTRL-001"
+  category: z.enum(["Policy", "Product", "Infra", "Process", "Legal"]),
+  description: z.string(),
+  owner_role: z.string(),
+  required: z.boolean().optional(),
+});
+
+export const ComplianceNoteSchema = z.object({
+  regime: z.string(), // "GDPR", "CCPA", "COPPA-ish", "Export Control"
+  status: z.enum(["ok", "watch", "risk"]),
+  note: z.string(),
+});
+
+export const RiskCompliancePackSchema = z.object({
+  summary: z.object({
+    headline: z.string(),
+    overall_risk: RiskSeveritySchema,
+    key_concerns: z.array(z.string()),
+    key_mitigations: z.array(z.string()),
+  }),
+  risks: z.array(RiskItemSchema),
+  controls: z.array(ControlItemSchema),
+  compliance_notes: z.array(ComplianceNoteSchema),
+  open_questions: z.array(z.string()),
+});
+
+export type RiskCompliancePack = z.infer<typeof RiskCompliancePackSchema>;
+
+2️⃣ DB helper – save Risk & Compliance Pack to a Work Item
+
+If you already have server/db/workItemPacks.ts, add this function.
+If not, you can create the file and collect all pack savers there.
+
+File: server/db/workItemPacks.ts (add this)
+
+// server/db/workItemPacks.ts
+import type { RiskCompliancePack } from "../ai/schemas/riskCompliancePack";
+import { db } from "./client"; // your DB client
+import { work_items } from "./schema"; // adjust to your schema
+
+// ...existing saveLifestylePackArtifacts, etc.
+
+export async function saveRiskCompliancePack(
+  workItemId: string,
+  pack: RiskCompliancePack
+): Promise<void> {
+  await db
+    .update(work_items)
+    .set({
+      risk_compliance_pack: pack,
+      risk_compliance_pack_updated_at: new Date(),
+    })
+    .where(work_items.id.eq(workItemId));
+}
+
+
+If risk_compliance_pack and risk_compliance_pack_updated_at columns don’t exist yet, you can:
+
+Add them via migration (JSONB + timestamptz), or
+
+Temporarily just console.log(pack) here during early testing.
+
+3️⃣ Action handler – using createWorkItemActionHandler
+
+This mirrors what you did for other packs.
+
+File: server/routes/workItemActions/riskCompliancePack.ts
+
+// server/routes/workItemActions/riskCompliancePack.ts
+import { createWorkItemActionHandler } from "../../ai/actions/createWorkItemActionHandler";
+import {
+  RiskCompliancePackSchema,
+  type RiskCompliancePack,
+} from "../../ai/schemas/riskCompliancePack";
+import { saveRiskCompliancePack } from "../../db/workItemPacks";
+
+export const postGenerateRiskCompliancePack =
+  createWorkItemActionHandler<RiskCompliancePack>({
+    skillName: "generateRiskCompliancePack",
+    outputSchema: RiskCompliancePackSchema,
+    persist: saveRiskCompliancePack,
+  });
+
+4️⃣ Route wiring
+
+Hook the new handler into your main routes.
+
+File: server/routes.ts
+
+import { postGenerateRiskCompliancePack } from "./routes/workItemActions/riskCompliancePack";
+
+export function registerRoutes(app: import("express").Express) {
+  // ...existing routes
+
+  app.post(
+    "/api/work-items/:id/actions/generate-risk-compliance-pack",
+    postGenerateRiskCompliancePack
+  );
+}
+
+
+If you want it in the Actions dropdown, just add a new entry in your WorkItemActionsPanel config later, e.g.:
+
+// in WorkItemActionsPanel.tsx ACTION_CONFIG:
+riskCompliance: {
+  label: "Generate Risk & Compliance Pack",
+  icon: "🛡️",
+  endpointSuffix: "generate-risk-compliance-pack",
+},
+
+
+(We can wire that once the backend is up.)
+
+5️⃣ Skill JSON config – generateRiskCompliancePack.json
+
+Place this in your skills directory:
+
+File: server/ai/skills/generateRiskCompliancePack.json
+
+{
+  "name": "generateRiskCompliancePack",
+  "description": "Generate a structured Risk & Compliance Pack (risks, controls, compliance notes, and open questions) for a Work Item using the full Security & Compliance Pod.",
+  "system_prompt": "You are the Security & Compliance Pod inside the Dream Team Hub. This pod includes ALL of the following roles working together:\n\n- Sentinel – Cybersecurity & Risk Lead\n- Praetor – Privacy Counsel (EU/US)\n- Aegis – IP & Patent Counsel\n- Atlas – Global Patentability & FTO Partner\n- Coda – Open-Source & License Compliance Lead\n- IP Portfolio Director / Program Manager\n- Invention Intake Lead\n- Patent Drafters (Software/AI, Systems/Infra, UX/GUI, Hardware/EE)\n- FTO & Risk Analyst\n- PCT / Foreign Filing Manager\n- Trademark Counsel\n- TM Search / Clearance Specialist\n- Open-Source & License Compliance Officer\n- IDS Manager\n- Brand Protection & Enforcement Lead\n- Design Patent Specialist\n- Copyright / Content Counsel\n- Licensing & Partnerships Manager\n- Trade Secret Program Lead\n- Data / Privacy Counsel\n- Specimen & Use-in-Commerce Manager\n- Evidence Curator (Archivist)\n- Security Reviewer (from Sentinel's lane)\n- Product Narrator (River/Storybloom for public-facing material)\n- International Counsel (EU/JP)\n\nYou are reviewing a single Work Item that may involve software products, agentic AI behavior, data collection, logging, IP filings, or brand-facing experiences. Your job is to produce an execution-ready Risk & Compliance Pack, not to restate the brief.\n\nGiven the work item title, body, and notes, you must:\n1) Identify key risks across areas: Security, Privacy, IP, Compliance, Brand/Safety, Ops, and Legal/Contract.\n2) For each risk, assign severity (low/medium/high/critical), likelihood (low/medium/high), and propose a concrete mitigation with an owner_role and time_horizon (now, near_term, later).\n3) Propose a small set of controls grouped as Policy, Product, Infra, Process, or Legal, with owner roles and an indication of which are required.\n4) Flag relevant compliance regimes (for example GDPR, CCPA, COPPA-ish, export control, content standards) with a short status: ok, watch, or risk, and a brief note.\n5) List open_questions where Dustin, counsel, or other stakeholders need to clarify intent or constraints before shipping.\n\nSummarize the overall risk level and key themes in a short summary block, then list detailed risks, controls, compliance_notes, and open_questions.\n\nRespond with JSON ONLY that matches the RiskCompliancePackSchema:\n{\n  \"summary\": { \"headline\", \"overall_risk\", \"key_concerns\", \"key_mitigations\" },\n  \"risks\": [ ... ],\n  \"controls\": [ ... ],\n  \"compliance_notes\": [ ... ],\n  \"open_questions\": [ ... ]\n}\n\nDo not include any commentary outside of the JSON.",
+  "input_schema": {
+    "type": "object",
+    "properties": {
+      "work_item_id": { "type": "string" },
+      "work_item_title": { "type": "string" },
+      "work_item_body": { "type": "string" },
+      "work_item_notes": { "type": "string" }
+    },
+    "required": ["work_item_id", "work_item_title", "work_item_body"]
+  }
+}
+
+
+This uses the full Security & Compliance Pod list you requested, baked right into the system prompt.

@@ -1,0 +1,252 @@
+1) Add Risk & Compliance to the Actions Panel
+
+Assuming you’re using the WorkItemActionsPanel I gave earlier.
+
+1A. Extend ActionKey and ACTION_CONFIG
+
+File: client/src/components/workItems/WorkItemActionsPanel.tsx
+
+Find:
+
+type ActionKey =
+  | "lifestyle"
+  | "patentClaims"
+  | "launchPlan";
+
+
+Update to include riskCompliance:
+
+type ActionKey =
+  | "lifestyle"
+  | "patentClaims"
+  | "launchPlan"
+  | "riskCompliance";
+
+
+Then in ACTION_CONFIG add a new entry:
+
+const ACTION_CONFIG: Record<
+  ActionKey,
+  {
+    label: string;
+    icon: string;
+    endpointSuffix: string;
+  }
+> = {
+  lifestyle: {
+    label: "Generate Lifestyle Pack",
+    icon: "✨",
+    endpointSuffix: "generate-lifestyle-pack",
+  },
+  patentClaims: {
+    label: "Generate Patent Claims Pack",
+    icon: "🧩",
+    endpointSuffix: "generate-patent-claims-pack",
+  },
+  launchPlan: {
+    label: "Generate Launch Plan Pack",
+    icon: "📣",
+    endpointSuffix: "generate-launch-plan-pack",
+  },
+  riskCompliance: {
+    label: "Generate Risk & Compliance Pack",
+    icon: "🛡️",
+    endpointSuffix: "generate-risk-compliance-pack",
+  },
+};
+
+
+No other logic changes are needed; the panel loops over Object.keys(ACTION_CONFIG).
+
+2) Add a “Risk & Compliance” tab to WorkItemPacksTabs
+
+We’ll extend the tabs to handle a risk_compliance_pack field.
+
+2A. Extend props & TabKey
+
+File: client/src/components/workItems/WorkItemPacksTabs.tsx
+
+Update the workItem type:
+
+type WorkItemPacksTabsProps = {
+  workItem: {
+    id: string;
+    lifestyle_pack?: any;
+    patent_claims_pack?: any;
+    launch_plan_pack?: any;
+    website_audit_pack?: any;
+    risk_compliance_pack?: any; // 👈 add this
+  };
+};
+
+
+Extend TabKey and config:
+
+type TabKey = "lifestyle" | "patent" | "launch" | "audit" | "risk";
+
+const TAB_CONFIG: { key: TabKey; label: string }[] = [
+  { key: "lifestyle", label: "Lifestyle Pack" },
+  { key: "patent", label: "Patent Claims Pack" },
+  { key: "launch", label: "Launch Plan Pack" },
+  { key: "audit", label: "Website Audit Pack" },
+  { key: "risk", label: "Risk & Compliance Pack" },
+];
+
+
+Update availableTabs filter:
+
+const availableTabs = TAB_CONFIG.filter((t) => {
+  if (t.key === "lifestyle") return !!workItem.lifestyle_pack;
+  if (t.key === "patent") return !!workItem.patent_claims_pack;
+  if (t.key === "launch") return !!workItem.launch_plan_pack;
+  if (t.key === "audit") return !!workItem.website_audit_pack;
+  if (t.key === "risk") return !!workItem.risk_compliance_pack;
+  return false;
+});
+
+2B. Add the Risk & Compliance panel renderer
+
+Inside renderActivePanel() add this branch:
+
+if (active === "risk" && workItem.risk_compliance_pack) {
+  const p = workItem.risk_compliance_pack;
+  return (
+    <div className="space-y-4 text-xs text-gray-300">
+      <div>
+        <h3 className="text-xs font-semibold uppercase tracking-wide text-gray-400">
+          Summary
+        </h3>
+        <p className="mt-1 text-sm text-gray-200">{p.summary?.headline}</p>
+        <p className="mt-1 text-xs text-gray-400">
+          Overall risk:{" "}
+          <span className="font-semibold uppercase">
+            {p.summary?.overall_risk}
+          </span>
+        </p>
+        <div className="mt-2 grid gap-4 md:grid-cols-2">
+          <div>
+            <h4 className="text-[11px] font-semibold uppercase tracking-wide text-rose-400">
+              Key concerns
+            </h4>
+            <ul className="mt-1 list-disc space-y-1 pl-4">
+              {p.summary?.key_concerns?.map((c: string, idx: number) => (
+                <li key={idx}>{c}</li>
+              ))}
+            </ul>
+          </div>
+          <div>
+            <h4 className="text-[11px] font-semibold uppercase tracking-wide text-emerald-400">
+              Key mitigations
+            </h4>
+            <ul className="mt-1 list-disc space-y-1 pl-4">
+              {p.summary?.key_mitigations?.map((m: string, idx: number) => (
+                <li key={idx}>{m}</li>
+              ))}
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <h4 className="text-[11px] font-semibold uppercase tracking-wide text-gray-400">
+          Risks
+        </h4>
+        <div className="mt-1 max-h-64 overflow-y-auto rounded-md border border-gray-800 bg-[#090a0f]">
+          {p.risks?.map((r: any) => (
+            <div
+              key={r.id}
+              className="border-b border-gray-800 p-2 last:border-b-0"
+            >
+              <div className="flex items-center justify-between text-[11px] text-gray-400">
+                <span>
+                  {r.id} · {r.area}
+                </span>
+                <span>
+                  {String(r.severity).toUpperCase()} ·{" "}
+                  {String(r.likelihood).toUpperCase()}
+                </span>
+              </div>
+              <p className="mt-1 text-xs text-gray-200">{r.description}</p>
+              <p className="mt-1 text-[11px] text-gray-400">
+                Impact: {r.impact}
+              </p>
+              <p className="mt-1 text-[11px] text-emerald-400">
+                Mitigation ({r.owner_role}, {r.time_horizon}):{" "}
+                {r.recommendation}
+              </p>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-2">
+        <div>
+          <h4 className="text-[11px] font-semibold uppercase tracking-wide text-gray-400">
+            Controls
+          </h4>
+          <div className="mt-1 max-h-48 overflow-y-auto rounded-md border border-gray-800 bg-[#090a0f]">
+            {p.controls?.map((c: any) => (
+              <div
+                key={c.id}
+                className="border-b border-gray-800 p-2 last:border-b-0"
+              >
+                <div className="flex items-center justify-between text-[11px] text-gray-400">
+                  <span>
+                    {c.id} · {c.category}
+                  </span>
+                  <span>{c.owner_role}</span>
+                </div>
+                <p className="mt-1 text-xs text-gray-200">
+                  {c.description}
+                </p>
+                {c.required && (
+                  <p className="mt-1 text-[11px] text-emerald-400">
+                    Required control
+                  </p>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div>
+          <h4 className="text-[11px] font-semibold uppercase tracking-wide text-gray-400">
+            Compliance notes
+          </h4>
+          <div className="mt-1 max-h-48 overflow-y-auto rounded-md border border-gray-800 bg-[#090a0f]">
+            {p.compliance_notes?.map((cn: any, idx: number) => (
+              <div
+                key={idx}
+                className="border-b border-gray-800 p-2 last:border-b-0"
+              >
+                <div className="flex items-center justify-between text-[11px] text-gray-400">
+                  <span>{cn.regime}</span>
+                  <span>{String(cn.status).toUpperCase()}</span>
+                </div>
+                <p className="mt-1 text-xs text-gray-200">{cn.note}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {p.open_questions && p.open_questions.length > 0 && (
+        <div>
+          <h4 className="text-[11px] font-semibold uppercase tracking-wide text-gray-400">
+            Open questions
+          </h4>
+          <ul className="mt-1 list-disc space-y-1 pl-4">
+            {p.open_questions.map((q: string, idx: number) => (
+              <li key={idx} className="text-xs text-gray-300">
+                {q}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </div>
+  );
+}
+
+
+Now the Risk & Compliance Pack is fully visible from the WI detail UI.

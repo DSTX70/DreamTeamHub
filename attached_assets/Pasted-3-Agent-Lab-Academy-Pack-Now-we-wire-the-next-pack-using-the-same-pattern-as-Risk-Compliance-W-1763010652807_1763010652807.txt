@@ -1,0 +1,156 @@
+3) Agent Lab Academy Pack
+
+Now we wire the next pack using the same pattern as Risk & Compliance.
+
+We’ll add:
+
+Zod schema + type: AgentLabAcademyPack
+
+DB helper
+
+Action handler
+
+Route wiring
+
+Skill JSON config
+
+3.1 Zod schema – AgentLabAcademyPack
+
+File: server/ai/schemas/agentLabAcademyPack.ts
+
+// server/ai/schemas/agentLabAcademyPack.ts
+import { z } from "zod";
+
+export const AcademyModuleSchema = z.object({
+  id: z.string(), // "MOD-01"
+  title: z.string(),
+  duration_minutes: z.number().int(),
+  format: z.enum(["video", "workshop", "lab", "reading", "office_hours"]),
+  description: z.string(),
+  outcomes: z.array(z.string()),
+  required_assets: z.array(z.string()),
+});
+
+export const AcademyTrackSchema = z.object({
+  id: z.string(),           // "TRACK-FOUNDATIONS"
+  name: z.string(),         // "Agent Foundations"
+  audience: z.string(),     // "Operators", "Developers", etc.
+  objectives: z.array(z.string()),
+  prerequisites: z.array(z.string()),
+  modules: z.array(AcademyModuleSchema),
+});
+
+export const CertificationPathSchema = z.object({
+  id: z.string(),           // "CERT-AGENT-OPERATOR-L1"
+  name: z.string(),
+  level: z.enum(["L1", "L2", "L3"]),
+  target_role: z.string(),  // "Agent Operator", etc.
+  required_tracks: z.array(z.string()), // track ids
+  exam_format: z.string(),  // "practical lab", "MCQ + lab"
+  criteria: z.array(z.string()),
+});
+
+export const AcademyLogisticsSchema = z.object({
+  cohort_length_weeks: z.number().int(),
+  cadence: z.string(),      // "1x weekly live, async labs"
+  max_seats: z.number().int(),
+  delivery_model: z.string(), // "live cohort", "self-paced", etc.
+});
+
+export const AgentLabAcademyPackSchema = z.object({
+  summary: z.object({
+    headline: z.string(),          // e.g. "Agent Academy MVP: 6-week Operator Track"
+    primary_audience: z.string(),
+    key_outcomes: z.array(z.string()),
+  }),
+  tracks: z.array(AcademyTrackSchema),
+  certifications: z.array(CertificationPathSchema),
+  logistics: AcademyLogisticsSchema,
+  open_questions: z.array(z.string()),
+});
+
+export type AgentLabAcademyPack = z.infer<typeof AgentLabAcademyPackSchema>;
+
+3.2 DB helper – save Agent Lab Academy Pack
+
+File: server/db/workItemPacks.ts
+
+Add:
+
+import type { AgentLabAcademyPack } from "../ai/schemas/agentLabAcademyPack";
+
+// ...
+
+export async function saveAgentLabAcademyPack(
+  workItemId: string,
+  pack: AgentLabAcademyPack
+): Promise<void> {
+  await db
+    .update(work_items)
+    .set({
+      agent_lab_academy_pack: pack,
+      agent_lab_academy_pack_updated_at: new Date(),
+    })
+    .where(work_items.id.eq(workItemId));
+}
+
+
+(Again, if the columns don’t exist yet, either migrate or temporarily log.)
+
+3.3 Action handler – postGenerateAgentLabAcademyPack
+
+File: server/routes/workItemActions/agentLabAcademyPack.ts
+
+// server/routes/workItemActions/agentLabAcademyPack.ts
+import { createWorkItemActionHandler } from "../../ai/actions/createWorkItemActionHandler";
+import {
+  AgentLabAcademyPackSchema,
+  type AgentLabAcademyPack,
+} from "../../ai/schemas/agentLabAcademyPack";
+import { saveAgentLabAcademyPack } from "../../db/workItemPacks";
+
+export const postGenerateAgentLabAcademyPack =
+  createWorkItemActionHandler<AgentLabAcademyPack>({
+    skillName: "generateAgentLabAcademyPack",
+    outputSchema: AgentLabAcademyPackSchema,
+    persist: saveAgentLabAcademyPack,
+  });
+
+3.4 Route wiring
+
+File: server/routes.ts
+
+Add import:
+
+import { postGenerateAgentLabAcademyPack } from "./routes/workItemActions/agentLabAcademyPack";
+
+
+Wire route:
+
+app.post(
+  "/api/work-items/:id/actions/generate-agent-lab-academy-pack",
+  postGenerateAgentLabAcademyPack
+);
+
+
+If you want it in the Actions Panel later, we’ll add an entry with endpointSuffix: "generate-agent-lab-academy-pack"—we can do that once Risk & Compliance is stable.
+
+3.5 Skill JSON config – generateAgentLabAcademyPack.json
+
+File: server/ai/skills/generateAgentLabAcademyPack.json
+
+{
+  "name": "generateAgentLabAcademyPack",
+  "description": "Generate a structured Agent Lab Academy Pack (tracks, modules, certifications, logistics, questions) using the full Agent Lab Academy Pod.",
+  "system_prompt": "You are the Agent Lab Academy Pod inside the Dream Team Hub. This pod includes ALL of the following roles working together:\n\n- OS – Orchestration / overall architecture\n- Foundry – Startup Mentor & Growth Strategist\n- Conductor – Program Manager, Pilot Factory\n- Bridge – SDK Lead\n- Verifier – QA Automation (Policy & Replay)\n- Pulse – Performance Engineer\n- Archivist – Evidence Curator\n- Aegis – IP & Patent Counsel\n- Atlas – Global Patentability & FTO Partner\n- Sentinel – Cybersecurity & Risk Lead\n- Praetor – Privacy Counsel (EU/US)\n- Coda – Open-Source & License Compliance Lead\n- Beacon – Analyst Relations & PR\n- Prism – Marketing\n- Echo – Social & Cohort Comms\n- Nova – Creative & Curriculum Design\n- Scout – Research & Competitive Intel\n- Muse – Creative Framing & Story\n- River / Storybloom – Narrative & Learning Materials\n- Navi – Ops & SLAs\n- Ledger – Monetization & Pricing for programs\n\nYou are designing the structure of Agent Lab Academy based on a Work Item. The Work Item provides a title, body, and notes about the goals, audience, constraints, and context of the academy or track.\n\nYour job is to produce an execution-ready Agent Lab Academy Pack, not to restate the brief. The Pack should define:\n1) Tracks: structured sets of modules for specific audiences (such as operators, developers, founders), including objectives and prerequisites.\n2) Modules: individual learning units with titles, duration, formats (video, workshop, lab, reading, office_hours), descriptions, learning outcomes, and required assets.\n3) Certification paths: clear, named certifications with levels (L1/L2/L3), target roles, required tracks, exam formats, and criteria.\n4) Logistics: cohort length, cadence, max seats, and delivery model (live cohort, self-paced, hybrid) matching the goals and constraints implied by the Work Item.\n5) Open questions where Dustin or the team needs to confirm content, scope, or delivery details before launching.\n\nRespond with JSON ONLY that matches the AgentLabAcademyPackSchema:\n{\n  \"summary\": { \"headline\", \"primary_audience\", \"key_outcomes\" },\n  \"tracks\": [ ... ],\n  \"certifications\": [ ... ],\n  \"logistics\": { ... },\n  \"open_questions\": [ ... ]\n}\n\nDo not include any commentary outside the JSON.",
+  "input_schema": {
+    "type": "object",
+    "properties": {
+      "work_item_id": { "type": "string" },
+      "work_item_title": { "type": "string" },
+      "work_item_body": { "type": "string" },
+      "work_item_notes": { "type": "string" }
+    },
+    "required": ["work_item_id", "work_item_title", "work_item_body"]
+  }
+}

@@ -1,0 +1,592 @@
+let’s keep everything on-rails and consistent.
+
+I’ll do this in two sections:
+
+Wire Agent Lab Academy into:
+
+Actions Panel
+
+WorkItemPacksTabs
+
+Add Agent Governance Pack end-to-end:
+
+Zod schema + type
+
+DB helper
+
+Action handler
+
+Route wiring
+
+Skill JSON
+
+Actions Panel entry
+
+WorkItemPacksTabs tab
+
+You can paste these directly into Replit and tweak imports/paths as needed.
+
+1) Agent Lab Academy → Actions Panel + Packs Tabs
+1.1 Add to Actions Panel
+
+File: client/src/components/workItems/WorkItemActionsPanel.tsx
+
+Extend ActionKey:
+
+type ActionKey =
+  | "lifestyle"
+  | "patentClaims"
+  | "launchPlan"
+  | "riskCompliance"
+  | "agentAcademy"
+  | "agentGovernance"; // we'll use this later
+
+
+Extend ACTION_CONFIG:
+
+const ACTION_CONFIG: Record<
+  ActionKey,
+  {
+    label: string;
+    icon: string;
+    endpointSuffix: string;
+  }
+> = {
+  lifestyle: {
+    label: "Generate Lifestyle Pack",
+    icon: "✨",
+    endpointSuffix: "generate-lifestyle-pack",
+  },
+  patentClaims: {
+    label: "Generate Patent Claims Pack",
+    icon: "🧩",
+    endpointSuffix: "generate-patent-claims-pack",
+  },
+  launchPlan: {
+    label: "Generate Launch Plan Pack",
+    icon: "📣",
+    endpointSuffix: "generate-launch-plan-pack",
+  },
+  riskCompliance: {
+    label: "Generate Risk & Compliance Pack",
+    icon: "🛡️",
+    endpointSuffix: "generate-risk-compliance-pack",
+  },
+  agentAcademy: {
+    label: "Generate Agent Lab Academy Pack",
+    icon: "🎓",
+    endpointSuffix: "generate-agent-lab-academy-pack",
+  },
+  agentGovernance: {
+    label: "Generate Agent Governance Pack",
+    icon: "⚖️",
+    endpointSuffix: "generate-agent-governance-pack",
+  },
+};
+
+
+The agentGovernance entry will start working once we wire that pack below.
+
+The rest of the panel code doesn’t need changes; the loop over ACTION_CONFIG will now show the new buttons automatically.
+
+1.2 Add Agent Lab Academy tab in WorkItemPacksTabs
+
+File: client/src/components/workItems/WorkItemPacksTabs.tsx
+
+Extend the workItem type:
+
+type WorkItemPacksTabsProps = {
+  workItem: {
+    id: string;
+    lifestyle_pack?: any;
+    patent_claims_pack?: any;
+    launch_plan_pack?: any;
+    website_audit_pack?: any;
+    risk_compliance_pack?: any;
+    agent_lab_academy_pack?: any;    // 👈 new
+    agent_governance_pack?: any;     // 👈 for later
+  };
+};
+
+
+Extend TabKey and TAB_CONFIG:
+
+type TabKey =
+  | "lifestyle"
+  | "patent"
+  | "launch"
+  | "audit"
+  | "risk"
+  | "academy"
+  | "governance";
+
+const TAB_CONFIG: { key: TabKey; label: string }[] = [
+  { key: "lifestyle", label: "Lifestyle Pack" },
+  { key: "patent", label: "Patent Claims Pack" },
+  { key: "launch", label: "Launch Plan Pack" },
+  { key: "audit", label: "Website Audit Pack" },
+  { key: "risk", label: "Risk & Compliance Pack" },
+  { key: "academy", label: "Agent Lab Academy" },
+  { key: "governance", label: "Agent Governance" },
+];
+
+
+Update availableTabs filter:
+
+const availableTabs = TAB_CONFIG.filter((t) => {
+  if (t.key === "lifestyle") return !!workItem.lifestyle_pack;
+  if (t.key === "patent") return !!workItem.patent_claims_pack;
+  if (t.key === "launch") return !!workItem.launch_plan_pack;
+  if (t.key === "audit") return !!workItem.website_audit_pack;
+  if (t.key === "risk") return !!workItem.risk_compliance_pack;
+  if (t.key === "academy") return !!workItem.agent_lab_academy_pack;
+  if (t.key === "governance") return !!workItem.agent_governance_pack;
+  return false;
+});
+
+
+Add a basic Academy tab in renderActivePanel():
+
+if (active === "academy" && workItem.agent_lab_academy_pack) {
+  const p = workItem.agent_lab_academy_pack;
+  return (
+    <div className="space-y-4 text-xs text-gray-300">
+      <div>
+        <h3 className="text-xs font-semibold uppercase tracking-wide text-gray-400">
+          Summary
+        </h3>
+        <p className="mt-1 text-sm text-gray-200">{p.summary?.headline}</p>
+        <p className="mt-1 text-xs text-gray-400">
+          Primary audience:{" "}
+          <span className="font-semibold">{p.summary?.primary_audience}</span>
+        </p>
+        <ul className="mt-2 list-disc space-y-1 pl-4">
+          {p.summary?.key_outcomes?.map((o: string, idx: number) => (
+            <li key={idx}>{o}</li>
+          ))}
+        </ul>
+      </div>
+
+      <div>
+        <h4 className="text-[11px] font-semibold uppercase tracking-wide text-gray-400">
+          Tracks
+        </h4>
+        <div className="mt-1 grid gap-3 md:grid-cols-2">
+          {p.tracks?.map((t: any) => (
+            <div
+              key={t.id}
+              className="rounded-md border border-gray-800 bg-[#090a0f] p-2"
+            >
+              <div className="flex items-center justify-between text-[11px] text-gray-400">
+                <span className="font-semibold text-gray-200">
+                  {t.name}
+                </span>
+                <span>{t.audience}</span>
+              </div>
+              <p className="mt-1 text-xs text-gray-400">
+                Objectives: {t.objectives?.join("; ")}
+              </p>
+              {t.prerequisites && t.prerequisites.length > 0 && (
+                <p className="mt-1 text-[11px] text-gray-500">
+                  Prereqs: {t.prerequisites.join(", ")}
+                </p>
+              )}
+              <p className="mt-1 text-[11px] text-gray-500">
+                Modules: {t.modules?.length ?? 0}
+              </p>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-2">
+        <div>
+          <h4 className="text-[11px] font-semibold uppercase tracking-wide text-gray-400">
+            Certifications
+          </h4>
+          <div className="mt-1 space-y-2">
+            {p.certifications?.map((c: any) => (
+              <div
+                key={c.id}
+                className="rounded-md border border-gray-800 bg-[#090a0f] p-2"
+              >
+                <div className="text-xs font-semibold text-gray-200">
+                  {c.name} · {c.level}
+                </div>
+                <p className="mt-1 text-[11px] text-gray-500">
+                  Target role: {c.target_role}
+                </p>
+                <p className="mt-1 text-[11px] text-gray-500">
+                  Exam: {c.exam_format}
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div>
+          <h4 className="text-[11px] font-semibold uppercase tracking-wide text-gray-400">
+            Logistics
+          </h4>
+          <div className="mt-1 rounded-md border border-gray-800 bg-[#090a0f] p-2 text-[11px] text-gray-300">
+            <p>
+              Length: {p.logistics?.cohort_length_weeks} weeks · Seats:{" "}
+              {p.logistics?.max_seats}
+            </p>
+            <p className="mt-1">Cadence: {p.logistics?.cadence}</p>
+            <p className="mt-1">
+              Model: {p.logistics?.delivery_model}
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {p.open_questions && p.open_questions.length > 0 && (
+        <div>
+          <h4 className="text-[11px] font-semibold uppercase tracking-wide text-gray-400">
+            Open questions
+          </h4>
+          <ul className="mt-1 list-disc space-y-1 pl-4">
+            {p.open_questions.map((q: string, idx: number) => (
+              <li key={idx}>{q}</li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </div>
+  );
+}
+
+
+Academy is now fully wired: action button → pack → tab.
+
+2) Agent Governance Pack – full pattern + UI
+
+Now we do Agent Governance with the same structure.
+
+2.1 Zod schema – AgentGovernancePack
+
+File: server/ai/schemas/agentGovernancePack.ts
+
+// server/ai/schemas/agentGovernancePack.ts
+import { z } from "zod";
+
+export const AgentScopeSchema = z.enum([
+  "read_only",
+  "advisory",
+  "operator_assist",
+  "autonomous_ops",
+  "write_with_approval",
+]);
+
+export const GovernancePrincipleSchema = z.object({
+  id: z.string(),       // "PRINCIPLE-HITL"
+  title: z.string(),    // "Human-in-the-loop"
+  description: z.string(),
+});
+
+export const AgentTypePolicySchema = z.object({
+  agent_type: z.string(),             // "DTH Pod Agent", "Customer Agent", etc.
+  allowed_scope: z.array(AgentScopeSchema),
+  disallowed_actions: z.array(z.string()),
+  escalation_rules: z.array(z.string()), // when to escalate to a human
+});
+
+export const ApprovalFlowSchema = z.object({
+  id: z.string(),       // "APPR-SPEND"
+  name: z.string(),     // "Agent spend approval"
+  triggers: z.array(z.string()),
+  required_roles: z.array(z.string()),
+  artifacts: z.array(z.string()),     // e.g., "Risk & Compliance Pack", "Pilot report"
+});
+
+export const MonitoringRuleSchema = z.object({
+  id: z.string(),       // "MON-ERROR-RATE"
+  metric: z.string(),   // "error_rate", "latency", "spend"
+  threshold: z.string(),// "error_rate > 2%", "spend > $100/day"
+  action: z.string(),   // "alert", "throttle", "disable agent"
+  owner_role: z.string(),
+});
+
+export const AgentGovernancePackSchema = z.object({
+  summary: z.object({
+    headline: z.string(),
+    key_risks: z.array(z.string()),
+    key_safeguards: z.array(z.string()),
+  }),
+  principles: z.array(GovernancePrincipleSchema),
+  agent_policies: z.array(AgentTypePolicySchema),
+  approval_flows: z.array(ApprovalFlowSchema),
+  monitoring_rules: z.array(MonitoringRuleSchema),
+  open_questions: z.array(z.string()),
+});
+
+export type AgentGovernancePack = z.infer<typeof AgentGovernancePackSchema>;
+
+2.2 DB helper – save Agent Governance Pack
+
+File: server/db/workItemPacks.ts
+
+Add:
+
+import type { AgentGovernancePack } from "../ai/schemas/agentGovernancePack";
+
+// ...
+
+export async function saveAgentGovernancePack(
+  workItemId: string,
+  pack: AgentGovernancePack
+): Promise<void> {
+  await db
+    .update(work_items)
+    .set({
+      agent_governance_pack: pack,
+      agent_governance_pack_updated_at: new Date(),
+    })
+    .where(work_items.id.eq(workItemId));
+}
+
+
+(Again, add columns agent_governance_pack + _updated_at in your schema if you haven’t already.)
+
+2.3 Action handler – postGenerateAgentGovernancePack
+
+File: server/routes/workItemActions/agentGovernancePack.ts
+
+// server/routes/workItemActions/agentGovernancePack.ts
+import { createWorkItemActionHandler } from "../../ai/actions/createWorkItemActionHandler";
+import {
+  AgentGovernancePackSchema,
+  type AgentGovernancePack,
+} from "../../ai/schemas/agentGovernancePack";
+import { saveAgentGovernancePack } from "../../db/workItemPacks";
+
+export const postGenerateAgentGovernancePack =
+  createWorkItemActionHandler<AgentGovernancePack>({
+    skillName: "generateAgentGovernancePack",
+    outputSchema: AgentGovernancePackSchema,
+    persist: saveAgentGovernancePack,
+  });
+
+2.4 Route wiring
+
+File: server/routes.ts
+
+Add import:
+
+import { postGenerateAgentGovernancePack } from "./routes/workItemActions/agentGovernancePack";
+
+
+Add route:
+
+app.post(
+  "/api/work-items/:id/actions/generate-agent-governance-pack",
+  postGenerateAgentGovernancePack
+);
+
+
+The Actions Panel entry for agentGovernance we already added will now call this route.
+
+2.5 Skill JSON config – generateAgentGovernancePack.json
+
+File: server/ai/skills/generateAgentGovernancePack.json
+
+{
+  "name": "generateAgentGovernancePack",
+  "description": "Generate a structured Agent Governance Pack (principles, agent policies, approval flows, monitoring rules, questions) using the full Agent Governance Pod.",
+  "system_prompt": "You are the Agent Governance Pod inside the Dream Team Hub. This pod includes ALL of the following roles working together:\n\n- OS – Orchestration & system design\n- Sentinel – Cybersecurity & Risk Lead\n- Praetor – Privacy Counsel (EU/US)\n- Aegis – IP & Patent Counsel\n- Atlas – Global Patentability & FTO Partner\n- Coda – Open-Source & License Compliance Lead\n- Archivist – Evidence Curator\n- Conductor – Program Manager, Pilot Factory\n- Bridge – SDK Lead\n- Verifier – QA Automation (Policy & Replay)\n- Pulse – Performance Engineer\n- Beacon – Analyst Relations & PR\n- Navi – Ops & change management\n- Data / Privacy Counsel\n- Brand Protection & Enforcement Lead\n- Trade Secret Program Lead\n\nYou are defining governance for one or more agents described in a Work Item. The Work Item provides a title, body, and notes describing the agents, their environments (e.g. DTH, SymbiosoAI, client workspaces), capabilities, and risk context.\n\nYour job is to produce an execution-ready Agent Governance Pack, not to restate the brief. The Pack should define:\n1) Governance principles: a small set of named, durable principles such as human-in-the-loop, least privilege, reversible actions, etc.\n2) Agent policies per agent_type: allowed_scope (read_only, advisory, operator_assist, autonomous_ops, write_with_approval), disallowed_actions, and escalation_rules for when a human must be involved.\n3) Approval flows: key flows that require explicit review (e.g., new integrations, spend above a threshold, broad data access), including triggers, required_roles, and required artifacts (such as Risk & Compliance Pack, Pilot report).\n4) Monitoring rules: metrics, thresholds, and actions (alert, throttle, disable) for monitoring agent behavior, with owner roles.\n5) Open questions where Dustin or the team needs to clarify scope, stakeholders, or acceptable risk levels.\n\nRespond with JSON ONLY that matches the AgentGovernancePackSchema:\n{\n  \"summary\": { \"headline\", \"key_risks\", \"key_safeguards\" },\n  \"principles\": [ ... ],\n  \"agent_policies\": [ ... ],\n  \"approval_flows\": [ ... ],\n  \"monitoring_rules\": [ ... ],\n  \"open_questions\": [ ... ]\n}\n\nDo not include any commentary outside the JSON.",
+  "input_schema": {
+    "type": "object",
+    "properties": {
+      "work_item_id": { "type": "string" },
+      "work_item_title": { "type": "string" },
+      "work_item_body": { "type": "string" },
+      "work_item_notes": { "type": "string" }
+    },
+    "required": ["work_item_id", "work_item_title", "work_item_body"]
+  }
+}
+
+2.6 Governance tab in WorkItemPacksTabs
+
+We already added governance to TabKey and availableTabs. Now add the render branch:
+
+In renderActivePanel():
+
+if (active === "governance" && workItem.agent_governance_pack) {
+  const p = workItem.agent_governance_pack;
+  return (
+    <div className="space-y-4 text-xs text-gray-300">
+      <div>
+        <h3 className="text-xs font-semibold uppercase tracking-wide text-gray-400">
+          Summary
+        </h3>
+        <p className="mt-1 text-sm text-gray-200">{p.summary?.headline}</p>
+        <div className="mt-2 grid gap-4 md:grid-cols-2">
+          <div>
+            <h4 className="text-[11px] font-semibold uppercase tracking-wide text-rose-400">
+              Key risks
+            </h4>
+            <ul className="mt-1 list-disc space-y-1 pl-4">
+              {p.summary?.key_risks?.map((r: string, idx: number) => (
+                <li key={idx}>{r}</li>
+              ))}
+            </ul>
+          </div>
+          <div>
+            <h4 className="text-[11px] font-semibold uppercase tracking-wide text-emerald-400">
+              Key safeguards
+            </h4>
+            <ul className="mt-1 list-disc space-y-1 pl-4">
+              {p.summary?.key_safeguards?.map((s: string, idx: number) => (
+                <li key={idx}>{s}</li>
+              ))}
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <h4 className="text-[11px] font-semibold uppercase tracking-wide text-gray-400">
+          Principles
+        </h4>
+        <div className="mt-1 grid gap-3 md:grid-cols-2">
+          {p.principles?.map((pr: any) => (
+            <div
+              key={pr.id}
+              className="rounded-md border border-gray-800 bg-[#090a0f] p-2"
+            >
+              <div className="text-xs font-semibold text-gray-200">
+                {pr.title}
+              </div>
+              <p className="mt-1 text-xs text-gray-400">
+                {pr.description}
+              </p>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div>
+        <h4 className="text-[11px] font-semibold uppercase tracking-wide text-gray-400">
+          Agent policies
+        </h4>
+        <div className="mt-1 max-h-56 overflow-y-auto rounded-md border border-gray-800 bg-[#090a0f]">
+          {p.agent_policies?.map((ap: any, idx: number) => (
+            <div
+              key={idx}
+              className="border-b border-gray-800 p-2 last:border-b-0"
+            >
+              <div className="flex items-center justify-between text-[11px] text-gray-400">
+                <span>{ap.agent_type}</span>
+                <span>
+                  Scope: {ap.allowed_scope?.join(", ")}
+                </span>
+              </div>
+              <p className="mt-1 text-[11px] text-gray-500">
+                Disallowed: {ap.disallowed_actions?.join("; ")}
+              </p>
+              <p className="mt-1 text-[11px] text-gray-500">
+                Escalation: {ap.escalation_rules?.join("; ")}
+              </p>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-2">
+        <div>
+          <h4 className="text-[11px] font-semibold uppercase tracking-wide text-gray-400">
+            Approval flows
+          </h4>
+          <div className="mt-1 max-h-48 overflow-y-auto rounded-md border border-gray-800 bg-[#090a0f]">
+            {p.approval_flows?.map((af: any) => (
+              <div
+                key={af.id}
+                className="border-b border-gray-800 p-2 last:border-b-0"
+              >
+                <div className="text-xs font-semibold text-gray-200">
+                  {af.name}
+                </div>
+                <p className="mt-1 text-[11px] text-gray-400">
+                  Triggers: {af.triggers?.join("; ")}
+                </p>
+                <p className="mt-1 text-[11px] text-gray-400">
+                  Roles: {af.required_roles?.join(", ")}
+                </p>
+                <p className="mt-1 text-[11px] text-gray-500">
+                  Artifacts: {af.artifacts?.join(", ")}
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div>
+          <h4 className="text-[11px] font-semibold uppercase tracking-wide text-gray-400">
+            Monitoring rules
+          </h4>
+          <div className="mt-1 max-h-48 overflow-y-auto rounded-md border border-gray-800 bg-[#090a0f]">
+            {p.monitoring_rules?.map((mr: any) => (
+              <div
+                key={mr.id}
+                className="border-b border-gray-800 p-2 last:border-b-0"
+              >
+                <div className="flex items-center justify-between text-[11px] text-gray-400">
+                  <span>{mr.metric}</span>
+                  <span>{mr.owner_role}</span>
+                </div>
+                <p className="mt-1 text-[11px] text-gray-500">
+                  Threshold: {mr.threshold}
+                </p>
+                <p className="mt-1 text-[11px] text-emerald-400">
+                  Action: {mr.action}
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {p.open_questions && p.open_questions.length > 0 && (
+        <div>
+          <h4 className="text-[11px] font-semibold uppercase tracking-wide text-gray-400">
+            Open questions
+          </h4>
+          <ul className="mt-1 list-disc space-y-1 pl-4">
+            {p.open_questions.map((q: string, idx: number) => (
+              <li key={idx}>{q}</li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </div>
+  );
+}
+
+
+With this:
+
+Risk & Compliance Pack:
+
+Action button: ✅
+
+Backend skill + schema: ✅
+
+Tab in WI Packs: ✅
+
+Agent Lab Academy Pack:
+
+Action button: ✅
+
+Backend skill + schema: ✅
+
+Tab in WI Packs: ✅
+
+Agent Governance Pack:
+
+Action button: ✅
+
+Backend skill + schema: ✅
+
+Tab in WI Packs: ✅
