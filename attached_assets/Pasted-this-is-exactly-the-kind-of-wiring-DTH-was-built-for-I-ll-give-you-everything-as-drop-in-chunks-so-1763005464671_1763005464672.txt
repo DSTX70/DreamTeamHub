@@ -1,0 +1,404 @@
+this is exactly the kind of wiring DTH was built for. I’ll give you everything as drop-in chunks, so you can paste and then tweak imports/names to match your codebase.
+
+I’ll break it into four drops:
+
+Skill / Action spec for generateLifestyleBannerPack
+
+JSON output schema (as JSON + as Zod)
+
+Example JSON output (for WO-001)
+
+Backend handler for POST /api/work-items/:id/actions/generate-lifestyle-pack
+
+🔹 Drop 1 — Skill / Action spec
+
+This is a generic JSON config you can store wherever you keep skill definitions, e.g.
+server/ai/skills/generateLifestyleBannerPack.json.
+
+{
+  "name": "generateLifestyleBannerPack",
+  "description": "Generate lifestyle banner shot boards, export filenames, and CSV-ready alt/SEO rows for Fab Card Co lifestyle heroes based on a Work Item brief.",
+  "input_schema": {
+    "type": "object",
+    "properties": {
+      "work_item_id": { "type": "string" },
+      "work_item_title": { "type": "string" },
+      "work_item_body": { "type": "string" },
+      "work_item_notes": { "type": "string" }
+    },
+    "required": ["work_item_id", "work_item_title", "work_item_body"]
+  },
+  "output_schema": {
+    "type": "object",
+    "properties": {
+      "shot_boards": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "shot_id": { "type": "string" },
+            "collection": { "type": "string" },
+            "sku": { "type": "string" },
+            "card_title": { "type": "string" },
+            "scenario": { "type": "string" },
+            "camera": { "type": "string" },
+            "framing": { "type": "string" },
+            "lighting": { "type": "string" },
+            "casting": { "type": "string" },
+            "color_palette": { "type": "string" },
+            "notes": { "type": "string" }
+          },
+          "required": [
+            "shot_id",
+            "collection",
+            "sku",
+            "card_title",
+            "scenario",
+            "camera",
+            "framing",
+            "lighting",
+            "casting",
+            "color_palette"
+          ]
+        }
+      },
+      "export_plan": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "shot_id": { "type": "string" },
+            "sku": { "type": "string" },
+            "base_key": { "type": "string" },
+            "size_label": { "type": "string" },
+            "width": { "type": "integer" },
+            "height": { "type": "integer" },
+            "filename": { "type": "string" },
+            "format": { "type": "string" },
+            "is_primary": { "type": "boolean" }
+          },
+          "required": [
+            "shot_id",
+            "sku",
+            "base_key",
+            "size_label",
+            "width",
+            "height",
+            "filename",
+            "format"
+          ]
+        }
+      },
+      "alt_text_rows": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "filename": { "type": "string" },
+            "sku": { "type": "string" },
+            "alt_text": { "type": "string" },
+            "en_title": { "type": "string" }
+          },
+          "required": ["filename", "sku", "alt_text", "en_title"]
+        }
+      },
+      "seo_meta_rows": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "filename": { "type": "string" },
+            "sku": { "type": "string" },
+            "meta_title": { "type": "string" },
+            "meta_description": { "type": "string" },
+            "focus_keywords": {
+              "type": "array",
+              "items": { "type": "string" }
+            }
+          },
+          "required": [
+            "filename",
+            "sku",
+            "meta_title",
+            "meta_description"
+          ]
+        }
+      }
+    },
+    "required": [
+      "shot_boards",
+      "export_plan",
+      "alt_text_rows",
+      "seo_meta_rows"
+    ]
+  },
+  "system_prompt": "You are a blended creative/marketing pod for Fab Card Co: Nova (Art Direction), Storybloom (Alt Text & Narrative), and Prism (SEO). You are working INSIDE the Dream Team Hub (DTH) platform, responding to a Work Item that describes a Lifestyle Banner brief for the Fab Card Co collections (Out Loud, Midnight Express, ColorCue, etc.).\\n\\nYour job is to produce EXECUTION-READY artifacts, not a restatement of the brief. Given the work item title, body, and notes, you must output a single JSON object with four arrays: shot_boards, export_plan, alt_text_rows, seo_meta_rows.\\n\\nBrand + technical constraints:\\n- Brand: Fab Card Co with locked visual systems. Out Loud is bold, queer-inclusive, modern; Midnight Express is upscale black-on-black with foil; ColorCue uses color psychology. Maintain that identity in shot descriptions but keep language tool-agnostic.\\n- Lifestyle style: realistic editorial, inclusive casting, natural/soft light, subtle grain OK, no visible brand logos or watermarks, avoid over-HDR/CGI.\\n- Safe area: 64px around card edges in all crops (do not place critical text or fingers inside that margin).\\n- Filenames MUST exactly follow the pattern: /fcc/lifestyle/{SHOT}_{SKU}_{WIDTH}x{HEIGHT}.webp. Example: fcc/lifestyle/OL-1_Brunch_Banter_SKU-OL-PRIDE-001_1920x800.webp.\\n- Sizes per shot: Desktop 1920x800, 1440x800, 3840x1600 (2x), Tablet 960x600, Mobile 1080x1350, LQIP ~480w.\\n\\nOutput requirements:\\n1) shot_boards: one entry per shot (OL-1, OL-2, ME-1, ME-2, CC-1, CC-2). Each entry must describe the scene, camera, framing, lighting, casting, and color palette in enough detail that an artist or AI tool could generate it consistently. Keep notes concise but concrete.\\n\\n2) export_plan: for each shot, emit one row per required size. Use an explicit base_key (e.g., fcc/lifestyle/OL-1_Brunch_Banter_SKU-OL-PRIDE-001), and construct the filename exactly by appending _{WIDTH}x{HEIGHT}.webp. Mark is_primary=true for the 1920x800 row only.\\n\\n3) alt_text_rows: one alt-text row per filename for at least the 1920x800, 960x600, and 1080x1350 sizes. Alt text must be specific, human, and inclusive (describe the people and scene, not just 'a card'). en_title is a short, human-readable label for internal use.\\n\\n4) seo_meta_rows: for at least the 1920x800 rows, emit meta_title and meta_description that would be reasonable for page-level SEO if this hero were the primary image for that SKU. Include a short list of focus_keywords per row to guide Prism.\\n\\nDo NOT include commentary outside the JSON. Respond with JSON ONLY, matching the output_schema exactly."
+}
+
+
+You can load this into your runSkill engine and pull out system_prompt, input_schema, output_schema as needed.
+
+🔹 Drop 2 — Output schema in Zod (for runtime validation)
+
+If you’re using Zod in your TypeScript backend, drop this into something like
+server/ai/schemas/lifestylePack.ts:
+
+// server/ai/schemas/lifestylePack.ts
+import { z } from "zod";
+
+export const ShotBoardSchema = z.object({
+  shot_id: z.string(),          // e.g., "OL-1"
+  collection: z.string(),       // e.g., "Out Loud"
+  sku: z.string(),              // e.g., "SKU-OL-PRIDE-001"
+  card_title: z.string(),       // card name or front copy label
+  scenario: z.string(),         // narrative description of the scene
+  camera: z.string(),           // camera angle / lens feel
+  framing: z.string(),          // composition framing notes
+  lighting: z.string(),         // time of day + key/fill/rim etc.
+  casting: z.string(),          // who is in the shot, diversity notes
+  color_palette: z.string(),    // key color notes
+  notes: z.string().optional(), // any extra guidance
+});
+
+export const ExportPlanRowSchema = z.object({
+  shot_id: z.string(),
+  sku: z.string(),
+  base_key: z.string(),         // e.g., "fcc/lifestyle/OL-1_Brunch_Banter_SKU-OL-PRIDE-001"
+  size_label: z.string(),       // e.g., "desktop-1920x800"
+  width: z.number().int(),
+  height: z.number().int(),
+  filename: z.string(),         // full path + file, e.g. "fcc/lifestyle/OL-1_Brunch_Banter_SKU-OL-PRIDE-001_1920x800.webp"
+  format: z.string(),           // e.g., "webp"
+  is_primary: z.boolean().optional(),
+});
+
+export const AltTextRowSchema = z.object({
+  filename: z.string(),
+  sku: z.string(),
+  alt_text: z.string(),
+  en_title: z.string(),
+});
+
+export const SeoMetaRowSchema = z.object({
+  filename: z.string(),
+  sku: z.string(),
+  meta_title: z.string(),
+  meta_description: z.string(),
+  focus_keywords: z.array(z.string()).optional(),
+});
+
+export const LifestylePackSchema = z.object({
+  shot_boards: z.array(ShotBoardSchema),
+  export_plan: z.array(ExportPlanRowSchema),
+  alt_text_rows: z.array(AltTextRowSchema),
+  seo_meta_rows: z.array(SeoMetaRowSchema),
+});
+
+export type LifestylePack = z.infer<typeof LifestylePackSchema>;
+
+🔹 Drop 3 — Example JSON output (for WO-001)
+
+You can use this as:
+
+A fixture in tests
+
+A reference for what “good” looks like
+
+A manual seed if you want to pre-populate WI #7
+
+This is shortened to OL-1 only for brevity; the real skill should output all six shots.
+
+{
+  "shot_boards": [
+    {
+      "shot_id": "OL-1",
+      "collection": "Out Loud",
+      "sku": "SKU-OL-PRIDE-001",
+      "card_title": "Brunch Banter",
+      "scenario": "A bright outdoor café scene where two friends sit at a small round table, laughing and leaning in as one hands the other an Out Loud card across coffee cups and plates.",
+      "camera": "Three-quarter view at seated eye level, medium shot that includes both people, table surface, and the card clearly readable but not full-frame.",
+      "framing": "Card sits in the lower third near the center, held between the two friends. Background softly blurred café with a hint of other patrons and greenery.",
+      "lighting": "Daylight with soft overcast or light diffusion, gentle key from the front-left, subtle back rim from the sun catching hair and shoulders.",
+      "casting": "Two queer-presenting friends, visibly diverse (e.g., different skin tones, body types). Clothing is modern-casual, expressive but not loud logos.",
+      "color_palette": "Warm neutrals for the café, pops of Out Loud Pride Purple and Hot Coral in clothing or props, with soft teal accents in mugs or napkins.",
+      "notes": "Keep hands and card edges within a 64px safe area in all crops. Avoid any brand logos on mugs, phones, or clothing."
+    }
+  ],
+  "export_plan": [
+    {
+      "shot_id": "OL-1",
+      "sku": "SKU-OL-PRIDE-001",
+      "base_key": "fcc/lifestyle/OL-1_Brunch_Banter_SKU-OL-PRIDE-001",
+      "size_label": "desktop-1920x800",
+      "width": 1920,
+      "height": 800,
+      "filename": "fcc/lifestyle/OL-1_Brunch_Banter_SKU-OL-PRIDE-001_1920x800.webp",
+      "format": "webp",
+      "is_primary": true
+    },
+    {
+      "shot_id": "OL-1",
+      "sku": "SKU-OL-PRIDE-001",
+      "base_key": "fcc/lifestyle/OL-1_Brunch_Banter_SKU-OL-PRIDE-001",
+      "size_label": "desktop-1440x800",
+      "width": 1440,
+      "height": 800,
+      "filename": "fcc/lifestyle/OL-1_Brunch_Banter_SKU-OL-PRIDE-001_1440x800.webp",
+      "format": "webp"
+    },
+    {
+      "shot_id": "OL-1",
+      "sku": "SKU-OL-PRIDE-001",
+      "base_key": "fcc/lifestyle/OL-1_Brunch_Banter_SKU-OL-PRIDE-001",
+      "size_label": "desktop-3840x1600-2x",
+      "width": 3840,
+      "height": 1600,
+      "filename": "fcc/lifestyle/OL-1_Brunch_Banter_SKU-OL-PRIDE-001_3840x1600.webp",
+      "format": "webp"
+    },
+    {
+      "shot_id": "OL-1",
+      "sku": "SKU-OL-PRIDE-001",
+      "base_key": "fcc/lifestyle/OL-1_Brunch_Banter_SKU-OL-PRIDE-001",
+      "size_label": "tablet-960x600",
+      "width": 960,
+      "height": 600,
+      "filename": "fcc/lifestyle/OL-1_Brunch_Banter_SKU-OL-PRIDE-001_960x600.webp",
+      "format": "webp"
+    },
+    {
+      "shot_id": "OL-1",
+      "sku": "SKU-OL-PRIDE-001",
+      "base_key": "fcc/lifestyle/OL-1_Brunch_Banter_SKU-OL-PRIDE-001",
+      "size_label": "mobile-1080x1350",
+      "width": 1080,
+      "height": 1350,
+      "filename": "fcc/lifestyle/OL-1_Brunch_Banter_SKU-OL-PRIDE-001_1080x1350.webp",
+      "format": "webp"
+    },
+    {
+      "shot_id": "OL-1",
+      "sku": "SKU-OL-PRIDE-001",
+      "base_key": "fcc/lifestyle/OL-1_Brunch_Banter_SKU-OL-PRIDE-001",
+      "size_label": "lqip-480w",
+      "width": 480,
+      "height": 300,
+      "filename": "fcc/lifestyle/OL-1_Brunch_Banter_SKU-OL-PRIDE-001_480x300.webp",
+      "format": "webp"
+    }
+  ],
+  "alt_text_rows": [
+    {
+      "filename": "fcc/lifestyle/OL-1_Brunch_Banter_SKU-OL-PRIDE-001_1920x800.webp",
+      "sku": "SKU-OL-PRIDE-001",
+      "alt_text": "Two friends at an outdoor café table laugh as one hands the other a bright Out Loud greeting card between coffee cups and brunch plates.",
+      "en_title": "OL-1 Brunch Banter café handoff hero"
+    },
+    {
+      "filename": "fcc/lifestyle/OL-1_Brunch_Banter_SKU-OL-PRIDE-001_960x600.webp",
+      "sku": "SKU-OL-PRIDE-001",
+      "alt_text": "Close-up of two friends exchanging an Out Loud card across a small café table with coffee cups and brunch dishes.",
+      "en_title": "OL-1 Brunch Banter café medium crop"
+    },
+    {
+      "filename": "fcc/lifestyle/OL-1_Brunch_Banter_SKU-OL-PRIDE-001_1080x1350.webp",
+      "sku": "SKU-OL-PRIDE-001",
+      "alt_text": "Vertical crop of two queer-presenting friends sharing an Out Loud card at a sunny café table.",
+      "en_title": "OL-1 Brunch Banter mobile hero"
+    }
+  ],
+  "seo_meta_rows": [
+    {
+      "filename": "fcc/lifestyle/OL-1_Brunch_Banter_SKU-OL-PRIDE-001_1920x800.webp",
+      "sku": "SKU-OL-PRIDE-001",
+      "meta_title": "Out Loud Brunch Banter Card – Celebrate Queer Joy in Everyday Moments",
+      "meta_description": "Our Brunch Banter card from the Out Loud collection captures the warmth of queer friendship, laughter, and everyday affirmation. Perfect for birthdays, big news, or just because.",
+      "focus_keywords": [
+        "Out Loud greeting card",
+        "queer friendship card",
+        "brunch celebration card",
+        "affirming LGBTQ+ card"
+      ]
+    }
+  ]
+}
+
+🔹 Drop 4 — Backend handler for POST /api/work-items/:id/actions/generate-lifestyle-pack
+
+This assumes:
+
+You’re on Express in your DTH backend.
+
+You have helpers like getWorkItemById and saveLifestylePackArtifacts.
+
+You have a generic runSkill wrapper for your LLM.
+
+Drop this into something like
+server/routes/workItemActions/generateLifestylePack.ts:
+
+// server/routes/workItemActions/generateLifestylePack.ts
+import type { Request, Response } from "express";
+import { LifestylePackSchema } from "../../ai/schemas/lifestylePack";
+import type { LifestylePack } from "../../ai/schemas/lifestylePack";
+import { runSkill } from "../../ai/runSkill"; // adjust import to your engine
+import { getWorkItemById, saveLifestylePackArtifacts } from "../../db/workItems"; // adjust paths
+
+const SKILL_NAME = "generateLifestyleBannerPack";
+
+export async function postGenerateLifestylePack(req: Request, res: Response) {
+  const workItemId = req.params.id;
+
+  try {
+    const wi = await getWorkItemById(workItemId);
+    if (!wi) {
+      return res.status(404).json({ ok: false, error: "work_item_not_found" });
+    }
+
+    const skillInput = {
+      work_item_id: String(workItemId),
+      work_item_title: wi.title ?? "",
+      work_item_body: wi.body ?? "",
+      work_item_notes: wi.notes ?? "",
+    };
+
+    // Call your LLM engine with the skill spec
+    const rawResult = await runSkill({
+      skillName: SKILL_NAME,
+      input: skillInput,
+      // if your engine supports it, you can also pass outputSchema here
+    });
+
+    // Validate & coerce to our typed shape
+    const parsed: LifestylePack = LifestylePackSchema.parse(rawResult);
+
+    // Persist artifacts in whatever way makes sense for DTH
+    await saveLifestylePackArtifacts(workItemId, parsed);
+
+    return res.json({
+      ok: true,
+      work_item_id: workItemId,
+      lifestyle_pack: parsed,
+    });
+  } catch (err) {
+    console.error("Error in generateLifestylePack", err);
+    return res.status(500).json({
+      ok: false,
+      error: "internal_error",
+    });
+  }
+}
+
+
+And then in your main server/routes.ts, wire it into your router with a single drop like:
+
+// server/routes.ts
+import { postGenerateLifestylePack } from "./routes/workItemActions/generateLifestylePack";
+
+export function registerRoutes(app: import("express").Express) {
+  // ...your existing routes...
+
+  app.post(
+    "/api/work-items/:id/actions/generate-lifestyle-pack",
+    postGenerateLifestylePack
+  );
+}
