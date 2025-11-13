@@ -1,0 +1,89 @@
+Beautiful. That screenshot tells me everything I needed:
+
+* `home.lifestyle_ol1` has **Desktop / Tablet / Mobile all green ✓**
+* The validator is resolving concrete file paths (those gray boxes)
+
+That means for this shot:
+
+> **Step 1 (Validate) and Step 2 (images exist) are DONE for `home.lifestyle_ol1`. 🎉**
+
+Now we wire this into the homepage so `<PictureBanner />` actually pulls this SKU from the DB instead of any hard-coded fallback.
+
+We’ll do this in **tiny, copy-pasteable drops**.
+
+---
+
+### Step 3 – Create a helper to read `sku_mappings` for FCC
+
+**Goal of this step:** add a small server helper that returns a map like:
+
+```ts
+{
+  "home.lifestyle_ol1": {
+    shotKey: "home.lifestyle_ol1",
+    baseKey: "<your base key>",
+    label: "..."
+  },
+  ...
+}
+```
+
+#### 3A. Create the helper file
+
+In Replit:
+
+1. In your `app` folder, create the path (if it doesn’t exist yet):
+
+   `app/server/fcc/sku-map.server.ts`
+
+2. Put this content in that file:
+
+```ts
+// app/server/fcc/sku-map.server.ts
+import { db } from "~/server/db"; // adjust import to match your project
+import { sku_mappings } from "~/server/db/schema"; // adjust path/name if different
+
+export type FccSkuRow = {
+  id: string | number;
+  brand: string;
+  shot_key: string;
+  base_key: string | null;
+  label: string | null;
+};
+
+export type FccSkuMap = Record<string, FccSkuRow>;
+
+export async function getFccSkuMap(): Promise<FccSkuMap> {
+  // Pull only Fab Card Co rows
+  const rows = (await db
+    .select()
+    .from(sku_mappings)
+    .where(sku_mappings.brand.eq("fcc"))) as FccSkuRow[];
+
+  const map: FccSkuMap = {};
+
+  for (const row of rows) {
+    if (!row.shot_key) continue;
+    map[row.shot_key] = row;
+  }
+
+  return map;
+}
+```
+
+> If your DB imports look slightly different (e.g., `import { db } from "~/db";` or `schema.skuMappings`), just adjust the two import lines — everything else can stay the same.
+
+---
+
+👉 **Do this now:**
+
+* Create `app/server/fcc/sku-map.server.ts`
+* Paste in the helper above
+* Adjust the two import lines if your paths/names differ
+* Hit **Save**
+
+Then tell me:
+
+> “Helper file saved”
+
+and we’ll move to the next step: **hooking this into the FCC homepage loader and feeding `<PictureBanner baseKey={row.base_key} />`**.
