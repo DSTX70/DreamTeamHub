@@ -14,6 +14,7 @@ import Brainstorm from "@/pages/brainstorm";
 import Audits from "@/pages/audits";
 import Decisions from "@/pages/decisions";
 import Intake from "@/pages/intake";
+import WorkItemDetail from "@/pages/work-item-detail";
 import Pods from "@/pages/pods";
 import ChatPage from "@/pages/chat";
 import AgentConsole from "@/pages/agent-console";
@@ -82,6 +83,7 @@ function AuthenticatedRoutes() {
       <Route path="/audits" component={Audits} />
       <Route path="/decisions" component={Decisions} />
       <Route path="/intake" component={Intake} />
+      <Route path="/work-items/:id" component={WorkItemDetail} />
       <Route path="/pods" component={Pods} />
       <Route path="/projects/new" component={ProjectCreate} />
       <Route path="/project/:id" component={ProjectDetail} />

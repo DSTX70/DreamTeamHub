@@ -1,0 +1,481 @@
+We’ll wire all four packs:
+
+generateLifestyleBannerPack (Creative Pod)
+
+generatePatentClaimsPack (IP Pod)
+
+generateLaunchPlanPack (Marketing Pod)
+
+generateWebsiteAuditPack (Product & Platform Pod)
+
+DROP 1 — Generic Work Item → Skill → Pack helper
+
+File: server/ai/actions/createWorkItemActionHandler.ts
+
+// server/ai/actions/createWorkItemActionHandler.ts
+import type { Request, Response } from "express";
+import type { ZodSchema } from "zod";
+import { runSkill } from "../runSkill"; // adjust path if needed
+import { getWorkItemById } from "../../db/workItems"; // adjust path
+
+type PersistFn<TOutput> = (workItemId: string, data: TOutput) => Promise<void>;
+
+interface WorkItemActionOptions<TOutput> {
+  skillName: string;
+  outputSchema: ZodSchema<TOutput>;
+  persist: PersistFn<TOutput>;
+}
+
+/**
+ * Generic factory: Work Item → Skill → Validated pack → Persist.
+ */
+export function createWorkItemActionHandler<TOutput>(
+  options: WorkItemActionOptions<TOutput>
+) {
+  const { skillName, outputSchema, persist } = options;
+
+  return async function workItemActionHandler(req: Request, res: Response) {
+    const workItemId = String(req.params.id);
+
+    try {
+      const wi = await getWorkItemById(workItemId);
+      if (!wi) {
+        return res
+          .status(404)
+          .json({ ok: false, error: "work_item_not_found" });
+      }
+
+      const skillInput = {
+        work_item_id: workItemId,
+        work_item_title: wi.title ?? "",
+        work_item_body: wi.body ?? "",
+        work_item_notes: wi.notes ?? "",
+      };
+
+      const rawResult = await runSkill({
+        skillName,
+        input: skillInput,
+      });
+
+      const parsed = outputSchema.parse(rawResult);
+
+      await persist(workItemId, parsed);
+
+      return res.json({
+        ok: true,
+        work_item_id: workItemId,
+        pack: parsed,
+      });
+    } catch (err) {
+      console.error(`Error in ${skillName}`, err);
+      return res.status(500).json({ ok: false, error: "internal_error" });
+    }
+  };
+}
+
+
+You already have runSkill and getWorkItemById in your infra — just fix those import paths if your folders differ.
+
+DROP 2 — Zod schemas for the four packs
+2A) Lifestyle Banner Pack
+
+File: server/ai/schemas/lifestylePack.ts
+(If you already created this, merge/adjust.)
+
+// server/ai/schemas/lifestylePack.ts
+import { z } from "zod";
+
+export const ShotBoardSchema = z.object({
+  shot_id: z.string(),          // "OL-1"
+  collection: z.string(),       // "Out Loud"
+  sku: z.string(),              // "SKU-OL-PRIDE-001"
+  card_title: z.string(),       // card name/front label
+  scenario: z.string(),         // narrative description of scene
+  camera: z.string(),           // camera angle / lens style
+  framing: z.string(),          // composition / where card sits
+  lighting: z.string(),         // time of day + key/fill/rim
+  casting: z.string(),          // people in shot + diversity notes
+  color_palette: z.string(),    // color cues
+  notes: z.string().optional(),
+});
+
+export const ExportPlanRowSchema = z.object({
+  shot_id: z.string(),
+  sku: z.string(),
+  base_key: z.string(),         // "fcc/lifestyle/OL-1_Brunch_Banter_SKU-OL-PRIDE-001"
+  size_label: z.string(),       // "desktop-1920x800"
+  width: z.number().int(),
+  height: z.number().int(),
+  filename: z.string(),         // full path + filename
+  format: z.string(),           // "webp"
+  is_primary: z.boolean().optional(),
+});
+
+export const AltTextRowSchema = z.object({
+  filename: z.string(),
+  sku: z.string(),
+  alt_text: z.string(),
+  en_title: z.string(),
+});
+
+export const SeoMetaRowSchema = z.object({
+  filename: z.string(),
+  sku: z.string(),
+  meta_title: z.string(),
+  meta_description: z.string(),
+  focus_keywords: z.array(z.string()).optional(),
+});
+
+export const LifestylePackSchema = z.object({
+  shot_boards: z.array(ShotBoardSchema),
+  export_plan: z.array(ExportPlanRowSchema),
+  alt_text_rows: z.array(AltTextRowSchema),
+  seo_meta_rows: z.array(SeoMetaRowSchema),
+});
+
+export type LifestylePack = z.infer<typeof LifestylePackSchema>;
+
+2B) Patent Claims Pack
+
+File: server/ai/schemas/patentClaimsPack.ts
+
+// server/ai/schemas/patentClaimsPack.ts
+import { z } from "zod";
+
+export const PatentClaimSchema = z.object({
+  claim_number: z.number().int(),                  // 1, 2, 3, ...
+  claim_type: z.enum(["independent", "dependent"]),
+  text: z.string(),                                // full claim text
+  depends_on: z.array(z.number().int()).default([]),
+  notes: z.string().optional(),
+});
+
+export const PatentClaimsPackSchema = z.object({
+  invention_title: z.string(),
+  short_summary: z.string(),                       // 2–3 sentences
+  independent_claims: z.array(PatentClaimSchema),
+  dependent_claims: z.array(PatentClaimSchema),
+  open_questions: z.array(z.string()).default([]),
+});
+
+export type PatentClaimsPack = z.infer<typeof PatentClaimsPackSchema>;
+
+2C) Launch Plan Pack
+
+File: server/ai/schemas/launchPlanPack.ts
+
+// server/ai/schemas/launchPlanPack.ts
+import { z } from "zod";
+
+export const TimelineItemSchema = z.object({
+  phase_id: z.string(),                // "prep", "launch_week", "post"
+  label: z.string(),                   // "Finalize hero creative"
+  owner_role: z.string(),              // "Prism", "Echo", etc.
+  start_offset_days: z.number().int(), // relative to T0
+  end_offset_days: z.number().int(),
+});
+
+export const ChannelPlanSchema = z.object({
+  channel: z.string(),                 // "Email", "IG", "TikTok", "PR"
+  objective: z.string(),
+  key_messages: z.array(z.string()),
+  cadence: z.string(),                 // "3 posts/week for 4 weeks"
+});
+
+export const AssetPlanSchema = z.object({
+  asset_id: z.string(),                // "hero-img-01"
+  type: z.string(),                    // "static", "reel", etc.
+  description: z.string(),
+  owner_role: z.string(),
+  needed_by_offset_days: z.number().int(),
+});
+
+export const KpiSchema = z.object({
+  metric: z.string(),                  // "CTR", "Sign-ups"
+  target_value: z.string(),            // "3%+", "500 signups"
+  measurement_window_days: z.number().int(),
+});
+
+export const LaunchPlanPackSchema = z.object({
+  campaign_name: z.string(),
+  t0_event: z.string(),                // "Launch date", "Pre-order open"
+  timeline: z.array(TimelineItemSchema),
+  channels: z.array(ChannelPlanSchema),
+  assets: z.array(AssetPlanSchema),
+  kpis: z.array(KpiSchema),
+});
+
+export type LaunchPlanPack = z.infer<typeof LaunchPlanPackSchema>;
+
+2D) Website Audit Pack
+
+File: server/ai/schemas/websiteAuditPack.ts
+
+// server/ai/schemas/websiteAuditPack.ts
+import { z } from "zod";
+
+export const AuditPageSchema = z.object({
+  url: z.string(),
+  label: z.string(),                         // "Home", "Collections", etc.
+  priority: z.enum(["high", "medium", "low"]),
+  template_type: z.string().optional(),      // "home", "collection", "product", etc.
+});
+
+export const AuditFindingSchema = z.object({
+  id: z.string(),                            // "F-001"
+  page_url: z.string(),
+  area: z.enum([
+    "SEO",
+    "Content",
+    "UX",
+    "Brand",
+    "Performance",
+    "Accessibility",
+    "Risk",
+  ]),
+  severity: z.enum(["low", "medium", "high", "critical"]),
+  description: z.string(),
+  recommendation: z.string(),
+  effort: z.enum(["S", "M", "L"]),
+});
+
+export const AuditChecklistItemSchema = z.object({
+  label: z.string(),
+  status: z.enum(["pass", "fail", "n/a", "unknown"]),
+  notes: z.string().optional(),
+});
+
+export const AuditChecklistSchema = z.object({
+  area: z.enum(["SEO", "UX", "Brand", "Performance", "Accessibility"]),
+  items: z.array(AuditChecklistItemSchema),
+});
+
+export const AuditRoadmapBucketSchema = z.object({
+  bucket: z.enum(["do_now", "do_next", "do_later"]),
+  finding_ids: z.array(z.string()),
+  narrative: z.string(),
+});
+
+export const WebsiteAuditPackSchema = z.object({
+  site_name: z.string(),
+  base_url: z.string(),
+  environment: z.enum(["production", "staging", "dev"]),
+  summary: z.object({
+    headline: z.string(),
+    key_wins: z.array(z.string()),
+    key_issues: z.array(z.string()),
+  }),
+  pages: z.array(AuditPageSchema),
+  findings: z.array(AuditFindingSchema),
+  checklists: z.array(AuditChecklistSchema),
+  roadmap: z.array(AuditRoadmapBucketSchema),
+});
+
+export type WebsiteAuditPack = z.infer<typeof WebsiteAuditPackSchema>;
+
+DROP 3 — Persist helpers for each pack
+
+These will connect packs → your DB. Keep them simple to start.
+
+File: server/db/workItemPacks.ts
+
+// server/db/workItemPacks.ts
+import type { LifestylePack } from "../ai/schemas/lifestylePack";
+import type { PatentClaimsPack } from "../ai/schemas/patentClaimsPack";
+import type { LaunchPlanPack } from "../ai/schemas/launchPlanPack";
+import type { WebsiteAuditPack } from "../ai/schemas/websiteAuditPack";
+import { db } from "./client"; // your DB client
+import { work_items } from "./schema"; // adjust to your schema
+
+// These assume JSONB columns on work_items; adjust to your actual model.
+
+export async function saveLifestylePackArtifacts(
+  workItemId: string,
+  pack: LifestylePack
+): Promise<void> {
+  await db
+    .update(work_items)
+    .set({
+      lifestyle_pack: pack,
+      lifestyle_pack_updated_at: new Date(),
+    })
+    .where(work_items.id.eq(workItemId));
+}
+
+export async function savePatentClaimsPack(
+  workItemId: string,
+  pack: PatentClaimsPack
+): Promise<void> {
+  await db
+    .update(work_items)
+    .set({
+      patent_claims_pack: pack,
+      patent_claims_pack_updated_at: new Date(),
+    })
+    .where(work_items.id.eq(workItemId));
+}
+
+export async function saveLaunchPlanPack(
+  workItemId: string,
+  pack: LaunchPlanPack
+): Promise<void> {
+  await db
+    .update(work_items)
+    .set({
+      launch_plan_pack: pack,
+      launch_plan_pack_updated_at: new Date(),
+    })
+    .where(work_items.id.eq(workItemId));
+}
+
+export async function saveWebsiteAuditPack(
+  workItemId: string,
+  pack: WebsiteAuditPack
+): Promise<void> {
+  await db
+    .update(work_items)
+    .set({
+      website_audit_pack: pack,
+      website_audit_pack_updated_at: new Date(),
+    })
+    .where(work_items.id.eq(workItemId));
+}
+
+
+If your work_items table doesn’t yet have those JSONB columns, you can still keep these helpers as stubs and log the pack for now.
+
+DROP 4 — Action handlers for the four packs
+
+File: server/routes/workItemActions/lifestylePack.ts
+
+// server/routes/workItemActions/lifestylePack.ts
+import { createWorkItemActionHandler } from "../../ai/actions/createWorkItemActionHandler";
+import {
+  LifestylePackSchema,
+  type LifestylePack,
+} from "../../ai/schemas/lifestylePack";
+import { saveLifestylePackArtifacts } from "../../db/workItemPacks";
+
+export const postGenerateLifestylePack =
+  createWorkItemActionHandler<LifestylePack>({
+    skillName: "generateLifestyleBannerPack",
+    outputSchema: LifestylePackSchema,
+    persist: saveLifestylePackArtifacts,
+  });
+
+
+File: server/routes/workItemActions/patentClaimsPack.ts
+
+// server/routes/workItemActions/patentClaimsPack.ts
+import { createWorkItemActionHandler } from "../../ai/actions/createWorkItemActionHandler";
+import {
+  PatentClaimsPackSchema,
+  type PatentClaimsPack,
+} from "../../ai/schemas/patentClaimsPack";
+import { savePatentClaimsPack } from "../../db/workItemPacks";
+
+export const postGeneratePatentClaimsPack =
+  createWorkItemActionHandler<PatentClaimsPack>({
+    skillName: "generatePatentClaimsPack",
+    outputSchema: PatentClaimsPackSchema,
+    persist: savePatentClaimsPack,
+  });
+
+
+File: server/routes/workItemActions/launchPlanPack.ts
+
+// server/routes/workItemActions/launchPlanPack.ts
+import { createWorkItemActionHandler } from "../../ai/actions/createWorkItemActionHandler";
+import {
+  LaunchPlanPackSchema,
+  type LaunchPlanPack,
+} from "../../ai/schemas/launchPlanPack";
+import { saveLaunchPlanPack } from "../../db/workItemPacks";
+
+export const postGenerateLaunchPlanPack =
+  createWorkItemActionHandler<LaunchPlanPack>({
+    skillName: "generateLaunchPlanPack",
+    outputSchema: LaunchPlanPackSchema,
+    persist: saveLaunchPlanPack,
+  });
+
+
+File: server/routes/workItemActions/websiteAuditPack.ts
+
+// server/routes/workItemActions/websiteAuditPack.ts
+import { createWorkItemActionHandler } from "../../ai/actions/createWorkItemActionHandler";
+import {
+  WebsiteAuditPackSchema,
+  type WebsiteAuditPack,
+} from "../../ai/schemas/websiteAuditPack";
+import { saveWebsiteAuditPack } from "../../db/workItemPacks";
+
+export const postGenerateWebsiteAuditPack =
+  createWorkItemActionHandler<WebsiteAuditPack>({
+    skillName: "generateWebsiteAuditPack",
+    outputSchema: WebsiteAuditPackSchema,
+    persist: saveWebsiteAuditPack,
+  });
+
+DROP 5 — Wire endpoints in your main routes file
+
+File: server/routes.ts (or equivalent)
+
+Add these imports near the top:
+
+import { postGenerateLifestylePack } from "./routes/workItemActions/lifestylePack";
+import { postGeneratePatentClaimsPack } from "./routes/workItemActions/patentClaimsPack";
+import { postGenerateLaunchPlanPack } from "./routes/workItemActions/launchPlanPack";
+import { postGenerateWebsiteAuditPack } from "./routes/workItemActions/websiteAuditPack";
+
+
+Inside your registerRoutes(app: Express) (or similar):
+
+  app.post(
+    "/api/work-items/:id/actions/generate-lifestyle-pack",
+    postGenerateLifestylePack
+  );
+
+  app.post(
+    "/api/work-items/:id/actions/generate-patent-claims-pack",
+    postGeneratePatentClaimsPack
+  );
+
+  app.post(
+    "/api/work-items/:id/actions/generate-launch-plan-pack",
+    postGenerateLaunchPlanPack
+  );
+
+  app.post(
+    "/api/work-items/:id/actions/generate-website-audit-pack",
+    postGenerateWebsiteAuditPack
+  );
+
+
+Your WorkItemActionsPanel (we already set up) is expecting exactly these endpoint suffixes, so it should line up:
+
+generate-lifestyle-pack
+
+generate-patent-claims-pack
+
+generate-launch-plan-pack
+
+generate-website-audit-pack
+
+Once you’ve pasted these pieces:
+
+Backend knows how to:
+
+Read a WI
+
+Call runSkill with the right skillName
+
+Validate the pack
+
+Persist it
+
+UI already has:
+
+Actions dropdown → POSTs to those endpoints
+
+Status badge per action

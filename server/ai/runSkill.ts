@@ -1,7 +1,11 @@
 import { makeProvider } from "../../shared/llm/providers";
 import type { LLMConfig } from "../../shared/llm/types";
 import { readFileSync } from "fs";
-import { join } from "path";
+import { join, dirname } from "path";
+import { fileURLToPath } from "url";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 interface SkillDefinition {
   name: string;

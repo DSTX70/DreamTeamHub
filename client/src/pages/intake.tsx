@@ -3,6 +3,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import { useLocation } from "wouter";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -33,6 +34,7 @@ const workItemSchema = z.object({
 export default function Intake() {
   const [showForm, setShowForm] = useState(false);
   const [editingItem, setEditingItem] = useState<WorkItem | null>(null);
+  const [, setLocation] = useLocation();
   const { toast } = useToast();
 
   const { data: workItems, isLoading: isLoadingItems } = useQuery<WorkItem[]>({
@@ -110,19 +112,8 @@ export default function Intake() {
     }
   };
 
-  const handleEditItem = (item: WorkItem) => {
-    setEditingItem(item);
-    setShowForm(true);
-    form.reset({
-      title: item.title,
-      description: item.description || "",
-      podId: item.podId ?? undefined,
-      ownerId: item.ownerId ?? undefined,
-      status: item.status,
-      priority: item.priority || "medium",
-      dueDate: item.dueDate ? format(new Date(item.dueDate), 'yyyy-MM-dd') : undefined,
-      milestone: item.milestone || "",
-    });
+  const handleViewItem = (item: WorkItem) => {
+    setLocation(`/work-items/${item.id}`);
   };
 
   return (
@@ -363,7 +354,7 @@ export default function Intake() {
             <article 
               key={item.id} 
               className="role-card hover-elevate cursor-pointer" 
-              onClick={() => handleEditItem(item)}
+              onClick={() => handleViewItem(item)}
               data-testid={`work-item-${item.id}`}
             >
               {/* Teal rail at top (Intake & Routing pod color) */}

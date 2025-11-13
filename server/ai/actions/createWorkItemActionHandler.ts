@@ -38,12 +38,18 @@ export function createWorkItemActionHandler<TOutput>(
         work_item_notes: "",
       };
 
+      console.log(`[${skillName}] Calling LLM with input:`, JSON.stringify(skillInput, null, 2));
+      
       const rawResult = await runSkill({
         skillName,
         input: skillInput,
       });
 
+      console.log(`[${skillName}] LLM returned raw result:`, JSON.stringify(rawResult, null, 2));
+      
       const parsed = outputSchema.parse(rawResult);
+      
+      console.log(`[${skillName}] Validation passed, persisting...`);
 
       await persist(workItemId, parsed);
 
@@ -54,6 +60,12 @@ export function createWorkItemActionHandler<TOutput>(
       });
     } catch (err: any) {
       console.error(`[${skillName}] Error:`, err);
+      
+      // If it's a Zod validation error, include details
+      if (err.name === 'ZodError') {
+        console.error(`[${skillName}] Zod validation failed:`, JSON.stringify(err.errors, null, 2));
+      }
+      
       return res.status(500).json({ 
         ok: false, 
         error: "internal_error",
