@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { LifestyleBannerPackSchema } from "./schemas/lifestyleBannerPack";
+import { LifestylePackSchema } from "./schemas/lifestylePack";
 import { PatentClaimsPackSchema } from "./schemas/patentClaimsPack";
 import { LaunchPlanPackSchema } from "./schemas/launchPlanPack";
 import { WebsiteAuditPackSchema } from "./schemas/websiteAuditPack";
@@ -42,7 +42,7 @@ export const PACK_REGISTRY: PackConfig[] = [
     label: "Generate Lifestyle Banner Pack",
     skillName: "generateLifestyleBannerPack",
     endpointSuffix: "generate-lifestyle-pack",
-    schema: LifestyleBannerPackSchema,
+    schema: LifestylePackSchema,
     icon: "Sparkles",
     driveFolder: "DRIVE_LIFESTYLE_PACKS_FOLDER",
     exportEnabled: true,

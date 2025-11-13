@@ -43,7 +43,7 @@ export function createPackActionHandler(config: PackConfig): RequestHandler {
       await saveWorkItemPackGeneric({
         workItemId: wi.id,
         packType: config.packType,
-        payload: validated,
+        packData: validated,
       });
 
       return res.json({
@@ -68,9 +68,9 @@ export function createPackActionHandler(config: PackConfig): RequestHandler {
 export async function saveWorkItemPackGeneric(input: {
   workItemId: string;
   packType: string;
-  payload: unknown;
+  packData: unknown;
 }) {
-  const { workItemId, packType, payload } = input;
+  const { workItemId, packType, packData } = input;
 
   return await db.transaction(async (tx) => {
     // Check if a pack of this type already exists for this work item
@@ -88,7 +88,7 @@ export async function saveWorkItemPackGeneric(input: {
       const updated = await tx
         .update(workItemPacks)
         .set({
-          payload: payload as any,
+          packData: packData as any,
           version: currentVersion + 1,
           updatedAt: now,
         })
@@ -103,7 +103,7 @@ export async function saveWorkItemPackGeneric(input: {
         .values({
           workItemId,
           packType,
-          payload: payload as any,
+          packData: packData as any,
           version: 1,
           createdAt: now,
           updatedAt: now,
