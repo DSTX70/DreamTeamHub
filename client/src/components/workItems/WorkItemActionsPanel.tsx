@@ -2,11 +2,11 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Sparkles, ChevronDown, ChevronUp, PuzzleIcon, MegaphoneIcon, SearchIcon } from "lucide-react";
+import { Sparkles, ChevronDown, ChevronUp, PuzzleIcon, MegaphoneIcon, SearchIcon, ShieldIcon, GraduationCapIcon, ScaleIcon, DollarSignIcon, BarChartIcon, HandshakeIcon } from "lucide-react";
 import { SavePackToDriveButton } from "../SavePackToDriveButton";
 
-type ActionKey = "lifestyle" | "patent" | "launch" | "audit";
-type PackType = "lifestyle" | "patent" | "launch" | "website_audit";
+type ActionKey = "lifestyle" | "patent" | "launch" | "audit" | "riskCompliance" | "agentAcademy" | "agentGovernance" | "pricingMonetization" | "dataMetrics" | "globalCollabs";
+type PackType = "lifestyle" | "patent" | "launch" | "website_audit" | "risk_compliance" | "agent_lab_academy" | "agent_governance" | "pricing_monetization" | "data_stewardship_metrics" | "globalcollabs_partnership";
 
 type ActionStateStatus = "idle" | "running" | "ok" | "error";
 
@@ -52,6 +52,42 @@ const ACTION_CONFIG: Record<
     endpointSuffix: "generate-website-audit-pack",
     packType: "website_audit",
   },
+  riskCompliance: {
+    label: "Generate Risk & Compliance Pack",
+    Icon: ShieldIcon,
+    endpointSuffix: "generate-risk-compliance-pack",
+    packType: "risk_compliance",
+  },
+  agentAcademy: {
+    label: "Generate Agent Lab Academy Pack",
+    Icon: GraduationCapIcon,
+    endpointSuffix: "generate-agent-lab-academy-pack",
+    packType: "agent_lab_academy",
+  },
+  agentGovernance: {
+    label: "Generate Agent Governance Pack",
+    Icon: ScaleIcon,
+    endpointSuffix: "generate-agent-governance-pack",
+    packType: "agent_governance",
+  },
+  pricingMonetization: {
+    label: "Generate Pricing & Monetization Pack",
+    Icon: DollarSignIcon,
+    endpointSuffix: "generate-pricing-monetization-pack",
+    packType: "pricing_monetization",
+  },
+  dataMetrics: {
+    label: "Generate Data Stewardship & Metrics Pack",
+    Icon: BarChartIcon,
+    endpointSuffix: "generate-data-stewardship-metrics-pack",
+    packType: "data_stewardship_metrics",
+  },
+  globalCollabs: {
+    label: "Generate GlobalCollabs Partnerships Pack",
+    Icon: HandshakeIcon,
+    endpointSuffix: "generate-globalcollabs-partnership-pack",
+    packType: "globalcollabs_partnership",
+  },
 };
 
 export function WorkItemActionsPanel({ workItemId }: WorkItemActionsPanelProps) {
@@ -61,6 +97,12 @@ export function WorkItemActionsPanel({ workItemId }: WorkItemActionsPanelProps) 
     patent: { status: "idle" },
     launch: { status: "idle" },
     audit: { status: "idle" },
+    riskCompliance: { status: "idle" },
+    agentAcademy: { status: "idle" },
+    agentGovernance: { status: "idle" },
+    pricingMonetization: { status: "idle" },
+    dataMetrics: { status: "idle" },
+    globalCollabs: { status: "idle" },
   });
   const { toast } = useToast();
 
