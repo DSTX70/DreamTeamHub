@@ -5,11 +5,14 @@ import { Link } from "wouter";
 type StatCardProps = {
   title: string;
   icon: LucideIcon;
-  stats: { label: string; value: string | number }[];
+  stats?: { label: string; value: string | number }[] | null | undefined; // defensive: may be undefined during load
   href: string;
 };
 
 export default function StatCard({ title, icon: Icon, stats, href }: StatCardProps) {
+  // Normalize to a safe array
+  const items = Array.isArray(stats) ? stats : [];
+
   return (
     <Link href={href}>
       <Card className="hover-elevate cursor-pointer" data-testid={`card-ops-${title.toLowerCase().replace(/\s+/g, "-")}`}>
@@ -19,14 +22,18 @@ export default function StatCard({ title, icon: Icon, stats, href }: StatCardPro
         </CardHeader>
         <CardContent>
           <div className="space-y-2">
-            {stats.map((stat, idx) => (
-              <div key={idx} className="flex items-baseline justify-between">
-                <span className="text-xs text-muted-foreground">{stat.label}</span>
-                <span className="text-sm font-semibold" data-testid={`stat-${stat.label.toLowerCase().replace(/\s+/g, "-")}`}>
-                  {stat.value}
-                </span>
-              </div>
-            ))}
+            {items.length > 0 ? (
+              items.map((stat, idx) => (
+                <div key={idx} className="flex items-baseline justify-between">
+                  <span className="text-xs text-muted-foreground">{stat.label}</span>
+                  <span className="text-sm font-semibold" data-testid={`stat-${stat.label.toLowerCase().replace(/\s+/g, "-")}`}>
+                    {stat.value}
+                  </span>
+                </div>
+              ))
+            ) : (
+              <div className="text-xs text-muted-foreground">No data</div>
+            )}
           </div>
         </CardContent>
       </Card>

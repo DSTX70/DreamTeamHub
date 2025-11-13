@@ -1,0 +1,86 @@
+You ran into a classic “undefined.map” crash: **`stats` is undefined** in `StatCard.tsx` and the code calls `stats.map(...)`. Let’s harden it so the UI never explodes when data is missing or still loading.
+
+## Step 1 — Make `StatCard` defensive (paste-over replacement)
+
+**File:** `client/src/pages/ops/components/StatCard.tsx`
+
+```tsx
+import * as React from 'react';
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+
+type Stat = { label: string; value: React.ReactNode; sub?: string };
+
+type Props = {
+  title: string;
+  stats?: Stat[] | null | undefined; // may arrive undefined during load
+};
+
+export default function StatCard({ title, stats }: Props) {
+  // Normalize to a safe array
+  const items: Stat[] = Array.isArray(stats) ? stats : [];
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-sm font-medium">{title}</CardTitle>
+      </CardHeader>
+
+      <CardContent>
+        <div className="space-y-2">
+          {items.length > 0 ? (
+            items.map((stat, idx) => (
+              <div key={idx} className="flex items-baseline justify-between">
+                <span className="text-xs text-muted-foreground">{stat.label}</span>
+                <div className="text-sm font-medium">
+                  {stat.value}
+                  {stat.sub && <span className="ml-2 text-xs text-muted-foreground">{stat.sub}</span>}
+                </div>
+              </div>
+            ))
+          ) : (
+            <div className="text-xs text-muted-foreground">No data</div>
+          )}
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+```
+
+## Step 2 — Ensure callers never pass `undefined`
+
+Wherever you render `StatCard`, pass a safe default:
+
+```tsx
+<StatCard title="Ops health" stats={data?.stats ?? []} />
+```
+
+If you compute stats from an async fetch, initialize state safely:
+
+```tsx
+const [stats, setStats] = React.useState<Stat[]>([]); // not undefined
+// ...
+<StatCard title="Ops health" stats={stats} />
+```
+
+## Step 3 — (Optional) Guard in data assembly
+
+If you build `stats` like:
+
+```ts
+const stats = api?.payload?.map(/* ... */);
+```
+
+change to:
+
+```ts
+const stats = Array.isArray(api?.payload) ? api.payload.map(/* ... */) : [];
+```
+
+Reload the page; the runtime overlay should disappear. You’ll see “No data” until the real numbers load.
+
+---
+
+When that’s green, we’ll continue exactly where we left off:
+
+**Next step:** go to **Ops → SKU Switcher**, click **Validate** on **home.lifestyle_ol1** and tell me whether you get ✓ for any of the three sizes (1920×800, 960×600, 1080×1350).
