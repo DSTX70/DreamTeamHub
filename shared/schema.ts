@@ -1218,6 +1218,56 @@ export type InsertKnowledgeLink = z.infer<typeof insertKnowledgeLinkSchema>;
 export type KnowledgeLink = typeof knowledgeLinks.$inferSelect;
 
 // ===========================
+// KNOWLEDGE INDEXER (RAG System)
+// ===========================
+
+// Metadata tracking for indexed Drive files
+export const knowledgeIndexMeta = pgTable("knowledge_index_meta", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  collection: text("collection").notNull(), // e.g., "lifestyle_packs", "patent_packs", "launch_packs", "website_audit_packs"
+  driveFileId: text("drive_file_id").notNull(), // Google Drive file ID
+  filePath: text("file_path"), // Path/name for display
+  lastIndexedAt: timestamp("last_indexed_at").defaultNow().notNull(),
+  chunkCount: integer("chunk_count").notNull().default(0),
+  status: text("status").notNull().default('pending'), // pending, indexed, failed
+  error: text("error"), // Error message if indexing failed
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => [
+  unique("unique_collection_drive_file").on(table.collection, table.driveFileId),
+  index("idx_knowledge_index_collection").on(table.collection),
+  index("idx_knowledge_index_status").on(table.status),
+]);
+
+export const insertKnowledgeIndexMetaSchema = createInsertSchema(knowledgeIndexMeta).omit({ id: true, createdAt: true, updatedAt: true });
+export type InsertKnowledgeIndexMeta = z.infer<typeof insertKnowledgeIndexMetaSchema>;
+export type KnowledgeIndexMeta = typeof knowledgeIndexMeta.$inferSelect;
+
+// Text chunks with embeddings for RAG queries
+export const knowledgeChunks = pgTable("knowledge_chunks", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  collection: text("collection").notNull(), // e.g., "lifestyle_packs", "patent_packs"
+  driveFileId: text("drive_file_id").notNull(), // Google Drive file ID
+  chunkIndex: integer("chunk_index").notNull(), // Order within document
+  text: text("text").notNull(), // Chunk content
+  embedding: jsonb("embedding").$type<number[]>(), // Vector embedding from OpenAI
+  metadata: jsonb("metadata").$type<{
+    filePath?: string;
+    title?: string;
+    dateIndexed?: string;
+    tokens?: number;
+  }>().default(sql`'{}'`),
+  indexedAt: timestamp("indexed_at").defaultNow().notNull(),
+}, (table) => [
+  index("idx_knowledge_chunks_collection").on(table.collection),
+  index("idx_knowledge_chunks_drive_file").on(table.driveFileId),
+]);
+
+export const insertKnowledgeChunkSchema = createInsertSchema(knowledgeChunks).omit({ id: true, indexedAt: true });
+export type InsertKnowledgeChunk = z.infer<typeof insertKnowledgeChunkSchema>;
+export type KnowledgeChunk = typeof knowledgeChunks.$inferSelect;
+
+// ===========================
 // PRODUCTS
 // ===========================
 
