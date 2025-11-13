@@ -9,7 +9,7 @@ import { searchRoute } from "./api_search_route";
 import { getOpsEvents, postOpsEvent } from "./api/ops_events.route";
 import { get24hMetrics, getAlertStatus, getEventTimeline } from "./api/ops_metrics.route";
 import { opsSummaryHandler } from "./api/ops_summary.route";
-import { publishFile, getPublishedFiles, searchKnowledge, uploadDraft } from "./api/knowledge.route";
+import { publishFile, getPublishedFiles, searchKnowledge, uploadDraft, indexFile, ragSearch, getIndexStatus } from "./api/knowledge.route";
 import { listWorkOrders, createWorkOrder, startWorkOrderRun } from "./api/work_orders.route";
 import { promoteAgent } from "./api/agents_promote.route";
 import { createBrand, createProduct } from "./api/onboarding.route";
@@ -171,6 +171,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/knowledge/:owner/:id/publish/:fileId", isDualAuthenticated, requireScopes("knowledge:draft:write"), publishFile);
   app.post("/api/knowledge/publish", isDualAuthenticated, requireScopes("knowledge:draft:write"), publishFile); // Legacy endpoint
   app.get("/api/knowledge/published", isDualAuthenticated, getPublishedFiles);
+  
+  // Knowledge Indexer Endpoints
+  app.post("/api/knowledge/index-file", isDualAuthenticated, requireScopes("knowledge:draft:write"), indexFile);
+  app.get("/api/knowledge/search", isDualAuthenticated, ragSearch);
+  app.get("/api/knowledge/index-status", isDualAuthenticated, getIndexStatus);
   
   // ===========================
   // WORK ORDERS (DB-backed with caps)

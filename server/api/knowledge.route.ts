@@ -1,12 +1,15 @@
 import type { Request, Response } from "express";
 import crypto from "crypto";
 import { db } from "../db";
-import { knowledgeLinks, opsEvent } from "@shared/schema";
-import { eq, and } from "drizzle-orm";
+import { knowledgeLinks, opsEvent, knowledgeChunks, knowledgeIndexMeta } from "@shared/schema";
+import { eq, and, desc } from "drizzle-orm";
 import { getDriveClient } from "../integrations/googleDrive_real";
 import { SearchQuery, DraftUploadBody } from "../../lib/validators/knowledge";
 import { PublishHeaders, PublishBody } from "../../lib/validators/publish";
 import { sanitizeFilename } from "../lib/utils/sanitizeFilename";
+import { indexSingleDriveFile } from "../services/knowledgeIndexer";
+import { embedQuery, cosineSimilarity } from "../services/knowledgeEmbedding";
+import { CollectionType } from "../config/knowledgeCollections";
 
 function required(v: any, msg: string) {
   if (!v) throw Object.assign(new Error(msg), { status: 400 });
@@ -199,5 +202,131 @@ export async function getPublishedFiles(req: Request, res: Response) {
   } catch (e) {
     console.error("getPublishedFiles error:", e);
     return res.status(500).json({ error: "Failed to fetch published files" });
+  }
+}
+
+/**
+ * POST /api/knowledge/index-file
+ * Quick-index a single Drive file for RAG search.
+ */
+export async function indexFile(req: Request, res: Response) {
+  try {
+    const { driveFileId, collection, filePath } = req.body;
+    
+    if (!driveFileId || typeof driveFileId !== "string") {
+      return res.status(400).json({ error: "driveFileId is required" });
+    }
+    
+    if (!collection || typeof collection !== "string") {
+      return res.status(400).json({ error: "collection is required" });
+    }
+    
+    const validCollections: CollectionType[] = ["lifestyle_packs", "patent_packs", "launch_packs", "website_audit_packs"];
+    if (!validCollections.includes(collection as CollectionType)) {
+      return res.status(400).json({ error: `Invalid collection. Must be one of: ${validCollections.join(", ")}` });
+    }
+    
+    const result = await indexSingleDriveFile(
+      driveFileId,
+      collection as CollectionType,
+      filePath
+    );
+    
+    if (result.success) {
+      return res.status(200).json(result);
+    } else {
+      return res.status(500).json(result);
+    }
+  } catch (error: any) {
+    console.error("[IndexFile] Error:", error);
+    return res.status(500).json({ error: error.message || "Failed to index file" });
+  }
+}
+
+/**
+ * GET /api/knowledge/search
+ * RAG-powered semantic search across indexed knowledge.
+ */
+export async function ragSearch(req: Request, res: Response) {
+  try {
+    const query = req.query.q as string;
+    const collection = req.query.collection as string | undefined;
+    const limit = parseInt(req.query.limit as string) || 10;
+    
+    if (!query || typeof query !== "string") {
+      return res.status(400).json({ error: "Query parameter 'q' is required" });
+    }
+    
+    // Generate embedding for query
+    const queryEmbedding = await embedQuery(query);
+    
+    // Fetch all chunks (optionally filtered by collection)
+    const filters = [];
+    if (collection) {
+      filters.push(eq(knowledgeChunks.collection, collection));
+    }
+    
+    const chunks = await db
+      .select()
+      .from(knowledgeChunks)
+      .where(filters.length > 0 ? and(...filters) : undefined)
+      .limit(1000); // Fetch top 1000 for scoring
+    
+    // Score chunks by cosine similarity
+    const scored = chunks.map(chunk => ({
+      ...chunk,
+      score: chunk.embedding ? cosineSimilarity(queryEmbedding, chunk.embedding as number[]) : 0,
+    }));
+    
+    // Sort by score and take top results
+    const topResults = scored
+      .sort((a, b) => b.score - a.score)
+      .slice(0, limit)
+      .map(chunk => ({
+        collection: chunk.collection,
+        driveFileId: chunk.driveFileId,
+        text: chunk.text,
+        metadata: chunk.metadata,
+        score: chunk.score,
+      }));
+    
+    return res.json({
+      query,
+      results: topResults,
+      count: topResults.length,
+    });
+  } catch (error: any) {
+    console.error("[RAGSearch] Error:", error);
+    return res.status(500).json({ error: error.message || "Search failed" });
+  }
+}
+
+/**
+ * GET /api/knowledge/index-status
+ * Get indexing status for all collections.
+ */
+export async function getIndexStatus(req: Request, res: Response) {
+  try {
+    const collection = req.query.collection as string | undefined;
+    
+    const filters = [];
+    if (collection) {
+      filters.push(eq(knowledgeIndexMeta.collection, collection));
+    }
+    
+    const meta = await db
+      .select()
+      .from(knowledgeIndexMeta)
+      .where(filters.length > 0 ? and(...filters) : undefined)
+      .orderBy(desc(knowledgeIndexMeta.lastIndexedAt))
+      .limit(100);
+    
+    return res.json({
+      files: meta,
+      count: meta.length,
+    });
+  } catch (error: any) {
+    console.error("[GetIndexStatus] Error:", error);
+    return res.status(500).json({ error: error.message || "Failed to get index status" });
   }
 }
