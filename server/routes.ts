@@ -29,6 +29,8 @@ import { postGenerateLifestylePack } from "./routes/workItemActions/generateLife
 import { postGeneratePatentClaimsPack } from "./routes/workItemActions/generatePatentClaimsPack";
 import { postGenerateLaunchPlanPack } from "./routes/workItemActions/generateLaunchPlanPack";
 import { postGenerateWebsiteAuditPack } from "./routes/workItemActions/generateWebsiteAuditPack";
+import { postGenerateRiskCompliancePack } from "./routes/workItemActions/generateRiskCompliancePack";
+import { postGenerateAgentLabAcademyPack } from "./routes/workItemActions/generateAgentLabAcademyPack";
 import multer from "multer";
 import { uploadFileToS3, getWorkItemFiles, getUploaderConfig } from "./services/uploader";
 import { getEffectiveUploadsConfig, updateUploadsConfig } from "./services/opsUploadsConfig";
@@ -1131,6 +1133,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/work-items/:id/actions/generate-patent-claims-pack", isAuthenticated, postGeneratePatentClaimsPack);
   app.post("/api/work-items/:id/actions/generate-launch-plan-pack", isAuthenticated, postGenerateLaunchPlanPack);
   app.post("/api/work-items/:id/actions/generate-website-audit-pack", isAuthenticated, postGenerateWebsiteAuditPack);
+  app.post("/api/work-items/:id/actions/generate-risk-compliance-pack", isAuthenticated, postGenerateRiskCompliancePack);
+  app.post("/api/work-items/:id/actions/generate-agent-lab-academy-pack", isAuthenticated, postGenerateAgentLabAcademyPack);
   
   // Pack to Drive routes
   const { postSavePackToDrive, getWorkItemDriveFiles } = await import("./api/packToDrive.route");

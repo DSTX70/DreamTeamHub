@@ -394,6 +394,191 @@ export async function exportWebsiteAuditPackToDOCX(
   };
 }
 
+async function exportRiskCompliancePackToDOCX(
+  workItemId: number,
+  version: number,
+  pack: any
+): Promise<ExportResult> {
+  const doc = new Document({
+    sections: [
+      {
+        properties: {},
+        children: [
+          new Paragraph({
+            text: "Risk & Compliance Pack",
+            heading: HeadingLevel.TITLE,
+          }),
+          new Paragraph({ text: `Work Item: ${workItemId} | Version: ${version}` }),
+          new Paragraph({ text: "" }),
+
+          new Paragraph({
+            text: "Summary",
+            heading: HeadingLevel.HEADING_1,
+          }),
+          new Paragraph({ text: pack.summary?.headline || "N/A" }),
+          new Paragraph({ text: `Overall Risk: ${pack.summary?.overall_risk?.toUpperCase() || "N/A"}` }),
+          new Paragraph({ text: "" }),
+
+          new Paragraph({
+            text: "Key Concerns",
+            heading: HeadingLevel.HEADING_2,
+          }),
+          ...(pack.summary?.key_concerns || []).map((c: string) => new Paragraph({ text: `• ${c}` })),
+          new Paragraph({ text: "" }),
+
+          new Paragraph({
+            text: "Key Mitigations",
+            heading: HeadingLevel.HEADING_2,
+          }),
+          ...(pack.summary?.key_mitigations || []).map((m: string) => new Paragraph({ text: `• ${m}` })),
+          new Paragraph({ text: "" }),
+
+          new Paragraph({
+            text: "Risks",
+            heading: HeadingLevel.HEADING_1,
+          }),
+          ...(pack.risks || []).flatMap((r: any) => [
+            new Paragraph({
+              text: `${r.id} [${r.area} - ${r.severity.toUpperCase()} severity, ${r.likelihood.toUpperCase()} likelihood]`,
+              heading: HeadingLevel.HEADING_3,
+            }),
+            new Paragraph({ text: `Description: ${r.description}` }),
+            new Paragraph({ text: `Impact: ${r.impact}` }),
+            new Paragraph({ text: `Mitigation (${r.owner_role}, ${r.time_horizon}): ${r.recommendation}` }),
+            new Paragraph({ text: "" }),
+          ]),
+
+          new Paragraph({
+            text: "Controls",
+            heading: HeadingLevel.HEADING_1,
+          }),
+          ...(pack.controls || []).map((c: any) => 
+            new Paragraph({ text: `• ${c.id} (${c.category}, ${c.owner_role})${c.required ? ' [REQUIRED]' : ''}: ${c.description}` })
+          ),
+          new Paragraph({ text: "" }),
+
+          new Paragraph({
+            text: "Compliance Notes",
+            heading: HeadingLevel.HEADING_1,
+          }),
+          ...(pack.compliance_notes || []).map((cn: any) => 
+            new Paragraph({ text: `• ${cn.regime} [${cn.status.toUpperCase()}]: ${cn.note}` })
+          ),
+          new Paragraph({ text: "" }),
+
+          ...(pack.open_questions && pack.open_questions.length > 0 ? [
+            new Paragraph({
+              text: "Open Questions",
+              heading: HeadingLevel.HEADING_1,
+            }),
+            ...(pack.open_questions || []).map((q: string) => new Paragraph({ text: `• ${q}` })),
+          ] : []),
+        ],
+      },
+    ],
+  });
+
+  const buffer = await Packer.toBuffer(doc);
+  return {
+    fileName: `WI-${workItemId}_RiskCompliance_v${version}.docx`,
+    mimeType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    buffer,
+  };
+}
+
+async function exportAgentLabAcademyPackToDOCX(
+  workItemId: number,
+  version: number,
+  pack: any
+): Promise<ExportResult> {
+  const doc = new Document({
+    sections: [
+      {
+        properties: {},
+        children: [
+          new Paragraph({
+            text: "Agent Lab Academy Pack",
+            heading: HeadingLevel.TITLE,
+          }),
+          new Paragraph({ text: `Work Item: ${workItemId} | Version: ${version}` }),
+          new Paragraph({ text: "" }),
+
+          new Paragraph({
+            text: "Summary",
+            heading: HeadingLevel.HEADING_1,
+          }),
+          new Paragraph({ text: pack.summary?.headline || "N/A" }),
+          new Paragraph({ text: `Primary Audience: ${pack.summary?.primary_audience || "N/A"}` }),
+          new Paragraph({ text: "" }),
+
+          new Paragraph({
+            text: "Key Outcomes",
+            heading: HeadingLevel.HEADING_2,
+          }),
+          ...(pack.summary?.key_outcomes || []).map((o: string) => new Paragraph({ text: `• ${o}` })),
+          new Paragraph({ text: "" }),
+
+          new Paragraph({
+            text: "Tracks",
+            heading: HeadingLevel.HEADING_1,
+          }),
+          ...(pack.tracks || []).flatMap((t: any) => [
+            new Paragraph({
+              text: `${t.name} (${t.id})`,
+              heading: HeadingLevel.HEADING_2,
+            }),
+            new Paragraph({ text: `Audience: ${t.audience}` }),
+            new Paragraph({ text: `Modules: ${t.modules?.length || 0}` }),
+            new Paragraph({ text: `Objectives: ${t.objectives?.join(', ') || 'None'}` }),
+            new Paragraph({ text: `Prerequisites: ${t.prerequisites?.length > 0 ? t.prerequisites.join(', ') : 'None'}` }),
+            new Paragraph({ text: "" }),
+          ]),
+
+          new Paragraph({
+            text: "Certifications",
+            heading: HeadingLevel.HEADING_1,
+          }),
+          ...(pack.certifications || []).flatMap((cert: any) => [
+            new Paragraph({
+              text: `${cert.name} (${cert.level})`,
+              heading: HeadingLevel.HEADING_2,
+            }),
+            new Paragraph({ text: `Target Role: ${cert.target_role}` }),
+            new Paragraph({ text: `Required Tracks: ${cert.required_tracks?.join(', ') || 'None'}` }),
+            new Paragraph({ text: `Exam Format: ${cert.exam_format}` }),
+            new Paragraph({ text: "" }),
+          ]),
+
+          new Paragraph({
+            text: "Logistics",
+            heading: HeadingLevel.HEADING_1,
+          }),
+          new Paragraph({ text: `Cohort Length: ${pack.logistics?.cohort_length_weeks || 0} weeks` }),
+          new Paragraph({ text: `Cadence: ${pack.logistics?.cadence || 'N/A'}` }),
+          new Paragraph({ text: `Max Seats: ${pack.logistics?.max_seats || 0}` }),
+          new Paragraph({ text: `Delivery Model: ${pack.logistics?.delivery_model || 'N/A'}` }),
+          new Paragraph({ text: "" }),
+
+          ...(pack.open_questions && pack.open_questions.length > 0 ? [
+            new Paragraph({
+              text: "Open Questions",
+              heading: HeadingLevel.HEADING_1,
+            }),
+            ...(pack.open_questions || []).map((q: string) => new Paragraph({ text: `• ${q}` })),
+          ] : []),
+        ],
+      },
+    ],
+  });
+
+  const buffer = await Packer.toBuffer(doc);
+  return {
+    fileName: `WI-${workItemId}_AgentLabAcademy_v${version}.docx`,
+    mimeType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    buffer,
+  };
+}
+
 export async function exportPackToFiles(
   workItemId: number,
   packType: PackType,
@@ -415,6 +600,12 @@ export async function exportPackToFiles(
       break;
     case "website_audit":
       results.push(await exportWebsiteAuditPackToDOCX(workItemId, version, packData));
+      break;
+    case "risk_compliance":
+      results.push(await exportRiskCompliancePackToDOCX(workItemId, version, packData));
+      break;
+    case "agent_lab_academy":
+      results.push(await exportAgentLabAcademyPackToDOCX(workItemId, version, packData));
       break;
     default:
       throw new Error(`Unsupported pack type: ${packType}`);

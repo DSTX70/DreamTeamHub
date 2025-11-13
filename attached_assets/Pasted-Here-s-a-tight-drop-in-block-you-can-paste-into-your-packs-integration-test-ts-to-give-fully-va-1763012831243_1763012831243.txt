@@ -1,0 +1,442 @@
+Here’s a tight, drop-in block you can paste into your `packs.integration.test.ts` to give **fully valid minimal fixtures for all 10 new Packs**.
+
+You can put this **right above** `const PACKS_UNDER_TEST` and then wire `makeMockPayload` from it.
+
+---
+
+### 1) Minimal payload helpers for the 10 new Packs
+
+```ts
+// Minimal valid payloads for NEW Packs (10)
+// These return plain objects that satisfy each Pack's Zod schema.
+
+const minimalNewPackPayloads = {
+  packagingPrePress: () => ({
+    summary: 'Minimal packaging summary',
+    packaging_story: 'This packaging reflects the brand and protects the product.',
+    primary_formats: [
+      {
+        name: 'Standard box',
+        dieline_reference: null,
+        dimensions_mm: { width: 100, height: 150, depth: 30 },
+        orientation: 'portrait',
+        notes: 'Simple portrait box.',
+      },
+    ],
+    print_specs: {
+      color_mode: 'CMYK',
+      coatings: ['matte'],
+      special_finishes: [],
+      stock: {
+        weight_gsm: 350,
+        finish: 'matte',
+        color: 'white',
+      },
+    },
+    compliance_checklist: [
+      {
+        label: 'UPC',
+        requirement: 'Include UPC barcode on bottom panel.',
+        status: 'required',
+      },
+    ],
+    prepress_checklist: [
+      {
+        step: 'Verify bleed and safety margins',
+        status: 'todo',
+      },
+    ],
+    reference_assets: [
+      {
+        description: 'Brand logo lockup',
+      },
+    ],
+  }),
+
+  productLineSkuTree: () => ({
+    line_name: 'Minimal Line',
+    line_code_prefix: 'ML',
+    overview: 'A minimal product line used for testing.',
+    tiers: [
+      {
+        name: 'good',
+        description: 'Entry tier product variant.',
+        price_band_hint: '$',
+      },
+    ],
+    hierarchy: [
+      {
+        collection: 'Core Collection',
+        series: [
+          {
+            code: 'CORE',
+            name: 'Core Series',
+            description: 'Primary series for testing.',
+            products: [
+              {
+                code: 'CORE01',
+                name: 'Core Product',
+                description: 'Test product.',
+                variants: [
+                  {
+                    sku: 'CORE01-STD',
+                    name: 'Core Product Standard',
+                    attributes: { size: 'standard', finish: 'matte' },
+                    tier: 'good',
+                    msrp: 10,
+                    wholesale: 5,
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      },
+    ],
+    roadmap_phases: [
+      {
+        phase_name: 'Launch',
+        phase_order: 1,
+        included_skus: ['CORE01-STD'],
+        notes: 'Initial launch phase.',
+      },
+    ],
+  }),
+
+  ecomPdpAplusContent: () => ({
+    seo_title: 'Minimal Test Product – PDP',
+    seo_slug_hint: 'minimal-test-product',
+    short_subtitle: 'A minimal setup for testing PDP content.',
+    feature_bullets: [
+      {
+        label: 'Key Benefit',
+        body: 'Provides a simple baseline for testing.',
+        pillar: 'benefit',
+      },
+    ],
+    long_description:
+      'This is a long-form description of the minimal test product, used to validate the PDP pack wiring.',
+    aplus_sections: [
+      {
+        section_type: 'hero',
+        heading: 'Why This Product Exists',
+        body: 'Explain the core story and value in one hero section.',
+        image_ideas: ['Hero shot of product in use'],
+      },
+    ],
+    faqs: [
+      {
+        question: 'Is this a real product?',
+        answer: 'No, this is a test fixture for pack validation.',
+      },
+    ],
+    cross_sell_suggestions: [
+      {
+        label: 'Related Test Product',
+        rationale: 'Demonstrate cross-sell structure.',
+      },
+    ],
+  }),
+
+  socialCampaignContentCalendar: () => ({
+    campaign_name: 'Minimal Campaign',
+    campaign_window_description: '7-day minimal campaign window.',
+    core_narrative: 'Introduce the minimal test product to a small audience.',
+    primary_hashtags: ['#minimal', '#testcampaign'],
+    weekly_themes: [
+      {
+        week_index: 0,
+        theme: 'Launch Week',
+        focus: 'Awareness and introduction.',
+      },
+    ],
+    posts: [
+      {
+        day_offset: 0,
+        platform: 'instagram',
+        content_type: 'post',
+        working_title: 'Launch Announcement',
+        hook: 'Meet our new minimal test product.',
+        core_message: 'Explain what it is and why it exists.',
+        cta: 'Click the link in bio to learn more.',
+        asset_needs: ['Static product shot'],
+      },
+    ],
+    influencer_prompts: ['Share your first impressions using the product.'],
+    performance_objectives: [
+      {
+        metric: 'link_clicks',
+        target_hint: 'At least 10 clicks during the test period.',
+      },
+    ],
+  }),
+
+  implementationRunbookSop: () => ({
+    overview: 'Minimal implementation runbook for validating the SOP pack.',
+    runbook_steps: [
+      {
+        order: 1,
+        title: 'Initial Setup',
+        description: 'Create a test WI and enable the pack.',
+        owner_role: 'Ops',
+      },
+    ],
+    sop_items: [
+      {
+        name: 'Weekly Check',
+        trigger: 'Every Monday morning',
+        frequency: 'weekly',
+        steps: ['Review open WIs', 'Check pack outputs for completeness'],
+      },
+    ],
+    raci_notes: 'Ops = Responsible, Governance = Accountable.',
+    risks_and_dependencies: ['Requires working DB connection.'],
+    definition_of_done: ['Pack routes respond with 200.', 'Pack payload passes schema validation.'],
+  }),
+
+  supportPlaybookKnowledgeBase: () => ({
+    overview: 'Minimal support playbook for the test product.',
+    top_issues: [
+      {
+        slug: 'cannot-find-feature',
+        title: 'User cannot find feature',
+        severity: 'medium',
+        description: 'User cannot locate the test feature in the UI.',
+      },
+    ],
+    response_macros: [
+      {
+        issue_slug: 'cannot-find-feature',
+        channel: 'email',
+        template: 'Hi there! Here is how to find the feature: ...',
+      },
+    ],
+    triage_tree_description: 'Start with self-serve KB; escalate to product if unresolved.',
+    kb_articles: [
+      {
+        slug: 'finding-the-test-feature',
+        title: 'How to Find the Test Feature',
+        summary: 'A simple guide to locating the test feature in the app.',
+        outline: ['Step 1: Open the app', 'Step 2: Navigate to the test section'],
+      },
+    ],
+    feedback_loop_notes: 'Support logs issues weekly for Product to review.',
+  }),
+
+  retailWholesaleReadiness: () => ({
+    summary: 'Minimal wholesale readiness pack for a test line.',
+    line_sheet_items: [
+      {
+        sku: 'TEST-001',
+        name: 'Test Product 001',
+        msrp: 15,
+        wholesale_price: 7.5,
+        case_pack: 6,
+        min_order_qty: 12,
+      },
+    ],
+    merchandising_concepts: [
+      {
+        name: 'Counter Display',
+        type: 'counter',
+        description: 'Small display near the checkout.',
+        asset_ideas: ['Counter standee', 'Small shelf tray'],
+      },
+    ],
+    retailer_pitch_angles: [
+      {
+        retailer_type: 'indie',
+        angle: 'Low-risk, small footprint test line for indie boutiques.',
+      },
+    ],
+    trade_show_checklist: ['Samples', 'Line sheet printouts', 'Order forms'],
+    terms_notes: 'Net 30, FOB origin, minimum opening order $300.',
+  }),
+
+  experimentOptimization: () => ({
+    overview: 'Minimal experiment to validate the Experiment & Optimization pack wiring.',
+    experiments: [
+      {
+        id: 'exp-1',
+        hypothesis: 'Changing the call-to-action will increase click-through rate.',
+        metric: 'cta_click_rate',
+        variant_a_description: 'Original CTA: "Learn More".',
+        variant_b_description: 'New CTA: "See It in Action".',
+        guardrails: ['Do not change pricing copy.', 'Do not change hero image.'],
+        sample_size_hint: 'At least 200 unique visitors per variant.',
+        duration_hint: 'Run for 7 days or until sample size is reached.',
+      },
+    ],
+    logging_annotation_plan:
+      'Tag all CTA clicks with event=cta_click and property=variant ("A" or "B").',
+    followup_work_item_ideas: [
+      'Create WI to roll out winning variant globally if statistically significant.',
+    ],
+  }),
+
+  localizationMarketExpansion: () => ({
+    primary_markets: [
+      {
+        code: 'JP',
+        name: 'Japan',
+        priority: 'high',
+        rationale: 'Strong alignment with product category and existing interest.',
+      },
+    ],
+    content_scope: {
+      must_translate: ['Marketing site homepage', 'Core PDPs', 'Primary onboarding emails'],
+      nice_to_translate: ['Blog posts', 'Secondary feature pages'],
+    },
+    cultural_notes:
+      'Be mindful of formal/informal register and avoid overly casual humor in system UI.',
+    legal_checklist: [
+      {
+        market_code: 'JP',
+        requirement: 'Ensure privacy policy includes localized disclosures.',
+        status: 'required',
+      },
+    ],
+    recommended_workflow:
+      'Source → Translation (pro) → Cultural review (ChieSan) → Legal review → Publish.',
+  }),
+
+  customerJourneyLifecycle: () => ({
+    persona_name: 'Minimal Test Persona',
+    journey_overview:
+      'A simple end-to-end view of how a test user discovers, tries, and continues using the product.',
+    stages: [
+      {
+        name: 'awareness',
+        description: 'User first hears about the product.',
+        primary_touchpoints: ['Social ad', 'Friend referral'],
+        automation_ideas: ['Retargeting ad sequence after first site visit'],
+        kpis: ['Impressions', 'Click-through rate'],
+      },
+      {
+        name: 'purchase',
+        description: 'User makes their first purchase.',
+        primary_touchpoints: ['PDP', 'Checkout flow'],
+        automation_ideas: ['Post-purchase thank-you email'],
+        kpis: ['Conversion rate', 'Cart abandonment rate'],
+      },
+      {
+        name: 'retention',
+        description: 'User continues to engage and repurchase.',
+        primary_touchpoints: ['Email updates', 'In-app notifications'],
+        automation_ideas: ['Reorder reminder campaigns'],
+        kpis: ['Repeat purchase rate'],
+      },
+    ],
+    moments_that_matter: [
+      'First successful checkout',
+      'First reorder',
+      'First support interaction',
+    ],
+    lifecycle_play_ideas: [
+      'Welcome email sequence after first purchase.',
+      'Winback campaign after 60 days of inactivity.',
+    ],
+  }),
+};
+```
+
+---
+
+### 2) Wiring them into `PACKS_UNDER_TEST`
+
+Now, in your `PACKS_UNDER_TEST` array, just plug these into the 10 new entries via `makeMockPayload`. For example:
+
+```ts
+{
+  name: 'Packaging & Pre-Press Pack',
+  skillName: 'generatePackagingPrePressPack',
+  routePath: (id) => `/api/work-items/${id}/actions/generate-packaging-pre-press-pack`,
+  packType: 'packaging_prepress',
+  schema: PackagingPrePressPackSchema,
+  makeMockPayload: minimalNewPackPayloads.packagingPrePress,
+},
+{
+  name: 'Product Line Architecture & SKU Tree Pack',
+  skillName: 'generateProductLineSkuTreePack',
+  routePath: (id) => `/api/work-items/${id}/actions/generate-product-line-sku-tree-pack`,
+  packType: 'product_line_sku_tree',
+  schema: ProductLineSkuTreePackSchema,
+  makeMockPayload: minimalNewPackPayloads.productLineSkuTree,
+},
+{
+  name: 'E-Com PDP & A+ Content Pack',
+  skillName: 'generateEcomPdpAplusContentPack',
+  routePath: (id) => `/api/work-items/${id}/actions/generate-ecom-pdp-aplus-content-pack`,
+  packType: 'ecom_pdp_aplus_content',
+  schema: EcomPdpAplusContentPackSchema,
+  makeMockPayload: minimalNewPackPayloads.ecomPdpAplusContent,
+},
+{
+  name: 'Social Campaign & Content Calendar Pack',
+  skillName: 'generateSocialCampaignContentCalendarPack',
+  routePath: (id) =>
+    `/api/work-items/${id}/actions/generate-social-campaign-content-calendar-pack`,
+  packType: 'social_campaign_content_calendar',
+  schema: SocialCampaignContentCalendarPackSchema,
+  makeMockPayload: minimalNewPackPayloads.socialCampaignContentCalendar,
+},
+{
+  name: 'Implementation Runbook & SOP Pack',
+  skillName: 'generateImplementationRunbookSopPack',
+  routePath: (id) => `/api/work-items/${id}/actions/generate-implementation-runbook-sop-pack`,
+  packType: 'implementation_runbook_sop',
+  schema: ImplementationRunbookSopPackSchema,
+  makeMockPayload: minimalNewPackPayloads.implementationRunbookSop,
+},
+{
+  name: 'Support Playbook & Knowledge Base Pack',
+  skillName: 'generateSupportPlaybookKnowledgeBasePack',
+  routePath: (id) =>
+    `/api/work-items/${id}/actions/generate-support-playbook-knowledge-base-pack`,
+  packType: 'support_playbook_knowledge_base',
+  schema: SupportPlaybookKnowledgeBasePackSchema,
+  makeMockPayload: minimalNewPackPayloads.supportPlaybookKnowledgeBase,
+},
+{
+  name: 'Retail & Wholesale Readiness Pack',
+  skillName: 'generateRetailWholesaleReadinessPack',
+  routePath: (id) => `/api/work-items/${id}/actions/generate-retail-wholesale-readiness-pack`,
+  packType: 'retail_wholesale_readiness',
+  schema: RetailWholesaleReadinessPackSchema,
+  makeMockPayload: minimalNewPackPayloads.retailWholesaleReadiness,
+},
+{
+  name: 'Experiment & Optimization Pack',
+  skillName: 'generateExperimentOptimizationPack',
+  routePath: (id) => `/api/work-items/${id}/actions/generate-experiment-optimization-pack`,
+  packType: 'experiment_optimization',
+  schema: ExperimentOptimizationPackSchema,
+  makeMockPayload: minimalNewPackPayloads.experimentOptimization,
+},
+{
+  name: 'Localization & Market Expansion Pack',
+  skillName: 'generateLocalizationMarketExpansionPack',
+  routePath: (id) => `/api/work-items/${id}/actions/generate-localization-market-expansion-pack`,
+  packType: 'localization_market_expansion',
+  schema: LocalizationMarketExpansionPackSchema,
+  makeMockPayload: minimalNewPackPayloads.localizationMarketExpansion,
+},
+{
+  name: 'Customer Journey & Lifecycle Pack',
+  skillName: 'generateCustomerJourneyLifecyclePack',
+  routePath: (id) => `/api/work-items/${id}/actions/generate-customer-journey-lifecycle-pack`,
+  packType: 'customer_journey_lifecycle',
+  schema: CustomerJourneyLifecyclePackSchema,
+  makeMockPayload: minimalNewPackPayloads.customerJourneyLifecycle,
+},
+```
+
+And in your test body where you build `mockPayload`, you can tighten it to:
+
+```ts
+const payload = makeMockPayload ? makeMockPayload() : {};
+const mockPayload = schema.parse(payload); // will throw if fixture is bad
+mockedRunSkill.mockResolvedValueOnce(mockPayload);
+```
+
+Once that’s in place, Replit’s test runner exercising this file will give you a clean pass/fail signal for every Pack, end-to-end.

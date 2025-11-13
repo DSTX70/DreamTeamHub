@@ -1,0 +1,492 @@
+Here’s a full “top testing” plan you can hand to Replit / Future-You so every Pack gets exercised the same way and you can quickly see if anything is broken.
+
+I’ll give you:
+
+Test matrix (what to test for every Pack).
+
+A reusable Jest/Vitest test harness for backend Packs (one file, 20 packs).
+
+A tiny UI smoke-test checklist you can run manually in the browser.
+
+You can drop the code into tests/packs/ in your repo and point Replit’s test runner at it.
+
+1. Pack Test Matrix (applies to all 20 Packs)
+
+For every Pack (original 10 + new 10), tests should confirm:
+
+Schema (Zod)
+
+Schema imports correctly.
+
+A minimal valid example passes .parse.
+
+Intentionally invalid examples fail .parse with reasonable errors.
+
+Skill wiring
+
+runSkill is called with:
+
+Correct skillName (e.g. generatePackagingPrePressPack).
+
+Correct input shape: { work_item_id, work_item_title, work_item_body, work_item_notes }.
+
+Handler + Saver
+
+createWorkItemActionHandler-based handler:
+
+Reads WI by id.
+
+Calls runSkill.
+
+Validates returned JSON with the Pack’s Zod schema.
+
+Calls the correct saver with packType and parsed payload.
+
+Route wiring
+
+POST /api/work-items/:id/actions/generate-<pack-name>-pack:
+
+Returns 200 and a JSON body with the Pack payload or metadata.
+
+Produces a persisted record in the DB with:
+
+The correct work_item_id.
+
+The correct pack_type value (e.g. 'packaging_prepress').
+
+A payload shape matching the schema.
+
+Auto-run rules (Pack Usage Guide alignment)
+
+For each WI lane/type that should auto-run a Pack:
+
+Creating that WI and triggering the “auto-run” hook results in:
+
+A call to the right route/handler.
+
+A Pack persisted for that WI.
+
+Save-to-Drive (optional now / future)
+
+For Packs that should be exportable:
+
+Action to “Export to Drive” results in:
+
+A file being created in the correct Shared Drive folder.
+
+A fileRef attached to the WI (or pack metadata).
+
+2. Backend Test Harness (single parametric test for all Packs)
+
+Below is a single test file that you can adapt. It:
+
+Mocks runSkill so you don’t actually call an LLM.
+
+Defines a PACKS_UNDER_TEST array for all 20 packs.
+
+For each pack, it:
+
+Seeds a dummy Work Item.
+
+Calls the pack’s route.
+
+Asserts:
+
+HTTP 200.
+
+runSkill called with correct skillName + input.
+
+DB has a Pack stored with the correct packType.
+
+You’ll need to tweak imports and DB helpers to match your actual code, but the pattern will hold.
+
+Create tests/packs/packs.integration.test.ts:
+
+// tests/packs/packs.integration.test.ts
+import request from 'supertest';
+import { app } from '../../server/app';            // your Express/Fastify app
+import { db } from '../../server/db';              // your DB instance or helper
+import { runSkill } from '../../server/ai/runSkill';
+
+import { PackagingPrePressPackSchema } from '../../server/ai/schemas/packagingPrePressPack';
+import { ProductLineSkuTreePackSchema } from '../../server/ai/schemas/productLineSkuTreePack';
+import { EcomPdpAplusContentPackSchema } from '../../server/ai/schemas/ecomPdpAplusContentPack';
+import { SocialCampaignContentCalendarPackSchema } from '../../server/ai/schemas/socialCampaignContentCalendarPack';
+import { ImplementationRunbookSopPackSchema } from '../../server/ai/schemas/implementationRunbookSopPack';
+import { SupportPlaybookKnowledgeBasePackSchema } from '../../server/ai/schemas/supportPlaybookKnowledgeBasePack';
+import { RetailWholesaleReadinessPackSchema } from '../../server/ai/schemas/retailWholesaleReadinessPack';
+import { ExperimentOptimizationPackSchema } from '../../server/ai/schemas/experimentOptimizationPack';
+import { LocalizationMarketExpansionPackSchema } from '../../server/ai/schemas/localizationMarketExpansionPack';
+import { CustomerJourneyLifecyclePackSchema } from '../../server/ai/schemas/customerJourneyLifecyclePack';
+
+// Original 10 schemas (add your real imports here)
+import { LifestyleBannerPackSchema } from '../../server/ai/schemas/lifestyleBannerPack';
+import { PatentClaimsPackSchema } from '../../server/ai/schemas/patentClaimsPack';
+import { LaunchPlanPackSchema } from '../../server/ai/schemas/launchPlanPack';
+import { WebsiteAuditPackSchema } from '../../server/ai/schemas/websiteAuditPack';
+import { RiskCompliancePackSchema } from '../../server/ai/schemas/riskCompliancePack';
+import { AgentLabAcademyPackSchema } from '../../server/ai/schemas/agentLabAcademyPack';
+import { AgentGovernancePackSchema } from '../../server/ai/schemas/agentGovernancePack';
+import { PricingMonetizationPackSchema } from '../../server/ai/schemas/pricingMonetizationPack';
+import { DataStewardshipMetricsPackSchema } from '../../server/ai/schemas/dataStewardshipMetricsPack';
+import { GlobalCollabsPartnershipPackSchema } from '../../server/ai/schemas/globalCollabsPartnershipPack';
+
+// Mock runSkill so tests don't call the LLM
+jest.mock('../../server/ai/runSkill', () => ({
+  runSkill: jest.fn(),
+}));
+
+const mockedRunSkill = runSkill as jest.Mock;
+
+// Helper: create a dummy Work Item
+async function createTestWorkItem() {
+  // Adapt this to however you insert WIs
+  const wi = await db.workItems.insert({
+    title: 'Test WI',
+    body: 'This is a test work item body.',
+    notes: 'Test notes',
+    lane: 'test_lane',
+    status: 'open',
+  });
+  return wi;
+}
+
+type PackEntry = {
+  name: string;
+  skillName: string;
+  routePath: (id: string) => string;
+  packType: string;
+  schema: any;
+  // optional: custom minimal payload for runSkill
+  makeMockPayload?: () => unknown;
+};
+
+// Minimal valid payload generators per schema
+// (simplified: you can tighten these if you like)
+const minimalPayloads = {
+  lifestyle: () => ({
+    // ...satisfy LifestyleBannerPackSchema minimally
+  }),
+  patent: () => ({
+    // ...
+  }),
+};
+
+// All 20 packs under test
+const PACKS_UNDER_TEST: PackEntry[] = [
+  // Existing 10
+  {
+    name: 'Lifestyle Banner Pack',
+    skillName: 'generateLifestyleBannerPack',
+    routePath: (id) => `/api/work-items/${id}/actions/generate-lifestyle-pack`,
+    packType: 'lifestyle_banner',
+    schema: LifestyleBannerPackSchema,
+    makeMockPayload: () => minimalPayloads.lifestyle(),
+  },
+  {
+    name: 'Patent Claims Pack',
+    skillName: 'generatePatentClaimsPack',
+    routePath: (id) => `/api/work-items/${id}/actions/generate-patent-claims-pack`,
+    packType: 'patent_claims',
+    schema: PatentClaimsPackSchema,
+  },
+  {
+    name: 'Launch Plan Pack',
+    skillName: 'generateLaunchPlanPack',
+    routePath: (id) => `/api/work-items/${id}/actions/generate-launch-plan-pack`,
+    packType: 'launch_plan',
+    schema: LaunchPlanPackSchema,
+  },
+  {
+    name: 'Website Audit Pack',
+    skillName: 'generateWebsiteAuditPack',
+    routePath: (id) => `/api/work-items/${id}/actions/generate-website-audit-pack`,
+    packType: 'website_audit',
+    schema: WebsiteAuditPackSchema,
+  },
+  {
+    name: 'Risk & Compliance Pack',
+    skillName: 'generateRiskCompliancePack',
+    routePath: (id) => `/api/work-items/${id}/actions/generate-risk-compliance-pack`,
+    packType: 'risk_compliance',
+    schema: RiskCompliancePackSchema,
+  },
+  {
+    name: 'Agent Lab Academy Pack',
+    skillName: 'generateAgentLabAcademyPack',
+    routePath: (id) => `/api/work-items/${id}/actions/generate-agent-lab-academy-pack`,
+    packType: 'agent_lab_academy',
+    schema: AgentLabAcademyPackSchema,
+  },
+  {
+    name: 'Agent Governance Pack',
+    skillName: 'generateAgentGovernancePack',
+    routePath: (id) => `/api/work-items/${id}/actions/generate-agent-governance-pack`,
+    packType: 'agent_governance',
+    schema: AgentGovernancePackSchema,
+  },
+  {
+    name: 'Pricing & Monetization Pack',
+    skillName: 'generatePricingMonetizationPack',
+    routePath: (id) => `/api/work-items/${id}/actions/generate-pricing-monetization-pack`,
+    packType: 'pricing_monetization',
+    schema: PricingMonetizationPackSchema,
+  },
+  {
+    name: 'Data Stewardship & Metrics Pack',
+    skillName: 'generateDataStewardshipMetricsPack',
+    routePath: (id) => `/api/work-items/${id}/actions/generate-data-stewardship-metrics-pack`,
+    packType: 'data_stewardship_metrics',
+    schema: DataStewardshipMetricsPackSchema,
+  },
+  {
+    name: 'GlobalCollabs Partnerships Pack',
+    skillName: 'generateGlobalCollabsPartnershipPack',
+    routePath: (id) => `/api/work-items/${id}/actions/generate-globalcollabs-partnership-pack`,
+    packType: 'globalcollabs_partnership',
+    schema: GlobalCollabsPartnershipPackSchema,
+  },
+
+  // New 10
+  {
+    name: 'Packaging & Pre-Press Pack',
+    skillName: 'generatePackagingPrePressPack',
+    routePath: (id) => `/api/work-items/${id}/actions/generate-packaging-pre-press-pack`,
+    packType: 'packaging_prepress',
+    schema: PackagingPrePressPackSchema,
+    makeMockPayload: () =>
+      PackagingPrePressPackSchema.parse({
+        summary: 'Test packaging summary',
+        packaging_story: 'Story',
+        primary_formats: [
+          {
+            name: 'Box',
+            dieline_reference: null,
+            dimensions_mm: { width: 100, height: 150, depth: 30 },
+            orientation: 'portrait',
+            notes: 'Test',
+          },
+        ],
+        print_specs: {
+          color_mode: 'CMYK',
+          coatings: ['matte'],
+        },
+        compliance_checklist: [],
+        prepress_checklist: [],
+      }),
+  },
+  {
+    name: 'Product Line Architecture & SKU Tree Pack',
+    skillName: 'generateProductLineSkuTreePack',
+    routePath: (id) => `/api/work-items/${id}/actions/generate-product-line-sku-tree-pack`,
+    packType: 'product_line_sku_tree',
+    schema: ProductLineSkuTreePackSchema,
+  },
+  {
+    name: 'E-Com PDP & A+ Content Pack',
+    skillName: 'generateEcomPdpAplusContentPack',
+    routePath: (id) => `/api/work-items/${id}/actions/generate-ecom-pdp-aplus-content-pack`,
+    packType: 'ecom_pdp_aplus_content',
+    schema: EcomPdpAplusContentPackSchema,
+  },
+  {
+    name: 'Social Campaign & Content Calendar Pack',
+    skillName: 'generateSocialCampaignContentCalendarPack',
+    routePath: (id) => `/api/work-items/${id}/actions/generate-social-campaign-content-calendar-pack`,
+    packType: 'social_campaign_content_calendar',
+    schema: SocialCampaignContentCalendarPackSchema,
+  },
+  {
+    name: 'Implementation Runbook & SOP Pack',
+    skillName: 'generateImplementationRunbookSopPack',
+    routePath: (id) => `/api/work-items/${id}/actions/generate-implementation-runbook-sop-pack`,
+    packType: 'implementation_runbook_sop',
+    schema: ImplementationRunbookSopPackSchema,
+  },
+  {
+    name: 'Support Playbook & Knowledge Base Pack',
+    skillName: 'generateSupportPlaybookKnowledgeBasePack',
+    routePath: (id) => `/api/work-items/${id}/actions/generate-support-playbook-knowledge-base-pack`,
+    packType: 'support_playbook_knowledge_base',
+    schema: SupportPlaybookKnowledgeBasePackSchema,
+  },
+  {
+    name: 'Retail & Wholesale Readiness Pack',
+    skillName: 'generateRetailWholesaleReadinessPack',
+    routePath: (id) => `/api/work-items/${id}/actions/generate-retail-wholesale-readiness-pack`,
+    packType: 'retail_wholesale_readiness',
+    schema: RetailWholesaleReadinessPackSchema,
+  },
+  {
+    name: 'Experiment & Optimization Pack',
+    skillName: 'generateExperimentOptimizationPack',
+    routePath: (id) => `/api/work-items/${id}/actions/generate-experiment-optimization-pack`,
+    packType: 'experiment_optimization',
+    schema: ExperimentOptimizationPackSchema,
+  },
+  {
+    name: 'Localization & Market Expansion Pack',
+    skillName: 'generateLocalizationMarketExpansionPack',
+    routePath: (id) => `/api/work-items/${id}/actions/generate-localization-market-expansion-pack`,
+    packType: 'localization_market_expansion',
+    schema: LocalizationMarketExpansionPackSchema,
+  },
+  {
+    name: 'Customer Journey & Lifecycle Pack',
+    skillName: 'generateCustomerJourneyLifecyclePack',
+    routePath: (id) => `/api/work-items/${id}/actions/generate-customer-journey-lifecycle-pack`,
+    packType: 'customer_journey_lifecycle',
+    schema: CustomerJourneyLifecyclePackSchema,
+  },
+];
+
+describe('Work Item Packs – integration tests', () => {
+  beforeEach(async () => {
+    mockedRunSkill.mockReset();
+    // optional: truncate/reset packs table
+    await db.workItemPacks.deleteAll?.();
+  });
+
+  it.each(PACKS_UNDER_TEST)('%s – schema parses minimal payload', ({ name, schema }) => {
+    // Sanity: ensure schema itself is usable.
+    expect(() => schema.parse(schema.parse ? schema.parse : {})).not.toThrow();
+    // ^ You can replace this with a better minimal fixture per schema.
+  });
+
+  it.each(PACKS_UNDER_TEST)(
+    '%s – route calls runSkill and saves pack',
+    async ({ name, skillName, routePath, packType, schema, makeMockPayload }) => {
+      const wi = await createTestWorkItem();
+
+      // Prepare mock payload for runSkill
+      const mockPayload =
+        (makeMockPayload && makeMockPayload()) || schema.parse(schema.parse({}));
+
+      mockedRunSkill.mockResolvedValueOnce(mockPayload);
+
+      const res = await request(app)
+        .post(routePath(wi.id))
+        .send({}) // body usually unused, WI ID in URL
+        .expect(200);
+
+      // Check runSkill call
+      expect(mockedRunSkill).toHaveBeenCalledTimes(1);
+      const [calledSkillName, input] = mockedRunSkill.mock.calls[0];
+      expect(calledSkillName).toBe(skillName);
+      expect(input).toMatchObject({
+        work_item_id: wi.id,
+        work_item_title: wi.title,
+      });
+
+      // Optional: assert response has a payload
+      expect(res.body).toBeDefined();
+
+      // Check DB state
+      const packs = await db.workItemPacks.findByWorkItemId(wi.id);
+      const packRow = packs.find((p: any) => p.pack_type === packType);
+      expect(packRow).toBeDefined();
+
+      // Schema validation against stored payload
+      expect(() => schema.parse(packRow.payload)).not.toThrow();
+    }
+  );
+});
+
+
+Notes / things to tweak:
+
+Replace:
+
+db.workItems.insert, db.workItemPacks.findByWorkItemId, db.workItemPacks.deleteAll
+
+With your actual Drizzle/Prisma/SQL helpers.
+
+Replace “minimal payload” hacks with real minimal fixtures per schema if needed.
+
+If your app export is different (e.g. createApp()), adapt accordingly.
+
+If runSkill signature differs (e.g. options object), match your implementation.
+
+Once this runs green in Replit, you know:
+
+All 20 routes exist.
+
+All handlers wire through runSkill properly.
+
+All savers are saving in the correct pack_type.
+
+All schemas can parse the stored payloads.
+
+3. Quick UI Smoke Tests
+
+After backend tests pass, you can do a fast manual pass in the browser:
+
+For each Pack:
+
+Open a Work Item in DTH that should support that Pack.
+
+In Actions Panel, confirm:
+
+The action button is present (e.g. “Generate Packaging & Pre-Press Pack”).
+
+Clicking it results in:
+
+A visible “running…” state.
+
+A success toast / message (whatever your pattern is).
+
+In WorkItemPacksTabs:
+
+Confirm a new tab exists for that Pack (icon + label correct).
+
+Click into the tab → confirm the Pack’s data renders without console errors.
+
+Optional: if Save-to-Drive is wired:
+
+Click “Export to Drive”.
+
+Confirm a file shows up in the correct Shared Drive folder.
+
+Confirm a fileRef appears on the WI.
+
+You can keep a one-page checklist like:
+
+ Lifestyle Banner
+
+ Patent Claims
+
+ Launch Plan
+
+ Website Audit
+
+ Risk & Compliance
+
+ Agent Lab Academy
+
+ Agent Governance
+
+ Pricing & Monetization
+
+ Data Stewardship & Metrics
+
+ GlobalCollabs Partnerships
+
+ Packaging & Pre-Press
+
+ Product Line Architecture & SKU Tree
+
+ E-Com PDP & A+ Content
+
+ Social Campaign & Content Calendar
+
+ Implementation Runbook & SOP
+
+ Support Playbook & Knowledge Base
+
+ Retail & Wholesale Readiness
+
+ Experiment & Optimization
+
+ Localization & Market Expansion
+
+ Customer Journey & Lifecycle

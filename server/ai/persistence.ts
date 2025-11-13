@@ -2,12 +2,14 @@ import type { LifestylePack } from "./schemas/lifestylePack";
 import type { PatentClaimsPack } from "./schemas/patentClaimsPack";
 import type { LaunchPlanPack } from "./schemas/launchPlanPack";
 import type { WebsiteAuditPack } from "./schemas/websiteAuditPack";
+import type { RiskCompliancePack } from "./schemas/riskCompliancePack";
+import type { AgentLabAcademyPack } from "./schemas/agentLabAcademyPack";
 import { storage } from "../storage";
 import { db } from "../db/client";
 import { workItemPacks } from "@shared/schema";
 import { eq, and, desc } from "drizzle-orm";
 
-export type PackType = "lifestyle" | "patent" | "launch" | "website_audit";
+export type PackType = "lifestyle" | "patent" | "launch" | "website_audit" | "risk_compliance" | "agent_lab_academy";
 
 async function savePackToDB(
   workItemId: number,
@@ -236,6 +238,106 @@ ${pack.roadmap.map(bucket => `
 ${bucket.narrative}
 Includes: ${bucket.finding_ids.join(', ') || 'None'}
 `).join('\n')}
+`;
+
+  await storage.updateWorkItem(workItemId, {
+    description: (wi.description || "") + packSummary,
+    status: "done",
+  });
+}
+
+export async function saveRiskCompliancePackArtifacts(
+  workItemId: number,
+  pack: RiskCompliancePack
+): Promise<void> {
+  const wi = await storage.getWorkItem(workItemId);
+  if (!wi) throw new Error("Work item not found");
+
+  await savePackToDB(workItemId, "risk_compliance", pack);
+
+  const packSummary = `
+
+---
+
+## 🛡️ Risk & Compliance Pack Generated (${new Date().toLocaleString()})
+
+**${pack.summary.headline}**
+**Overall Risk:** ${pack.summary.overall_risk.toUpperCase()}
+
+### Key Concerns (${pack.summary.key_concerns.length})
+${pack.summary.key_concerns.map(c => `- ${c}`).join('\n')}
+
+### Key Mitigations (${pack.summary.key_mitigations.length})
+${pack.summary.key_mitigations.map(m => `- ${m}`).join('\n')}
+
+### Risks (${pack.risks.length})
+${pack.risks.map(r => `
+**${r.id}** [${r.area} - ${r.severity.toUpperCase()} severity, ${r.likelihood.toUpperCase()} likelihood]
+- **Impact:** ${r.impact}
+- **Description:** ${r.description}
+- **Mitigation (${r.owner_role}, ${r.time_horizon}):** ${r.recommendation}
+`).join('\n')}
+
+### Controls (${pack.controls.length})
+${pack.controls.map(c => `- **${c.id}** (${c.category}, ${c.owner_role})${c.required ? ' [REQUIRED]' : ''}: ${c.description}`).join('\n')}
+
+### Compliance Notes (${pack.compliance_notes.length})
+${pack.compliance_notes.map(cn => `- **${cn.regime}** [${cn.status.toUpperCase()}]: ${cn.note}`).join('\n')}
+
+${pack.open_questions.length > 0 ? `### Open Questions (${pack.open_questions.length})\n${pack.open_questions.map(q => `- ${q}`).join('\n')}` : ''}
+`;
+
+  await storage.updateWorkItem(workItemId, {
+    description: (wi.description || "") + packSummary,
+    status: "done",
+  });
+}
+
+export async function saveAgentLabAcademyPackArtifacts(
+  workItemId: number,
+  pack: AgentLabAcademyPack
+): Promise<void> {
+  const wi = await storage.getWorkItem(workItemId);
+  if (!wi) throw new Error("Work item not found");
+
+  await savePackToDB(workItemId, "agent_lab_academy", pack);
+
+  const packSummary = `
+
+---
+
+## 🎓 Agent Lab Academy Pack Generated (${new Date().toLocaleString()})
+
+**${pack.summary.headline}**
+**Primary Audience:** ${pack.summary.primary_audience}
+
+### Key Outcomes (${pack.summary.key_outcomes.length})
+${pack.summary.key_outcomes.map(o => `- ${o}`).join('\n')}
+
+### Tracks (${pack.tracks.length})
+${pack.tracks.map(t => `
+**${t.name}** (${t.id})
+- **Audience:** ${t.audience}
+- **Modules:** ${t.modules.length}
+- **Objectives:** ${t.objectives.join(', ')}
+- **Prerequisites:** ${t.prerequisites.length > 0 ? t.prerequisites.join(', ') : 'None'}
+`).join('\n')}
+
+### Certifications (${pack.certifications.length})
+${pack.certifications.map(cert => `
+**${cert.name}** (${cert.level})
+- **Target Role:** ${cert.target_role}
+- **Required Tracks:** ${cert.required_tracks.join(', ')}
+- **Exam Format:** ${cert.exam_format}
+`).join('\n')}
+
+### Logistics
+- **Cohort Length:** ${pack.logistics.cohort_length_weeks} weeks
+- **Cadence:** ${pack.logistics.cadence}
+- **Max Seats:** ${pack.logistics.max_seats}
+- **Delivery Model:** ${pack.logistics.delivery_model}
+
+${pack.open_questions.length > 0 ? `### Open Questions (${pack.open_questions.length})\n${pack.open_questions.map(q => `- ${q}`).join('\n')}` : ''}
 `;
 
   await storage.updateWorkItem(workItemId, {
