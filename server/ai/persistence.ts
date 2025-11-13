@@ -7,7 +7,14 @@ export async function saveLifestylePackArtifacts(
   workItemId: number,
   pack: LifestylePack
 ): Promise<void> {
-  const notes = `## Lifestyle Pack Generated
+  const wi = await storage.getWorkItem(workItemId);
+  if (!wi) throw new Error("Work item not found");
+
+  const packSummary = `
+
+---
+
+## ✨ Lifestyle Pack Generated (${new Date().toLocaleString()})
 
 ### Shot Boards (${pack.shot_boards.length})
 ${pack.shot_boards.map(sb => `
@@ -32,7 +39,7 @@ ${pack.seo_meta_rows.map(seo => `- ${seo.filename}: ${seo.meta_title}`).join('\n
 `;
 
   await storage.updateWorkItem(workItemId, {
-    description: notes,
+    description: (wi.description || "") + packSummary,
     status: "done",
   });
 }
@@ -41,7 +48,14 @@ export async function savePatentClaimsPack(
   workItemId: number,
   pack: PatentClaimsPack
 ): Promise<void> {
-  const notes = `## Patent Claims Pack Generated
+  const wi = await storage.getWorkItem(workItemId);
+  if (!wi) throw new Error("Work item not found");
+
+  const packSummary = `
+
+---
+
+## 🧩 Patent Claims Pack Generated (${new Date().toLocaleString()})
 
 **Invention:** ${pack.invention_title}
 
@@ -65,7 +79,7 @@ ${pack.open_questions.length > 0 ? `### Open Questions\n${pack.open_questions.ma
 `;
 
   await storage.updateWorkItem(workItemId, {
-    description: notes,
+    description: (wi.description || "") + packSummary,
     status: "done",
   });
 }
@@ -74,7 +88,14 @@ export async function saveLaunchPlanPack(
   workItemId: number,
   pack: LaunchPlanPack
 ): Promise<void> {
-  const notes = `## Launch Plan Pack Generated
+  const wi = await storage.getWorkItem(workItemId);
+  if (!wi) throw new Error("Work item not found");
+
+  const packSummary = `
+
+---
+
+## 📣 Launch Plan Pack Generated (${new Date().toLocaleString()})
 
 **Campaign:** ${pack.campaign_name}
 **T0 Event:** ${pack.t0_event}
@@ -98,7 +119,7 @@ ${pack.kpis.map(k => `- **${k.metric}**: ${k.target_value} (${k.measurement_wind
 `;
 
   await storage.updateWorkItem(workItemId, {
-    description: notes,
+    description: (wi.description || "") + packSummary,
     status: "done",
   });
 }
