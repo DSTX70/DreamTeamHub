@@ -1,0 +1,535 @@
+Here’s a compact, code-shaped spec you can hand to Replit as the starting point for the **Drive indexer**:
+
+* Nightly job: index all configured collections/folders
+* Quick-index endpoint: index a single Drive file on demand (e.g., right after “Save to Drive”)
+
+I’ll keep it as **pseudo-TypeScript** with clear TODOs.
+
+---
+
+## 1️⃣ Config: Knowledge collections ↔ Drive folders
+
+**File:** `server/config/knowledgeCollections.ts`
+
+```ts
+// server/config/knowledgeCollections.ts
+
+export type KnowledgeCollectionKey =
+  | "fab_card_co_brand"
+  | "ip_specs"
+  | "launch_playbooks"
+  | "website_audits";
+
+export interface KnowledgeCollectionConfig {
+  key: KnowledgeCollectionKey;
+  driveFolderIds: string[]; // Google Drive folder IDs
+  brand?: string;           // optional default brand tag
+}
+
+export const knowledgeCollections: KnowledgeCollectionConfig[] = [
+  {
+    key: "fab_card_co_brand",
+    driveFolderIds: [
+      // e.g. Brand book + Agentic Packs for Fab Card Co
+      "<BrandBookFolderID>",
+      "<FabCardCoAgenticPacksFolderID>",
+    ],
+    brand: "Fab Card Co",
+  },
+  {
+    key: "ip_specs",
+    driveFolderIds: ["<SpecsFolderID>", "<ClaimsFolderID>"],
+  },
+  {
+    key: "launch_playbooks",
+    driveFolderIds: ["<LaunchDocsFolderID>", "<LaunchPacksFolderID>"],
+  },
+  {
+    key: "website_audits",
+    driveFolderIds: ["<OldAuditsFolderID>", "<AuditPacksFolderID>"],
+  },
+];
+```
+
+---
+
+## 2️⃣ Types & DB helpers for knowledge chunks
+
+**File:** `server/db/knowledge.ts`
+
+```ts
+// server/db/knowledge.ts
+import { db } from "./client"; // your DB client
+
+export type KnowledgeCollectionKey =
+  import("../config/knowledgeCollections").KnowledgeCollectionKey;
+
+export interface KnowledgeChunk {
+  id: string;
+  collection: KnowledgeCollectionKey;
+  driveFileId: string;
+  driveFileName: string;
+  driveFolderId: string;
+  pathHint?: string;
+  brand?: string;
+  packType?: string;     // "lifestyle" | "patent" | "launch" | "website_audit" | null
+  workItemId?: string;
+  chunkIndex: number;
+  text: string;
+  embedding: number[];
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface IndexedFileMeta {
+  driveFileId: string;
+  collection: KnowledgeCollectionKey;
+  modifiedTime: string; // ISO from Drive
+  etag?: string | null;
+  lastIndexedAt: string; // ISO
+}
+
+/**
+ * Fetch prior index metadata for a file in a collection.
+ */
+export async function getIndexedFileMeta(
+  collection: KnowledgeCollectionKey,
+  driveFileId: string,
+): Promise<IndexedFileMeta | null> {
+  // TODO: query knowledge_index_meta table
+  return null as any;
+}
+
+/**
+ * Upsert index metadata for a file.
+ */
+export async function upsertIndexedFileMeta(
+  meta: IndexedFileMeta,
+): Promise<void> {
+  // TODO: INSERT ... ON CONFLICT or equivalent
+}
+
+/**
+ * Replace all chunks for a given file+collection with new chunks.
+ */
+export async function replaceKnowledgeChunksForFile(
+  collection: KnowledgeCollectionKey,
+  driveFileId: string,
+  chunks: KnowledgeChunk[],
+): Promise<void> {
+  // TODO:
+  // 1) DELETE FROM knowledge_chunks WHERE collection=? AND driveFileId=?
+  // 2) INSERT new chunks
+}
+```
+
+---
+
+## 3️⃣ Google Drive helpers (list + content)
+
+**File:** `server/services/googleDrive.ts`
+
+```ts
+// server/services/googleDrive.ts
+import type { drive_v3 } from "@googleapis/drive";
+
+export interface DriveFileSummary {
+  id: string;
+  name: string;
+  mimeType: string;
+  modifiedTime: string;
+  parents?: string[];
+}
+
+/**
+ * List all files in a given folder (non-recursive for v1).
+ * Can be extended later to recurse or use Drive queries.
+ */
+export async function listFilesInFolder(
+  drive: drive_v3.Drive,
+  folderId: string,
+): Promise<DriveFileSummary[]> {
+  // TODO: use drive.files.list with:
+  // q: `'${folderId}' in parents and trashed = false`
+  // fields: "files(id, name, mimeType, modifiedTime, parents)"
+  return [] as any;
+}
+
+/**
+ * Fetch file content as text, depending on mime type:
+ * - Google Docs → export as text
+ * - DOCX / PDF → convert via existing pipeline
+ * - Plain text / markdown → read directly
+ */
+export async function fetchFileText(
+  drive: drive_v3.Drive,
+  file: DriveFileSummary,
+): Promise<string | null> {
+  // TODO:
+  // switch on mimeType and use:
+  // - files.export for Google Docs
+  // - files.get with alt: "media" for binary, then pass through your text extractor
+  return null;
+}
+```
+
+---
+
+## 4️⃣ Embedding + chunking helpers
+
+**File:** `server/services/knowledgeEmbedding.ts`
+
+```ts
+// server/services/knowledgeEmbedding.ts
+
+import type { KnowledgeCollectionKey, KnowledgeChunk } from "../db/knowledge";
+
+/**
+ * Split a long text into smaller chunks (by paragraph, sentence, or token count).
+ * This is a simplified placeholder.
+ */
+export function splitTextIntoChunks(text: string, maxChars = 1200): string[] {
+  const chunks: string[] = [];
+  let current = "";
+
+  for (const paragraph of text.split(/\n{2,}/)) {
+    if ((current + "\n\n" + paragraph).length > maxChars && current) {
+      chunks.push(current.trim());
+      current = paragraph;
+    } else {
+      current = current ? current + "\n\n" + paragraph : paragraph;
+    }
+  }
+
+  if (current.trim()) {
+    chunks.push(current.trim());
+  }
+  return chunks;
+}
+
+/**
+ * Call your embeddings API to embed an array of texts.
+ * Returns one embedding vector per chunk.
+ */
+export async function embedChunks(
+  chunks: string[],
+): Promise<number[][]> {
+  // TODO: use your existing OpenAI/Vertex embeddings client
+  // Example:
+  // const response = await embeddingsClient.embed({ inputs: chunks });
+  // return response.vectors;
+  return [] as any;
+}
+
+/**
+ * Build KnowledgeChunk objects from raw chunks + embeddings.
+ */
+export function buildKnowledgeChunks(params: {
+  collection: KnowledgeCollectionKey;
+  driveFileId: string;
+  driveFileName: string;
+  driveFolderId: string;
+  brand?: string;
+  packType?: string;
+  workItemId?: string;
+  chunks: string[];
+  embeddings: number[][];
+}): KnowledgeChunk[] {
+  const {
+    collection,
+    driveFileId,
+    driveFileName,
+    driveFolderId,
+    brand,
+    packType,
+    workItemId,
+    chunks,
+    embeddings,
+  } = params;
+
+  const now = new Date();
+  return chunks.map((text, idx) => ({
+    id: `${collection}:${driveFileId}:${idx}`,
+    collection,
+    driveFileId,
+    driveFileName,
+    driveFolderId,
+    brand,
+    packType,
+    workItemId,
+    chunkIndex: idx,
+    text,
+    embedding: embeddings[idx],
+    createdAt: now,
+    updatedAt: now,
+  }));
+}
+```
+
+---
+
+## 5️⃣ Core indexer: index one file + nightly job
+
+### 5A. Index a single file for a specific collection
+
+**File:** `server/services/driveIndexer.ts`
+
+```ts
+// server/services/driveIndexer.ts
+import type { drive_v3 } from "@googleapis/drive";
+import {
+  knowledgeCollections,
+  type KnowledgeCollectionKey,
+} from "../config/knowledgeCollections";
+import {
+  getIndexedFileMeta,
+  upsertIndexedFileMeta,
+  replaceKnowledgeChunksForFile,
+} from "../db/knowledge";
+import { listFilesInFolder, fetchFileText } from "./googleDrive";
+import {
+  splitTextIntoChunks,
+  embedChunks,
+  buildKnowledgeChunks,
+} from "./knowledgeEmbedding";
+
+export interface IndexFileParams {
+  drive: drive_v3.Drive;
+  collection: KnowledgeCollectionKey;
+  file: {
+    id: string;
+    name: string;
+    mimeType: string;
+    modifiedTime: string;
+    parents?: string[];
+  };
+}
+
+/**
+ * Index a single Drive file into the knowledge index for a collection.
+ * - Skips unchanged files (based on modifiedTime)
+ * - Extracts text, chunks, embeds, and upserts knowledge chunks
+ */
+export async function indexSingleDriveFile(
+  params: IndexFileParams,
+): Promise<void> {
+  const { drive, collection, file } = params;
+
+  const existingMeta = await getIndexedFileMeta(collection, file.id);
+  if (existingMeta && existingMeta.modifiedTime === file.modifiedTime) {
+    // No change, skip re-index
+    return;
+  }
+
+  const text = await fetchFileText(drive, file);
+  if (!text || !text.trim()) {
+    // Nothing indexable
+    return;
+  }
+
+  const chunks = splitTextIntoChunks(text);
+  if (!chunks.length) return;
+
+  const embeddings = await embedChunks(chunks);
+  if (!embeddings.length || embeddings.length !== chunks.length) {
+    // Embeddings failed or mismatch
+    return;
+  }
+
+  const folderId = (file.parents && file.parents[0]) || "";
+
+  const collectionConfig = knowledgeCollections.find(
+    (c) => c.key === collection,
+  );
+
+  const knowledgeChunks = buildKnowledgeChunks({
+    collection,
+    driveFileId: file.id,
+    driveFileName: file.name,
+    driveFolderId: folderId,
+    brand: collectionConfig?.brand,
+    // TODO: optionally infer packType/workItemId from filename pattern
+    packType: undefined,
+    workItemId: undefined,
+    chunks,
+    embeddings,
+  });
+
+  await replaceKnowledgeChunksForFile(collection, file.id, knowledgeChunks);
+
+  await upsertIndexedFileMeta({
+    driveFileId: file.id,
+    collection,
+    modifiedTime: file.modifiedTime,
+    etag: null,
+    lastIndexedAt: new Date().toISOString(),
+  });
+}
+```
+
+### 5B. Nightly job: index all collections/folders
+
+```ts
+// server/services/driveIndexer.ts (continued)
+export async function runNightlyDriveIndexJob(
+  drive: drive_v3.Drive,
+): Promise<void> {
+  for (const collectionConfig of knowledgeCollections) {
+    const collection = collectionConfig.key;
+
+    for (const folderId of collectionConfig.driveFolderIds) {
+      // List files in this folder
+      const files = await listFilesInFolder(drive, folderId);
+
+      for (const file of files) {
+        // Optional filter: skip binary types you don't support yet
+        if (!file.mimeType) continue;
+        // e.g., only index docs, sheets, slides, PDFs, text
+        if (
+          !file.mimeType.startsWith("application/") &&
+          !file.mimeType.startsWith("text/") &&
+          !file.mimeType.startsWith("application/vnd.google-apps.")
+        ) {
+          continue;
+        }
+
+        await indexSingleDriveFile({
+          drive,
+          collection,
+          file,
+        });
+      }
+    }
+  }
+}
+```
+
+> This job can be wired to a cron/scheduler that calls `runNightlyDriveIndexJob(driveClient)` once per night.
+
+---
+
+## 6️⃣ Quick-index endpoint: index a specific file right after “Save to Drive”
+
+This is the on-demand hook you call right after exporting a pack to Drive.
+
+### 6A. Quick-index API handler
+
+**File:** `server/routes/knowledge/quickIndex.ts`
+
+```ts
+// server/routes/knowledge/quickIndex.ts
+import type { Request, Response } from "express";
+import type { drive_v3 } from "@googleapis/drive";
+import { knowledgeCollections, KnowledgeCollectionKey } from "../../config/knowledgeCollections";
+import { indexSingleDriveFile } from "../../services/driveIndexer";
+import { getDriveClient } from "../../services/googleAuth"; // TODO
+
+/**
+ * POST /api/knowledge/index-file
+ * Body: { collection: "fab_card_co_brand", driveFileId: "..." }
+ */
+export async function postQuickIndexFile(req: Request, res: Response) {
+  const { collection, driveFileId } = req.body as {
+    collection: KnowledgeCollectionKey;
+    driveFileId: string;
+  };
+
+  if (!collection || !driveFileId) {
+    return res
+      .status(400)
+      .json({ ok: false, error: "missing_collection_or_driveFileId" });
+  }
+
+  const drive: drive_v3.Drive = getDriveClient(); // service account
+
+  try {
+    // Look up the file metadata from Drive
+    // TODO: optimize with fields=...
+    const fileRes = await drive.files.get({
+      fileId: driveFileId,
+      fields: "id, name, mimeType, modifiedTime, parents",
+    });
+
+    const file = fileRes.data;
+    if (!file.id || !file.name || !file.modifiedTime) {
+      return res
+        .status(404)
+        .json({ ok: false, error: "file_not_found_or_incomplete" });
+    }
+
+    await indexSingleDriveFile({
+      drive,
+      collection,
+      file: {
+        id: file.id,
+        name: file.name,
+        mimeType: file.mimeType || "application/octet-stream",
+        modifiedTime: file.modifiedTime,
+        parents: file.parents || [],
+      },
+    });
+
+    return res.json({ ok: true });
+  } catch (err) {
+    console.error("Error in postQuickIndexFile", err);
+    return res.status(500).json({ ok: false, error: "index_failed" });
+  }
+}
+```
+
+### 6B. Wire the quick-index route
+
+**File:** `server/routes.ts`
+
+```ts
+import { postQuickIndexFile } from "./routes/knowledge/quickIndex";
+
+export function registerRoutes(app: import("express").Express) {
+  // ...
+  app.post("/api/knowledge/index-file", postQuickIndexFile);
+}
+```
+
+### 6C. Hook it from “Save to Drive” (optional v1)
+
+In `postSavePackToDrive` (from the previous plan), after you upload files:
+
+```ts
+// After `const uploaded = await uploadFilesToDrive(...)`
+for (const file of uploaded) {
+  // Optionally: determine collection based on packType, brand, etc.
+  const collection: KnowledgeCollectionKey | null =
+    packType === "lifestyle"
+      ? "fab_card_co_brand"
+      : packType === "patent"
+      ? "ip_specs"
+      : packType === "launch"
+      ? "launch_playbooks"
+      : packType === "website_audit"
+      ? "website_audits"
+      : null;
+
+  if (collection) {
+    // Fire-and-forget quick index
+    // (Optionally queue this instead of awaiting.)
+    fetch("http://localhost:5000/api/knowledge/index-file", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        collection,
+        driveFileId: file.driveFileId,
+      }),
+    }).catch((err) =>
+      console.error("Failed to enqueue quick index", err),
+    );
+  }
+}
+```
+
+---
+
+This gives Replit a concrete starting point:
+
+* **Nightly job**: `runNightlyDriveIndexJob(driveClient)` to keep the KB synced to your Shared Drive.
+* **Quick index**: `POST /api/knowledge/index-file` to pull new pack files into the index as soon as they’re saved.
+* **Metadata**: rich enough that future packs can query by brand, collection, packType, and workItemId, so your Agentic Dream Team is grounded in everything you’ve already created and everything new you save.

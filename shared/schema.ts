@@ -245,6 +245,43 @@ export const workItems = pgTable("work_items", {
 });
 
 // ===========================
+// WORK ITEM PACKS (Versioned AI-Generated Outputs)
+// ===========================
+
+export const workItemPacks = pgTable("work_item_packs", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  workItemId: integer("work_item_id").notNull().references(() => workItems.id, { onDelete: 'cascade' }),
+  packType: text("pack_type").notNull(), // "lifestyle" | "patent" | "launch" | "website_audit"
+  version: integer("version").notNull().default(1),
+  packData: jsonb("pack_data").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => ({
+  uniqueWorkItemPackTypeVersion: unique().on(table.workItemId, table.packType, table.version),
+  workItemPackTypeIdx: index("idx_work_item_pack_type").on(table.workItemId, table.packType),
+}));
+
+// ===========================
+// WORK ITEM DRIVE FILES (Track Google Drive Exports)
+// ===========================
+
+export const workItemDriveFiles = pgTable("work_item_drive_files", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  workItemId: integer("work_item_id").notNull().references(() => workItems.id, { onDelete: 'cascade' }),
+  packId: integer("pack_id").references(() => workItemPacks.id, { onDelete: 'set null' }),
+  driveFileId: text("drive_file_id").notNull(),
+  fileName: text("file_name").notNull(),
+  mimeType: text("mime_type").notNull(),
+  webViewLink: text("web_view_link").notNull(),
+  packType: text("pack_type"), // "lifestyle" | "patent" | "launch" | "website_audit"
+  driveFolderId: text("drive_folder_id"),
+  uploadedBy: text("uploaded_by"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => ({
+  driveFileIdIdx: unique().on(table.driveFileId),
+  workItemPackIdx: index("idx_wi_drive_files_wi_pack").on(table.workItemId, table.packType),
+}));
+
+// ===========================
 // WORK ITEM FILES
 // ===========================
 
@@ -934,6 +971,16 @@ export const insertWorkItemSchema = createInsertSchema(workItems).omit({ id: tru
 });
 export type InsertWorkItem = z.infer<typeof insertWorkItemSchema>;
 export type WorkItem = typeof workItems.$inferSelect;
+
+// Work Item Packs
+export const insertWorkItemPackSchema = createInsertSchema(workItemPacks).omit({ id: true, createdAt: true });
+export type InsertWorkItemPack = z.infer<typeof insertWorkItemPackSchema>;
+export type WorkItemPack = typeof workItemPacks.$inferSelect;
+
+// Work Item Drive Files
+export const insertWorkItemDriveFileSchema = createInsertSchema(workItemDriveFiles).omit({ id: true, createdAt: true });
+export type InsertWorkItemDriveFile = z.infer<typeof insertWorkItemDriveFileSchema>;
+export type WorkItemDriveFile = typeof workItemDriveFiles.$inferSelect;
 
 // Work Item Files
 export const insertWorkItemFileSchema = createInsertSchema(workItemFiles).omit({ createdAt: true });

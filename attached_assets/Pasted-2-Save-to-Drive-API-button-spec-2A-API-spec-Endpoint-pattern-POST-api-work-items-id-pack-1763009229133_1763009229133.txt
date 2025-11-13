@@ -1,0 +1,469 @@
+2️⃣ “Save to Drive” API + button spec
+2A. API spec
+
+Endpoint pattern:
+
+POST /api/work-items/:id/packs/:packType/save-to-drive
+
+
+Where packType ∈ lifestyle | patent | launch | website_audit.
+
+Request:
+
+No body required for v1.
+
+Auth: same as your other WI APIs.
+
+Server flow:
+
+Look up Work Item by id.
+
+Check that the requested pack type exists for this WI:
+
+lifestyle_pack or
+
+patent_claims_pack or
+
+launch_plan_pack or
+
+website_audit_pack
+
+Load the corresponding pack JSON.
+
+Render one or more files in a temp directory:
+
+e.g. WI-<id>_<PackType>_v1.docx, WI-<id>_<PackType>_export.csv
+
+Look up the Drive folder ID from config:
+
+// example config object
+dth_drive_routes = {
+  "packs:lifestyle": { driveFolderId: "..." },
+  "packs:patent": { driveFolderId: "..." },
+  "packs:launch": { driveFolderId: "..." },
+  "packs:website_audit": { driveFolderId: "..." },
+};
+
+
+Upload each file to Google Drive:
+
+Destination: the mapped folder ID for this pack type.
+
+Use the service account to upload.
+
+Capture driveFileId, webViewLink, file name, mimeType.
+
+Append fileRefs[] on the Work Item object in DB.
+
+Return:
+
+{
+  "ok": true,
+  "work_item_id": "WI-TEST-001",
+  "pack_type": "lifestyle",
+  "files": [
+    {
+      "kind": "google_drive",
+      "driveFileId": "1AbCdEf...",
+      "name": "WI-TEST-001_LifestylePack_v1.docx",
+      "mimeType": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      "webViewLink": "https://drive.google.com/file/d/1AbCdEf.../view"
+    }
+  ]
+}
+
+
+Error cases:
+
+WI not found → 404 { ok:false, error:"work_item_not_found" }
+
+Pack missing → 400 { ok:false, error:"pack_not_found" }
+
+Drive upload fails → 502 { ok:false, error:"drive_upload_failed" }
+
+2B. Backend drop (Express handler)
+
+File: server/routes/workItemPacks/saveToDrive.ts
+
+// server/routes/workItemPacks/saveToDrive.ts
+import type { Request, Response } from "express";
+import { getWorkItemById, appendFileRefsToWorkItem } from "../../db/workItems";
+import { renderPackFilesForDrive } from "../../services/packExport"; // implement
+import { uploadFilesToDrive } from "../../services/googleDrive"; // implement
+import { dthDriveRoutes } from "../../config/dthDriveRoutes"; // implement
+
+type PackType = "lifestyle" | "patent" | "launch" | "website_audit";
+
+export async function postSavePackToDrive(req: Request, res: Response) {
+  const workItemId = String(req.params.id);
+  const packType = String(req.params.packType) as PackType;
+
+  try {
+    const wi = await getWorkItemById(workItemId);
+    if (!wi) {
+      return res
+        .status(404)
+        .json({ ok: false, error: "work_item_not_found" });
+    }
+
+    let packData: any;
+    switch (packType) {
+      case "lifestyle":
+        packData = wi.lifestyle_pack;
+        break;
+      case "patent":
+        packData = wi.patent_claims_pack;
+        break;
+      case "launch":
+        packData = wi.launch_plan_pack;
+        break;
+      case "website_audit":
+        packData = wi.website_audit_pack;
+        break;
+      default:
+        return res.status(400).json({ ok: false, error: "invalid_pack_type" });
+    }
+
+    if (!packData) {
+      return res.status(400).json({ ok: false, error: "pack_not_found" });
+    }
+
+    const routeKey = `packs:${packType}` as keyof typeof dthDriveRoutes;
+    const route = dthDriveRoutes[routeKey];
+    if (!route) {
+      return res
+        .status(500)
+        .json({ ok: false, error: "drive_route_not_configured" });
+    }
+
+    // Step 1: render files (DOCX/CSV/etc.) to a temp directory
+    const localFiles = await renderPackFilesForDrive({
+      workItemId,
+      packType,
+      packData,
+    });
+
+    // Step 2: upload to Drive
+    const uploaded = await uploadFilesToDrive({
+      driveFolderId: route.driveFolderId,
+      localFiles,
+    });
+
+    // Step 3: persist file refs
+    await appendFileRefsToWorkItem(workItemId, uploaded, packType);
+
+    return res.json({
+      ok: true,
+      work_item_id: workItemId,
+      pack_type: packType,
+      files: uploaded,
+    });
+  } catch (err) {
+    console.error("Error in postSavePackToDrive", err);
+    return res.status(502).json({
+      ok: false,
+      error: "drive_upload_failed",
+    });
+  }
+}
+
+
+Wire the route in server/routes.ts:
+
+import { postSavePackToDrive } from "./routes/workItemPacks/saveToDrive";
+
+export function registerRoutes(app: import("express").Express) {
+  // ...
+  app.post(
+    "/api/work-items/:id/packs/:packType/save-to-drive",
+    postSavePackToDrive
+  );
+}
+
+2C. Minimal React “Save to Drive” button
+
+We’ll tuck this inside the Generated Packs panel, per tab.
+
+File: client/src/components/workItems/SavePackToDriveButton.tsx
+
+// client/src/components/workItems/SavePackToDriveButton.tsx
+import * as React from "react";
+
+type PackType = "lifestyle" | "patent" | "launch" | "website_audit";
+
+interface SavePackToDriveButtonProps {
+  workItemId: string;
+  packType: PackType;
+}
+
+export function SavePackToDriveButton(props: SavePackToDriveButtonProps) {
+  const { workItemId, packType } = props;
+  const [status, setStatus] = React.useState<
+    "idle" | "saving" | "ok" | "error"
+  >("idle");
+
+  async function handleClick() {
+    setStatus("saving");
+
+    try {
+      const res = await fetch(
+        `/api/work-items/${encodeURIComponent(
+          workItemId
+        )}/packs/${packType}/save-to-drive`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+        }
+      );
+
+      if (!res.ok) throw new Error(`Bad status: ${res.status}`);
+
+      setStatus("ok");
+    } catch (err) {
+      console.error("Save to Drive failed", err);
+      setStatus("error");
+    }
+  }
+
+  const labelMap: Record<PackType, string> = {
+    lifestyle: "Save Lifestyle Pack to Drive",
+    patent: "Save Claims Pack to Drive",
+    launch: "Save Launch Plan to Drive",
+    website_audit: "Save Audit Pack to Drive",
+  };
+
+  return (
+    <div className="mt-3 flex items-center gap-2">
+      <button
+        type="button"
+        onClick={handleClick}
+        disabled={status === "saving"}
+        className="inline-flex items-center rounded-md border border-gray-500 px-2 py-1 text-xs font-medium text-gray-100 hover:bg-gray-800 disabled:opacity-60"
+      >
+        {status === "saving" ? "Saving…" : labelMap[packType]}
+      </button>
+      {status === "ok" && (
+        <span className="text-[11px] text-emerald-400">Saved to Drive ✔</span>
+      )}
+      {status === "error" && (
+        <span className="text-[11px] text-rose-400">
+          Save failed. Check logs.
+        </span>
+      )}
+    </div>
+  );
+}
+
+
+Then, in WorkItemPacksTabs, drop this into each tab’s content:
+
+Example for Lifestyle tab (inside if (active === "lifestyle" ...)):
+
+import { SavePackToDriveButton } from "./SavePackToDriveButton";
+
+// at bottom of the Lifestyle pack render:
+return (
+  <div className="space-y-4">
+    {/* existing Shot Boards + Export Plan UI */}
+    {/* ... */}
+
+    <SavePackToDriveButton
+      workItemId={workItem.id}
+      packType="lifestyle"
+    />
+  </div>
+);
+
+
+And similarly for other tabs with packType="patent", "launch", "website_audit".
+
+3️⃣ Drive indexer spec (how DTH “learns” from Drive)
+
+This is the part that gives you ongoing access to old + new docs.
+
+3A. What the indexer does (high-level)
+
+For a given knowledge collection (e.g. fab_card_co_brand):
+
+Fetches files from configured Drive folder IDs.
+
+For each file:
+
+Checks if it’s new or changed.
+
+Extracts text content.
+
+Splits it into chunks.
+
+Embeds each chunk (vector embeddings).
+
+Stores them in your vector DB with rich metadata.
+
+Marks the file as indexed with a lastIndexedAt + ETag / version.
+
+Then, when a pack (or Q&A) runs:
+
+The skill calls searchKnowledge(collection, query).
+
+DTH looks up relevant chunks in the vector DB and passes them as context into the LLM.
+
+3B. Collections → folder IDs mapping
+
+In config (or DB):
+
+{
+  "knowledge_collections": {
+    "fab_card_co_brand": {
+      "driveFolderIds": ["<BrandBookFolderID>", "<AgenticPacksFolderID>"]
+    },
+    "ip_specs": {
+      "driveFolderIds": ["<SpecsFolderID>", "<ClaimsFolderID>"]
+    },
+    "launch_playbooks": {
+      "driveFolderIds": ["<LaunchDocsFolderID>", "<LaunchPacksFolderID>"]
+    },
+    "website_audits": {
+      "driveFolderIds": ["<OldAuditsFolderID>", "<AuditPacksFolderID>"]
+    }
+  }
+}
+
+
+You use your existing folders + the new pack folders. No reorg required.
+
+3C. How the indexer “watches” folders
+
+You’ve got two main options:
+
+Option 1 – Scheduled full scans (simpler to start)
+
+Run a scheduled job (cron/worker) 1–4 times/day:
+
+For each collection:
+
+For each folder ID:
+
+List files via drive.files.list (filter by mimeTypes you care about: docs, sheets, PDFs, etc.).
+
+For each file:
+
+Look up a local index table row: drive_file_id, modifiedTime, etag.
+
+If:
+
+New file, or
+
+modifiedTime changed since last index:
+
+Fetch content, re-index.
+
+Pros: simple.
+Cons: redundant listing, but fine for your scale.
+
+Option 2 – Drive changes feed (more complex, more efficient)
+
+Use Drive “changes” or “push notifications” to only process changed files.
+
+Probably overkill for v1, but a good later improvement.
+
+For now, I’d tell Replit to do Option 1 (scheduled scan) and revisit later.
+
+3D. What metadata to attach to each chunk
+
+For each indexed chunk, store something like:
+
+type KnowledgeChunk = {
+  id: string;
+  collection: string;       // "fab_card_co_brand", "ip_specs", ...
+  driveFileId: string;
+  driveFileName: string;
+  driveFolderId: string;
+  pathHint?: string;        // e.g. "Fab Card Co / Brand / Agentic Packs"
+  brand?: string;           // "Fab Card Co", "OUAS", "dreamshitter"
+  packType?: string;        // "lifestyle" | "patent" | "launch" | "website_audit" | null
+  workItemId?: string;      // if came from a pack
+  chunkIndex: number;
+  text: string;
+  embedding: number[];
+  createdAt: Date;
+  updatedAt: Date;
+};
+
+
+That gives you:
+
+Brand filtering (“only pull Fab Card Co docs”),
+
+Pack awareness (“use past launch packs when drafting a new launch plan”),
+
+Traceability back to Drive and the original WI.
+
+3E. Indexer schedule & scope
+
+Recommended v1 schedule:
+
+Nightly full scan across all collections.
+
+Plus a small real-time hook when packs are saved:
+
+After Save to Drive finishes, enqueue that new file ID for indexing.
+
+Concrete:
+
+Nightly job:
+
+For each knowledge_collection:
+
+For each folder ID:
+
+List files; index new/changed.
+
+After pack upload:
+
+postSavePackToDrive knows the new driveFileId.
+
+Push a message onto a queue (or call a “quick index” endpoint):
+
+POST /api/knowledge/index-file with { collection, driveFileId }.
+
+That means:
+
+Your KB stays “fresh” for new agentic outputs almost immediately,
+
+But the big bulk of older docs is handled by the nightly job.
+
+3F. How packs actually “see” the knowledge
+
+In code, you’ll have something like:
+
+// server/ai/searchKnowledge.ts
+export async function searchKnowledge(options: {
+  collections: string[];
+  query: string;
+  limit?: number;
+}) {
+  // 1. Run embeddings on query
+  // 2. Query vector DB filtered by collection in options.collections
+  // 3. Return top N chunks with text + metadata
+}
+
+
+Then your skill runner (or the skill’s prelude) does:
+
+For a Launch Plan Pack:
+
+searchKnowledge(["launch_playbooks", "fab_card_co_brand"], queryFromWI)
+
+For a Patent Claims Pack:
+
+searchKnowledge(["ip_specs"], inventionSummary)
+
+For a Website Audit Pack:
+
+searchKnowledge(["website_audits", "fab_card_co_brand"], siteNameOrURL)
+
+The results are passed into the model as:
+
+“Here are relevant snippets from your existing knowledge,”
+
+So it doesn’t start from zero each time.
