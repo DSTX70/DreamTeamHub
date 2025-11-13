@@ -3,7 +3,7 @@ import type { DB } from "../db/types";
 import type { PackConfig } from "./packRegistry";
 import { runSkill } from "./runSkill";
 import { db } from "../db";
-import { eq, and } from "drizzle-orm";
+import { eq, and, desc } from "drizzle-orm";
 import { workItems, workItemPacks } from "@shared/schema";
 
 /**
@@ -81,6 +81,7 @@ export function createPackActionHandler(config: PackConfig): RequestHandler {
 /**
  * Generic pack saver that works with the work_item_packs table
  * Uses transaction to handle concurrent regenerations safely
+ * Always inserts a new row with incremented version (never updates)
  */
 export async function saveWorkItemPackGeneric(input: {
   workItemId: number;
@@ -90,45 +91,33 @@ export async function saveWorkItemPackGeneric(input: {
   const { workItemId, packType, packData } = input;
 
   return await db.transaction(async (tx) => {
-    // Check if a pack of this type already exists for this work item
-    const existing = await tx
+    // Find the highest version for this work item + pack type combination
+    const existingPacks = await tx
       .select()
       .from(workItemPacks)
       .where(and(eq(workItemPacks.workItemId, workItemId), eq(workItemPacks.packType, packType)))
-      .limit(1);
+      .orderBy(desc(workItemPacks.version));
+
+    // Calculate next version (1 if no existing packs, otherwise max version + 1)
+    const nextVersion = existingPacks.length > 0 ? existingPacks[0].version + 1 : 1;
 
     const now = new Date();
 
-    if (existing && existing.length > 0) {
-      // Update existing pack (increment version)
-      const currentVersion = existing[0].version || 1;
-      const updated = await tx
-        .update(workItemPacks)
-        .set({
-          packData: packData as any,
-          version: currentVersion + 1,
-          updatedAt: now,
-        })
-        .where(eq(workItemPacks.id, existing[0].id))
-        .returning();
+    // Always insert a new row with the next version
+    const inserted = await tx
+      .insert(workItemPacks)
+      .values({
+        workItemId,
+        packType,
+        packData: packData as any,
+        version: nextVersion,
+        createdAt: now,
+        updatedAt: now,
+      })
+      .returning();
 
-      return updated[0];
-    } else {
-      // Insert new pack
-      const inserted = await tx
-        .insert(workItemPacks)
-        .values({
-          workItemId,
-          packType,
-          packData: packData as any,
-          version: 1,
-          createdAt: now,
-          updatedAt: now,
-        })
-        .returning();
-
-      return inserted[0];
-    }
+    console.log(`[saveWorkItemPackGeneric] Saved ${packType} pack for work item ${workItemId}, version ${nextVersion}`);
+    return inserted[0];
   });
 }
 

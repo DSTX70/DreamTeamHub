@@ -28,6 +28,13 @@ async function savePackToDB(
 
   const nextVersion = existingPacks.length > 0 ? existingPacks[0].version + 1 : 1;
 
+  console.log(`[savePackToDB] workItemId=${workItemId}, packType=${packType}`);
+  console.log(`[savePackToDB] existingPacks.length=${existingPacks.length}`);
+  console.log(`[savePackToDB] nextVersion=${nextVersion}`);
+  if (existingPacks.length > 0) {
+    console.log(`[savePackToDB] existing versions:`, existingPacks.map(p => p.version));
+  }
+
   const [inserted] = await db
     .insert(workItemPacks)
     .values({
@@ -38,6 +45,7 @@ async function savePackToDB(
     })
     .returning();
 
+  console.log(`[savePackToDB] inserted pack id=${inserted.id}, version=${inserted.version}`);
   return inserted.id;
 }
 
