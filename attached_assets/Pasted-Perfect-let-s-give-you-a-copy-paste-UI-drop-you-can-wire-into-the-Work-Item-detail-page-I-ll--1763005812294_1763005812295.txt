@@ -1,0 +1,300 @@
+Perfect, let’s give you a **copy-paste UI drop** you can wire into the Work Item detail page.
+
+I’ll give you:
+
+1. A reusable `WorkItemActionsPanel` component
+2. A tiny example of how to use it on your WI detail page
+
+---
+
+## 1️⃣ Component Drop – `WorkItemActionsPanel.tsx`
+
+Create this file:
+
+```text
+client/src/components/workItems/WorkItemActionsPanel.tsx
+```
+
+Paste this in:
+
+```tsx
+// client/src/components/workItems/WorkItemActionsPanel.tsx
+import * as React from "react";
+
+type ActionKey =
+  | "lifestyle"
+  | "patentClaims"
+  | "launchPlan";
+
+type ActionStateStatus = "idle" | "running" | "ok" | "error";
+
+interface ActionState {
+  status: ActionStateStatus;
+  lastRunAt?: string; // ISO string
+}
+
+interface WorkItemActionsPanelProps {
+  workItemId: string;
+}
+
+const ACTION_CONFIG: Record<
+  ActionKey,
+  {
+    label: string;
+    icon: string;
+    endpointSuffix: string;
+  }
+> = {
+  lifestyle: {
+    label: "Generate Lifestyle Pack",
+    icon: "✨",
+    endpointSuffix: "generate-lifestyle-pack",
+  },
+  patentClaims: {
+    label: "Generate Patent Claims Pack",
+    icon: "🧩",
+    endpointSuffix: "generate-patent-claims-pack",
+  },
+  launchPlan: {
+    label: "Generate Launch Plan Pack",
+    icon: "📣",
+    endpointSuffix: "generate-launch-plan-pack",
+  },
+};
+
+export function WorkItemActionsPanel(props: WorkItemActionsPanelProps) {
+  const { workItemId } = props;
+  const [open, setOpen] = React.useState(false);
+  const [actionState, setActionState] = React.useState<
+    Record<ActionKey, ActionState>
+  >({
+    lifestyle: { status: "idle" },
+    patentClaims: { status: "idle" },
+    launchPlan: { status: "idle" },
+  });
+
+  async function runAction(key: ActionKey) {
+    const cfg = ACTION_CONFIG[key];
+    const now = new Date().toISOString();
+
+    setActionState((prev) => ({
+      ...prev,
+      [key]: { ...prev[key], status: "running" },
+    }));
+
+    try {
+      const res = await fetch(
+        `/api/work-items/${encodeURIComponent(
+          workItemId
+        )}/actions/${cfg.endpointSuffix}`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      if (!res.ok) {
+        throw new Error(`Bad status: ${res.status}`);
+      }
+
+      setActionState((prev) => ({
+        ...prev,
+        [key]: { status: "ok", lastRunAt: now },
+      }));
+    } catch (err) {
+      console.error("Failed to run WI action", key, err);
+      setActionState((prev) => ({
+        ...prev,
+        [key]: { status: "error", lastRunAt: now },
+      }));
+    }
+  }
+
+  function formatLastRun(lastRunAt?: string): string {
+    if (!lastRunAt) return "Never run";
+    const d = new Date(lastRunAt);
+    return d.toLocaleString(undefined, {
+      month: "short",
+      day: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+    });
+  }
+
+  function statusBadge(state: ActionState): JSX.Element {
+    const { status, lastRunAt } = state;
+
+    const labelMap: Record<ActionStateStatus, string> = {
+      idle: "Idle",
+      running: "Running…",
+      ok: "Last run OK",
+      error: "Last run failed",
+    };
+
+    const colorMap: Record<ActionStateStatus, string> = {
+      idle: "border-gray-400 text-gray-600",
+      running: "border-blue-500 text-blue-600",
+      ok: "border-emerald-500 text-emerald-600",
+      error: "border-rose-500 text-rose-600",
+    };
+
+    return (
+      <div
+        className={[
+          "inline-flex items-center gap-2 rounded-full border px-2 py-0.5 text-xs",
+          colorMap[status],
+        ].join(" ")}
+      >
+        <span>{labelMap[status]}</span>
+        <span className="text-[10px] text-gray-500">
+          {formatLastRun(lastRunAt)}
+        </span>
+      </div>
+    );
+  }
+
+  return (
+    <div className="wi-actions-panel">
+      <div className="flex items-center justify-between gap-2">
+        <span className="text-xs uppercase tracking-wide text-gray-500">
+          Actions
+        </span>
+        <button
+          type="button"
+          onClick={() => setOpen((v) => !v)}
+          className="inline-flex items-center gap-1 rounded-md border border-gray-500 px-2 py-1 text-xs font-medium text-gray-100 hover:bg-gray-800"
+        >
+          <span>Run</span>
+          <span aria-hidden="true">▾</span>
+        </button>
+      </div>
+
+      {open && (
+        <div className="mt-2 rounded-md border border-gray-700 bg-[#101015] p-2 text-sm">
+          {(
+            Object.keys(ACTION_CONFIG) as ActionKey[]
+          ).map((key) => {
+            const cfg = ACTION_CONFIG[key];
+            const state = actionState[key];
+
+            const isRunning = state.status === "running";
+
+            return (
+              <div
+                key={key}
+                className="flex items-center justify-between gap-2 border-b border-gray-800 py-2 last:border-b-0"
+              >
+                <div className="flex flex-col">
+                  <span className="flex items-center gap-2">
+                    <span>{cfg.icon}</span>
+                    <span className="font-medium">{cfg.label}</span>
+                  </span>
+                  <span className="mt-0.5 text-xs text-gray-500">
+                    {statusBadge(state)}
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => runAction(key)}
+                  disabled={isRunning}
+                  className="inline-flex items-center rounded-md border border-gray-500 px-2 py-1 text-xs font-medium text-gray-100 hover:bg-gray-800 disabled:opacity-60"
+                >
+                  {isRunning ? "Running…" : "Run"}
+                </button>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+```
+
+* It renders a small **“Actions / Run ▾”** control.
+* Inside the dropdown, you get three rows:
+
+  * `✨ Generate Lifestyle Pack`
+  * `🧩 Generate Patent Claims Pack`
+  * `📣 Generate Launch Plan Pack`
+* Each row has:
+
+  * A **Run** button that POSTs to the correct endpoint.
+  * A **status + last run** badge that updates when you click.
+
+---
+
+## 2️⃣ Usage Drop – Add to Work Item detail page
+
+Wherever you render your **Work Item detail** (e.g. `client/src/pages/workItems/WorkItemDetail.tsx`), you can embed the panel like this.
+
+Assume your detail page already has a `workItem` object with an `id`:
+
+```tsx
+// client/src/pages/workItems/WorkItemDetail.tsx
+import * as React from "react";
+import { WorkItemActionsPanel } from "../../components/workItems/WorkItemActionsPanel";
+
+interface WorkItem {
+  id: string;
+  title: string;
+  body: string;
+  // ...other fields...
+}
+
+interface WorkItemDetailProps {
+  workItem: WorkItem;
+}
+
+export default function WorkItemDetailPage(props: WorkItemDetailProps) {
+  const { workItem } = props;
+
+  return (
+    <main className="wi-detail">
+      <header className="flex items-start justify-between gap-4 border-b border-gray-700 pb-3">
+        <div>
+          <h1 className="text-lg font-semibold text-gray-50">
+            {workItem.title}
+          </h1>
+          <p className="mt-1 text-xs text-gray-400">WI #{workItem.id}</p>
+        </div>
+
+        {/* 🔽 Actions dropdown lives here */}
+        <WorkItemActionsPanel workItemId={workItem.id} />
+      </header>
+
+      {/* ...rest of your WI detail layout... */}
+    </main>
+  );
+}
+```
+
+If your page shape is slightly different, the only bit that really matters is:
+
+```tsx
+<WorkItemActionsPanel workItemId={workItem.id} />
+```
+
+with `workItem.id` as a string.
+
+---
+
+Once those are in:
+
+* Clicking **“Run ▾ → Generate Lifestyle Pack”** calls
+  `POST /api/work-items/:id/actions/generate-lifestyle-pack`
+* Clicking **Patent / Launch** calls the other two.
+* Each line shows:
+
+  * Status: Idle → Running… → Last run OK / Last run failed
+  * Timestamp of the last attempt
+
+You can later wire the returned data (`pack`) into tabs like:
+
+* “Lifestyle Pack”
+* “Patent Claims Pack”
+* “Launch Plan Pack”
+
+…but the actions UI above is enough to get your Work Item → Agentic Pack loop live inside DTH.

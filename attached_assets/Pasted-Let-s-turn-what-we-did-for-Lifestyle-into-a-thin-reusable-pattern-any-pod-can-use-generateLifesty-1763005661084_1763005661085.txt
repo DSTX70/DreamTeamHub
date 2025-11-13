@@ -1,0 +1,295 @@
+Let’s turn what we did for Lifestyle into a thin, reusable pattern any pod can use:
+
+generateLifestyleBannerPack
+
+generatePatentClaimsPack
+
+generateLaunchPlanPack
+
+etc.
+
+I’ll keep this slim and drop-based.
+
+1️⃣ Generic “Work Item → Pack” action helper
+
+Instead of writing a new handler every time, make one generic factory you can reuse for any pack.
+
+Drop 1 – createWorkItemActionHandler.ts
+
+// server/ai/actions/createWorkItemActionHandler.ts
+import type { Request, Response } from "express";
+import type { ZodSchema } from "zod";
+import { runSkill } from "../runSkill"; // your existing LLM runner
+import { getWorkItemById } from "../../db/workItems"; // adjust path
+
+type PersistFn<TOutput> = (workItemId: string, data: TOutput) => Promise<void>;
+
+interface WorkItemActionOptions<TOutput> {
+  skillName: string;
+  outputSchema: ZodSchema<TOutput>;
+  persist: PersistFn<TOutput>;
+}
+
+/**
+ * Generic factory: Work Item → Skill → Validated pack → Persist.
+ */
+export function createWorkItemActionHandler<TOutput>(
+  options: WorkItemActionOptions<TOutput>
+) {
+  const { skillName, outputSchema, persist } = options;
+
+  return async function workItemActionHandler(req: Request, res: Response) {
+    const workItemId = String(req.params.id);
+
+    try {
+      const wi = await getWorkItemById(workItemId);
+      if (!wi) {
+        return res
+          .status(404)
+          .json({ ok: false, error: "work_item_not_found" });
+      }
+
+      const skillInput = {
+        work_item_id: workItemId,
+        work_item_title: wi.title ?? "",
+        work_item_body: wi.body ?? "",
+        work_item_notes: wi.notes ?? "",
+      };
+
+      const rawResult = await runSkill({
+        skillName,
+        input: skillInput,
+      });
+
+      const parsed = outputSchema.parse(rawResult);
+
+      await persist(workItemId, parsed);
+
+      return res.json({
+        ok: true,
+        work_item_id: workItemId,
+        pack: parsed,
+      });
+    } catch (err) {
+      console.error(`Error in ${skillName}`, err);
+      return res.status(500).json({ ok: false, error: "internal_error" });
+    }
+  };
+}
+
+
+Now every pod can define:
+
+a skill name
+
+an output schema
+
+a persist function
+
+…and get a ready-made Express handler.
+
+2️⃣ Slim schemas for other pods
+A) Patent Claims Pack (IP Pod)
+
+This is intentionally lean: claims + a summary + a few flags.
+
+Drop 2A – patentClaimsPack.ts
+
+// server/ai/schemas/patentClaimsPack.ts
+import { z } from "zod";
+
+export const PatentClaimSchema = z.object({
+  claim_number: z.number().int(),         // 1, 2, 3...
+  claim_type: z.enum(["independent", "dependent"]),
+  text: z.string(),                       // full cleaned claim text
+  depends_on: z.array(z.number().int()).default([]), // for dependents
+  notes: z.string().optional(),          // drafting notes for counsel
+});
+
+export const PatentClaimsPackSchema = z.object({
+  invention_title: z.string(),
+  short_summary: z.string(),             // 2–3 sentence summary
+  independent_claims: z.array(PatentClaimSchema),
+  dependent_claims: z.array(PatentClaimSchema),
+  open_questions: z.array(z.string()).default([]), // things to confirm with inventor/counsel
+});
+
+export type PatentClaimsPack = z.infer<typeof PatentClaimsPackSchema>;
+
+B) Launch Plan Pack (Marketing Pod)
+
+Again: timeline + channels + assets + KPIs.
+
+Drop 2B – launchPlanPack.ts
+
+// server/ai/schemas/launchPlanPack.ts
+import { z } from "zod";
+
+export const TimelineItemSchema = z.object({
+  phase_id: z.string(),         // e.g., "prep", "launch_week", "post"
+  label: z.string(),            // e.g., "Finalize hero creative"
+  owner_role: z.string(),       // e.g., "Prism", "Echo", "Nova"
+  start_offset_days: z.number().int(), // relative to T0
+  end_offset_days: z.number().int(),   // relative to T0
+});
+
+export const ChannelPlanSchema = z.object({
+  channel: z.string(),          // "Email", "IG", "TikTok", "PR"
+  objective: z.string(),        // what this channel is for
+  key_messages: z.array(z.string()),
+  cadence: z.string(),          // e.g., "3 posts/week for 4 weeks"
+});
+
+export const AssetPlanSchema = z.object({
+  asset_id: z.string(),         // "hero-img-01", "reel-01"
+  type: z.string(),             // "static", "reel", "carousel", "landing_page"
+  description: z.string(),
+  owner_role: z.string(),       // "Nova", "Echo", etc.
+  needed_by_offset_days: z.number().int(),
+});
+
+export const KpiSchema = z.object({
+  metric: z.string(),           // "CTR", "Sign-ups", "Add-to-cart rate"
+  target_value: z.string(),     // "3%+", "500 signups"
+  measurement_window_days: z.number().int(),
+});
+
+export const LaunchPlanPackSchema = z.object({
+  campaign_name: z.string(),
+  t0_event: z.string(),         // "Launch date", "Pre-order open"
+  timeline: z.array(TimelineItemSchema),
+  channels: z.array(ChannelPlanSchema),
+  assets: z.array(AssetPlanSchema),
+  kpis: z.array(KpiSchema),
+});
+
+export type LaunchPlanPack = z.infer<typeof LaunchPlanPackSchema>;
+
+
+You already have LifestylePackSchema from before — now you have three “pack” shapes under a common pattern.
+
+3️⃣ Reusable skill prompts (short + pod-specific)
+
+Rather than giant configs, you can keep skills as simple JSON + a system prompt string.
+
+A) generatePatentClaimsPack skill JSON
+{
+  "name": "generatePatentClaimsPack",
+  "description": "Draft a structured patent claims pack (independents + dependents + summary) for a software/system invention based on a Work Item brief.",
+  "system_prompt": "You are Aegis (IP counsel) and Atlas (patentability partner) working inside the Dream Team Hub. Given a Work Item that describes an invention, you will draft a structured patent claims pack.\\n\\nYour goal is NOT to write a full spec, but to give counsel a clean, well-laddered starting set of claims. Use simple, precise language. Avoid anything that sounds like marketing.\\n\\nYou must respond with JSON ONLY matching the PatentClaimsPackSchema. Include: (1) a short invention_title, (2) a short_summary, (3) a list of independent_claims, and (4) a list of dependent_claims. For each dependent claim, populate depends_on with the claim numbers it narrows. Include open_questions where clarification would materially improve claim scope.",
+  "input_schema": {
+    "type": "object",
+    "properties": {
+      "work_item_id": { "type": "string" },
+      "work_item_title": { "type": "string" },
+      "work_item_body": { "type": "string" },
+      "work_item_notes": { "type": "string" }
+    },
+    "required": ["work_item_id", "work_item_title", "work_item_body"]
+  }
+}
+
+B) generateLaunchPlanPack skill JSON
+{
+  "name": "generateLaunchPlanPack",
+  "description": "Generate a structured launch plan (timeline, channels, assets, KPIs) for a brand or product launch based on a Work Item brief.",
+  "system_prompt": "You are Prism (Marketing), Echo (Social), and Ledger (growth ROI) working together inside the Dream Team Hub. Given a Work Item describing a launch, produce a structured launch plan.\\n\\nYour job is to make this execution-ready: clear phases, concrete channel plans, named assets, and measurable KPIs. Assume there will be a real team executing this and they will treat this as a starting plan.\\n\\nYou must respond with JSON ONLY matching the LaunchPlanPackSchema. Include: (1) campaign_name, (2) t0_event description, (3) a timeline array with phase IDs and offsets relative to t0, (4) a channels array describing strategy per channel, (5) an assets array describing creatives to produce, and (6) a kpis array with metrics and rough targets.",
+  "input_schema": {
+    "type": "object",
+    "properties": {
+      "work_item_id": { "type": "string" },
+      "work_item_title": { "type": "string" },
+      "work_item_body": { "type": "string" },
+      "work_item_notes": { "type": "string" }
+    },
+    "required": ["work_item_id", "work_item_title", "work_item_body"]
+  }
+}
+
+
+You can keep these in server/ai/skills/*.json and have runSkill load them by skillName.
+
+4️⃣ Using the factory: 3 actions in almost no code
+A) Lifestyle (what we already did, now slimmed)
+// server/routes/workItemActions/generateLifestylePack.ts
+import { createWorkItemActionHandler } from "../../ai/actions/createWorkItemActionHandler";
+import {
+  LifestylePackSchema,
+  type LifestylePack,
+} from "../../ai/schemas/lifestylePack";
+import { saveLifestylePackArtifacts } from "../../db/workItems"; // your persistence
+
+export const postGenerateLifestylePack = createWorkItemActionHandler<LifestylePack>({
+  skillName: "generateLifestyleBannerPack",
+  outputSchema: LifestylePackSchema,
+  persist: saveLifestylePackArtifacts,
+});
+
+B) Patent claims
+// server/routes/workItemActions/generatePatentClaimsPack.ts
+import { createWorkItemActionHandler } from "../../ai/actions/createWorkItemActionHandler";
+import {
+  PatentClaimsPackSchema,
+  type PatentClaimsPack,
+} from "../../ai/schemas/patentClaimsPack";
+import { savePatentClaimsPack } from "../../db/workItems"; // implement as needed
+
+export const postGeneratePatentClaimsPack =
+  createWorkItemActionHandler<PatentClaimsPack>({
+    skillName: "generatePatentClaimsPack",
+    outputSchema: PatentClaimsPackSchema,
+    persist: savePatentClaimsPack,
+  });
+
+C) Launch plan
+// server/routes/workItemActions/generateLaunchPlanPack.ts
+import { createWorkItemActionHandler } from "../../ai/actions/createWorkItemActionHandler";
+import {
+  LaunchPlanPackSchema,
+  type LaunchPlanPack,
+} from "../../ai/schemas/launchPlanPack";
+import { saveLaunchPlanPack } from "../../db/workItems"; // implement as needed
+
+export const postGenerateLaunchPlanPack =
+  createWorkItemActionHandler<LaunchPlanPack>({
+    skillName: "generateLaunchPlanPack",
+    outputSchema: LaunchPlanPackSchema,
+    persist: saveLaunchPlanPack,
+  });
+
+D) Wire routes (one-liners)
+
+In your main routes.ts:
+
+import { postGenerateLifestylePack } from "./routes/workItemActions/generateLifestylePack";
+import { postGeneratePatentClaimsPack } from "./routes/workItemActions/generatePatentClaimsPack";
+import { postGenerateLaunchPlanPack } from "./routes/workItemActions/generateLaunchPlanPack";
+
+export function registerRoutes(app: import("express").Express) {
+  // ...
+  app.post(
+    "/api/work-items/:id/actions/generate-lifestyle-pack",
+    postGenerateLifestylePack
+  );
+  app.post(
+    "/api/work-items/:id/actions/generate-patent-claims-pack",
+    postGeneratePatentClaimsPack
+  );
+  app.post(
+    "/api/work-items/:id/actions/generate-launch-plan-pack",
+    postGenerateLaunchPlanPack
+  );
+}
+
+
+With this pattern in place:
+
+Any new pod just defines:
+
+A “Pack” schema,
+
+A saveXxxPack function,
+
+A small skill JSON,
+
+And uses createWorkItemActionHandler to become a first-class DTH Work Item Action.

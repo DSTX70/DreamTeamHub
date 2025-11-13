@@ -1,0 +1,131 @@
+direct answers to Replit’s questions 👇
+
+1️⃣ “Do you want me to implement this entire AI skill system now?”
+
+Yes — but scoped.
+
+For now, implement just the Lifestyle Pack path, using the pattern we set up:
+
+You should:
+
+Add the schemas (Zod):
+
+LifestylePackSchema + types (we already dropped this)
+
+Keep Patent/Launch schemas in the repo, but you only have to wire Lifestyle right now if you want to keep it small.
+
+Add the endpoint:
+
+POST /api/work-items/:id/actions/generate-lifestyle-pack
+
+Use the generic handler pattern we defined:
+
+// with createWorkItemActionHandler
+app.post(
+  "/api/work-items/:id/actions/generate-lifestyle-pack",
+  postGenerateLifestylePack
+);
+
+
+postGenerateLifestylePack should be the thin wrapper that passes:
+
+skillName: "generateLifestyleBannerPack"
+
+outputSchema: LifestylePackSchema
+
+persist: saveLifestylePackArtifacts
+
+Hook into the existing LLM infra:
+
+Yes: this should use your existing runSkill / Work Orders LLM execution.
+
+Treat generateLifestyleBannerPack as just another skill:
+
+runSkill({ skillName, input }) with the system_prompt + JSON schema we already defined.
+
+You do not have to fully wire Patent Claims / Launch Plan packs right now. Those can be turned on later using the same pattern.
+
+2️⃣ “What about the actual images?”
+
+Short version:
+
+The hero will only show images once files exist at:
+
+fcc/lifestyle/OL-1_Brunch_Banter_SKU-OL-PRIDE-001_1920x800.webp
+
+fcc/lifestyle/OL-1_Brunch_Banter_SKU-OL-PRIDE-001_960x600.webp
+
+fcc/lifestyle/OL-1_Brunch_Banter_SKU-OL-PRIDE-001_1080x1350.webp
+
+Right now those keys 404 → hence naturalWidth === 0 and “pending upload”.
+
+For this sprint, I’d like you to:
+
+✅ Add placeholder/test images to S3 at those exact keys so we can see /fcc working end-to-end.
+
+That means:
+
+Use any neutral hero placeholder (even a simple gradient or stock photo) and upload via whatever path your Ops → Images / S3 uploader expects.
+
+The important part is: filenames match the export plan.
+
+Later:
+
+The AI Lifestyle Pack skill will give Nova/Storybloom the full spec.
+
+Final art replaces the placeholders, using the same filenames, so the app doesn’t change—only the pixels do.
+
+So: go with Option 1 Replit proposed — upload placeholders so we can see the hero live now, then let the AI-generated specs drive the real assets later.
+
+3️⃣ “Should this hook into runSkill / Work Orders LLM system?”
+
+Yes, exactly.
+
+This is not a separate one-off.
+
+It should plug into the same LLM action pathway described in replit.md:
+
+Same runSkill function
+
+Same way you load skill configs (like generateLifestyleBannerPack.json)
+
+Same logging/telemetry as your other skills
+
+Think of generateLifestyleBannerPack as:
+
+“A Work Item → Pack-style skill that reads the WI, calls the LLM, returns a typed pack object, and persists it.”
+
+No new infra, just:
+
+New skill config
+
+New schema
+
+New endpoint that uses the same plumbing.
+
+Suggested concrete next steps for Replit
+
+If you want something you can paste into a “comment to Replit” or a task list, here’s a tight version:
+
+Please proceed with:
+
+Implementing the Lifestyle Pack skill only:
+
+Add LifestylePackSchema and types (from our spec).
+
+Add POST /api/work-items/:id/actions/generate-lifestyle-pack using createWorkItemActionHandler + runSkill("generateLifestyleBannerPack", …).
+
+Wiring it into the existing Work Orders LLM system:
+
+Use the same runSkill pattern as other skills; load the system prompt + output schema from config.
+
+Uploading three placeholder OL-1 hero images to S3 at:
+
+fcc/lifestyle/OL-1_Brunch_Banter_SKU-OL-PRIDE-001_1920x800.webp
+
+fcc/lifestyle/OL-1_Brunch_Banter_SKU-OL-PRIDE-001_960x600.webp
+
+fcc/lifestyle/OL-1_Brunch_Banter_SKU-OL-PRIDE-001_1080x1350.webp
+so /fcc shows a non-placeholder lifestyle hero while we iterate.
+
+Patent/Launch packs can be wired later using the same pattern; focus on Lifestyle first.
