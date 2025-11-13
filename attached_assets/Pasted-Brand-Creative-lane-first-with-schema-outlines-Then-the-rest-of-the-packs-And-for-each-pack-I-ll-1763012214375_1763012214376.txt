@@ -1,0 +1,655 @@
+Brand/Creative lane first with schema outlines,
+
+Then the rest of the packs,
+
+And for each pack I’ll explicitly call out: schema name, saver, handler, route, and skill JSON so everything is “wired” conceptually.
+
+I’ll show full code once (for Packaging & Pre-Press) and then use the same pattern for the others to keep this readable.
+
+🔮 Shared pattern (reminder)
+
+For each Pack:
+
+Schema → server/ai/schemas/<packName>.ts
+
+Saver → server/db/workItemPacks.ts
+
+Action handler → server/routes/workItemActions/generate<PackName>.ts
+
+Route → POST /api/work-items/:id/actions/generate-<kebab-pack-name>-pack
+
+Skill JSON → server/ai/skills/generate<PackName>.json
+
+system_prompt lists full pod
+
+input_schema = { work_item_id, work_item_title, work_item_body, work_item_notes }
+
+I’ll assume you already have:
+
+import { createWorkItemActionHandler } from '../utils/createWorkItemActionHandler';
+import { saveWorkItemPack } from '../db/workItemPacksCore'; // or similar shared helper
+
+
+You can adapt the helper name to your real one.
+
+1) Brand / Creative Lane Packs
+1. Packaging & Pre-Press Pack
+
+Canonical code name: PackagingPrePressPack
+Kebab route: packaging-pre-press
+
+Schema (server/ai/schemas/packagingPrePressPack.ts)
+import { z } from 'zod';
+
+export const PackagingFormatSchema = z.object({
+  name: z.string().describe('Format name, e.g. “5x7 folded card box”, “mug box”'),
+  dieline_reference: z.string().nullable().describe('Dieline ID or reference name'),
+  dimensions_mm: z.object({
+    width: z.number(),
+    height: z.number(),
+    depth: z.number().optional(),
+  }),
+  orientation: z.enum(['portrait', 'landscape', 'square', 'other']).default('other'),
+  notes: z.string().optional(),
+});
+
+export const PrintSpecSchema = z.object({
+  color_mode: z.enum(['CMYK', 'PMS', 'Hybrid']),
+  spots: z.array(z.string()).describe('Spot color callouts if any').optional(),
+  coatings: z.array(z.enum(['none', 'matte', 'gloss', 'soft_touch', 'uv', 'spot_uv'])).optional(),
+  special_finishes: z.array(
+    z.enum(['foil', 'emboss', 'deboss', 'glitter', 'holographic', 'other'])
+  ).optional(),
+  stock: z.object({
+    weight_gsm: z.number().optional(),
+    finish: z.string().optional(),
+    color: z.string().optional(),
+  }).optional(),
+});
+
+export const ComplianceItemSchema = z.object({
+  label: z.string(), // e.g. “UPC”, “Age Warning”, “Country of Origin”
+  requirement: z.string(),
+  status: z.enum(['required', 'recommended']).default('required'),
+  notes: z.string().optional(),
+});
+
+export const PrePressChecklistItemSchema = z.object({
+  step: z.string(),
+  status: z.enum(['todo', 'in_progress', 'done']).default('todo'),
+  owner_hint: z.string().optional(),
+  notes: z.string().optional(),
+});
+
+export const PackagingPrePressPackSchema = z.object({
+  summary: z.string().describe('High-level packaging concept for this line/product'),
+  packaging_story: z.string().describe('Narrative that ties packaging to the brand/collection'),
+  primary_formats: z.array(PackagingFormatSchema),
+  alternate_formats: z.array(PackagingFormatSchema).optional(),
+  print_specs: PrintSpecSchema,
+  compliance_checklist: z.array(ComplianceItemSchema),
+  prepress_checklist: z.array(PrePressChecklistItemSchema),
+  reference_assets: z.array(
+    z.object({
+      description: z.string(),
+      fileRefId: z.string().optional(), // if mapped to Save-to-Drive/fileRefs
+      url: z.string().url().optional(),
+    })
+  ).optional(),
+});
+
+export type PackagingPrePressPack = z.infer<typeof PackagingPrePressPackSchema>;
+
+Saver (server/db/workItemPacks.ts)
+import type { PackagingPrePressPack } from '../ai/schemas/packagingPrePressPack';
+
+export async function savePackagingPrePressPack(
+  db: DB,
+  workItemId: string,
+  pack: PackagingPrePressPack
+) {
+  return saveWorkItemPack(db, {
+    workItemId,
+    packType: 'packaging_prepress',
+    payload: pack,
+  });
+}
+
+Action handler (server/routes/workItemActions/generatePackagingPrePressPack.ts)
+import { PackagingPrePressPackSchema } from '../../ai/schemas/packagingPrePressPack';
+import { savePackagingPrePressPack } from '../../db/workItemPacks';
+import { createWorkItemActionHandler } from '../utils/createWorkItemActionHandler';
+
+export const generatePackagingPrePressPack = createWorkItemActionHandler({
+  skillName: 'generatePackagingPrePressPack',
+  outputSchema: PackagingPrePressPackSchema,
+  save: savePackagingPrePressPack,
+});
+
+Route (server/routes.ts)
+import { generatePackagingPrePressPack } from './routes/workItemActions/generatePackagingPrePressPack';
+
+router.post(
+  '/api/work-items/:id/actions/generate-packaging-pre-press-pack',
+  generatePackagingPrePressPack
+);
+
+Skill JSON (server/ai/skills/generatePackagingPrePressPack.json)
+{
+  "name": "generatePackagingPrePressPack",
+  "description": "Generate Packaging & Pre-Press Pack for a Work Item (dielines, specs, compliance, prepress checklist).",
+  "system_prompt": "You are the combined Packaging & Pre-Press Pod, Creative Pod, and Retail Pod for the i³ Collective. Work only from the provided work item context and known brand systems. Output must strictly match PackagingPrePressPackSchema. Think like a senior packaging engineer, pre-press operator, and retail merchandiser collaborating.",
+  "input_schema": {
+    "type": "object",
+    "properties": {
+      "work_item_id": { "type": "string" },
+      "work_item_title": { "type": "string" },
+      "work_item_body": { "type": "string" },
+      "work_item_notes": { "type": "string" }
+    },
+    "required": ["work_item_id", "work_item_title"]
+  }
+}
+
+2. Product Line Architecture & SKU Tree Pack
+
+Canonical code name: ProductLineSkuTreePack
+Kebab route: product-line-sku-tree
+
+Schema (server/ai/schemas/productLineSkuTreePack.ts)
+import { z } from 'zod';
+
+const SkuVariantSchema = z.object({
+  sku: z.string(),
+  name: z.string(),
+  attributes: z.record(z.string(), z.string()).describe('e.g. { size: "5x7", finish: "gloss" }'),
+  tier: z.enum(['good', 'better', 'best']).optional(),
+  msrp: z.number().optional(),
+  wholesale: z.number().optional(),
+  notes: z.string().optional(),
+});
+
+const ProductSchema = z.object({
+  code: z.string().optional(), // internal product code
+  name: z.string(),
+  description: z.string().optional(),
+  variants: z.array(SkuVariantSchema),
+});
+
+const SeriesSchema = z.object({
+  code: z.string().optional(),
+  name: z.string(),
+  description: z.string().optional(),
+  products: z.array(ProductSchema),
+});
+
+export const ProductLineSkuTreePackSchema = z.object({
+  line_name: z.string(),
+  line_code_prefix: z.string().optional(),
+  overview: z.string(),
+  tiers: z.array(
+    z.object({
+      name: z.enum(['good', 'better', 'best']),
+      description: z.string(),
+      price_band_hint: z.string().optional(),
+    })
+  ).optional(),
+  hierarchy: z.array(
+    z.object({
+      collection: z.string(),
+      series: z.array(SeriesSchema),
+    })
+  ),
+  roadmap_phases: z.array(
+    z.object({
+      phase_name: z.string(), // e.g. “Launch”, “Holiday Refresh”
+      phase_order: z.number(),
+      included_skus: z.array(z.string()).describe('SKU codes planned for this phase'),
+      notes: z.string().optional(),
+    })
+  ).optional(),
+});
+
+export type ProductLineSkuTreePack = z.infer<typeof ProductLineSkuTreePackSchema>;
+
+Wiring names
+
+Schema file: server/ai/schemas/productLineSkuTreePack.ts
+
+Schema export: ProductLineSkuTreePackSchema, type ProductLineSkuTreePack
+
+Saver: saveProductLineSkuTreePack(db, workItemId, pack)
+
+packType: 'product_line_sku_tree'
+
+Action handler: generateProductLineSkuTreePack
+
+file: server/routes/workItemActions/generateProductLineSkuTreePack.ts
+
+Route:
+POST /api/work-items/:id/actions/generate-product-line-sku-tree-pack
+
+Skill JSON: server/ai/skills/generateProductLineSkuTreePack.json
+
+system_prompt mentions Product Pod, Retail Pod, Creative Pod.
+
+3. E-Com PDP & A+ Content Pack
+
+Canonical code name: EcomPdpAplusContentPack
+Kebab route: ecom-pdp-aplus-content
+
+Schema (server/ai/schemas/ecomPdpAplusContentPack.ts)
+import { z } from 'zod';
+
+const PdpBulletSchema = z.object({
+  label: z.string(),
+  body: z.string(),
+  pillar: z.enum(['feature', 'benefit', 'emotion', 'objection']).optional(),
+});
+
+const AplusSectionSchema = z.object({
+  section_type: z.enum(['hero', 'feature_grid', 'story', 'comparison', 'faq', 'other']),
+  heading: z.string(),
+  body: z.string(),
+  image_ideas: z.array(z.string()).optional(),
+  layout_hint: z.string().optional(),
+});
+
+const FaqSchema = z.object({
+  question: z.string(),
+  answer: z.string(),
+});
+
+export const EcomPdpAplusContentPackSchema = z.object({
+  seo_title: z.string(),
+  seo_slug_hint: z.string().optional(),
+  short_subtitle: z.string(),
+  feature_bullets: z.array(PdpBulletSchema),
+  long_description: z.string(),
+  aplus_sections: z.array(AplusSectionSchema),
+  faqs: z.array(FaqSchema),
+  cross_sell_suggestions: z.array(
+    z.object({
+      ref_work_item_id: z.string().optional(),
+      label: z.string(),
+      rationale: z.string(),
+    })
+  ).optional(),
+});
+
+export type EcomPdpAplusContentPack = z.infer<typeof EcomPdpAplusContentPackSchema>;
+
+Wiring names
+
+Schema file: server/ai/schemas/ecomPdpAplusContentPack.ts
+
+Schema export: EcomPdpAplusContentPackSchema, type EcomPdpAplusContentPack
+
+Saver: saveEcomPdpAplusContentPack(db, workItemId, pack)
+
+packType: 'ecom_pdp_aplus_content'
+
+Action handler: generateEcomPdpAplusContentPack
+
+file: server/routes/workItemActions/generateEcomPdpAplusContentPack.ts
+
+Route:
+POST /api/work-items/:id/actions/generate-ecom-pdp-aplus-content-pack
+
+Skill JSON: server/ai/skills/generateEcomPdpAplusContentPack.json
+
+Pods: E-Com Pod, Creative Pod, Marketing Pod.
+
+4. Social Campaign & Content Calendar Pack
+
+Canonical code name: SocialCampaignContentCalendarPack
+Kebab route: social-campaign-content-calendar
+
+Schema (server/ai/schemas/socialCampaignContentCalendarPack.ts)
+import { z } from 'zod';
+
+const PlatformEnum = z.enum(['instagram', 'tiktok', 'youtube', 'facebook', 'x', 'linkedin', 'email', 'other']);
+
+const CampaignPostSchema = z.object({
+  day_offset: z.number().describe('0 = launch/start day, 1 = +1 day, etc.'),
+  platform: PlatformEnum,
+  content_type: z.enum(['post', 'story', 'reel', 'short', 'live', 'email', 'other']),
+  working_title: z.string(),
+  hook: z.string(),
+  core_message: z.string(),
+  cta: z.string().optional(),
+  asset_needs: z.array(z.string()).optional(),
+  notes: z.string().optional(),
+});
+
+const WeekThemeSchema = z.object({
+  week_index: z.number(),
+  theme: z.string(),
+  focus: z.string(),
+});
+
+export const SocialCampaignContentCalendarPackSchema = z.object({
+  campaign_name: z.string(),
+  campaign_window_description: z.string(), // e.g. “30 days pre-launch + 7 days post-launch”
+  core_narrative: z.string(),
+  primary_hashtags: z.array(z.string()),
+  secondary_hashtags: z.array(z.string()).optional(),
+  weekly_themes: z.array(WeekThemeSchema),
+  posts: z.array(CampaignPostSchema),
+  influencer_prompts: z.array(z.string()).optional(),
+  performance_objectives: z.array(
+    z.object({
+      metric: z.string(), // e.g. “saves”, “site clicks”
+      target_hint: z.string().optional(),
+    })
+  ).optional()
+});
+
+export type SocialCampaignContentCalendarPack = z.infer<typeof SocialCampaignContentCalendarPackSchema>;
+
+Wiring names
+
+Schema file: server/ai/schemas/socialCampaignContentCalendarPack.ts
+
+Schema export: SocialCampaignContentCalendarPackSchema, type SocialCampaignContentCalendarPack
+
+Saver: saveSocialCampaignContentCalendarPack(db, workItemId, pack)
+
+packType: 'social_campaign_content_calendar'
+
+Action handler: generateSocialCampaignContentCalendarPack
+
+file: server/routes/workItemActions/generateSocialCampaignContentCalendarPack.ts
+
+Route:
+POST /api/work-items/:id/actions/generate-social-campaign-content-calendar-pack
+
+Skill JSON: server/ai/skills/generateSocialCampaignContentCalendarPack.json
+
+Pods: Agent Lab Academy, Social & Marketing Pods.
+
+2) Ops Lane Packs
+5. Implementation Runbook & SOP Pack
+
+Canonical code name: ImplementationRunbookSopPack
+Kebab route: implementation-runbook-sop
+
+Schema outline (server/ai/schemas/implementationRunbookSopPack.ts)
+import { z } from 'zod';
+
+const RunbookStepSchema = z.object({
+  order: z.number(),
+  title: z.string(),
+  description: z.string(),
+  owner_role: z.string().optional(),
+  estimated_duration: z.string().optional(),
+  dependencies: z.array(z.number()).optional(), // step.order values
+});
+
+const SopItemSchema = z.object({
+  name: z.string(),
+  trigger: z.string(), // when is this SOP used
+  frequency: z.enum(['once', 'daily', 'weekly', 'monthly', 'quarterly', 'ad_hoc']).optional(),
+  steps: z.array(z.string()), // bullet list, not full sub-steps
+});
+
+export const ImplementationRunbookSopPackSchema = z.object({
+  overview: z.string(),
+  runbook_steps: z.array(RunbookStepSchema),
+  sop_items: z.array(SopItemSchema),
+  raci_notes: z.string().optional(),
+  risks_and_dependencies: z.array(z.string()).optional(),
+  definition_of_done: z.array(z.string()),
+});
+
+export type ImplementationRunbookSopPack = z.infer<typeof ImplementationRunbookSopPackSchema>;
+
+Wiring names
+
+Schema file: implementationRunbookSopPack.ts
+
+Saver: saveImplementationRunbookSopPack(...) → packType: 'implementation_runbook_sop'
+
+Handler: generateImplementationRunbookSopPack
+
+Route: POST /api/work-items/:id/actions/generate-implementation-runbook-sop-pack
+
+Skill JSON: generateImplementationRunbookSopPack.json (Pods: Ops, Agent Governance, Data Stewardship & Metrics)
+
+6. Support Playbook & Knowledge Base Pack
+
+Canonical: SupportPlaybookKnowledgeBasePack
+Kebab route: support-playbook-knowledge-base
+
+Schema outline (server/ai/schemas/supportPlaybookKnowledgeBasePack.ts)
+import { z } from 'zod';
+
+const IssueSchema = z.object({
+  slug: z.string(),
+  title: z.string(),
+  severity: z.enum(['low', 'medium', 'high']).default('low'),
+  description: z.string(),
+});
+
+const MacroSchema = z.object({
+  issue_slug: z.string(),
+  channel: z.enum(['email', 'chat', 'phone']),
+  template: z.string(),
+});
+
+const KbArticleSchema = z.object({
+  slug: z.string(),
+  title: z.string(),
+  summary: z.string(),
+  outline: z.array(z.string()),
+});
+
+export const SupportPlaybookKnowledgeBasePackSchema = z.object({
+  overview: z.string(),
+  top_issues: z.array(IssueSchema),
+  response_macros: z.array(MacroSchema),
+  triage_tree_description: z.string(), // text explanation, you can later make it structured
+  kb_articles: z.array(KbArticleSchema),
+  feedback_loop_notes: z.string().optional(),
+});
+
+export type SupportPlaybookKnowledgeBasePack = z.infer<typeof SupportPlaybookKnowledgeBasePackSchema>;
+
+Wiring names
+
+Schema file: supportPlaybookKnowledgeBasePack.ts
+
+Saver: saveSupportPlaybookKnowledgeBasePack(...) → packType: 'support_playbook_knowledge_base'
+
+Handler: generateSupportPlaybookKnowledgeBasePack
+
+Route: POST /api/work-items/:id/actions/generate-support-playbook-knowledge-base-pack
+
+Skill JSON: generateSupportPlaybookKnowledgeBasePack.json (Pods: Support/Success, Ops, Agent Lab Academy)
+
+7. Retail & Wholesale Readiness Pack
+
+Canonical: RetailWholesaleReadinessPack
+Kebab route: retail-wholesale-readiness
+
+Schema outline (server/ai/schemas/retailWholesaleReadinessPack.ts)
+import { z } from 'zod';
+
+const LineSheetItemSchema = z.object({
+  sku: z.string(),
+  name: z.string(),
+  msrp: z.number(),
+  wholesale_price: z.number(),
+  case_pack: z.number().optional(),
+  min_order_qty: z.number().optional(),
+});
+
+const DisplayConceptSchema = z.object({
+  name: z.string(),
+  type: z.enum(['shelf', 'peg', 'endcap', 'counter', 'floor', 'other']),
+  description: z.string(),
+  asset_ideas: z.array(z.string()).optional(),
+});
+
+export const RetailWholesaleReadinessPackSchema = z.object({
+  summary: z.string(),
+  line_sheet_items: z.array(LineSheetItemSchema),
+  merchandising_concepts: z.array(DisplayConceptSchema),
+  retailer_pitch_angles: z.array(
+    z.object({
+      retailer_type: z.enum(['indie', 'regional_chain', 'national_chain', 'online']),
+      angle: z.string(),
+    })
+  ),
+  trade_show_checklist: z.array(z.string()),
+  terms_notes: z.string().optional(),
+});
+
+export type RetailWholesaleReadinessPack = z.infer<typeof RetailWholesaleReadinessPackSchema>;
+
+Wiring names
+
+Schema file: retailWholesaleReadinessPack.ts
+
+Saver: saveRetailWholesaleReadinessPack(...) → packType: 'retail_wholesale_readiness'
+
+Handler: generateRetailWholesaleReadinessPack
+
+Route: POST /api/work-items/:id/actions/generate-retail-wholesale-readiness-pack
+
+Skill JSON: generateRetailWholesaleReadinessPack.json (Pods: Retail, Sales & Partnerships, Creative)
+
+3) Data Lane Pack
+8. Experiment & Optimization Pack
+
+Canonical: ExperimentOptimizationPack
+Kebab route: experiment-optimization
+
+Schema outline (server/ai/schemas/experimentOptimizationPack.ts)
+import { z } from 'zod';
+
+const ExperimentSchema = z.object({
+  id: z.string(),
+  hypothesis: z.string(),
+  metric: z.string(),
+  variant_a_description: z.string(),
+  variant_b_description: z.string(),
+  guardrails: z.array(z.string()).optional(),
+  sample_size_hint: z.string().optional(),
+  duration_hint: z.string().optional(),
+});
+
+export const ExperimentOptimizationPackSchema = z.object({
+  overview: z.string(),
+  experiments: z.array(ExperimentSchema),
+  logging_annotation_plan: z.string(), // how to tag logs / events
+  followup_work_item_ideas: z.array(z.string()).optional(),
+});
+
+export type ExperimentOptimizationPack = z.infer<typeof ExperimentOptimizationPackSchema>;
+
+Wiring names
+
+Schema file: experimentOptimizationPack.ts
+
+Saver: saveExperimentOptimizationPack(...) → packType: 'experiment_optimization'
+
+Handler: generateExperimentOptimizationPack
+
+Route: POST /api/work-items/:id/actions/generate-experiment-optimization-pack
+
+Skill JSON: generateExperimentOptimizationPack.json (Pods: Data Stewardship & Metrics, Marketing, Product)
+
+4) Market Expansion Lane Packs
+9. Localization & Market Expansion Pack
+
+Canonical: LocalizationMarketExpansionPack
+Kebab route: localization-market-expansion
+
+Schema outline (server/ai/schemas/localizationMarketExpansionPack.ts)
+import { z } from 'zod';
+
+const TargetMarketSchema = z.object({
+  code: z.string(), // e.g. “JP”, “DE”
+  name: z.string(),
+  priority: z.enum(['high', 'medium', 'low']).default('medium'),
+  rationale: z.string(),
+});
+
+const LegalChecklistItemSchema = z.object({
+  market_code: z.string(),
+  requirement: z.string(),
+  status: z.enum(['required', 'recommended']).default('required'),
+  notes: z.string().optional(),
+});
+
+export const LocalizationMarketExpansionPackSchema = z.object({
+  primary_markets: z.array(TargetMarketSchema),
+  content_scope: z.object({
+    must_translate: z.array(z.string()),
+    nice_to_translate: z.array(z.string()).optional(),
+  }),
+  cultural_notes: z.string(),
+  legal_checklist: z.array(LegalChecklistItemSchema),
+  recommended_workflow: z.string(), // text description of roles/steps
+});
+
+export type LocalizationMarketExpansionPack = z.infer<typeof LocalizationMarketExpansionPackSchema>;
+
+Wiring names
+
+Schema file: localizationMarketExpansionPack.ts
+
+Saver: saveLocalizationMarketExpansionPack(...) → packType: 'localization_market_expansion'
+
+Handler: generateLocalizationMarketExpansionPack
+
+Route: POST /api/work-items/:id/actions/generate-localization-market-expansion-pack
+
+Skill JSON: generateLocalizationMarketExpansionPack.json (Pods: Localization, Legal/Compliance, Marketing)
+
+10. Customer Journey & Lifecycle Pack
+
+Canonical: CustomerJourneyLifecyclePack
+Kebab route: customer-journey-lifecycle
+
+Schema outline (server/ai/schemas/customerJourneyLifecyclePack.ts)
+import { z } from 'zod';
+
+const JourneyStageSchema = z.object({
+  name: z.enum([
+    'awareness',
+    'consideration',
+    'purchase',
+    'onboarding',
+    'retention',
+    'advocacy',
+    'other',
+  ]),
+  description: z.string(),
+  primary_touchpoints: z.array(z.string()),
+  automation_ideas: z.array(z.string()).optional(),
+  kpis: z.array(z.string()).optional(),
+});
+
+export const CustomerJourneyLifecyclePackSchema = z.object({
+  persona_name: z.string().optional(),
+  journey_overview: z.string(),
+  stages: z.array(JourneyStageSchema),
+  moments_that_matter: z.array(z.string()),
+  lifecycle_play_ideas: z.array(z.string()), // e.g. winback campaigns, loyalty perks
+});
+
+export type CustomerJourneyLifecyclePack = z.infer<typeof CustomerJourneyLifecyclePackSchema>;
+
+Wiring names
+
+Schema file: customerJourneyLifecyclePack.ts
+
+Saver: saveCustomerJourneyLifecyclePack(...) → packType: 'customer_journey_lifecycle'
+
+Handler: generateCustomerJourneyLifecyclePack
+
+Route: POST /api/work-items/:id/actions/generate-customer-journey-lifecycle-pack
+
+Skill JSON: generateCustomerJourneyLifecyclePack.json (Pods: Marketing, Ops/CRM, Data Stewardship & Metrics)

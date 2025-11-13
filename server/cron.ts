@@ -4,6 +4,7 @@ import { startLowStockSchedulerDB } from './scheduler/lowStockScheduler.db';
 import { startWeeklyDigest } from './scheduler/weeklyDigest';
 import { webhookNotifier } from './notifiers/webhook';
 import { emailNotifier } from './notifiers/email';
+import { runNightlyDriveIndexJob } from './services/knowledgeIndexer';
 
 /**
  * Nightly Agent Goldens Snapshot
@@ -93,6 +94,23 @@ export function initializeCronJobs() {
 
   // Start weekly digest scheduler
   startWeeklyDigest();
+
+  // Nightly Drive Knowledge Indexing (3:00 AM)
+  cron.schedule('0 3 * * *', async () => {
+    console.log('[Cron] Starting nightly Drive knowledge indexing...');
+    try {
+      const result = await runNightlyDriveIndexJob();
+      console.log(`[Cron] ✅ Indexed ${result.totalFilesIndexed} files with ${result.totalChunksCreated} chunks`);
+      if (result.errors.length > 0) {
+        console.warn(`[Cron] ⚠️  ${result.errors.length} indexing errors:`, result.errors);
+      }
+    } catch (error) {
+      console.error('[Cron] ❌ Failed to run nightly Drive indexing:', error);
+    }
+  }, {
+    timezone: 'America/Los_Angeles'
+  });
+  console.log('[Cron] 📚 Nightly Drive knowledge indexing scheduled for 3:00 AM');
 
   // Optional: Run on startup for testing (disabled by default)
   // Uncomment the line below to create a snapshot when the server starts

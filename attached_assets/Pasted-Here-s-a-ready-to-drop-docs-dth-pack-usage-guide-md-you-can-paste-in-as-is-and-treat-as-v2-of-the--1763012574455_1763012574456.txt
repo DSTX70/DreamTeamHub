@@ -1,0 +1,542 @@
+Here’s a ready-to-drop `docs/dth/pack-usage-guide.md` you can paste in as-is and treat as v2 of the canonical guide.
+
+---
+
+```md
+# Dream Team Hub – Pack Usage Guide (v2)
+
+This guide defines **when** each Pack should auto-run, **how** owners should use it manually, and **what “Definition of Done” (DoD)** looks like.
+
+Use this as the **source of truth** for:
+
+- Work Item → Pack auto-run rules  
+- Pack expectations and handoffs (Pods, Drive exports, follow-up WIs)  
+- “Is this Pack complete enough to share outside?” checks
+
+---
+
+## Pack Directory
+
+| Pack Name                               | Code Name                                   | Primary Lane        | Key Pods / Teams                                                                 |
+|----------------------------------------|---------------------------------------------|---------------------|----------------------------------------------------------------------------------|
+| Lifestyle Banner Pack                  | `LifestyleBannerPack`                       | Brand / Creative    | Creative, Marketing, Retail                                                      |
+| Patent Claims Pack                     | `PatentClaimsPack`                          | IP / Legal          | IP Pod (Aegis, Atlas, Patent Drafter, etc.)                                      |
+| Launch Plan Pack                       | `LaunchPlanPack`                            | Brand / Ops         | Marketing, Ops, Sales/Partnerships                                              |
+| Website Audit Pack                     | `WebsiteAuditPack`                          | Brand / Product     | UX/Product (Lume), Engineering, Marketing                                       |
+| Risk & Compliance Pack                 | `RiskCompliancePack`                        | Risk / Governance   | Security & Compliance Pod (Sentinel, Praetor, Aegis, Coda, etc.)                |
+| Agent Lab Academy Pack                 | `AgentLabAcademyPack`                       | Training / Enablement| Agent Lab Academy Pod, Ops, Product                                             |
+| Agent Governance Pack                  | `AgentGovernancePack`                       | Governance          | Agent Governance Pod, Risk & Compliance, Ops                                    |
+| Pricing & Monetization Pack            | `PricingMonetizationPack`                   | Monetization        | Ledger, Marketing, Sales/Partnerships                                           |
+| Data Stewardship & Metrics Pack        | `DataStewardshipMetricsPack`                | Data / Analytics    | Data Stewardship & Metrics Pod, Ops, Product                                    |
+| GlobalCollabs Partnerships Pack        | `GlobalCollabsPartnershipPack`              | Partnerships        | GlobalCollabs Pod, Partnerships, Legal                                          |
+| Packaging & Pre-Press Pack             | `PackagingPrePressPack`                     | Brand / Creative    | Packaging & Pre-Press, Creative, Retail                                         |
+| Product Line Architecture & SKU Tree   | `ProductLineSkuTreePack`                    | Brand / Creative    | Product, Retail, Creative                                                       |
+| E-Com PDP & A+ Content Pack            | `EcomPdpAplusContentPack`                   | Brand / Creative    | E-Com, Creative, Marketing                                                      |
+| Social Campaign & Content Calendar     | `SocialCampaignContentCalendarPack`         | Brand / Creative    | Agent Lab Academy, Social & Marketing                                           |
+| Implementation Runbook & SOP Pack      | `ImplementationRunbookSopPack`              | Ops                 | Ops, Agent Governance, Data Stewardship & Metrics                               |
+| Support Playbook & Knowledge Base Pack | `SupportPlaybookKnowledgeBasePack`          | Ops                 | Support/Success, Ops, Agent Lab Academy                                         |
+| Retail & Wholesale Readiness Pack      | `RetailWholesaleReadinessPack`              | Ops / Retail        | Retail, Sales & Partnerships, Creative                                          |
+| Experiment & Optimization Pack         | `ExperimentOptimizationPack`                | Data                | Data Stewardship & Metrics, Marketing, Product                                  |
+| Localization & Market Expansion Pack   | `LocalizationMarketExpansionPack`           | Market Expansion    | Localization, Legal/Compliance, Marketing                                       |
+| Customer Journey & Lifecycle Pack      | `CustomerJourneyLifecyclePack`              | Market Expansion    | Marketing, Ops/CRM, Data Stewardship & Metrics                                  |
+
+---
+
+## Core Packs (Existing 10)
+
+### Lifestyle Banner Pack
+
+**Purpose:** Generate lifestyle hero concepts (copy + visual direction) for a brand, collection, or product.
+
+**Typical WI Types (auto-run):**
+
+- `brand_collection`
+- `homepage_hero`
+- `campaign_concept`
+
+**Manual Usage:**
+
+- When Creative/Marketing needs a quick hero concept before briefing a designer.  
+- When testing alternate hero angles (re-run with updated WI notes).
+
+**Definition of Done:**
+
+- At least **one primary hero concept** with headline, subhead, and visual direction.  
+- Clear **audience + emotion** notes (who the hero is for, what it should feel like).  
+- Optional alternates (A/B variants) identified as such.  
+- Ready to export as **DOCX/PDF** and attach to the WI / Save-to-Drive lane.
+
+---
+
+### Patent Claims Pack
+
+**Purpose:** Draft, structure, or refine patent claims and dependent ladders around a technical WI.
+
+**Typical WI Types (auto-run):**
+
+- `patent_draft`
+- `invention_disclosure`
+- `ip_scope_review`
+
+**Manual Usage:**
+
+- When IP Pod needs a structured first-pass claim set to hand to counsel.  
+- When revising earlier versions with new embodiments or refinements.
+
+**Definition of Done:**
+
+- At least **one independent claim** covering the core inventive concept.  
+- A **dependent ladder** that meaningfully tightens / extends protection (not just boilerplate).  
+- Clear labeling of claim families if multiple inventions are present.  
+- Ready for export as **TXT + line-numbered PDF** for counsel redlines and IDS intake.
+
+---
+
+### Launch Plan Pack
+
+**Purpose:** Turn a strategy WI into a concrete go-to-market launch plan.
+
+**Typical WI Types (auto-run):**
+
+- `product_launch`
+- `collection_launch`
+- `feature_launch`
+
+**Manual Usage:**
+
+- When Marketing/Ops needs a single shared view of launch phases and owners.  
+- Before scheduling social, PR, or paid media WIs tied to the same launch.
+
+**Definition of Done:**
+
+- Launch **phases defined** (pre-launch, launch, post-launch) with dates or relative timing.  
+- Key **channels and plays** mapped (email, social, PR, paid, affiliates, etc.).  
+- Owners or pods identified for each major action.  
+- **Success metrics** and a basic measurement plan included.
+
+---
+
+### Website Audit Pack
+
+**Purpose:** Provide a structured audit of a page/site (UX, content, technical basics).
+
+**Typical WI Types (auto-run):**
+
+- `webpage_audit`
+- `site_redesign_discovery`
+- `conversion_review`
+
+**Manual Usage:**
+
+- When deciding what to fix first on a weak page.  
+- When preparing a scoped website upgrade WI for engineering.
+
+**Definition of Done:**
+
+- At least **one pass** over UX, content, and technical aspects (not just one category).  
+- Clear **priority labeling** (e.g. P0/P1/P2) for findings.  
+- Concrete **recommended changes**, not just “improve content”.  
+- Enough detail to create follow-up WIs straight from the Pack.
+
+---
+
+### Risk & Compliance Pack
+
+**Purpose:** Identify and structure risk/compliance concerns around a WI (data, security, legal, brand).
+
+**Typical WI Types (auto-run):**
+
+- `system_design`
+- `data_pipeline`
+- `regulated_feature`
+- Any WI flagged as “High Risk”.
+
+**Manual Usage:**
+
+- When Sentinel, Praetor, or Aegis want a quick structured view of risks.  
+- Prior to external pilots or third-party integrations.
+
+**Definition of Done:**
+
+- Risks grouped by **category** (security, privacy, legal, brand, ops, etc.).  
+- Each risk has **impact/severity** and suggested mitigations.  
+- Any obvious **compliance duties** called out (GDPR, SOC2, HIPAA, COPPA, etc. where relevant).  
+- Pack is rich enough that Risk & Compliance Pod can annotate, not rewrite from scratch.
+
+---
+
+### Agent Lab Academy Pack
+
+**Purpose:** Turn a WI into an agent training/enablement unit (lesson, lab, or exercise).
+
+**Typical WI Types (auto-run):**
+
+- `agent_training_unit`
+- `academy_module`
+- `playground_scenario`
+
+**Manual Usage:**
+
+- When turning real work examples into training labs or certification tracks.  
+- When capturing a new pattern or “how to” as an Academy resource.
+
+**Definition of Done:**
+
+- Clear **learning objective(s)** for this module.  
+- A **scenario or prompt** that can be run via Actions or sandbox.  
+- Guidelines for **expected behavior** (good vs bad outputs).  
+- Notes for how to **evaluate/score** agent performance.
+
+---
+
+### Agent Governance Pack
+
+**Purpose:** Wrap a WI with guardrails: policy, approvals, constraints, and audit notes.
+
+**Typical WI Types (auto-run):**
+
+- `agent_profile`
+- `high_risk_agent_feature`
+- `governance_review`
+
+**Manual Usage:**
+
+- When Governance needs to define what an agent **may / may not** do.  
+- Before enabling new agent abilities in production.
+
+**Definition of Done:**
+
+- **Allowed / disallowed actions** explicitly listed.  
+- Any required **approvals** or human-in-the-loop moments defined.  
+- Logging/audit expectations captured (what must be recorded and where).  
+- Clear reference to relevant **policies or standards** (internal or external).
+
+---
+
+### Pricing & Monetization Pack
+
+**Purpose:** Develop a pricing & monetization view for a product/app/service/collection.
+
+**Typical WI Types (auto-run):**
+
+- `pricing_strategy`
+- `offer_design`
+- `bundle_design`
+
+**Manual Usage:**
+
+- When Ledger or GTM pods need structured options before finalizing prices.  
+- When exploring new packages or tiers for existing products.
+
+**Definition of Done:**
+
+- At least one **pricing model** (e.g. one-time, subscription, usage-based, hybrid).  
+- **Value narrative** that explains why pricing is justified.  
+- Simple **comparative options** (good/better/best, or alternate tiers) if relevant.  
+- Clear notes on **discounts, promos, and add-ons** where applicable.
+
+---
+
+### Data Stewardship & Metrics Pack
+
+**Purpose:** Define data responsibilities, schema hints, and KPIs around a WI.
+
+**Typical WI Types (auto-run):**
+
+- `analytics_instrumentation`
+- `data_pipeline`
+- `metrics_definition`
+
+**Manual Usage:**
+
+- When Product/Data want to clarify “what should we measure” for a feature.  
+- Before building dashboards or adding new events.
+
+**Definition of Done:**
+
+- **Key metrics** named and described (and aligned with product goals).  
+- Basic **event and entity** hints (what events/entities should exist).  
+- Ownership and **data quality** expectations outlined.  
+- Links back to Risk & Compliance if sensitive data is involved.
+
+---
+
+### GlobalCollabs Partnerships Pack
+
+**Purpose:** Map partnership angles, target partners, and collaboration structures around a WI.
+
+**Typical WI Types (auto-run):**
+
+- `partnership_strategy`
+- `co-marketing_opportunity`
+- `platform_integration_pitch`
+
+**Manual Usage:**
+
+- When exploring if a project should involve partners rather than solo build.  
+- Before outreach to specific potential partners.
+
+**Definition of Done:**
+
+- Clear **partner types** (e.g. agencies, SaaS platforms, creators, retailers).  
+- Example **partner candidates** and why they fit.  
+- Suggested **deal/structure** formats (rev share, co-brand, white-label, etc.).  
+- Follow-up WIs obvious from the Pack (outreach, materials, legal review).
+
+---
+
+## New Packs (Next 10)
+
+### Packaging & Pre-Press Pack
+
+**Purpose:** Turn a product/collection WI into print-ready packaging + pre-press specs.
+
+**Typical WI Types (auto-run):**
+
+- `collection_packaging_design`
+- `physical_product_launch`
+- `retail_display_concept`
+
+**Manual Usage:**
+
+- Before briefing printers/packaging vendors.  
+- As a pre-flight check before final art is sent to production.
+
+**Definition of Done:**
+
+- At least **one primary format** with dimensions + orientation.  
+- **Print specs** defined (color mode, coatings/finishes, stock hints).  
+- **Compliance checklist** listing required labels (UPC, age warnings, origin, recycling, etc.).  
+- **Pre-press checklist** covering file prep → proof → signoff.  
+- Known assets (logos, dielines, brand boards) referenced in `reference_assets`.
+
+---
+
+### Product Line Architecture & SKU Tree Pack
+
+**Purpose:** Build a coherent SKU architecture and line hierarchy.
+
+**Typical WI Types (auto-run):**
+
+- `new_collection_definition`
+- `product_line_strategy`
+- `multi_sku_launch_plan`
+
+**Manual Usage:**
+
+- When expanding a hero product into a line (sizes, finishes, bundles).  
+- When Ops/Retail needs clarity for inventory and systems.
+
+**Definition of Done:**
+
+- `line_name` (and code prefix if applicable) set.  
+- At least one **collection → series → product → variant** hierarchy populated.  
+- SKUs follow a **consistent pattern** (even if provisional).  
+- Tiers (good/better/best) described if relevant.  
+- Any phased rollout captured in `roadmap_phases` or explicitly not needed.
+
+---
+
+### E-Com PDP & A+ Content Pack
+
+**Purpose:** Generate SEO-aware PDP copy and A+ content outlines.
+
+**Typical WI Types (auto-run):**
+
+- `ecom_pdp_build`
+- `amazon_listing_build`
+- `product_page_redesign`
+
+**Manual Usage:**
+
+- Before delegating PDP build to VAs/devs.  
+- When optimizing a weak-converting PDP.
+
+**Definition of Done:**
+
+- `seo_title` + `short_subtitle` set and brand-voiced.  
+- **3–7 feature bullets** covering feature/benefit/emotion/objection pillars.  
+- `long_description` is coherent and persuasive.  
+- At least **2 A+ sections** with headings, body, and image ideas.  
+- At least **3 FAQs** addressing real objections.  
+- Cross-sell suggestions present or explicitly not needed.
+
+---
+
+### Social Campaign & Content Calendar Pack
+
+**Purpose:** Script a multi-week social campaign around a WI.
+
+**Typical WI Types (auto-run):**
+
+- `campaign_launch`
+- `product_launch_marketing`
+- `seasonal_campaign`
+
+**Manual Usage:**
+
+- When Echo/Prism want a structured 30–45 day push.  
+- When aligning social with a Launch Plan Pack.
+
+**Definition of Done:**
+
+- `campaign_name` and `campaign_window_description` set.  
+- A clear **core narrative** and **primary hashtags**.  
+- `weekly_themes` covering the campaign duration.  
+- `posts` list shows a realistic cadence (not just a handful).  
+- If influencers are in scope, `influencer_prompts` includes specific asks.  
+- Basic **performance objectives** described.
+
+---
+
+### Implementation Runbook & SOP Pack
+
+**Purpose:** Turn a strategy WI into a concrete execution runbook + SOP set.
+
+**Typical WI Types (auto-run):**
+
+- `initiative_implementation`
+- `system_rollout`
+- Any WI tagged as `project` with multi-step work.
+
+**Manual Usage:**
+
+- When Ops/Governance wants reusable SOPs around a new pattern.  
+- Before delegating implementation to others.
+
+**Definition of Done:**
+
+- `overview` summarises the initiative and desired outcome.  
+- `runbook_steps` cover the path from today → fully live (no obvious gaps).  
+- At least one **SOP item** for recurring tasks (e.g. checks, reviews).  
+- `definition_of_done` includes **measurable** acceptance criteria.
+
+---
+
+### Support Playbook & Knowledge Base Pack
+
+**Purpose:** Capture support macros, issues, and KB outlines around a WI.
+
+**Typical WI Types (auto-run):**
+
+- `product_support_launch`
+- `beta_program`
+- `major_feature_release` (user-facing)
+
+**Manual Usage:**
+
+- When support requests a playbook for a product/feature.  
+- Before onboarding new support reps/vendors.
+
+**Definition of Done:**
+
+- `top_issues` lists **5–10 likely issues** (or fewer for very narrow scope).  
+- High-severity issues have at least one **macro** per key channel.  
+- `triage_tree_description` clearly states escalation vs self-serve.  
+- `kb_articles` include usable titles + outlines.  
+- `feedback_loop_notes` explain how support signals get to Product/Data.
+
+---
+
+### Retail & Wholesale Readiness Pack
+
+**Purpose:** Make a WI wholesale-ready for retailers.
+
+**Typical WI Types (auto-run):**
+
+- `retail_pitch`
+- `wholesale_line_sheet`
+- `trade_show_prep`
+
+**Manual Usage:**
+
+- Before a pitch to a specific retailer/buyer.  
+- When pulling a Fab Card Co. or dreamshitter.com line into wholesale.
+
+**Definition of Done:**
+
+- `line_sheet_items` include SKUs with MSRP + wholesale (TBD explicitly noted where unknown).  
+- At least one **merchandising concept** (shelf/peg/endcap/etc.).  
+- `retailer_pitch_angles` cover at least indie vs chain.  
+- `trade_show_checklist` is concrete (can be used to pack).  
+- `terms_notes` records assumptions to review with Finance/Legal.
+
+---
+
+### Experiment & Optimization Pack
+
+**Purpose:** Wrap a WI in a small, structured experiment plan.
+
+**Typical WI Types (auto-run):**
+
+- `experiment_design`
+- `conversion_optimization`
+- Any WI tagged as `ab_test_candidate`.
+
+**Manual Usage:**
+
+- When Launch Plan/PDP/Website Audit Packs indicate weak performance.  
+- When a pod wants to formalize “let’s test X vs Y”.
+
+**Definition of Done:**
+
+- `overview` states what we’re trying to improve.  
+- At least one **experiment** with hypothesis, metric, and both variants described.  
+- **Guardrails** noted for anything risky.  
+- `logging_annotation_plan` explains how to tag logs/events.  
+- `followup_work_item_ideas` include at least one next step if the test wins.
+
+---
+
+### Localization & Market Expansion Pack
+
+**Purpose:** Prepare a WI for entry into new regions/languages.
+
+**Typical WI Types (auto-run):**
+
+- `market_entry`
+- `localization_scope`
+- Any WI explicitly targeting a non-US region.
+
+**Manual Usage:**
+
+- Before commissioning translation or local marketing agencies.  
+- When product teams suspect an opportunity in another market but need structure.
+
+**Definition of Done:**
+
+- `primary_markets` lists at least one target with priority + rationale.  
+- `content_scope.must_translate` covers critical surfaces (app, PDPs, site, key campaigns).  
+- `cultural_notes` surface real risks and opportunities (not generic statements).  
+- `legal_checklist` includes initial requirements per market.  
+- `recommended_workflow` outlines roles and steps (translator, reviewer, legal, QA).
+
+---
+
+### Customer Journey & Lifecycle Pack
+
+**Purpose:** Map customer journey stages and lifecycle plays around a persona/product.
+
+**Typical WI Types (auto-run):**
+
+- `customer_persona`
+- `lifecycle_strategy`
+- `crm_automation_design`
+
+**Manual Usage:**
+
+- When designing welcome series, winback, loyalty, or lifecycle flows.  
+- When mapping journeys for specific brands or verticals.
+
+**Definition of Done:**
+
+- `journey_overview` describes the big-picture experience.  
+- `stages` cover at least Awareness → Purchase → Retention.  
+- Each stage lists **primary_touchpoints**, plus automation/KPI hints where useful.  
+- `moments_that_matter` includes concrete events (delivery, renewal, churn-risk, etc.).  
+- `lifecycle_play_ideas` list at least 3–5 plays to turn into new WIs.
+
+---
+
+_This guide should be updated whenever we add new Packs or materially change an existing Pack’s schema, pods, or DoD. Treat this file as the canonical Pack usage spec for Dream Team Hub._
+```

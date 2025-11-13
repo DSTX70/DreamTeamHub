@@ -7,6 +7,8 @@ import { db } from "../db";
 import { workItemDriveFiles, opsEvent, workItems } from "@shared/schema";
 import { eq, and } from "drizzle-orm";
 import { storage } from "../storage";
+import { indexSingleDriveFile } from "../services/knowledgeIndexer";
+import type { CollectionType } from "../config/knowledgeCollections";
 
 async function checkWorkItemAccess(workItemId: number, req: Request): Promise<{ hasAccess: boolean; workItem: any | null }> {
   const workItem = await storage.getWorkItem(workItemId);
@@ -164,6 +166,32 @@ export async function postSavePackToDrive(req: Request, res: Response) {
         }
       }
       throw dbError;
+    }
+
+    // Auto-index the DOCX file for RAG search (async, non-blocking)
+    const collectionMap: Record<PackType, CollectionType> = {
+      lifestyle: "lifestyle_packs",
+      patent: "patent_packs",
+      launch: "launch_packs",
+      website_audit: "website_audit_packs",
+    };
+    
+    const collection = collectionMap[packType];
+    const docxFile = uploadedFiles.find(f => f.mimeType?.includes("wordprocessing") || f.name?.endsWith(".docx"));
+    
+    if (docxFile && collection) {
+      // Index asynchronously - don't block response
+      indexSingleDriveFile(docxFile.id, collection, docxFile.name || `${packType}_pack_v${latestPack.version}.docx`)
+        .then(result => {
+          if (result.success) {
+            console.log(`[PackToDrive] Auto-indexed ${docxFile.name} with ${result.chunksCreated} chunks`);
+          } else {
+            console.error(`[PackToDrive] Auto-indexing failed for ${docxFile.name}:`, result.error);
+          }
+        })
+        .catch(err => {
+          console.error(`[PackToDrive] Auto-indexing error for ${docxFile.name}:`, err);
+        });
     }
 
     return res.status(201).json({

@@ -1,0 +1,490 @@
+Here’s everything in one shot: first the workItemPacks.ts diff with all 10 savers, then the Pack Usage Guide extension.
+
+1) server/db/workItemPacks.ts – diff with all 10 savers
+
+Assumptions:
+
+You already have a shared helper:
+
+async function saveWorkItemPack(
+  db: DB,
+  input: { workItemId: string; packType: string; payload: unknown }
+) { /* ... */ }
+
+
+File path: server/db/workItemPacks.ts
+
+Adapt names if your helper signature differs.
+
+--- a/server/db/workItemPacks.ts
++++ b/server/db/workItemPacks.ts
+@@ -1,6 +1,26 @@
+ import type { DB } from './types';
+ import { saveWorkItemPack } from './workItemPacksCore';
+ 
++// New pack schemas
++import type { PackagingPrePressPack } from '../ai/schemas/packagingPrePressPack';
++import type { ProductLineSkuTreePack } from '../ai/schemas/productLineSkuTreePack';
++import type { EcomPdpAplusContentPack } from '../ai/schemas/ecomPdpAplusContentPack';
++import type { SocialCampaignContentCalendarPack } from '../ai/schemas/socialCampaignContentCalendarPack';
++import type { ImplementationRunbookSopPack } from '../ai/schemas/implementationRunbookSopPack';
++import type { SupportPlaybookKnowledgeBasePack } from '../ai/schemas/supportPlaybookKnowledgeBasePack';
++import type { RetailWholesaleReadinessPack } from '../ai/schemas/retailWholesaleReadinessPack';
++import type { ExperimentOptimizationPack } from '../ai/schemas/experimentOptimizationPack';
++import type { LocalizationMarketExpansionPack } from '../ai/schemas/localizationMarketExpansionPack';
++import type { CustomerJourneyLifecyclePack } from '../ai/schemas/customerJourneyLifecyclePack';
++
+ // existing savers for Lifestyle, Patent, Launch, WebsiteAudit, Risk, AgentLab, Governance, Pricing, Data, GlobalCollabs...
+ // export async function saveLifestyleBannerPack(...) { ... }
+ // export async function savePatentClaimsPack(...) { ... }
+@@
+ // ────────────────────────────────────────────────────────────────────────────────
+ // New savers – Brand / Creative lane
+ // ────────────────────────────────────────────────────────────────────────────────
++
++export async function savePackagingPrePressPack(
++  db: DB,
++  workItemId: string,
++  pack: PackagingPrePressPack,
++) {
++  return saveWorkItemPack(db, {
++    workItemId,
++    packType: 'packaging_prepress',
++    payload: pack,
++  });
++}
++
++export async function saveProductLineSkuTreePack(
++  db: DB,
++  workItemId: string,
++  pack: ProductLineSkuTreePack,
++) {
++  return saveWorkItemPack(db, {
++    workItemId,
++    packType: 'product_line_sku_tree',
++    payload: pack,
++  });
++}
++
++export async function saveEcomPdpAplusContentPack(
++  db: DB,
++  workItemId: string,
++  pack: EcomPdpAplusContentPack,
++) {
++  return saveWorkItemPack(db, {
++    workItemId,
++    packType: 'ecom_pdp_aplus_content',
++    payload: pack,
++  });
++}
++
++export async function saveSocialCampaignContentCalendarPack(
++  db: DB,
++  workItemId: string,
++  pack: SocialCampaignContentCalendarPack,
++) {
++  return saveWorkItemPack(db, {
++    workItemId,
++    packType: 'social_campaign_content_calendar',
++    payload: pack,
++  });
++}
++
++// ────────────────────────────────────────────────────────────────────────────────
++// New savers – Ops lane
++// ────────────────────────────────────────────────────────────────────────────────
++
++export async function saveImplementationRunbookSopPack(
++  db: DB,
++  workItemId: string,
++  pack: ImplementationRunbookSopPack,
++) {
++  return saveWorkItemPack(db, {
++    workItemId,
++    packType: 'implementation_runbook_sop',
++    payload: pack,
++  });
++}
++
++export async function saveSupportPlaybookKnowledgeBasePack(
++  db: DB,
++  workItemId: string,
++  pack: SupportPlaybookKnowledgeBasePack,
++) {
++  return saveWorkItemPack(db, {
++    workItemId,
++    packType: 'support_playbook_knowledge_base',
++    payload: pack,
++  });
++}
++
++export async function saveRetailWholesaleReadinessPack(
++  db: DB,
++  workItemId: string,
++  pack: RetailWholesaleReadinessPack,
++) {
++  return saveWorkItemPack(db, {
++    workItemId,
++    packType: 'retail_wholesale_readiness',
++    payload: pack,
++  });
++}
++
++// ────────────────────────────────────────────────────────────────────────────────
++// New saver – Data lane
++// ────────────────────────────────────────────────────────────────────────────────
++
++export async function saveExperimentOptimizationPack(
++  db: DB,
++  workItemId: string,
++  pack: ExperimentOptimizationPack,
++) {
++  return saveWorkItemPack(db, {
++    workItemId,
++    packType: 'experiment_optimization',
++    payload: pack,
++  });
++}
++
++// ────────────────────────────────────────────────────────────────────────────────
++// New savers – Market Expansion lane
++// ────────────────────────────────────────────────────────────────────────────────
++
++export async function saveLocalizationMarketExpansionPack(
++  db: DB,
++  workItemId: string,
++  pack: LocalizationMarketExpansionPack,
++) {
++  return saveWorkItemPack(db, {
++    workItemId,
++    packType: 'localization_market_expansion',
++    payload: pack,
++  });
++}
++
++export async function saveCustomerJourneyLifecyclePack(
++  db: DB,
++  workItemId: string,
++  pack: CustomerJourneyLifecyclePack,
++) {
++  return saveWorkItemPack(db, {
++    workItemId,
++    packType: 'customer_journey_lifecycle',
++    payload: pack,
++  });
++}
+
+
+You can drop that into your file and adjust import paths if your folder structure is slightly different.
+
+2) Pack Usage Guide – Extension for the 10 new Packs
+
+I’ll keep this in the same style as your existing guide:
+
+Auto-run: which WI lanes/types should trigger the pack automatically.
+
+Manual usage: common cases where an owner clicks “Generate … Pack” explicitly.
+
+Definition of Done (DoD): what “complete” means for that pack.
+
+Where I refer to WI lanes, swap in your actual enum/IDs (e.g. brand_collection, ecom_page, retail_wholesale, etc.).
+
+1. Packaging & Pre-Press Pack
+
+Lane: Brand / Creative → Packaging & Retail
+
+Auto-run on WI:
+
+collection_packaging_design
+
+physical_product_launch (Fab Card Co., dreamshitter.com, merch)
+
+retail_display_concept
+
+Manual usage:
+
+Any WI where the owner is about to brief a printer or packaging vendor.
+
+Pre-flight check before uploading final print files to Drive.
+
+Definition of Done:
+
+At least one primary format defined with dimensions + orientation.
+
+Print specs filled in (color mode, coatings, special finishes).
+
+Compliance checklist has all applicable labeling items for the product category.
+
+Pre-press checklist includes concrete steps from “art file prep” through “printer proof signoff”.
+
+Any known existing assets (logos, dielines, brand boards) referenced in reference_assets.
+
+2. Product Line Architecture & SKU Tree Pack
+
+Lane: Brand / Creative → Product Line Architecture
+
+Auto-run on WI:
+
+new_collection_definition
+
+product_line_strategy
+
+multi-sku_launch_plan
+
+Manual usage:
+
+When a single hero product is being expanded into a family (sizes, finishes, bundles).
+
+When Ops or Retail asks for a clear SKU hierarchy for inventory/EDI.
+
+Definition of Done:
+
+line_name + optional line_code_prefix set.
+
+At least one hierarchy entry with Collection → Series → Products → Variants.
+
+SKUs follow a consistent pattern (even if provisional).
+
+If tiers apply, tiers describes how good/better/best are differentiated.
+
+Any phased rollout plans captured in roadmap_phases (or explicitly deliberately left empty).
+
+3. E-Com PDP & A+ Content Pack
+
+Lane: Brand / Creative → E-Com / Digital
+
+Auto-run on WI:
+
+ecom_pdp_build
+
+amazon_listing_build
+
+product_page_redesign
+
+Manual usage:
+
+Before handing a product to a VA or dev to build the PDP.
+
+When optimizing a weak-converting PDP (re-run with updated WI notes).
+
+Definition of Done:
+
+seo_title and short_subtitle present and on-voice.
+
+3–7 feature bullets populated with a mix of feature/benefit/emotion pillars.
+
+long_description reads as a coherent, brand-aligned story.
+
+At least 2 A+ sections defined with headings + body and image ideas.
+
+Minimum 3 FAQs covering expected objections.
+
+Cross-sell suggestions present or explicitly not applicable.
+
+4. Social Campaign & Content Calendar Pack
+
+Lane: Brand / Creative → Marketing / Social
+
+Auto-run on WI:
+
+campaign_launch
+
+product_launch_marketing
+
+seasonal_campaign (e.g. holiday, Pride, back-to-school)
+
+Manual usage:
+
+When Echo/Prism want to spin a dedicated 30–45 day push around a one-off WI.
+
+When there’s a need to align social activity with a Launch Plan Pack.
+
+Definition of Done:
+
+campaign_name + campaign_window_description set.
+
+A core narrative and at least one hashtag cluster (primary).
+
+weekly_themes covering the duration of the campaign.
+
+posts list includes a realistic cadence (not just 3 posts total).
+
+If influencers are in scope, influencer_prompts includes specific asks (e.g. “unboxing reel,” “day-in-the-life using X”).
+
+5. Implementation Runbook & SOP Pack
+
+Lane: Ops
+
+Auto-run on WI:
+
+initiative_implementation
+
+system_rollout
+
+Any WI tagged as “Project” with multiple steps and pods involved.
+
+Manual usage:
+
+When Governance or Ops wants to turn something from “plan” into recurring SOPs.
+
+Before delegating an initiative to an external vendor or junior team.
+
+Definition of Done:
+
+overview summarises what is being implemented and why.
+
+runbook_steps cover the path from current state → fully live (no obvious gaps).
+
+At least one SOP item for tasks that will repeat (e.g. monthly checks, quarterly reviews).
+
+definition_of_done includes measurable acceptance criteria (not just “looks good”).
+
+6. Support Playbook & Knowledge Base Pack
+
+Lane: Ops → Support / Success
+
+Auto-run on WI:
+
+product_support_launch
+
+beta_program (for apps like iCadence, Gigster Garage, WaySage)
+
+major_feature_release that’s user-facing.
+
+Manual usage:
+
+When support keeps seeing unstructured questions for a product and needs a playbook.
+
+Before onboarding a new support rep or external support vendor.
+
+Definition of Done:
+
+top_issues includes at least 5–10 likely issues (or fewer if scope is tiny).
+
+Each high-severity issue has at least one macro for email or chat.
+
+triage_tree_description clearly says what gets self-serve vs escalated.
+
+kb_articles list includes usable titles + outlines for self-serve help.
+
+feedback_loop_notes tells how support signals get back to Product/Data.
+
+7. Retail & Wholesale Readiness Pack
+
+Lane: Ops → Retail & Sales
+
+Auto-run on WI:
+
+retail_pitch
+
+wholesale_line_sheet
+
+trade_show_prep
+
+Manual usage:
+
+When preparing for a specific retailer pitch (Target, indie boutiques, etc.).
+
+When needing a quick retail-ready view of a Fab Card Co. collection or dreamshitter.com line.
+
+Definition of Done:
+
+line_sheet_items list SKUs with MSRP + wholesale prices (or explicitly mark TBD).
+
+At least one merchandising concept for how this shows up in-store.
+
+retailer_pitch_angles cover indie + chain behavior where relevant.
+
+trade_show_checklist is concrete enough to pack a suitcase from.
+
+Any terms assumptions written in terms_notes so Finance/Legal can sanity check.
+
+8. Experiment & Optimization Pack
+
+Lane: Data
+
+Auto-run on WI:
+
+experiment_design
+
+conversion_optimization
+
+Any WI tagged as “AB_test_candidate”.
+
+Manual usage:
+
+When Launch Plan Pack or PDP Pack surfaces weak performance.
+
+When a pod wants to formalize “we’re going to try X vs Y” for an initiative.
+
+Definition of Done:
+
+overview clearly states what we’re trying to improve.
+
+At least one Experiment with: hypothesis, metric, and both variants described.
+
+guardrails captured for any experiment that could break core UX or revenue.
+
+logging_annotation_plan describes how we’ll tag events / annotate dashboards.
+
+followup_work_item_ideas includes at least one “if this works, do X” note.
+
+9. Localization & Market Expansion Pack
+
+Lane: Market Expansion
+
+Auto-run on WI:
+
+market_entry
+
+localization_scope
+
+Any WI explicitly targeting a non-US region.
+
+Manual usage:
+
+Before commissioning translation or local agencies for a new market.
+
+When product teams suspect there’s opportunity in another region but need clarity.
+
+Definition of Done:
+
+primary_markets lists at least one target with priority + rationale.
+
+content_scope.must_translate covers all critical surfaces (e.g. marketing site, PDPs, in-app UI).
+
+cultural_notes highlights risks and opportunities (not generic fluff).
+
+legal_checklist has at least a starting list of regulatory requirements per market.
+
+recommended_workflow gives a realistic view of who does what (translator, reviewer, legal check, etc.).
+
+10. Customer Journey & Lifecycle Pack
+
+Lane: Market Expansion / Scale (Marketing + CRM + Data)
+
+Auto-run on WI:
+
+customer_persona
+
+lifecycle_strategy
+
+crm_automation_design
+
+Manual usage:
+
+When designing always-on lifecycle campaigns (welcome series, winback, loyalty).
+
+When mapping journeys for specific brands (Fab Card Co., WaySage, Gigster Garage).
+
+Definition of Done:
+
+journey_overview gives a clear high-level story of how a customer experiences us.
+
+stages covers at least Awareness → Purchase → Retention (even if others are minimal).
+
+Each stage has primary_touchpoints and at least some automation or KPI hints.
+
+moments_that_matter includes concrete examples (e.g. “first order delivered,” “first renewal,” “churn risk signal”).
+
+lifecycle_play_ideas lists at least 3–5 plays the Marketing/CRM pod can turn into concrete WIs.
