@@ -1,6 +1,7 @@
 import type { LifestylePack } from "./schemas/lifestylePack";
 import type { PatentClaimsPack } from "./schemas/patentClaimsPack";
 import type { LaunchPlanPack } from "./schemas/launchPlanPack";
+import type { WebsiteAuditPack } from "./schemas/websiteAuditPack";
 import { storage } from "../storage";
 
 export async function saveLifestylePackArtifacts(
@@ -116,6 +117,62 @@ ${pack.assets.map(a => `- **${a.asset_id}** (${a.type}): ${a.description} - ${a.
 
 ### KPIs (${pack.kpis.length})
 ${pack.kpis.map(k => `- **${k.metric}**: ${k.target_value} (${k.measurement_window_days} days)`).join('\n')}
+`;
+
+  await storage.updateWorkItem(workItemId, {
+    description: (wi.description || "") + packSummary,
+    status: "done",
+  });
+}
+
+export async function saveWebsiteAuditPack(
+  workItemId: number,
+  pack: WebsiteAuditPack
+): Promise<void> {
+  const wi = await storage.getWorkItem(workItemId);
+  if (!wi) throw new Error("Work item not found");
+
+  const packSummary = `
+
+---
+
+## 🔍 Website Audit Pack Generated (${new Date().toLocaleString()})
+
+**Site:** ${pack.site_name} (${pack.environment})
+**Base URL:** ${pack.base_url}
+
+### Summary
+**${pack.summary.headline}**
+
+**Key Wins:**
+${pack.summary.key_wins.map(w => `- ${w}`).join('\n')}
+
+**Key Issues:**
+${pack.summary.key_issues.map(i => `- ${i}`).join('\n')}
+
+### Pages Audited (${pack.pages.length})
+${pack.pages.map(p => `- [${p.priority.toUpperCase()}] ${p.label}: ${p.url}`).join('\n')}
+
+### Findings (${pack.findings.length})
+${pack.findings.map(f => `
+**${f.id}** [${f.area} - ${f.severity.toUpperCase()} - Effort: ${f.effort}]
+- **Page:** ${f.page_url}
+- **Issue:** ${f.description}
+- **Fix:** ${f.recommendation}
+`).join('\n')}
+
+### Checklists
+${pack.checklists.map(cl => `
+**${cl.area}**
+${cl.items.map(item => `- [${item.status.toUpperCase()}] ${item.label}${item.notes ? ` (${item.notes})` : ''}`).join('\n')}
+`).join('\n')}
+
+### Roadmap
+${pack.roadmap.map(bucket => `
+**${bucket.bucket.replace('_', ' ').toUpperCase()}** (${bucket.finding_ids.length} findings)
+${bucket.narrative}
+Includes: ${bucket.finding_ids.join(', ') || 'None'}
+`).join('\n')}
 `;
 
   await storage.updateWorkItem(workItemId, {

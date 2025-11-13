@@ -2,9 +2,9 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Sparkles, ChevronDown, ChevronUp } from "lucide-react";
+import { Sparkles, ChevronDown, ChevronUp, PuzzleIcon, MegaphoneIcon, SearchIcon } from "lucide-react";
 
-type ActionKey = "lifestyle";
+type ActionKey = "lifestyle" | "patent" | "launch" | "audit";
 
 type ActionStateStatus = "idle" | "running" | "ok" | "error";
 
@@ -30,12 +30,30 @@ const ACTION_CONFIG: Record<
     Icon: Sparkles,
     endpointSuffix: "generate-lifestyle-pack",
   },
+  patent: {
+    label: "Generate Patent Claims Pack",
+    Icon: PuzzleIcon,
+    endpointSuffix: "generate-patent-claims-pack",
+  },
+  launch: {
+    label: "Generate Launch Plan Pack",
+    Icon: MegaphoneIcon,
+    endpointSuffix: "generate-launch-plan-pack",
+  },
+  audit: {
+    label: "Generate Website Audit Pack",
+    Icon: SearchIcon,
+    endpointSuffix: "generate-website-audit-pack",
+  },
 };
 
 export function WorkItemActionsPanel({ workItemId }: WorkItemActionsPanelProps) {
   const [open, setOpen] = useState(false);
   const [actionState, setActionState] = useState<Record<ActionKey, ActionState>>({
     lifestyle: { status: "idle" },
+    patent: { status: "idle" },
+    launch: { status: "idle" },
+    audit: { status: "idle" },
   });
   const { toast } = useToast();
 

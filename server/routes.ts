@@ -26,6 +26,9 @@ import { seoMetaRouter, seoMetaPublicRouter } from "./routes/seo_meta";
 import { fccSkuMapRouter } from "./routes/fcc_sku_map";
 import { getFccSkuMapByKey } from "./lib/fccSkuMap";
 import { postGenerateLifestylePack } from "./routes/workItemActions/generateLifestylePack";
+import { postGeneratePatentClaimsPack } from "./routes/workItemActions/generatePatentClaimsPack";
+import { postGenerateLaunchPlanPack } from "./routes/workItemActions/generateLaunchPlanPack";
+import { postGenerateWebsiteAuditPack } from "./routes/workItemActions/generateWebsiteAuditPack";
 import multer from "multer";
 import { uploadFileToS3, getWorkItemFiles, getUploaderConfig } from "./services/uploader";
 import { getEffectiveUploadsConfig, updateUploadsConfig } from "./services/opsUploadsConfig";
@@ -1120,6 +1123,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // ===========================
 
   app.post("/api/work-items/:id/actions/generate-lifestyle-pack", isAuthenticated, postGenerateLifestylePack);
+  app.post("/api/work-items/:id/actions/generate-patent-claims-pack", isAuthenticated, postGeneratePatentClaimsPack);
+  app.post("/api/work-items/:id/actions/generate-launch-plan-pack", isAuthenticated, postGenerateLaunchPlanPack);
+  app.post("/api/work-items/:id/actions/generate-website-audit-pack", isAuthenticated, postGenerateWebsiteAuditPack);
 
   app.get("/api/ops/uploader/config", isAuthenticated, async (_req, res) => {
     try {
