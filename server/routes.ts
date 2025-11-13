@@ -24,6 +24,7 @@ import { router as coverageTrendsRouter } from "./api/coverage_trends.route";
 import { seoAltTextRouter } from "./routes/seo_alt_text";
 import { seoMetaRouter, seoMetaPublicRouter } from "./routes/seo_meta";
 import { fccSkuMapRouter } from "./routes/fcc_sku_map";
+import { getFccSkuMapByKey } from "./lib/fccSkuMap";
 import multer from "multer";
 import { uploadFileToS3, getWorkItemFiles, getUploaderConfig } from "./services/uploader";
 import { getEffectiveUploadsConfig, updateUploadsConfig } from "./services/opsUploadsConfig";
@@ -239,6 +240,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // Public SEO endpoints (no auth required for landing page) - MUST BE FIRST
   app.use("/api", seoMetaPublicRouter);
+  
+  // FCC Home Hero - Public endpoint for homepage lifestyle image mapping
+  app.get("/api/fcc/home-hero", async (req, res) => {
+    try {
+      const map = await getFccSkuMapByKey();
+      const row = map["home.lifestyle_ol1"];
+
+      if (!row || !row.base_key) {
+        return res.status(404).json({
+          ok: false,
+          baseKey: null,
+          shotKey: "home.lifestyle_ol1",
+          label: row?.label ?? null,
+        });
+      }
+
+      return res.json({
+        ok: true,
+        baseKey: row.base_key,
+        shotKey: row.shot_key,
+        label: row.label,
+      });
+    } catch (err) {
+      console.error("Error in /api/fcc/home-hero", err);
+      return res.status(500).json({
+        ok: false,
+        error: "internal_error",
+      });
+    }
+  });
   
   // Mount new feature routes (WO Playbook Preview, Coverage Report, Ops Alerts, LLM Infer, Evidence Packs)
   // Using isDualAuthenticated to support both API token and session authentication
