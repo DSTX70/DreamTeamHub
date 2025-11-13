@@ -1,0 +1,86 @@
+Amazing status, this is exactly where we wanted to land. 🚀
+Now we just need to swap the homepage hero to use `FccHomeHero`.
+
+I’ll give you a **single Replit-ready drop** you can paste into whatever file currently renders the Fab Card Co homepage.
+
+---
+
+## 🔹 Final Drop — Wire `FccHomeHero` into the homepage
+
+In the file that represents your **Fab Card Co homepage** (the one that *used* to render `<PictureBanner …>` directly), do this one patch:
+
+### 1) Import `FccHomeHero`
+
+Add this import near the top with your other React imports:
+
+```tsx
+import { FccHomeHero } from "../brands/fcc/FccHomeHero";
+// ↑ adjust the ../ path so it points to client/src/brands/fcc/FccHomeHero from this file
+```
+
+Common examples (pick the one that matches your folder depth):
+
+* If the homepage file is in `client/src/pages/FabCardCoHome.tsx`:
+
+  ```tsx
+  import { FccHomeHero } from "../brands/fcc/FccHomeHero";
+  ```
+* If it’s in `client/src/brands/fcc/FabCardCoHome.tsx`:
+
+  ```tsx
+  import { FccHomeHero } from "./FccHomeHero";
+  ```
+
+---
+
+### 2) Use `<FccHomeHero />` instead of a hardcoded `<PictureBanner />`
+
+Wherever you currently have something like:
+
+```tsx
+<PictureBanner
+  baseKey="fcc/lifestyle/OL-1_Brunch_Banter_SKU-OL-PRIDE-001"
+  // ...other props
+/>
+```
+
+replace that **entire** block with:
+
+```tsx
+<FccHomeHero />
+```
+
+If your homepage was very bare-bones, you can even use this whole minimal structure:
+
+```tsx
+// example Fab Card Co homepage component
+export default function FabCardCoHomePage() {
+  return (
+    <main data-brand="fcc">
+      <FccHomeHero />
+      {/* other sections below, e.g. collections, cards, etc. */}
+    </main>
+  );
+}
+```
+
+---
+
+Once you save and refresh the homepage:
+
+* The hero will:
+
+  * Call `/api/fcc/home-hero`
+  * Pull `home.lifestyle_ol1` from the DB
+  * Pass its `baseKey` into `<PictureBanner />`
+* Your **marketing team can now swap that hero** entirely from `/ops/fcc-sku-switcher` without touching code. ✅
+
+---
+
+Reply back once you’ve:
+
+* Pasted the import
+* Swapped `<PictureBanner …>` → `<FccHomeHero />`
+* Refreshed the homepage
+
+…tell me what you see on the page (hero image showing up? any console errors?), and we can do a quick sanity check plus talk about the optional polish (AVIF + readiness badge) if you want.

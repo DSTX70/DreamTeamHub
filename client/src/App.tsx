@@ -59,6 +59,7 @@ import ProviderPromptLinter from "@/pages/llm/ProviderPromptLinter";
 import LinterAugment from "@/pages/llm/Linter_Augment";
 import Checkout from "@/pages/checkout/Checkout";
 import ChatTest from "@/pages/chat-test";
+import FabCardCoHomePage from "@/pages/fcc-home";
 import { Button } from "@/components/ui/button";
 import { LogOut, User as UserIcon, Search } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -118,6 +119,7 @@ function AuthenticatedRoutes() {
       <Route path="/ops/content-imports" component={ContentImports} />
       <Route path="/ops/fcc-sku-switcher" component={FCCSkuSwitcher} />
       <Route path="/ops/settings/:rest*" component={SettingsLayout} />
+      <Route path="/fcc" component={FabCardCoHomePage} />
       <Route path="/llm/provider" component={LLMProviderSelect} />
       <Route path="/llm/provider/linter" component={ProviderPromptLinter} />
       <Route path="/llm/linter/augment" component={LinterAugment} />
