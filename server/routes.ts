@@ -25,6 +25,7 @@ import { seoAltTextRouter } from "./routes/seo_alt_text";
 import { seoMetaRouter, seoMetaPublicRouter } from "./routes/seo_meta";
 import { fccSkuMapRouter } from "./routes/fcc_sku_map";
 import { getFccSkuMapByKey } from "./lib/fccSkuMap";
+import { postGenerateLifestylePack } from "./routes/workItemActions/generateLifestylePack";
 import multer from "multer";
 import { uploadFileToS3, getWorkItemFiles, getUploaderConfig } from "./services/uploader";
 import { getEffectiveUploadsConfig, updateUploadsConfig } from "./services/opsUploadsConfig";
@@ -1113,6 +1114,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ error: 'Failed to fetch files' });
     }
   });
+
+  // ===========================
+  // WORK ITEM ACTIONS
+  // ===========================
+
+  app.post("/api/work-items/:id/actions/generate-lifestyle-pack", isAuthenticated, postGenerateLifestylePack);
 
   app.get("/api/ops/uploader/config", isAuthenticated, async (_req, res) => {
     try {
