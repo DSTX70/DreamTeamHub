@@ -13,7 +13,11 @@ import { workItems, workItemPacks } from "@shared/schema";
 export function createPackActionHandler(config: PackConfig): RequestHandler {
   return async (req: Request, res: Response) => {
     try {
-      const workItemId = req.params.id;
+      const workItemId = parseInt(req.params.id, 10);
+      
+      if (isNaN(workItemId)) {
+        return res.status(400).json({ error: "Invalid work item ID" });
+      }
       
       // Fetch work item
       const workItem = await db
@@ -29,11 +33,14 @@ export function createPackActionHandler(config: PackConfig): RequestHandler {
       const wi = workItem[0];
 
       // Run LLM skill to generate pack
-      const packData = await runSkill(config.skillName, {
-        work_item_id: wi.id,
-        work_item_title: wi.title,
-        work_item_body: wi.body || "",
-        work_item_notes: wi.notes || "",
+      const packData = await runSkill({
+        skillName: config.skillName,
+        input: {
+          work_item_id: wi.id,
+          work_item_title: wi.title,
+          work_item_body: wi.body || "",
+          work_item_notes: wi.notes || "",
+        },
       });
 
       // Validate against schema
@@ -76,7 +83,7 @@ export function createPackActionHandler(config: PackConfig): RequestHandler {
  * Uses transaction to handle concurrent regenerations safely
  */
 export async function saveWorkItemPackGeneric(input: {
-  workItemId: string;
+  workItemId: number;
   packType: string;
   packData: unknown;
 }) {

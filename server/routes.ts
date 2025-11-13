@@ -1128,7 +1128,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Register all pack generation routes from the pack registry
   for (const config of PACK_REGISTRY) {
-    const path = `/api/work-items/:id/actions/${config.endpointSuffix}`;
+    const path = `/api/work-items/:id/${config.endpointSuffix}`;
     const handler = createPackActionHandler(config);
     app.post(path, isAuthenticated, handler);
   }
