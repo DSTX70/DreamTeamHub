@@ -25,12 +25,9 @@ import { seoAltTextRouter } from "./routes/seo_alt_text";
 import { seoMetaRouter, seoMetaPublicRouter } from "./routes/seo_meta";
 import { fccSkuMapRouter } from "./routes/fcc_sku_map";
 import { getFccSkuMapByKey } from "./lib/fccSkuMap";
-import { postGenerateLifestylePack } from "./routes/workItemActions/generateLifestylePack";
-import { postGeneratePatentClaimsPack } from "./routes/workItemActions/generatePatentClaimsPack";
-import { postGenerateLaunchPlanPack } from "./routes/workItemActions/generateLaunchPlanPack";
-import { postGenerateWebsiteAuditPack } from "./routes/workItemActions/generateWebsiteAuditPack";
-import { postGenerateRiskCompliancePack } from "./routes/workItemActions/generateRiskCompliancePack";
-import { postGenerateAgentLabAcademyPack } from "./routes/workItemActions/generateAgentLabAcademyPack";
+// Pack generation handlers now use the registry pattern
+import { PACK_REGISTRY } from "./ai/packRegistry";
+import { createPackActionHandler } from "./ai/packFactory";
 import multer from "multer";
 import { uploadFileToS3, getWorkItemFiles, getUploaderConfig } from "./services/uploader";
 import { getEffectiveUploadsConfig, updateUploadsConfig } from "./services/opsUploadsConfig";
@@ -1126,15 +1123,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // ===========================
-  // WORK ITEM ACTIONS
+  // WORK ITEM ACTIONS (Registry-driven)
   // ===========================
 
-  app.post("/api/work-items/:id/actions/generate-lifestyle-pack", isAuthenticated, postGenerateLifestylePack);
-  app.post("/api/work-items/:id/actions/generate-patent-claims-pack", isAuthenticated, postGeneratePatentClaimsPack);
-  app.post("/api/work-items/:id/actions/generate-launch-plan-pack", isAuthenticated, postGenerateLaunchPlanPack);
-  app.post("/api/work-items/:id/actions/generate-website-audit-pack", isAuthenticated, postGenerateWebsiteAuditPack);
-  app.post("/api/work-items/:id/actions/generate-risk-compliance-pack", isAuthenticated, postGenerateRiskCompliancePack);
-  app.post("/api/work-items/:id/actions/generate-agent-lab-academy-pack", isAuthenticated, postGenerateAgentLabAcademyPack);
+  // Register all pack generation routes from the pack registry
+  for (const config of PACK_REGISTRY) {
+    const path = `/api/work-items/:id/actions/${config.endpointSuffix}`;
+    const handler = createPackActionHandler(config);
+    app.post(path, isAuthenticated, handler);
+  }
   
   // Pack to Drive routes
   const { postSavePackToDrive, getWorkItemDriveFiles } = await import("./api/packToDrive.route");
