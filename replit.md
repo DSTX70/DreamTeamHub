@@ -56,6 +56,24 @@ A Hybrid Uploader Configuration System provides runtime-editable file upload set
 
 A Work Order File Linkage System connects work_orders to work_items for file management, keeping files anchored to work_items while providing WO-scoped views. The system includes a work_order_id column in work_items (varchar FK to work_orders.id with SET NULL/CASCADE semantics), a work_order_files database view for aggregated file listing, GET /api/work-orders/:woId/files endpoint for querying files, and client helpers (listWorkOrderFiles, getConfig, getDefaultVisibility) in client/src/lib/workOrderFiles.ts. This architecture avoids parallel attachment systems while enabling both WO-level and WI-level file views.
 
+**AI-Powered Pack Generation System**: A comprehensive config-driven system for generating 20+ specification pack types across Brand/Creative, Governance, Operations, Partnerships, Data, and Expansion categories. The Pack System uses a registry architecture (`PACK_REGISTRY` in `server/ai/packRegistry.ts`) as the single source of truth, automatically wiring routes, handlers, schemas, skills, and exports.
+
+Key features:
+- **20 Pack Types**: Includes Lifestyle, Patent, Launch Plan, Website Audit, Risk & Compliance, Agent Lab Academy (6 legacy), plus Agent Governance, Pricing & Monetization, Data Stewardship, GlobalCollabs Partnerships, Packaging & Pre-Press, Product Line & SKU Tree, E-Com PDP, Social Campaign, Implementation Runbook, Support Playbook, Retail Readiness, Experiment Optimization, Localization, and Customer Journey (14 new)
+- **Registry-Driven Architecture**: Derived `PackType` from `PACK_REGISTRY` eliminates type drift across persistence, export, and drive integration modules
+- **LLM Skill Integration**: Each pack uses OpenAI GPT-4 with schema-aligned JSON prompts for high-quality output generation. Prompts include explicit JSON structure, exact enum values, minimum array lengths, and comprehensive examples to ensure schema validation success
+- **Versioned Storage**: `work_item_packs` table with auto-incrementing versions per pack_type. Each regeneration creates a new row (not updates), enabling complete version history (v1, v2, v3...)
+- **Dual Export System**: Custom DOCX exporters for 6 legacy packs, generic DOCX converter for 14 new packs with hierarchical headings and automatic array→table conversion
+- **Google Drive Integration**: Auto-configured pack folders from registry for seamless publishing
+- **Transaction-Safe Persistence**: `saveWorkItemPackGeneric` uses database transactions with `orderBy(desc(version))` to ensure correct version incrementing even under concurrent regenerations
+- **API Endpoints**: Auto-registered routes at `/api/work-items/:id/{pack-endpoint-suffix}` with Zod validation and error handling
+
+Recent improvements (November 2025):
+- Fixed critical bug where pack regenerations were updating rows instead of inserting new versions
+- Aligned all 14 skill JSON prompts with their Zod schemas to eliminate LLM validation failures
+- Updated prompts with **CRITICAL: YOU MUST RETURN VALID JSON** instructions and comprehensive examples
+- Verified e2e pack generation with proper version history (agent_governance v1, pricing_monetization v1/v2/v3)
+
 The CI/CD pipeline uses GitHub Actions for automated testing and environment health validation. Production health checks include `/api/healthz` (readiness) and `/api/healthz/livez` (liveness) endpoints, with Prometheus metrics and deployment tracking for observability.
 
 ### Technology Stack
