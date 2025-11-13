@@ -19,6 +19,8 @@ export interface GoogleDriveClient {
   search(folderId: string, q: string, limit?: number, pageToken?: string | null): Promise<DriveSearchResult>;
   upload(folderId: string, file: UploadInput): Promise<DriveFile>;
   copyOrMove(fileId: string, targetFolderId: string, mode?: "copy" | "move"): Promise<DriveFile>;
+  listFilesInFolder(folderId: string, limit?: number, pageToken?: string | null): Promise<DriveSearchResult>;
+  fetchFileText(fileId: string): Promise<string>;
 }
 
 function getAuth() {
@@ -82,6 +84,29 @@ export class RealDriveClient implements GoogleDriveClient {
       fields: "id,name,mimeType,webViewLink,createdTime,modifiedTime,parents",
     });
     return r.data as DriveFile;
+  }
+
+  async listFilesInFolder(folderId: string, limit = 100, pageToken?: string | null): Promise<DriveSearchResult> {
+    const query = `'${folderId}' in parents and trashed = false`;
+    const r = await this.drive.files.list({
+      q: query,
+      pageSize: limit,
+      pageToken: pageToken || undefined,
+      fields: "files(id,name,mimeType,webViewLink,createdTime,modifiedTime,parents),nextPageToken",
+      orderBy: "modifiedTime desc",
+    });
+    return { items: (r.data.files || []) as DriveFile[], nextPageToken: r.data.nextPageToken ?? null };
+  }
+
+  async fetchFileText(fileId: string): Promise<string> {
+    const r = await this.drive.files.get(
+      {
+        fileId,
+        alt: "media",
+      },
+      { responseType: "text" }
+    );
+    return r.data as string;
   }
 }
 
