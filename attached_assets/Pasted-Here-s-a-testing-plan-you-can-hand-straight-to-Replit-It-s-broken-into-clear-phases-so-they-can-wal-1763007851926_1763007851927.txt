@@ -1,0 +1,420 @@
+Here’s a testing plan you can hand straight to Replit. It’s broken into clear phases so they can walk through it without guessing.
+
+Feel free to copy/paste this as-is into a Work Item.
+
+---
+
+# DTH Agentic Packs – Implementation Test Plan
+
+**Scope:**
+
+* `generateLifestyleBannerPack`
+* `generatePatentClaimsPack`
+* `generateLaunchPlanPack`
+* `generateWebsiteAuditPack`
+* Shared pieces: `createWorkItemActionHandler`, new `/api/work-items/:id/actions/*` routes, `WorkItemActionsPanel`, `WorkItemPacksTabs`, and skill JSON configs.
+
+---
+
+## 0. Pre-flight: Environment & Basics
+
+**Goal:** Confirm the project compiles, routes are registered, and the new files exist.
+
+**Checks:**
+
+1. **TypeScript / build passes**
+
+   * Run the usual dev/build command (e.g. `npm run dev` or `npm run build`).
+   * Expected: No TS errors from:
+
+     * `server/ai/actions/createWorkItemActionHandler.ts`
+     * `server/ai/schemas/*Pack.ts`
+     * `server/db/workItemPacks.ts`
+     * `server/routes/workItemActions/*.ts`
+     * `client/src/components/workItems/WorkItemActionsPanel.tsx`
+     * `client/src/components/workItems/WorkItemPacksTabs.tsx`
+   * If there are type errors, fix imports/paths and re-run.
+
+2. **Routes wired**
+
+   * In `server/routes.ts` (or equivalent), confirm these routes exist:
+
+     * `POST /api/work-items/:id/actions/generate-lifestyle-pack`
+     * `POST /api/work-items/:id/actions/generate-patent-claims-pack`
+     * `POST /api/work-items/:id/actions/generate-launch-plan-pack`
+     * `POST /api/work-items/:id/actions/generate-website-audit-pack`
+
+3. **Skill config files exist**
+
+   * Under `server/ai/skills/` verify:
+
+     * `generateLifestyleBannerPack.json`
+     * `generatePatentClaimsPack.json`
+     * `generateLaunchPlanPack.json`
+     * `generateWebsiteAuditPack.json`
+   * Confirm `runSkill` can resolve these by `skillName`.
+
+---
+
+## 1. Backend: API + Schema Integration
+
+### 1.1 Sanity check `runSkill` integration
+
+**Goal:** Confirm each action route calls `runSkill` with the right `skillName` and validates with Zod.
+
+For each handler:
+
+* `postGenerateLifestylePack` → `skillName: "generateLifestyleBannerPack"`; uses `LifestylePackSchema`.
+* `postGeneratePatentClaimsPack` → `skillName: "generatePatentClaimsPack"`; uses `PatentClaimsPackSchema`.
+* `postGenerateLaunchPlanPack` → `skillName: "generateLaunchPlanPack"`; uses `LaunchPlanPackSchema`.
+* `postGenerateWebsiteAuditPack` → `skillName: "generateWebsiteAuditPack"`; uses `WebsiteAuditPackSchema`.
+
+**Test:**
+
+1. Temporarily instrument `runSkill` or the handlers to log:
+
+   * `skillName`
+   * Work item ID
+2. Hit each endpoint (see 1.2 below).
+3. Confirm logs show the correct skill name for each route.
+
+---
+
+### 1.2 Direct API tests (curl/Postman) – Happy Path
+
+**Goal:** For each pack route, verify:
+
+* 200 OK
+* `ok: true` in JSON response
+* DB persistence hook is called
+
+**Pre-conditions:**
+
+* There is at least **one test Work Item** in the DB with:
+
+  * Valid `id`
+  * Non-empty `title` and `body`
+* LLM credentials and `runSkill` are configured.
+
+Use a test WI ID like `"WI-TEST-001"` (replace with real ID).
+
+#### A) Lifestyle Pack
+
+```bash
+curl -X POST http://localhost:5000/api/work-items/WI-TEST-001/actions/generate-lifestyle-pack \
+  -H "Content-Type: application/json"
+```
+
+Expected:
+
+* HTTP 200
+* Response JSON:
+
+  * `{"ok": true, "work_item_id": "WI-TEST-001", "pack": { ... }}`
+* `pack` should contain keys:
+
+  * `shot_boards`, `export_plan`, `alt_text_rows`, `seo_meta_rows`
+* No Zod validation errors in server logs.
+
+Then check persistence:
+
+* Query DB `work_items` table:
+
+  * `lifestyle_pack` JSONB column is populated
+  * `lifestyle_pack_updated_at` set to a recent timestamp
+
+Repeat this pattern for:
+
+#### B) Patent Claims Pack
+
+```bash
+curl -X POST http://localhost:5000/api/work-items/WI-TEST-001/actions/generate-patent-claims-pack \
+  -H "Content-Type: application/json"
+```
+
+Expected `pack` keys:
+
+* `invention_title`, `short_summary`, `independent_claims`, `dependent_claims`, `open_questions`
+
+DB:
+
+* `patent_claims_pack` and `patent_claims_pack_updated_at` populated.
+
+#### C) Launch Plan Pack
+
+```bash
+curl -X POST http://localhost:5000/api/work-items/WI-TEST-001/actions/generate-launch-plan-pack \
+  -H "Content-Type: application/json"
+```
+
+Expected keys:
+
+* `campaign_name`, `t0_event`, `timeline`, `channels`, `assets`, `kpis`
+
+DB:
+
+* `launch_plan_pack` and `launch_plan_pack_updated_at` populated.
+
+#### D) Website Audit Pack
+
+```bash
+curl -X POST http://localhost:5000/api/work-items/WI-TEST-001/actions/generate-website-audit-pack \
+  -H "Content-Type: application/json"
+```
+
+Expected keys:
+
+* `site_name`, `base_url`, `environment`, `summary`, `pages`, `findings`, `checklists`, `roadmap`
+
+DB:
+
+* `website_audit_pack` and `website_audit_pack_updated_at` populated.
+
+---
+
+### 1.3 Negative & edge cases
+
+**Goal:** Confirm error handling is sane.
+
+1. **Nonexistent Work Item**
+
+   ```bash
+   curl -X POST http://localhost:5000/api/work-items/DOES-NOT-EXIST/actions/generate-lifestyle-pack
+   ```
+
+   * Expected:
+
+     * 404
+     * JSON: `{ "ok": false, "error": "work_item_not_found" }`
+
+2. **Skill misconfig / LLM error simulation**
+
+   * Temporarily have `runSkill` throw an error for one skill (e.g. by checking skillName).
+   * Call that action route.
+   * Expected:
+
+     * 500
+     * JSON: `{ "ok": false, "error": "internal_error" }`
+     * `WorkItemActionsPanel` should show `Last run failed` for that action (see UI tests).
+
+---
+
+## 2. UI: Actions Panel
+
+**Goal:** Verify `WorkItemActionsPanel` on the WI detail page:
+
+* Renders correctly
+* Triggers the right endpoints
+* Updates its status + timestamp
+
+### 2.1 Panel renders
+
+1. Open the **Work Item detail page** for `WI-TEST-001` in the browser.
+2. Confirm:
+
+   * An **“Actions” header** is visible.
+   * A **“Run ▾”** button is present.
+   * Clicking “Run ▾” opens a dropdown with:
+
+     * `✨ Generate Lifestyle Pack`
+     * `🧩 Generate Patent Claims Pack`
+     * `📣 Generate Launch Plan Pack`
+     * `🔍 Generate Website Audit Pack` (if you added this row)
+
+### 2.2 Actions fire correct routes
+
+For each button:
+
+1. Open **DevTools → Network**.
+2. Click “Run” next to:
+
+   * `✨ Generate Lifestyle Pack`
+   * Expected network call:
+
+     * `POST /api/work-items/WI-TEST-001/actions/generate-lifestyle-pack`
+3. Confirm:
+
+   * HTTP 200
+   * `ok: true` in response
+   * Status badge text changes from **Idle** → **Running…** → **Last run OK**
+   * Timestamp under the badge updates.
+
+Repeat for:
+
+* `🧩 Generate Patent Claims Pack` → `/generate-patent-claims-pack`
+* `📣 Generate Launch Plan Pack` → `/generate-launch-plan-pack`
+* `🔍 Generate Website Audit Pack` → `/generate-website-audit-pack`
+
+### 2.3 Error UI
+
+Simulate an error (e.g., temporarily break one handler or make `runSkill` throw for a given skill):
+
+1. Click the corresponding “Run” button.
+2. Confirm:
+
+   * Network response is 500.
+   * Badge shows: **Last run failed**
+   * Timestamp updates.
+
+Restore normal behavior after test.
+
+---
+
+## 3. UI: “Generated Packs” Tabs
+
+**Goal:** Confirm `WorkItemPacksTabs` renders only when packs exist, and the contents match the data.
+
+### 3.1 No packs state
+
+1. Pick a WI with **no packs** generated yet.
+2. Open the detail page.
+3. Confirm:
+
+   * “Generated Packs” section appears with text like:
+
+     > “No generated packs yet. Use the Actions panel…”
+   * No tabs are clickable.
+
+### 3.2 Lifestyle Pack tab
+
+1. On `WI-TEST-001`, run `Generate Lifestyle Pack` if not already done.
+2. Reload the WI detail page.
+3. Confirm:
+
+   * “Generated Packs” section shows a **Lifestyle Pack** tab.
+   * Click “Lifestyle Pack”:
+
+     * **Shot Boards** section shows one card per `shot_boards` entry.
+     * **Export Plan** table lists each `export_plan` row:
+
+       * Columns: Shot, Size, Dimensions, Filename, Primary.
+     * `is_primary: true` rows show “★” in Primary.
+
+Cross-check one entry:
+
+* Confirm that a row’s `filename` matches your DB `lifestyle_pack.export_plan[0].filename`.
+
+### 3.3 Patent Claims Pack tab
+
+1. Run `Generate Patent Claims Pack` for `WI-TEST-001`.
+2. Reload WI detail.
+3. Confirm:
+
+   * **Patent Claims Pack** tab appears.
+   * Tab content shows:
+
+     * Summary section with `invention_title` + `short_summary`.
+     * Two columns:
+
+       * Independent Claims: list of `independent_claims`
+       * Dependent Claims: list of `dependent_claims`
+     * Optional Open Questions list if `open_questions` is non-empty.
+
+Verify that claim text on screen matches `patent_claims_pack.independent_claims[0].text` in DB.
+
+### 3.4 Launch Plan Pack tab
+
+1. Run `Generate Launch Plan Pack`.
+2. Reload WI detail.
+3. Confirm:
+
+   * **Launch Plan Pack** tab appears.
+   * Tab content shows:
+
+     * Campaign name and `t0_event`.
+     * Timeline table with:
+
+       * Phase, Label, Owner, Start, End.
+     * Channels list (cards with channel name, objective, cadence).
+     * Assets cards (asset_id, type, description, owner_role, needed_by_offset_days).
+     * KPIs list with metric + target + window.
+
+Spot-check: one timeline row’s `phase_id` on screen matches the DB JSON.
+
+### 3.5 Website Audit Pack tab
+
+1. Run `Generate Website Audit Pack`.
+2. Reload WI detail.
+3. Confirm:
+
+   * **Website Audit Pack** tab appears.
+   * Tab content shows:
+
+     * Summary:
+
+       * `site_name`, `environment`
+       * headline
+       * two columns: Key wins / Key issues
+     * Findings list in scrollable container:
+
+       * Each finding shows:
+
+         * area (SEO/UX/etc.)
+         * severity + effort
+         * page_url
+         * description
+         * Recommendation
+
+Again, spot-check one `finding` JSON vs what’s rendered.
+
+---
+
+## 4. Data Integrity & UX Coherence
+
+### 4.1 JSON parity check
+
+**Goal:** DB data ↔ UI rendering stays in sync.
+
+Pick 1–2 packs (e.g. Lifestyle + Audit):
+
+1. Fetch Work Item JSON via your existing API (e.g. `GET /api/work-items/WI-TEST-001`).
+2. Inspect `lifestyle_pack`, `website_audit_pack` fields.
+3. Confirm that:
+
+   * Every element rendered in UI corresponds to the JSON data.
+   * No obvious fields are missing (e.g. timeline, KPIs, findings, etc.).
+
+### 4.2 Multiple pack runs
+
+**Goal:** Re-running a pack updates it, doesn’t break things.
+
+1. On `WI-TEST-001`, click:
+
+   * `✨ Generate Lifestyle Pack` twice (separated by at least a few seconds).
+2. Confirm:
+
+   * No errors.
+   * `lifestyle_pack_updated_at` is updated to the latest run.
+   * “Generated Packs” tab still renders correctly.
+3. Do the same for one other pack (e.g. Launch Plan).
+
+---
+
+## 5. Optional: Manual smoke for Lifestyle → Hero integration
+
+If you want to include the lifestyle hero test:
+
+1. Confirm `lifestyle_pack.export_plan` for OL-1 includes expected filenames.
+2. Ensure placeholder images exist in storage at those paths.
+3. Load `/fcc`:
+
+   * Confirm the hero now shows a real image (not “pending upload”).
+   * Confirm network requests for the hero images are 200 OK.
+
+---
+
+## Definition of Done (for Replit)
+
+Implementation is considered complete and correct when:
+
+* [ ] All four endpoints respond with 200/`ok: true` for valid WIs.
+* [ ] Packs are being saved to the DB and can be retrieved with WI data.
+* [ ] `WorkItemActionsPanel` shows all four actions, calls correct endpoints, and updates status badges.
+* [ ] `WorkItemPacksTabs`:
+
+  * Shows “no packs” state for empty WIs.
+  * Shows correct tabs and data when packs exist.
+* [ ] Error cases (missing WI, simulated skill error) surface as `ok: false` with `Last run failed` badge in UI.
+* [ ] No TypeScript or build errors introduced by the new files.
+
+You can use this checklist as the sign-off criteria for the Agentic Packs v1 implementation.

@@ -1,0 +1,580 @@
+Love it. Let’s make this real inside DTH.
+
+I’ll do this in two sections:
+
+Skill JSON configs for all 4 packs
+
+“Generated Packs” tabs UI for the Work Item detail page
+
+All are Replit-ready drops.
+
+1️⃣ Skill JSON configs
+
+Put these in something like:
+
+server/ai/skills/generateLifestyleBannerPack.json
+
+server/ai/skills/generatePatentClaimsPack.json
+
+server/ai/skills/generateLaunchPlanPack.json
+
+server/ai/skills/generateWebsiteAuditPack.json
+
+Your runSkill can load them by skillName.
+
+1A) generateLifestyleBannerPack.json
+{
+  "name": "generateLifestyleBannerPack",
+  "description": "Generate lifestyle banner shot boards, export filenames, and CSV-ready alt/SEO rows for Fab Card Co lifestyle heroes based on a Work Item brief.",
+  "system_prompt": "You are a blended creative pod for Fab Card Co: Nova (Art Direction), Storybloom (Alt Text and narrative), and Prism (SEO). You are working inside the Dream Team Hub (DTH) platform. You receive a Work Item that describes lifestyle banner images for the Fab Card Co collections such as Out Loud, Midnight Express, and ColorCue.\n\nYour job is to produce execution-ready artifacts, not to restate the brief. Given the work item title, body, and notes, you must output a single JSON object with four arrays: shot_boards, export_plan, alt_text_rows, seo_meta_rows.\n\nBrand and technical constraints:\n- Brand: Fab Card Co with locked visual systems. Out Loud is bold, queer-inclusive, and modern. Midnight Express is upscale black-on-black with foil. ColorCue uses color psychology with a clean, modern feel. Respect those identities in shot descriptions but keep language tool-agnostic.\n- Lifestyle style: realistic editorial, inclusive casting, natural or soft light, subtle grain is acceptable. Avoid over-HDR or obvious CGI looks.\n- Safe area: maintain at least 64 pixels of safe area around card edges in all crops to avoid cropping text or hands.\n- Filenames must follow the pattern: fcc/lifestyle/{SHOT}_{SKU}_{WIDTH}x{HEIGHT}.webp. Example: fcc/lifestyle/OL-1_Brunch_Banter_SKU-OL-PRIDE-001_1920x800.webp.\n- Sizes per shot: Desktop 1920x800, Desktop fallback 1440x800, Desktop 2x 3840x1600, Tablet 960x600, Mobile 1080x1350, and a lightweight LQIP around 480 pixels wide.\n\nOutput requirements:\n1) shot_boards: one entry per shot such as OL-1, OL-2, ME-1, ME-2, CC-1, CC-2. Each entry must describe the scene, camera, framing, lighting, casting, and color palette in enough detail that an artist or AI tool could generate it consistently.\n2) export_plan: for each shot, emit one row per required size. Use base_key to hold the base path like fcc/lifestyle/OL-1_Brunch_Banter_SKU-OL-PRIDE-001 and construct filename by appending an underscore, the WIDTH x HEIGHT string, and the webp extension. Mark is_primary true only for the 1920x800 row.\n3) alt_text_rows: one row per filename for at least the 1920x800, 960x600, and 1080x1350 sizes. Alt text must be specific, human, and inclusive. Describe the people and the scene, not only that there is a card. en_title is a short human-readable internal label.\n4) seo_meta_rows: for at least the 1920x800 rows, emit meta_title and meta_description that would be appropriate if that hero were the primary image for the SKU on a landing page. Include a short list of focus_keywords per row.\n\nRespond with JSON only that matches the output schema. Do not include explanations, comments, or other text outside the JSON.",
+  "input_schema": {
+    "type": "object",
+    "properties": {
+      "work_item_id": { "type": "string" },
+      "work_item_title": { "type": "string" },
+      "work_item_body": { "type": "string" },
+      "work_item_notes": { "type": "string" }
+    },
+    "required": ["work_item_id", "work_item_title", "work_item_body"]
+  }
+}
+
+1B) generatePatentClaimsPack.json
+{
+  "name": "generatePatentClaimsPack",
+  "description": "Draft a structured patent claims pack (independents, dependents, summary, and questions) for a software or system invention based on a Work Item brief.",
+  "system_prompt": "You are Aegis (IP counsel) and Atlas (patentability partner) working inside the Dream Team Hub. You receive a Work Item that describes an invention. Your job is to draft a structured patent claims pack that counsel can refine.\n\nYou are not writing a full specification. Focus on a clean set of independent and dependent claims that capture the core inventive idea and useful dependent fallbacks.\n\nFor each independent claim, write precise claim language for a computer system, method, or computer-readable medium, depending on what the Work Item implies. For each dependent claim, narrow a specific independent claim by adding a concrete limitation. Use depends_on to list the claim numbers each dependent claim narrows.\n\nAvoid marketing language. Use clear and neutral technical phrasing. Include a short summary of the invention and a list of open questions where clarification from the inventor or counsel would materially help.\n\nRespond with JSON only that matches the PatentClaimsPackSchema. Do not include commentary outside the JSON.",
+  "input_schema": {
+    "type": "object",
+    "properties": {
+      "work_item_id": { "type": "string" },
+      "work_item_title": { "type": "string" },
+      "work_item_body": { "type": "string" },
+      "work_item_notes": { "type": "string" }
+    },
+    "required": ["work_item_id", "work_item_title", "work_item_body"]
+  }
+}
+
+1C) generateLaunchPlanPack.json
+{
+  "name": "generateLaunchPlanPack",
+  "description": "Generate a structured launch plan (timeline, channels, assets, KPIs) for a brand or product launch based on a Work Item brief.",
+  "system_prompt": "You are Prism (Marketing), Echo (Social and content), and Ledger (growth and ROI) working together inside the Dream Team Hub. You receive a Work Item that describes a launch for a brand, product, or campaign.\n\nYour job is to produce an execution-ready launch plan. The output should include a named campaign, a t0_event description such as launch day or pre-order opening, a timeline of key tasks relative to that t0, a per-channel plan, a list of assets to create, and a small set of measurable KPIs.\n\nTimeline: include 3 to 5 phases such as prep, launch week, and post. For each timeline item, specify a label, owner_role, and start_offset_days and end_offset_days relative to t0.\n\nChannels: for each major channel such as email, Instagram, TikTok, PR, or paid, describe the objective, key messages, and cadence.\n\nAssets: list the assets to create such as hero images, reels, carousels, landing pages, or email templates, with owner_role and needed_by_offset_days.\n\nKPIs: define a small set of key metrics such as CTR, sign ups, or add to cart rate, with rough target values and measurement windows.\n\nRespond with JSON only that matches the LaunchPlanPackSchema. Do not include commentary outside the JSON.",
+  "input_schema": {
+    "type": "object",
+    "properties": {
+      "work_item_id": { "type": "string" },
+      "work_item_title": { "type": "string" },
+      "work_item_body": { "type": "string" },
+      "work_item_notes": { "type": "string" }
+    },
+    "required": ["work_item_id", "work_item_title", "work_item_body"]
+  }
+}
+
+1D) generateWebsiteAuditPack.json
+{
+  "name": "generateWebsiteAuditPack",
+  "description": "Generate a structured website audit pack (summary, pages, findings, checklists, roadmap) for a site that is in production or development, based on a Work Item brief.",
+  "system_prompt": "You are a blended product and platform pod inside the Dream Team Hub, combining Prism (Marketing and SEO), Echo (content and user journey), Nova (visual and UX), and a light version of Sentinel (risk awareness). You receive a Work Item that describes one or more websites or environments to audit.\n\nYour job is to produce a structured website audit pack. You are not a live crawler in this skill. Treat the Work Item body, notes, and any URL list as your primary source and combine that with best practices for modern brand, UX, SEO, accessibility, and performance.\n\nThe pack must include:\n- A summary with a headline, key_wins, and key_issues.\n- A pages array listing the key URLs, labels, priorities, and optional template types.\n- A findings array where each finding is tied to a page_url and an area such as SEO, Content, UX, Brand, Performance, Accessibility, or Risk, with a severity, a clear description, a concrete recommendation, and an effort level.\n- A set of checklists grouped by area, using pass, fail, n/a, or unknown with brief notes.\n- A roadmap array that groups related findings into do_now, do_next, and do_later buckets with a short narrative for each bucket.\n\nIf the Work Item includes multiple environments such as production and staging, make that clear in summary and environment fields but keep the pack focused and actionable. Use language that a product and marketing team can act on during a real working session.\n\nRespond with JSON only that matches the WebsiteAuditPackSchema. Do not include commentary outside the JSON.",
+  "input_schema": {
+    "type": "object",
+    "properties": {
+      "work_item_id": { "type": "string" },
+      "work_item_title": { "type": "string" },
+      "work_item_body": { "type": "string" },
+      "work_item_notes": { "type": "string" }
+    },
+    "required": ["work_item_id", "work_item_title", "work_item_body"]
+  }
+}
+
+
+That’s all the skill configs you need for the four packs.
+
+2️⃣ “Generated Packs” tabs UI
+
+Now let’s surface these packs in the Work Item detail page.
+
+2A) Packs tabs component
+
+File: client/src/components/workItems/WorkItemPacksTabs.tsx
+
+// client/src/components/workItems/WorkItemPacksTabs.tsx
+import * as React from "react";
+
+type WorkItemPacksTabsProps = {
+  workItem: {
+    id: string;
+    lifestyle_pack?: any;
+    patent_claims_pack?: any;
+    launch_plan_pack?: any;
+    website_audit_pack?: any;
+  };
+};
+
+type TabKey = "lifestyle" | "patent" | "launch" | "audit";
+
+const TAB_CONFIG: { key: TabKey; label: string }[] = [
+  { key: "lifestyle", label: "Lifestyle Pack" },
+  { key: "patent", label: "Patent Claims Pack" },
+  { key: "launch", label: "Launch Plan Pack" },
+  { key: "audit", label: "Website Audit Pack" }
+];
+
+export function WorkItemPacksTabs(props: WorkItemPacksTabsProps) {
+  const { workItem } = props;
+
+  const availableTabs = TAB_CONFIG.filter((t) => {
+    if (t.key === "lifestyle") return !!workItem.lifestyle_pack;
+    if (t.key === "patent") return !!workItem.patent_claims_pack;
+    if (t.key === "launch") return !!workItem.launch_plan_pack;
+    if (t.key === "audit") return !!workItem.website_audit_pack;
+    return false;
+  });
+
+  const firstKey: TabKey | null =
+    availableTabs.length > 0 ? availableTabs[0].key : null;
+
+  const [active, setActive] = React.useState<TabKey | null>(firstKey);
+
+  if (!firstKey) {
+    return (
+      <section className="mt-6 rounded-md border border-gray-800 bg-[#0b0c10] p-3 text-sm text-gray-400">
+        <div className="font-medium text-gray-200">Generated Packs</div>
+        <p className="mt-1 text-xs text-gray-500">
+          No generated packs yet. Use the Actions panel to run an agentic pack
+          for this Work Item.
+        </p>
+      </section>
+    );
+  }
+
+  function renderActivePanel() {
+    if (active === "lifestyle" && workItem.lifestyle_pack) {
+      const p = workItem.lifestyle_pack;
+      return (
+        <div className="space-y-4">
+          <div>
+            <h3 className="text-xs font-semibold uppercase tracking-wide text-gray-400">
+              Shot Boards
+            </h3>
+            <div className="mt-2 space-y-2">
+              {p.shot_boards?.map((shot: any) => (
+                <div
+                  key={shot.shot_id}
+                  className="rounded-md border border-gray-800 bg-[#090a0f] p-2"
+                >
+                  <div className="flex items-center justify-between text-xs text-gray-300">
+                    <span className="font-semibold">
+                      {shot.shot_id} · {shot.collection}
+                    </span>
+                    <span className="text-[11px] text-gray-500">
+                      {shot.sku}
+                    </span>
+                  </div>
+                  <p className="mt-1 text-xs text-gray-400">
+                    {shot.scenario}
+                  </p>
+                  <p className="mt-1 text-[11px] text-gray-500">
+                    Camera: {shot.camera} · Framing: {shot.framing} · Lighting:{" "}
+                    {shot.lighting}
+                  </p>
+                  <p className="mt-1 text-[11px] text-gray-500">
+                    Casting: {shot.casting}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <h3 className="text-xs font-semibold uppercase tracking-wide text-gray-400">
+              Export Plan
+            </h3>
+            <div className="mt-2 overflow-x-auto">
+              <table className="min-w-full border-collapse text-xs">
+                <thead>
+                  <tr className="border-b border-gray-800 text-[11px] text-gray-400">
+                    <th className="px-2 py-1 text-left">Shot</th>
+                    <th className="px-2 py-1 text-left">Size</th>
+                    <th className="px-2 py-1 text-left">Dimensions</th>
+                    <th className="px-2 py-1 text-left">Filename</th>
+                    <th className="px-2 py-1 text-left">Primary</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {p.export_plan?.map((row: any, idx: number) => (
+                    <tr
+                      key={idx}
+                      className="border-b border-gray-900 text-[11px] text-gray-300"
+                    >
+                      <td className="px-2 py-1">{row.shot_id}</td>
+                      <td className="px-2 py-1">{row.size_label}</td>
+                      <td className="px-2 py-1">
+                        {row.width}×{row.height}
+                      </td>
+                      <td className="px-2 py-1">{row.filename}</td>
+                      <td className="px-2 py-1">
+                        {row.is_primary ? "★" : ""}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    if (active === "patent" && workItem.patent_claims_pack) {
+      const p = workItem.patent_claims_pack;
+      return (
+        <div className="space-y-4 text-xs text-gray-300">
+          <div>
+            <h3 className="text-xs font-semibold uppercase tracking-wide text-gray-400">
+              Summary
+            </h3>
+            <p className="mt-1 text-sm text-gray-200">{p.invention_title}</p>
+            <p className="mt-1 text-xs text-gray-400">{p.short_summary}</p>
+          </div>
+          <div className="grid gap-4 md:grid-cols-2">
+            <div>
+              <h4 className="text-[11px] font-semibold uppercase tracking-wide text-gray-400">
+                Independent Claims
+              </h4>
+              <ol className="mt-1 list-decimal space-y-1 pl-4">
+                {p.independent_claims?.map((c: any) => (
+                  <li key={c.claim_number} className="text-xs text-gray-300">
+                    <span className="font-semibold">
+                      Claim {c.claim_number}:{" "}
+                    </span>
+                    {c.text}
+                  </li>
+                ))}
+              </ol>
+            </div>
+            <div>
+              <h4 className="text-[11px] font-semibold uppercase tracking-wide text-gray-400">
+                Dependent Claims
+              </h4>
+              <ol className="mt-1 list-decimal space-y-1 pl-4">
+                {p.dependent_claims?.map((c: any) => (
+                  <li key={c.claim_number} className="text-xs text-gray-300">
+                    <span className="font-semibold">
+                      Claim {c.claim_number}:{" "}
+                    </span>
+                    {c.text}
+                  </li>
+                ))}
+              </ol>
+            </div>
+          </div>
+          {p.open_questions && p.open_questions.length > 0 && (
+            <div>
+              <h4 className="text-[11px] font-semibold uppercase tracking-wide text-gray-400">
+                Open Questions
+              </h4>
+              <ul className="mt-1 list-disc space-y-1 pl-4">
+                {p.open_questions.map((q: string, i: number) => (
+                  <li key={i} className="text-xs text-gray-300">
+                    {q}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    if (active === "launch" && workItem.launch_plan_pack) {
+      const p = workItem.launch_plan_pack;
+      return (
+        <div className="space-y-4 text-xs text-gray-300">
+          <div>
+            <h3 className="text-xs font-semibold uppercase tracking-wide text-gray-400">
+              Campaign
+            </h3>
+            <p className="mt-1 text-sm text-gray-200">{p.campaign_name}</p>
+            <p className="mt-1 text-xs text-gray-400">T0 event: {p.t0_event}</p>
+          </div>
+
+          <div>
+            <h4 className="text-[11px] font-semibold uppercase tracking-wide text-gray-400">
+              Timeline
+            </h4>
+            <div className="mt-1 overflow-x-auto">
+              <table className="min-w-full border-collapse text-[11px]">
+                <thead>
+                  <tr className="border-b border-gray-800 text-gray-400">
+                    <th className="px-2 py-1 text-left">Phase</th>
+                    <th className="px-2 py-1 text-left">Label</th>
+                    <th className="px-2 py-1 text-left">Owner</th>
+                    <th className="px-2 py-1 text-left">Start</th>
+                    <th className="px-2 py-1 text-left">End</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {p.timeline?.map((t: any, idx: number) => (
+                    <tr
+                      key={idx}
+                      className="border-b border-gray-900 text-gray-300"
+                    >
+                      <td className="px-2 py-1">{t.phase_id}</td>
+                      <td className="px-2 py-1">{t.label}</td>
+                      <td className="px-2 py-1">{t.owner_role}</td>
+                      <td className="px-2 py-1">{t.start_offset_days}</td>
+                      <td className="px-2 py-1">{t.end_offset_days}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div className="grid gap-4 md:grid-cols-2">
+            <div>
+              <h4 className="text-[11px] font-semibold uppercase tracking-wide text-gray-400">
+                Channels
+              </h4>
+              <div className="mt-1 space-y-2">
+                {p.channels?.map((ch: any, idx: number) => (
+                  <div
+                    key={idx}
+                    className="rounded-md border border-gray-800 bg-[#090a0f] p-2"
+                  >
+                    <div className="text-xs font-semibold text-gray-200">
+                      {ch.channel}
+                    </div>
+                    <p className="mt-1 text-xs text-gray-400">
+                      Objective: {ch.objective}
+                    </p>
+                    <p className="mt-1 text-[11px] text-gray-500">
+                      Cadence: {ch.cadence}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <h4 className="text-[11px] font-semibold uppercase tracking-wide text-gray-400">
+                Assets
+              </h4>
+              <div className="mt-1 space-y-2">
+                {p.assets?.map((a: any, idx: number) => (
+                  <div
+                    key={idx}
+                    className="rounded-md border border-gray-800 bg-[#090a0f] p-2"
+                  >
+                    <div className="text-xs font-semibold text-gray-200">
+                      {a.asset_id} · {a.type}
+                    </div>
+                    <p className="mt-1 text-xs text-gray-400">
+                      {a.description}
+                    </p>
+                    <p className="mt-1 text-[11px] text-gray-500">
+                      Owner: {a.owner_role} · Needed by: T0{" "}
+                      {a.needed_by_offset_days} days
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {p.kpis && p.kpis.length > 0 && (
+            <div>
+              <h4 className="text-[11px] font-semibold uppercase tracking-wide text-gray-400">
+                KPIs
+              </h4>
+              <ul className="mt-1 list-disc space-y-1 pl-4">
+                {p.kpis.map((k: any, idx: number) => (
+                  <li key={idx} className="text-xs text-gray-300">
+                    {k.metric}: target {k.target_value} over{" "}
+                    {k.measurement_window_days} days
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    if (active === "audit" && workItem.website_audit_pack) {
+      const p = workItem.website_audit_pack;
+      return (
+        <div className="space-y-4 text-xs text-gray-300">
+          <div>
+            <h3 className="text-xs font-semibold uppercase tracking-wide text-gray-400">
+              Summary
+            </h3>
+            <p className="mt-1 text-sm text-gray-200">
+              {p.site_name} · {p.environment}
+            </p>
+            <p className="mt-1 text-xs text-gray-400">{p.summary?.headline}</p>
+            <div className="mt-2 grid gap-4 md:grid-cols-2">
+              <div>
+                <h4 className="text-[11px] font-semibold uppercase tracking-wide text-emerald-400">
+                  Key wins
+                </h4>
+                <ul className="mt-1 list-disc space-y-1 pl-4">
+                  {p.summary?.key_wins?.map((w: string, idx: number) => (
+                    <li key={idx}>{w}</li>
+                  ))}
+                </ul>
+              </div>
+              <div>
+                <h4 className="text-[11px] font-semibold uppercase tracking-wide text-rose-400">
+                  Key issues
+                </h4>
+                <ul className="mt-1 list-disc space-y-1 pl-4">
+                  {p.summary?.key_issues?.map((w: string, idx: number) => (
+                    <li key={idx}>{w}</li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <h4 className="text-[11px] font-semibold uppercase tracking-wide text-gray-400">
+              Findings
+            </h4>
+            <div className="mt-1 max-h-64 overflow-y-auto rounded-md border border-gray-800 bg-[#090a0f]">
+              {p.findings?.map((f: any) => (
+                <div
+                  key={f.id}
+                  className="border-b border-gray-800 p-2 last:border-b-0"
+                >
+                  <div className="flex items-center justify-between text-[11px] text-gray-400">
+                    <span>{f.area}</span>
+                    <span>
+                      {f.severity.toUpperCase()} · {f.effort}
+                    </span>
+                  </div>
+                  <div className="mt-1 text-[11px] text-gray-500">
+                    {f.page_url}
+                  </div>
+                  <p className="mt-1 text-xs text-gray-200">
+                    {f.description}
+                  </p>
+                  <p className="mt-1 text-[11px] text-emerald-400">
+                    Recommendation: {f.recommendation}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    return null;
+  }
+
+  return (
+    <section className="mt-6 rounded-md border border-gray-800 bg-[#0b0c10] p-3 text-sm text-gray-200">
+      <div className="flex items-center justify-between gap-2">
+        <h2 className="text-xs font-semibold uppercase tracking-wide text-gray-400">
+          Generated Packs
+        </h2>
+        <div className="inline-flex gap-1 rounded-md bg-[#050509] p-1">
+          {availableTabs.map((tab) => (
+            <button
+              key={tab.key}
+              type="button"
+              onClick={() => setActive(tab.key)}
+              className={[
+                "rounded px-2 py-1 text-[11px]",
+                active === tab.key
+                  ? "bg-gray-100 text-black"
+                  : "text-gray-400 hover:text-gray-100"
+              ].join(" ")}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="mt-3">{renderActivePanel()}</div>
+    </section>
+  );
+}
+
+2B) Use it on the Work Item detail page
+
+Assuming your detail page looks roughly like this, just add the tabs component.
+
+File: client/src/pages/workItems/WorkItemDetail.tsx (adjust path to match your app)
+
+// client/src/pages/workItems/WorkItemDetail.tsx
+import * as React from "react";
+import { WorkItemActionsPanel } from "../../components/workItems/WorkItemActionsPanel";
+import { WorkItemPacksTabs } from "../../components/workItems/WorkItemPacksTabs";
+
+interface WorkItem {
+  id: string;
+  title: string;
+  body: string;
+  // These fields should be wired from your API / DB
+  lifestyle_pack?: any;
+  patent_claims_pack?: any;
+  launch_plan_pack?: any;
+  website_audit_pack?: any;
+}
+
+interface WorkItemDetailProps {
+  workItem: WorkItem;
+}
+
+export default function WorkItemDetailPage(props: WorkItemDetailProps) {
+  const { workItem } = props;
+
+  return (
+    <main className="wi-detail px-4 py-4 text-sm text-gray-100">
+      <header className="flex items-start justify-between gap-4 border-b border-gray-700 pb-3">
+        <div>
+          <h1 className="text-lg font-semibold text-gray-50">
+            {workItem.title}
+          </h1>
+          <p className="mt-1 text-xs text-gray-400">WI #{workItem.id}</p>
+        </div>
+
+        <WorkItemActionsPanel workItemId={workItem.id} />
+      </header>
+
+      <section className="mt-4">
+        {/* your existing body / notes rendering */}
+        <div className="rounded-md border border-gray-800 bg-[#05060a] p-3 text-sm text-gray-200">
+          {workItem.body}
+        </div>
+      </section>
+
+      {/* 🔽 Generated packs live here */}
+      <WorkItemPacksTabs workItem={workItem} />
+    </main>
+  );
+}
+
+
+As long as your Work Item API populates lifestyle_pack, patent_claims_pack, launch_plan_pack, and website_audit_pack from the JSONB columns / pack tables, this will:
+
+Show a “Generated Packs” box
+
+Only enable tabs for packs that exist for that WI
+
+Render each pack in a structured, readable way
+
+You now have:
+
+Actions dropdown to run packs
+
+Tabs section to inspect what each agentic pod produced
+
+That’s a legit v1 of your Agentic Dream Team UI in DTH.
