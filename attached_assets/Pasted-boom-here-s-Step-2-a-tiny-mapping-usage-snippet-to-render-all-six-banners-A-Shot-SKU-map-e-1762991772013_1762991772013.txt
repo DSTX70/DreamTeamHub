@@ -1,0 +1,90 @@
+boom—here’s Step 2: a tiny mapping + usage snippet to render all six banners.
+
+## A) Shot→SKU map (edit SKUs when Nova picks final cards)
+
+**File:** `app/client/components/fcc/lifestyleMap.ts`
+
+```ts
+// Update SKUs once the team locks final card selections
+export const lifestyleShots = [
+  {
+    key: 'home.lifestyle_ol1',
+    label: 'OL-1 Brunch Banter',
+    baseKey: 'fcc/lifestyle/OL-1_Brunch_Banter_SKU-OL-PRIDE-001', // TODO: replace SKU
+  },
+  {
+    key: 'home.lifestyle_ol2',
+    label: 'OL-2 Stoop Affirmation',
+    baseKey: 'fcc/lifestyle/OL-2_Stoop_Affirmation_SKU-OL-AFFIRM-002', // TODO
+  },
+  {
+    key: 'home.lifestyle_me1',
+    label: 'ME-1 Candlelight Foil',
+    baseKey: 'fcc/lifestyle/ME-1_Candlelight_Foil_SKU-ME-FOIL-001', // TODO
+  },
+  {
+    key: 'home.lifestyle_me2',
+    label: 'ME-2 Bar Congrats Clink',
+    baseKey: 'fcc/lifestyle/ME-2_Bar_Congrats_Clink_SKU-ME-CONGRATS-003', // TODO
+  },
+  {
+    key: 'home.lifestyle_cc1',
+    label: 'CC-1 Kitchen Table Thank-You',
+    baseKey: 'fcc/lifestyle/CC-1_Kitchen_Table_ThankYou_SKU-CC-THANKS-004', // TODO
+  },
+  {
+    key: 'home.lifestyle_cc2',
+    label: 'CC-2 At-Home Birthday',
+    baseKey: 'fcc/lifestyle/CC-2_AtHome_Birthday_SKU-CC-BDAY-005', // TODO
+  },
+] as const;
+```
+
+## B) Drop them on the homepage
+
+**File:** `app/client/pages/FCCHome.tsx` (or wherever your FCC homepage lives)
+
+```tsx
+import * as React from 'react';
+import PictureBanner from '@/components/fcc/PictureBanner';
+import { lifestyleShots } from '@/components/fcc/lifestyleMap';
+
+// Optional: section wrappers for spacing
+const Section: React.FC<{ children: React.ReactNode }> = ({ children }) => (
+  <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 my-10">{children}</section>
+);
+
+export default function FCCHome() {
+  return (
+    <>
+      {/* ...your hero goes here... */}
+
+      {lifestyleShots.map((shot) => (
+        <Section key={shot.key}>
+          <PictureBanner baseKey={shot.baseKey} className="rounded-card shadow-elev-1" />
+        </Section>
+      ))}
+
+      {/* ...product rails continue... */}
+    </>
+  );
+}
+```
+
+## C) How this “lights up”
+
+* Before uploads: users see a soft placeholder per slot.
+* After Nova uploads to S3 with the exact filenames:
+
+  * `/fcc/lifestyle/{SHOT}_{SKU}_1920x800.webp` (and other sizes)
+* The `<PictureBanner />` HEAD-checks `1920x800`; when it exists, the full sourceset renders.
+* Alt text is pulled from `/api/seo/alt?key=/fcc/lifestyle/{SHOT}_{SKU}_1920x800.webp`.
+
+## D) Quick checklist for the team (so it “just works”)
+
+* Filenames match **exactly** the `baseKey` + `_{WIDTH}x{HEIGHT}.webp`.
+* SEO CSV entries already point to the `1920x800` path with the real `{SKU}`.
+* `alt_text.csv` has rows where `image_key` equals the **full filename** (e.g., `fcc/lifestyle/OL-1_Brunch_Banter_SKU-OL-PRIDE-001_1920x800.webp`).
+* After uploads, revisit **Ops → Content Imports** only if SKUs changed (re-import SEO/alt).
+
+Want me to also drop a tiny **admin “SKU switcher”** panel that updates `lifestyleMap.ts` from the DB (so marketing can flip SKUs without code)? Say the word and I’ll ship it.
