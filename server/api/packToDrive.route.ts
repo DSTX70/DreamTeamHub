@@ -18,6 +18,11 @@ async function checkWorkItemAccess(workItemId: number, req: Request): Promise<{ 
   const userId = user?.claims?.sub || user?.id;
   const userEmail = user?.claims?.email || user?.email;
   
+  // Must have at least one user identifier
+  if (!userId && !userEmail) {
+    return { hasAccess: false, workItem };
+  }
+  
   // Check if user has ops_admin role (can access all work items)
   const { getUserRoles } = await import("../security/roles");
   const roles = getUserRoles(userId || "", userEmail || "");
@@ -26,13 +31,19 @@ async function checkWorkItemAccess(workItemId: number, req: Request): Promise<{ 
   }
   
   // Check if user is the owner of the work item
-  if (workItem.ownerId) {
+  if (workItem.ownerId && typeof workItem.ownerId === 'number') {
     const owner = await db.query.persons.findFirst({
       where: (persons, { eq }) => eq(persons.id, workItem.ownerId!),
     });
     
-    if (owner && (owner.replitUserId === userId || owner.email === userEmail)) {
-      return { hasAccess: true, workItem };
+    // Match by Replit user ID or email
+    if (owner) {
+      const matchByUserId = userId && owner.replitUserId && owner.replitUserId === userId;
+      const matchByEmail = userEmail && owner.email && owner.email.toLowerCase() === userEmail.toLowerCase();
+      
+      if (matchByUserId || matchByEmail) {
+        return { hasAccess: true, workItem };
+      }
     }
   }
   

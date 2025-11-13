@@ -1,0 +1,334 @@
+Here’s a compact **“Pack Usage Guide”** you can drop straight into your DTH docs / Notion / WI-AGENT-000.
+
+---
+
+# Dream Team Hub – Pack Usage Guide (v1)
+
+This guide defines:
+
+* **Which Work Item (WI) types should auto-run which Packs**
+* When to trigger Packs manually
+* **Definition of Done (DoD)** for each Pack
+
+Use this to keep Agentic Packs consistent across pods.
+
+---
+
+## 1. Quick Map – WI Type → Pack(s)
+
+**Brand / Creative**
+
+* **WI Type: Lifestyle Imagery / Collection Visuals**
+
+  * Auto-run: `Lifestyle Banner Pack`
+  * Often paired with: `Launch Plan Pack`, `Website Audit Pack`
+
+**IP / Patent**
+
+* **WI Type: IP / Filing / Invention**
+
+  * Auto-run: `Patent Claims Pack`, `Risk & Compliance Pack`
+  * Often paired with: `Data Stewardship & Metrics Pack` (if logs/metrics relevant)
+
+**Launch / Campaign**
+
+* **WI Type: Launch / Campaign / Go-to-Market**
+
+  * Auto-run: `Launch Plan Pack`, `Pricing & Monetization Pack`
+  * Optional: `Website Audit Pack`, `Data Stewardship & Metrics Pack`
+
+**Security / Risk / Compliance**
+
+* **WI Type: Security / Data / Policy / Risk**
+
+  * Auto-run: `Risk & Compliance Pack`, `Data Stewardship & Metrics Pack`
+  * Optional: `Agent Governance Pack`
+
+**Agentic / Academy / Training**
+
+* **WI Type: Agent Academy / Agent Training**
+
+  * Auto-run: `Agent Lab Academy Pack`
+  * Optional: `Agent Governance Pack`, `Risk & Compliance Pack`
+
+**Agent Behavior / Permissions**
+
+* **WI Type: Agent Governance / Agent Capabilities**
+
+  * Auto-run: `Agent Governance Pack`, `Risk & Compliance Pack`
+  * Optional: `Data Stewardship & Metrics Pack`
+
+**Pricing / Offers**
+
+* **WI Type: Pricing / Monetization / Offer Design**
+
+  * Auto-run: `Pricing & Monetization Pack`
+  * Optional: `Launch Plan Pack`, `GlobalCollabs Partnerships Pack` (if partner-based)
+
+**Analytics / Logs / Telemetry**
+
+* **WI Type: Metrics / Logging / Analytics / Dashboards**
+
+  * Auto-run: `Data Stewardship & Metrics Pack`
+  * Optional: `Risk & Compliance Pack`
+
+**Partnerships / Ecosystem**
+
+* **WI Type: GlobalCollabs / Partnerships / Alliances**
+
+  * Auto-run: `GlobalCollabs Partnerships Pack`
+  * Optional: `Pricing & Monetization Pack`, `Launch Plan Pack`
+
+---
+
+## 2. Pack-by-Pack Usage & Definition of Done
+
+### 2.1 Lifestyle Banner Pack (Creative Pod)
+
+**Use when:**
+
+* WI is about Fab Card Co / brand lifestyle images, especially homepage or collection heroes.
+
+**Auto-run:**
+
+* On WI creation in **Fab Card Co / Visuals / Lifestyle** lane.
+
+**Definition of Done:**
+
+* [ ] `shot_boards` includes **one entry per planned shot** (OL-1, OL-2, ME-1, etc.)
+* [ ] `export_plan` lists **all required sizes** per shot with correct filename patterns
+* [ ] `alt_text_rows` cover at least desktop/tablet/mobile hero sizes
+* [ ] `seo_meta_rows` exist for primary hero per SKU
+* [ ] Open questions are either answered or parked on WI as follow-ups
+
+---
+
+### 2.2 Patent Claims Pack (IP Pod)
+
+**Use when:**
+
+* WI describes a **patentable invention**, filing, or claims revision.
+
+**Auto-run:**
+
+* On WI creation in **IP / Inventions / Filings** lane.
+
+**Definition of Done:**
+
+* [ ] `invention_title` is clear and aligned with WI
+* [ ] `short_summary` matches the intended invention scope
+* [ ] `independent_claims` include at least 1–3 solid, non-overlapping claims
+* [ ] `dependent_claims` ladder properly with `depends_on` filled
+* [ ] `open_questions` are logged and routed back to Dustin/counsel before drafting final claims
+
+---
+
+### 2.3 Launch Plan Pack (Marketing Pod)
+
+**Use when:**
+
+* WI is about a **launch / campaign / GTM** for any brand/product.
+
+**Auto-run:**
+
+* On WI status change to **“Scoped”** in **Launch / Campaign** lanes.
+
+**Definition of Done:**
+
+* [ ] `campaign_name` and `t0_event` clearly defined
+* [ ] `timeline` includes key phases from pre-launch through post-launch
+* [ ] `channels` cover the main target channels with objectives & cadence
+* [ ] `assets` list what needs to be produced with owners + needed-by offsets
+* [ ] `kpis` match the campaign’s real goals (not generic)
+
+---
+
+### 2.4 Website Audit Pack (Product & Platform Pod)
+
+**Use when:**
+
+* WI is a **site review, redesign, or audit** for a brand or app.
+
+**Auto-run:**
+
+* On WI creation in **Web / UX / Site Audit** lanes.
+
+**Definition of Done:**
+
+* [ ] `summary.headline` quickly explains the current state and issues
+* [ ] `pages` covers all key routes you care about (home, key flows, etc.)
+* [ ] `findings` span SEO, UX, Brand, Performance, Accessibility, Risk
+* [ ] `checklists` have at least some non-unknown statuses (pass/fail/N/A)
+* [ ] `roadmap` clearly separates **Do Now / Do Next / Do Later**
+
+---
+
+### 2.5 Risk & Compliance Pack (Security & Compliance Pod)
+
+**Use when:**
+
+* WI has **data, security, IP, or regulatory risk**.
+
+**Auto-run:**
+
+* On WI creation in **Security / Policy / Risk** lanes
+* Also when **Agent Governance** WIs are created.
+
+**Definition of Done:**
+
+* [ ] `summary.overall_risk` is set and believable (not always “medium” 😄)
+* [ ] `risks` cover all relevant areas (Security, Privacy, IP, Compliance, Brand/Safety, Ops, Legal/Contract)
+* [ ] Each risk has **severity, likelihood, impact, mitigation, owner_role, time_horizon**
+* [ ] `controls` include at least 1–2 per major risk area
+* [ ] `compliance_notes` mention applicable regimes (GDPR/CCPA/COPPA-ish, etc.)
+* [ ] `open_questions` are reviewed and turned into follow-up WIs if needed
+
+---
+
+### 2.6 Agent Lab Academy Pack (Agent Lab Academy Pod)
+
+**Use when:**
+
+* WI is about **Agent Academy / Agent training programs**.
+
+**Auto-run:**
+
+* On WI creation in **Agent Academy / Training** lanes.
+
+**Definition of Done:**
+
+* [ ] `summary` has a clear **headline**, audience, and key outcomes
+* [ ] `tracks` define at least one coherent track with objectives, prerequisites, and modules
+* [ ] `modules` are concrete enough to draft actual lessons/labs
+* [ ] `certifications` specify level, target role, tracks, exam format, criteria
+* [ ] `logistics` match realistic constraints (length, cadence, seats, model)
+* [ ] `open_questions` are reviewed before finalizing curriculum
+
+---
+
+### 2.7 Agent Governance Pack (Agent Governance Pod)
+
+**Use when:**
+
+* WI defines **what agents may do**, scopes, guardrails, or approval flows.
+
+**Auto-run:**
+
+* On WI creation in **Agent Governance / Policy** lanes
+* When a new Agent Academy track is created that implies new agent capabilities.
+
+**Definition of Done:**
+
+* [ ] `summary` highlights major governance risks + safeguards
+* [ ] `principles` include a small, memorable set (HITL, least privilege, reversibility, etc.)
+* [ ] `agent_policies` cover each relevant agent_type with allowed_scope and disallowed_actions
+* [ ] `approval_flows` cover high-risk operations (spend, integrations, data access)
+* [ ] `monitoring_rules` define metrics, thresholds, and actions (alert/throttle/disable)
+* [ ] `open_questions` are reviewed and resolved before enabling agents in prod
+
+---
+
+### 2.8 Pricing & Monetization Pack (Ops & Finance Pod + RCP)
+
+**Use when:**
+
+* WI is about **pricing, offers, SKUs, or monetization**.
+
+**Auto-run:**
+
+* On WI creation in **Pricing / Packaging / Offers** lanes.
+
+**Definition of Done:**
+
+* [ ] `model.primary_model` is chosen and explained
+* [ ] `tiers` make sense for the target segments and avoid obvious overlap
+* [ ] `promos` are realistic and not just “10% off everything”
+* [ ] `risks` flag at least underpricing, overcomplexity, and fit with brand/market
+* [ ] `open_questions` (margin, floor/ceiling, bundles) are addressed before launch
+
+---
+
+### 2.9 Data Stewardship & Metrics Pack (Data Stewardship & Metrics Pod)
+
+**Use when:**
+
+* WI is about **metrics, telemetry, logs, dashboards, analytics, or data policy**.
+
+**Auto-run:**
+
+* On WI creation in **Metrics / Telemetry / Analytics** lanes.
+
+**Definition of Done:**
+
+* [ ] `summary` clearly states what we’re trying to measure and why
+* [ ] `core_metrics` match the real business or product outcomes
+* [ ] `supporting_metrics` are helpful but not noise
+* [ ] `log_categories` have fields, PII risk, and retention_days defined
+* [ ] `policies` cover at least retention + access; more if sensitive
+* [ ] `open_questions` are resolved with Sentinal/Praetor/OS as needed
+
+---
+
+### 2.10 GlobalCollabs Partnerships Pack (GlobalCollabs Partnerships Pod + Amani)
+
+**Use when:**
+
+* WI is about **GlobalCollabs partners, ecosystem deals, or collabs**.
+
+**Auto-run:**
+
+* On WI creation in **GlobalCollabs / Partnerships** lanes.
+
+**Definition of Done:**
+
+* [ ] `summary` clearly states whether this is a high/medium/low priority opportunity
+* [ ] `partner_profile` is detailed enough to brief a human (type, audience, strengths)
+* [ ] `models` include at least 2–3 partnership structures with pros/cons
+* [ ] `recommended_model_id` is set and justified by the models
+* [ ] `activations` are specific, with channels and success_metrics
+* [ ] `risks` flag obvious partnership pitfalls (brand fit, dependency, margin, IP)
+* [ ] `open_questions` are addressed before any term sheet / MOU drafting
+
+---
+
+## 3. Simple Auto-Run Rules (Summary)
+
+Set these as triggers inside DTH:
+
+* **On WI creation in lane = `IP/Inventions`:**
+
+  * auto-run: `Patent Claims Pack`, `Risk & Compliance Pack`
+
+* **On WI creation in lane = `Launch/Campaign`:**
+
+  * auto-run: `Launch Plan Pack`, `Pricing & Monetization Pack`
+
+* **On WI creation in lane = `Web/Site Audit`:**
+
+  * auto-run: `Website Audit Pack`
+
+* **On WI creation in lane = `Security/Risk/Policy`:**
+
+  * auto-run: `Risk & Compliance Pack`, `Data Stewardship & Metrics Pack`
+
+* **On WI creation in lane = `Agent Academy/Training`:**
+
+  * auto-run: `Agent Lab Academy Pack`
+
+* **On WI creation in lane = `Agent Governance/Policy`:**
+
+  * auto-run: `Agent Governance Pack`, `Risk & Compliance Pack`
+
+* **On WI creation in lane = `Pricing/Offers`:**
+
+  * auto-run: `Pricing & Monetization Pack`
+
+* **On WI creation in lane = `Metrics/Analytics`:**
+
+  * auto-run: `Data Stewardship & Metrics Pack`
+
+* **On WI creation in lane = `GlobalCollabs/Partnerships`:**
+
+  * auto-run: `GlobalCollabs Partnerships Pack`
+
+You can drop this guide into DTH docs and use it as the canonical reference whenever you add new WI types or Packs.
