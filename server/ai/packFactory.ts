@@ -53,6 +53,16 @@ export function createPackActionHandler(config: PackConfig): RequestHandler {
       });
     } catch (error: any) {
       console.error(`[${config.packType}] Error generating pack:`, error);
+      
+      // Distinguish validation errors (400) from server errors (500)
+      if (error.name === 'ZodError') {
+        return res.status(400).json({
+          error: "Validation failed",
+          message: "Generated pack data did not match expected schema",
+          details: error.errors,
+        });
+      }
+      
       return res.status(500).json({
         error: "Failed to generate pack",
         message: error.message,

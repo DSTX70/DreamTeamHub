@@ -35,10 +35,10 @@ export interface PackConfig {
 }
 
 export const PACK_REGISTRY: PackConfig[] = [
-  // Core/Existing Packs
+  // Core/Existing Packs (using legacy packType values for DB compatibility)
   {
     id: "lifestyle",
-    packType: "lifestyle_banner",
+    packType: "lifestyle",
     label: "Generate Lifestyle Banner Pack",
     skillName: "generateLifestyleBannerPack",
     endpointSuffix: "generate-lifestyle-pack",
@@ -50,7 +50,7 @@ export const PACK_REGISTRY: PackConfig[] = [
   },
   {
     id: "patent",
-    packType: "patent_claims",
+    packType: "patent",
     label: "Generate Patent Claims Pack",
     skillName: "generatePatentClaimsPack",
     endpointSuffix: "generate-patent-claims-pack",
@@ -62,7 +62,7 @@ export const PACK_REGISTRY: PackConfig[] = [
   },
   {
     id: "launch",
-    packType: "launch_plan",
+    packType: "launch",
     label: "Generate Launch Plan Pack",
     skillName: "generateLaunchPlanPack",
     endpointSuffix: "generate-launch-plan-pack",

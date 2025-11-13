@@ -4,12 +4,11 @@ import type { LaunchPlanPack } from "./schemas/launchPlanPack";
 import type { WebsiteAuditPack } from "./schemas/websiteAuditPack";
 import type { RiskCompliancePack } from "./schemas/riskCompliancePack";
 import type { AgentLabAcademyPack } from "./schemas/agentLabAcademyPack";
+import type { PackType } from "./packRegistry";
 import { storage } from "../storage";
 import { db } from "../db/client";
 import { workItemPacks } from "@shared/schema";
 import { eq, and, desc } from "drizzle-orm";
-
-export type PackType = "lifestyle" | "patent" | "launch" | "website_audit" | "risk_compliance" | "agent_lab_academy";
 
 async function savePackToDB(
   workItemId: number,

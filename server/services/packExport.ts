@@ -3,7 +3,7 @@ import type { LifestylePack } from "../ai/schemas/lifestylePack";
 import type { PatentClaimsPack } from "../ai/schemas/patentClaimsPack";
 import type { LaunchPlanPack } from "../ai/schemas/launchPlanPack";
 import type { WebsiteAuditPack } from "../ai/schemas/websiteAuditPack";
-import type { PackType } from "../ai/persistence";
+import type { PackType } from "../ai/packRegistry";
 
 export interface ExportResult {
   fileName: string;
@@ -579,6 +579,88 @@ async function exportAgentLabAcademyPackToDOCX(
   };
 }
 
+/**
+ * Generic DOCX exporter that converts any pack structure to formatted Word document
+ */
+async function exportGenericPackToDOCX(
+  workItemId: number,
+  packType: string,
+  packLabel: string,
+  version: number,
+  packData: any
+): Promise<ExportResult> {
+  const children: Paragraph[] = [
+    new Paragraph({
+      text: packLabel,
+      heading: HeadingLevel.HEADING_1,
+    }),
+    new Paragraph({
+      text: `Work Item: WI-${workItemId} | Version: ${version} | Generated: ${new Date().toLocaleString()}`,
+      spacing: { after: 200 },
+    }),
+  ];
+
+  // Recursively convert pack data to paragraphs
+  function addObjectToParagraphs(obj: any, level: number = 2): void {
+    if (!obj || typeof obj !== 'object') return;
+
+    Object.entries(obj).forEach(([key, value]) => {
+      const headingLevel = Math.min(level, 6) as HeadingLevel;
+      const title = key.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase());
+
+      if (Array.isArray(value)) {
+        children.push(new Paragraph({
+          text: title,
+          heading: headingLevel,
+        }));
+
+        value.forEach((item, index) => {
+          if (typeof item === 'object' && item !== null) {
+            children.push(new Paragraph({
+              text: `${title} ${index + 1}`,
+              heading: Math.min(level + 1, 6) as HeadingLevel,
+            }));
+            addObjectToParagraphs(item, level + 2);
+          } else {
+            children.push(new Paragraph({
+              text: `• ${String(item)}`,
+            }));
+          }
+        });
+        children.push(new Paragraph({ text: "" }));
+      } else if (typeof value === 'object' && value !== null) {
+        children.push(new Paragraph({
+          text: title,
+          heading: headingLevel,
+        }));
+        addObjectToParagraphs(value, level + 1);
+      } else {
+        children.push(new Paragraph({
+          text: `${title}: ${String(value)}`,
+        }));
+      }
+    });
+  }
+
+  addObjectToParagraphs(packData);
+
+  const doc = new Document({
+    sections: [
+      {
+        properties: {},
+        children,
+      },
+    ],
+  });
+
+  const buffer = await Packer.toBuffer(doc);
+  return {
+    fileName: `WI-${workItemId}_${packType}_v${version}.docx`,
+    mimeType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    buffer,
+  };
+}
+
 export async function exportPackToFiles(
   workItemId: number,
   packType: PackType,
@@ -607,6 +689,51 @@ export async function exportPackToFiles(
     case "agent_lab_academy":
       results.push(await exportAgentLabAcademyPackToDOCX(workItemId, version, packData));
       break;
+    
+    // New pack types: Use generic DOCX exporter
+    case "agent_governance":
+      results.push(await exportGenericPackToDOCX(workItemId, packType, "Agent Governance Pack", version, packData));
+      break;
+    case "pricing_monetization":
+      results.push(await exportGenericPackToDOCX(workItemId, packType, "Pricing & Monetization Pack", version, packData));
+      break;
+    case "data_stewardship_metrics":
+      results.push(await exportGenericPackToDOCX(workItemId, packType, "Data Stewardship & Metrics Pack", version, packData));
+      break;
+    case "globalcollabs_partnership":
+      results.push(await exportGenericPackToDOCX(workItemId, packType, "GlobalCollabs Partnership Pack", version, packData));
+      break;
+    case "packaging_prepress":
+      results.push(await exportGenericPackToDOCX(workItemId, packType, "Packaging & Pre-Press Pack", version, packData));
+      break;
+    case "product_line_sku_tree":
+      results.push(await exportGenericPackToDOCX(workItemId, packType, "Product Line & SKU Tree Pack", version, packData));
+      break;
+    case "ecom_pdp_aplus_content":
+      results.push(await exportGenericPackToDOCX(workItemId, packType, "E-Com PDP & A+ Content Pack", version, packData));
+      break;
+    case "social_campaign_content_calendar":
+      results.push(await exportGenericPackToDOCX(workItemId, packType, "Social Campaign & Content Calendar Pack", version, packData));
+      break;
+    case "implementation_runbook_sop":
+      results.push(await exportGenericPackToDOCX(workItemId, packType, "Implementation Runbook & SOP Pack", version, packData));
+      break;
+    case "support_playbook_knowledge_base":
+      results.push(await exportGenericPackToDOCX(workItemId, packType, "Support Playbook & Knowledge Base Pack", version, packData));
+      break;
+    case "retail_wholesale_readiness":
+      results.push(await exportGenericPackToDOCX(workItemId, packType, "Retail & Wholesale Readiness Pack", version, packData));
+      break;
+    case "experiment_optimization":
+      results.push(await exportGenericPackToDOCX(workItemId, packType, "Experiment & Optimization Pack", version, packData));
+      break;
+    case "localization_market_expansion":
+      results.push(await exportGenericPackToDOCX(workItemId, packType, "Localization & Market Expansion Pack", version, packData));
+      break;
+    case "customer_journey_lifecycle":
+      results.push(await exportGenericPackToDOCX(workItemId, packType, "Customer Journey & Lifecycle Pack", version, packData));
+      break;
+    
     default:
       throw new Error(`Unsupported pack type: ${packType}`);
   }
