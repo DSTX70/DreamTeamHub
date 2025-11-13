@@ -511,3 +511,20 @@ body{margin:0;background:#0B0D12;color:#fff;font-family:Inter,system-ui,-apple-s
 .pod-finance .icon { background: radial-gradient(circle at 30% 30%, #ffffff33, transparent 60%), linear-gradient(135deg, var(--pod-finance), var(--brand-jade)); }
 .pod-control .rail { background: linear-gradient(135deg, var(--pod-control), var(--brand-violet)); }
 .pod-control .icon { background: radial-gradient(circle at 30% 30%, #ffffff33, transparent 60%), linear-gradient(135deg, var(--pod-control), var(--brand-violet)); }
+
+/* ---- DTH: readable form fields (FCC + global) ---- */
+input[type="text"],
+input[type="search"],
+input[type="email"],
+input[type="password"],
+input[type="url"],
+textarea {
+  background-color: #ffffff;
+  color: #111827; /* slate-900 style dark text */
+}
+
+/* Optional: better placeholder contrast */
+input::placeholder,
+textarea::placeholder {
+  color: #6b7280; /* slate-500 style */
+}
