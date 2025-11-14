@@ -1,0 +1,200 @@
+Nice, this is the fun QA bit. Here’s a compact “golden” you can drop into your repo and wire into a test runner.
+
+I’ll give you **one JSON file** that contains **two golden cases** for WO-002:
+
+* One for **Lifestyle Pack**
+* One for **PDP & A+ Content Pack**
+
+You can save this as e.g.
+`tests/packs/goldens/wo002_colorcue.json` and have your Jest test load it.
+
+---
+
+## Golden test JSON for WO-002
+
+```json
+{
+  "work_item": {
+    "id_hint": "WO-002",
+    "title": "WO-002 – ColorCue Birthday & Thank You Homepage Heroes",
+    "body_markdown": "## WO-002 – ColorCue Birthday & Thank You Homepage Heroes\n\n### Objective\n\nDesign and implement updated homepage hero images and supporting PDP content for a focused set of **ColorCue** SKUs, using the existing Fab Card Co. brand system.\n\nThis Work Item should produce:\n\n- Lifestyle hero image specs for the selected SKUs  \n- Aligned PDP & A+ content for those same SKUs  \n- Clear mapping from each hero slot to a real SKU in the product catalog  \n- Ready-to-use copy and filenames that can be wired into the website\n\n### In-Scope Line & SKUs\n\n**Line:** ColorCue  \n**Focus:** Birthday + Thank You\n\nThese SKUs must be treated as the source of truth (no invented SKUs):\n\n1. `SKU-CC-BDAY-001` – Birthday Remix – Neon Confetti  \n2. `SKU-CC-BDAY-002` – Soft Surprise – Pastel Sprinkles  \n3. `SKU-CC-THANK-001` – Grateful Waves  \n\nThese exist in `product_catalog.csv` with their canonical `product_name`, `collection`, `series`, `url_slug`, and `hero_slot`.\n\n### Hero Strategy\n\nWe want a small, coherent hero set that showcases ColorCue’s range:\n\n- **Hero 1 – Bold Birthday (SKU-CC-BDAY-001)**  \n  - Feeling: energetic, bright, “party in motion”  \n  - Visual: neon confetti, bold color play, strong contrast  \n  - Slot: `home-hero-1`\n\n- **Hero 2 – Soft Birthday (SKU-CC-BDAY-002)**  \n  - Feeling: warm, tender, pastel and cozy  \n  - Visual: soft-focus backgrounds, pastel sprinkles, gentle light  \n  - Slot: `home-hero-2`\n\n- **Hero 3 – Thank You (SKU-CC-THANK-001)**  \n  - Feeling: modern, calm gratitude  \n  - Visual: simple, graphic, hints of grid / wave geometry  \n  - Slot: `thankyou-hero-1`\n\n### Lifestyle Pack Expectations\n\nThe **Lifestyle Banner Pack** should:\n\n- Only reference SKUs that exist in the product catalog and are listed above  \n- For each in-scope SKU, propose:\n  - A specific hero use (slot)\n  - A consistent, web-friendly filename pattern\n  - Meta title, description, and focus keywords\n\nEach lifestyle hero spec should be safe to hand directly to designers, devs, and SEO.\n\n### PDP & A+ Content Expectations\n\nThe **E-Com PDP & A+ Content Pack** should:\n\n- Generate PDP copy **only** for these three SKUs  \n- Respect the canonical `product_name` and `url_slug` from the catalog  \n- Provide:\n  - SEO-aware titles and slugs\n  - A short subtitle that matches ColorCue’s tone\n  - 3–7 feature/benefit bullets per SKU\n  - A long description aligned with the Lifestyle hero mood\n  - A+ sections with headings, body copy, and image ideas\n  - A short FAQ set that addresses likely objections for these card types\n\nThis WO does **not** need to cover pricing logic, discounts, or multi-pack bundles.",
+    "in_scope_skus": [
+      "SKU-CC-BDAY-001",
+      "SKU-CC-BDAY-002",
+      "SKU-CC-THANK-001"
+    ]
+  },
+  "goldens": {
+    "lifestyle_pack": {
+      "pack_type": "lifestyle_banner",
+      "allowed_skus": [
+        "SKU-CC-BDAY-001",
+        "SKU-CC-BDAY-002",
+        "SKU-CC-THANK-001"
+      ],
+      "min_entries": 3,
+      "max_entries": 3,
+      "expected_hero_slots": {
+        "SKU-CC-BDAY-001": "home-hero-1",
+        "SKU-CC-BDAY-002": "home-hero-2",
+        "SKU-CC-THANK-001": "thankyou-hero-1"
+      },
+      "required_fields_per_entry": [
+        "sku",
+        "hero_slot",
+        "filename",
+        "meta_title",
+        "meta_description",
+        "focus_keywords",
+        "visual_direction"
+      ],
+      "filename_expectations": {
+        "must_contain_sku": true,
+        "must_contain_resolution_hint": "1920x800",
+        "allowed_extensions": [
+          ".webp",
+          ".jpg",
+          ".jpeg",
+          ".png"
+        ]
+      },
+      "structural_expectations": {
+        "focus_keywords_min_length": 1,
+        "meta_title_max_length": 90,
+        "meta_description_max_length": 200
+      }
+    },
+    "pdp_pack": {
+      "pack_type": "ecom_pdp_aplus_content",
+      "allowed_skus": [
+        "SKU-CC-BDAY-001",
+        "SKU-CC-BDAY-002",
+        "SKU-CC-THANK-001"
+      ],
+      "required_top_level_fields": [
+        "seo_title",
+        "seo_slug_hint",
+        "short_subtitle",
+        "feature_bullets",
+        "long_description",
+        "aplus_sections",
+        "faqs"
+      ],
+      "feature_bullets_expectations": {
+        "min_count": 3,
+        "max_count": 7,
+        "require_pillars": [
+          "feature",
+          "benefit",
+          "emotion"
+        ]
+      },
+      "aplus_sections_expectations": {
+        "min_count": 1,
+        "require_section_types": [
+          "hero",
+          "feature_grid"
+        ]
+      },
+      "faqs_expectations": {
+        "min_count": 2
+      },
+      "slug_expectations": {
+        "must_match_catalog_url_slug": true
+      },
+      "sku_binding": {
+        "enforce": true,
+        "description": "If PDP pack is modeled as per-SKU entries, each entry.sku must be in allowed_skus. If single-object output, tests should infer SKU from context and ensure it corresponds to exactly one allowed SKU at a time."
+      }
+    }
+  }
+}
+```
+
+---
+
+### How you might use this in your Jest/Vitest harness
+
+Pseudo-code (you don’t have to do this right now, just to show how it plugs in):
+
+```ts
+import fs from 'node:fs';
+import path from 'node:path';
+import { LifestyleBannerPackSchema } from '../../server/ai/schemas/lifestyleBannerPack';
+import { EcomPdpAplusContentPackSchema } from '../../server/ai/schemas/ecomPdpAplusContentPack';
+
+const golden = JSON.parse(
+  fs.readFileSync(
+    path.join(__dirname, 'goldens', 'wo002_colorcue.json'),
+    'utf8'
+  )
+);
+
+describe('WO-002 goldens', () => {
+  test('Lifestyle Pack meets golden expectations', async () => {
+    const { work_item, goldens } = golden;
+    const { lifestyle_pack } = goldens;
+
+    // 1. Seed a test WI with work_item.title/body
+    // 2. Run generateLifestyleBannerPack for that WI
+    const output = await runLifestylePackForWorkItem(work_item); // your helper
+
+    const parsed = LifestyleBannerPackSchema.parse(output);
+
+    // 3. Structural checks
+    expect(parsed.entries.length).toBeGreaterThanOrEqual(lifestyle_pack.min_entries);
+    expect(parsed.entries.length).toBeLessThanOrEqual(lifestyle_pack.max_entries);
+
+    const allowed = new Set(lifestyle_pack.allowed_skus);
+    for (const entry of parsed.entries) {
+      expect(allowed.has(entry.sku)).toBe(true);
+      lifestyle_pack.required_fields_per_entry.forEach((field) => {
+        expect(entry[field]).toBeTruthy();
+      });
+
+      const expectedSlot = lifestyle_pack.expected_hero_slots[entry.sku];
+      if (expectedSlot) {
+        expect(entry.hero_slot).toBe(expectedSlot);
+      }
+
+      expect(entry.filename).toContain(entry.sku);
+      expect(entry.filename).toContain(lifestyle_pack.filename_expectations.must_contain_resolution_hint);
+    }
+  });
+
+  test('PDP Pack meets golden expectations', async () => {
+    const { work_item, goldens } = golden;
+    const { pdp_pack } = goldens;
+
+    const output = await runPdpPackForWorkItem(work_item); // your helper
+    const parsed = EcomPdpAplusContentPackSchema.parse(output);
+
+    pdp_pack.required_top_level_fields.forEach((field) => {
+      expect(parsed[field]).toBeTruthy();
+    });
+
+    expect(parsed.feature_bullets.length).toBeGreaterThanOrEqual(
+      pdp_pack.feature_bullets_expectations.min_count
+    );
+
+    expect(parsed.faqs.length).toBeGreaterThanOrEqual(
+      pdp_pack.faqs_expectations.min_count
+    );
+
+    // And so on: check slug, A+ sections, etc.
+  });
+});
+```
+
+The key is: the JSON above encodes:
+
+* **The WO-002 brief** (so the test is self-contained), and
+* **Formal expectations** for Lifestyle + PDP packs:
+
+  * **Which SKUs are allowed**
+  * **Minimum structure and counts**
+  * **Field-level expectations** (hero slots, filename patterns, bullets, etc.)
+
+So now, every time you change a prompt, schema, or product catalog wiring, you can run the golden test and immediately see if WO-002 still behaves the way you intended.
+
+If you want, I can next help you define a tiny `runLifestylePackForWorkItem` / `runPdpPackForWorkItem` helper that spins up an in-memory WI for tests and calls `runSkill` directly, so your goldens stay fast and hermetic.
