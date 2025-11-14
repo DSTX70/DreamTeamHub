@@ -1137,6 +1137,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
   const { postSavePackToDrive, getWorkItemDriveFiles } = await import("./api/packToDrive.route");
   app.post("/api/work-items/:workItemId/packs/:packType/save-to-drive", isAuthenticated, postSavePackToDrive);
   app.get("/api/work-items/:workItemId/drive-files", isAuthenticated, getWorkItemDriveFiles);
+  
+  // List all packs for a work item
+  app.get("/api/work-items/:workItemId/packs", isAuthenticated, async (req, res, next) => {
+    try {
+      const workItemId = parseInt(req.params.workItemId, 10);
+      if (isNaN(workItemId)) {
+        return res.status(400).json({ error: "Invalid work item ID" });
+      }
+      
+      const packs = await db
+        .select()
+        .from(workItemPacks)
+        .where(eq(workItemPacks.workItemId, workItemId))
+        .orderBy(desc(workItemPacks.createdAt));
+      
+      res.json(packs);
+    } catch (err) {
+      next(err);
+    }
+  });
 
   app.get("/api/ops/uploader/config", isAuthenticated, async (_req, res) => {
     try {

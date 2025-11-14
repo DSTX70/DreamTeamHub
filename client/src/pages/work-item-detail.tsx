@@ -6,6 +6,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { StatusBadge } from "@/components/status-badge";
 import { FilesPanel } from "@/components/FilesPanel";
 import { WorkItemActionsPanel } from "@/components/workItems/WorkItemActionsPanel";
+import { WorkItemPacksPanel } from "@/components/workItems/WorkItemPacksPanel";
 import { ArrowLeft, Calendar, User, Target } from "lucide-react";
 import { format } from "date-fns";
 import type { WorkItem } from "@shared/schema";
@@ -109,6 +110,9 @@ export default function WorkItemDetail() {
               <WorkItemActionsPanel workItemId={workItem.id} />
             </CardContent>
           </Card>
+
+          {/* Work Item Packs Viewer */}
+          <WorkItemPacksPanel workItemId={workItem.id} />
 
           {/* Files */}
           {workItem.workOrderId && (
