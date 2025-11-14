@@ -60,6 +60,7 @@ A Work Order File Linkage System connects work_orders to work_items for file man
 
 Key features:
 - **20 Pack Types**: Includes Lifestyle, Patent, Launch Plan, Website Audit, Risk & Compliance, Agent Lab Academy (6 legacy), plus Agent Governance, Pricing & Monetization, Data Stewardship, GlobalCollabs Partnerships, Packaging & Pre-Press, Product Line & SKU Tree, E-Com PDP, Social Campaign, Implementation Runbook, Support Playbook, Retail Readiness, Experiment Optimization, Localization, and Customer Journey (14 new)
+- **14 Packs Active in UI**: Currently 14 packs are manually exposed in WorkItemActionsPanel. PACK_REGISTRY backend supports all 20 pack types with auto-registered routes, but frontend ACTION_CONFIG requires manual curation for UI display
 - **Registry-Driven Architecture**: Derived `PackType` from `PACK_REGISTRY` eliminates type drift across persistence, export, and drive integration modules
 - **LLM Skill Integration**: Each pack uses OpenAI GPT-4 with schema-aligned JSON prompts for high-quality output generation. Prompts include explicit JSON structure, exact enum values, minimum array lengths, and comprehensive examples to ensure schema validation success
 - **Versioned Storage**: `work_item_packs` table with auto-incrementing versions per pack_type. Each regeneration creates a new row (not updates), enabling complete version history (v1, v2, v3...)
@@ -73,11 +74,13 @@ Recent improvements (November 2025):
 - Aligned all 14 skill JSON prompts with their Zod schemas to eliminate LLM validation failures
 - Updated prompts with **CRITICAL: YOU MUST RETURN VALID JSON** instructions and comprehensive examples
 - Verified e2e pack generation with proper version history (agent_governance v1, pricing_monetization v1/v2/v3)
-- **November 14, 2025**: Fixed pack generation persistence bugs:
+- **November 14, 2025**: Fixed pack generation persistence bugs and added 4 Brand Hero packs:
   - Added missing imports (`eq`, `desc` from drizzle-orm, `workItemPacks` from schema) to server/routes.ts
   - Removed invalid `updatedAt` field from `saveWorkItemPackGeneric` function (schema only has `createdAt`)
   - Fixed route registration path mismatch: backend now correctly registers `/api/work-items/:id/actions/${endpointSuffix}` to match frontend calls
-  - Verified end-to-end pack generation with automated testing: lifecycle pack v1/v2 successfully created and displayed in WorkItemPacksPanel
+  - Added 4 must-have Brand Hero packs to WorkItemActionsPanel: Packaging & Pre-Press, Product Line Architecture & SKU Tree, E-Com PDP & A+ Content, Social Campaign & Content Calendar
+  - Verified end-to-end pack generation with automated testing: lifecycle pack v1/v2 and packaging_prepress v1 successfully created and displayed in WorkItemPacksPanel
+  - All 14 pack types now fully operational with LLM generation, database persistence, and Drive export capabilities
 
 The CI/CD pipeline uses GitHub Actions for automated testing and environment health validation. Production health checks include `/api/healthz` (readiness) and `/api/healthz/livez` (liveness) endpoints, with Prometheus metrics and deployment tracking for observability.
 

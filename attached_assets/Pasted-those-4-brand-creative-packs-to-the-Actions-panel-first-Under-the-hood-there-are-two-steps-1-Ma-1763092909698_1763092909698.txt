@@ -1,0 +1,131 @@
+those 4 brand/creative packs to the Actions panel first. Under the hood there are two steps:
+
+1️⃣ Make sure backend handlers/routes exist for the new packs
+
+For each new pack we want visible, you need:
+
+A handler file, e.g.:
+
+// server/routes/workItemActions/generatePackagingPrePressPack.ts
+import { PackagingPrePressPackSchema } from '../../ai/schemas/packagingPrePressPack';
+import { savePackagingPrePressPack } from '../../db/workItemPacks';
+import { createWorkItemActionHandler } from '../utils/createWorkItemActionHandler';
+
+export const generatePackagingPrePressPack = createWorkItemActionHandler({
+  skillName: 'generatePackagingPrePressPack',
+  outputSchema: PackagingPrePressPackSchema,
+  save: savePackagingPrePressPack,
+});
+
+
+(Same pattern for generateProductLineSkuTreePack, generateEcomPdpAplusContentPack, generateSocialCampaignContentCalendarPack.)
+
+A route in server/routes.ts:
+
+import { generatePackagingPrePressPack } from './routes/workItemActions/generatePackagingPrePressPack';
+import { generateProductLineSkuTreePack } from './routes/workItemActions/generateProductLineSkuTreePack';
+import { generateEcomPdpAplusContentPack } from './routes/workItemActions/generateEcomPdpAplusContentPack';
+import { generateSocialCampaignContentCalendarPack } from './routes/workItemActions/generateSocialCampaignContentCalendarPack';
+
+router.post(
+  '/api/work-items/:id/actions/generate-packaging-pre-press-pack',
+  generatePackagingPrePressPack
+);
+router.post(
+  '/api/work-items/:id/actions/generate-product-line-sku-tree-pack',
+  generateProductLineSkuTreePack
+);
+router.post(
+  '/api/work-items/:id/actions/generate-ecom-pdp-aplus-content-pack',
+  generateEcomPdpAplusContentPack
+);
+router.post(
+  '/api/work-items/:id/actions/generate-social-campaign-content-calendar-pack',
+  generateSocialCampaignContentCalendarPack
+);
+
+
+Once those are in, the backend can actually run those packs for a work item.
+
+2️⃣ Add the new actions to the Work Item Actions panel (UI)
+
+Your Actions list is driven by a config array in a component like WorkItemActionsPanel.tsx.
+Extend that array to include the four new packs.
+
+Something like:
+
+// app/components/work-items/WorkItemActionsPanel.tsx
+type WorkItemActionConfig = {
+  id: string;
+  label: string;
+  endpoint: (id: string) => string;
+  packType?: string; // if you use this to tie into the packs viewer
+};
+
+const ACTIONS: WorkItemActionConfig[] = [
+  // …existing 10 actions…
+
+  {
+    id: 'generate-packaging-pre-press-pack',
+    label: 'Generate Packaging & Pre-Press Pack',
+    endpoint: (id) =>
+      `/api/work-items/${id}/actions/generate-packaging-pre-press-pack`,
+    packType: 'packaging_prepress',
+  },
+  {
+    id: 'generate-product-line-sku-tree-pack',
+    label: 'Generate Product Line & SKU Tree Pack',
+    endpoint: (id) =>
+      `/api/work-items/${id}/actions/generate-product-line-sku-tree-pack`,
+    packType: 'product_line_sku_tree',
+  },
+  {
+    id: 'generate-ecom-pdp-aplus-content-pack',
+    label: 'Generate E-Com PDP & A+ Content Pack',
+    endpoint: (id) =>
+      `/api/work-items/${id}/actions/generate-ecom-pdp-aplus-content-pack`,
+    packType: 'ecom_pdp_aplus_content',
+  },
+  {
+    id: 'generate-social-campaign-content-calendar-pack',
+    label: 'Generate Social Campaign & Content Calendar Pack',
+    endpoint: (id) =>
+      `/api/work-items/${id}/actions/generate-social-campaign-content-calendar-pack`,
+    packType: 'social_campaign_content_calendar',
+  },
+];
+
+
+The render code that builds each row (with Run buttons) will then automatically include these four new actions alongside the existing ones.
+
+What you should see after that
+
+On /work-items/7 (WO-001) in the Actions list, you’ll now see additional rows:
+
+Generate Packaging & Pre-Press Pack
+
+Generate Product Line & SKU Tree Pack
+
+Generate E-Com PDP & A+ Content Pack
+
+Generate Social Campaign & Content Calendar Pack
+
+Then:
+
+Click Run on each of those.
+
+Scroll down to your Work Item Packs panel and hit Refresh → you’ll see:
+
+Lifestyle Pack
+
+Packaging & Pre-Press Pack
+
+Product Line & SKU Tree Pack
+
+E-Com PDP & A+ Content Pack
+
+Social Campaign & Content Calendar Pack
+
+(plus Launch/Risk/etc. as you run them)
+
+That gives WO-001 the full creative/funnel context you wanted for the hero refresh, and we can add the ops/data/expansion packs later the same way.

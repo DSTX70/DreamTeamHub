@@ -1,0 +1,261 @@
+Perfect—time to wire the **Ops / Data / Market Expansion** packs the same way we just did for the creative ones.
+
+Below is a **single “drop”** with everything you need for these 6 packs:
+
+* Implementation Runbook & SOP
+* Support Playbook & Knowledge Base
+* Retail & Wholesale Readiness
+* Experiment & Optimization
+* Localization & Market Expansion
+* Customer Journey & Lifecycle
+
+I’ll assume:
+
+* Schemas are already in `server/ai/schemas/*Pack.ts`
+* Savers for all 6 already exist in `server/db/workItemPacks.ts` (from earlier pass)
+
+This drop just adds:
+
+1. **Action handlers**
+2. **Routes**
+3. **Actions panel entries** (so they show up with `Run` buttons)
+4. **Pack labels** for the viewer (if you haven’t added them already)
+
+---
+
+## 1) Action handlers (server/routes/workItemActions/*.ts)
+
+Create these six files.
+
+### a) Implementation Runbook & SOP Pack
+
+```ts
+// server/routes/workItemActions/generateImplementationRunbookSopPack.ts
+import { ImplementationRunbookSopPackSchema } from '../../ai/schemas/implementationRunbookSopPack';
+import { saveImplementationRunbookSopPack } from '../../db/workItemPacks';
+import { createWorkItemActionHandler } from '../utils/createWorkItemActionHandler';
+
+export const generateImplementationRunbookSopPack = createWorkItemActionHandler({
+  skillName: 'generateImplementationRunbookSopPack',
+  outputSchema: ImplementationRunbookSopPackSchema,
+  save: saveImplementationRunbookSopPack,
+});
+```
+
+### b) Support Playbook & Knowledge Base Pack
+
+```ts
+// server/routes/workItemActions/generateSupportPlaybookKnowledgeBasePack.ts
+import { SupportPlaybookKnowledgeBasePackSchema } from '../../ai/schemas/supportPlaybookKnowledgeBasePack';
+import { saveSupportPlaybookKnowledgeBasePack } from '../../db/workItemPacks';
+import { createWorkItemActionHandler } from '../utils/createWorkItemActionHandler';
+
+export const generateSupportPlaybookKnowledgeBasePack = createWorkItemActionHandler({
+  skillName: 'generateSupportPlaybookKnowledgeBasePack',
+  outputSchema: SupportPlaybookKnowledgeBasePackSchema,
+  save: saveSupportPlaybookKnowledgeBasePack,
+});
+```
+
+### c) Retail & Wholesale Readiness Pack
+
+```ts
+// server/routes/workItemActions/generateRetailWholesaleReadinessPack.ts
+import { RetailWholesaleReadinessPackSchema } from '../../ai/schemas/retailWholesaleReadinessPack';
+import { saveRetailWholesaleReadinessPack } from '../../db/workItemPacks';
+import { createWorkItemActionHandler } from '../utils/createWorkItemActionHandler';
+
+export const generateRetailWholesaleReadinessPack = createWorkItemActionHandler({
+  skillName: 'generateRetailWholesaleReadinessPack',
+  outputSchema: RetailWholesaleReadinessPackSchema,
+  save: saveRetailWholesaleReadinessPack,
+});
+```
+
+### d) Experiment & Optimization Pack
+
+```ts
+// server/routes/workItemActions/generateExperimentOptimizationPack.ts
+import { ExperimentOptimizationPackSchema } from '../../ai/schemas/experimentOptimizationPack';
+import { saveExperimentOptimizationPack } from '../../db/workItemPacks';
+import { createWorkItemActionHandler } from '../utils/createWorkItemActionHandler';
+
+export const generateExperimentOptimizationPack = createWorkItemActionHandler({
+  skillName: 'generateExperimentOptimizationPack',
+  outputSchema: ExperimentOptimizationPackSchema,
+  save: saveExperimentOptimizationPack,
+});
+```
+
+### e) Localization & Market Expansion Pack
+
+```ts
+// server/routes/workItemActions/generateLocalizationMarketExpansionPack.ts
+import { LocalizationMarketExpansionPackSchema } from '../../ai/schemas/localizationMarketExpansionPack';
+import { saveLocalizationMarketExpansionPack } from '../../db/workItemPacks';
+import { createWorkItemActionHandler } from '../utils/createWorkItemActionHandler';
+
+export const generateLocalizationMarketExpansionPack = createWorkItemActionHandler({
+  skillName: 'generateLocalizationMarketExpansionPack',
+  outputSchema: LocalizationMarketExpansionPackSchema,
+  save: saveLocalizationMarketExpansionPack,
+});
+```
+
+### f) Customer Journey & Lifecycle Pack
+
+```ts
+// server/routes/workItemActions/generateCustomerJourneyLifecyclePack.ts
+import { CustomerJourneyLifecyclePackSchema } from '../../ai/schemas/customerJourneyLifecyclePack';
+import { saveCustomerJourneyLifecyclePack } from '../../db/workItemPacks';
+import { createWorkItemActionHandler } from '../utils/createWorkItemActionHandler';
+
+export const generateCustomerJourneyLifecyclePack = createWorkItemActionHandler({
+  skillName: 'generateCustomerJourneyLifecyclePack',
+  outputSchema: CustomerJourneyLifecyclePackSchema,
+  save: saveCustomerJourneyLifecyclePack,
+});
+```
+
+---
+
+## 2) Routes (server/routes.ts)
+
+Wire the handlers into the main router:
+
+```ts
+// server/routes.ts
+import { generateImplementationRunbookSopPack } from './routes/workItemActions/generateImplementationRunbookSopPack';
+import { generateSupportPlaybookKnowledgeBasePack } from './routes/workItemActions/generateSupportPlaybookKnowledgeBasePack';
+import { generateRetailWholesaleReadinessPack } from './routes/workItemActions/generateRetailWholesaleReadinessPack';
+import { generateExperimentOptimizationPack } from './routes/workItemActions/generateExperimentOptimizationPack';
+import { generateLocalizationMarketExpansionPack } from './routes/workItemActions/generateLocalizationMarketExpansionPack';
+import { generateCustomerJourneyLifecyclePack } from './routes/workItemActions/generateCustomerJourneyLifecyclePack';
+
+// …existing routes…
+
+router.post(
+  '/api/work-items/:id/actions/generate-implementation-runbook-sop-pack',
+  generateImplementationRunbookSopPack
+);
+
+router.post(
+  '/api/work-items/:id/actions/generate-support-playbook-knowledge-base-pack',
+  generateSupportPlaybookKnowledgeBasePack
+);
+
+router.post(
+  '/api/work-items/:id/actions/generate-retail-wholesale-readiness-pack',
+  generateRetailWholesaleReadinessPack
+);
+
+router.post(
+  '/api/work-items/:id/actions/generate-experiment-optimization-pack',
+  generateExperimentOptimizationPack
+);
+
+router.post(
+  '/api/work-items/:id/actions/generate-localization-market-expansion-pack',
+  generateLocalizationMarketExpansionPack
+);
+
+router.post(
+  '/api/work-items/:id/actions/generate-customer-journey-lifecycle-pack',
+  generateCustomerJourneyLifecyclePack
+);
+```
+
+---
+
+## 3) Actions panel entries (WorkItemActionsPanel)
+
+In your actions config (e.g. `WorkItemActionsPanel.tsx`), extend the list:
+
+```ts
+// app/components/work-items/WorkItemActionsPanel.tsx
+
+const ACTIONS: WorkItemActionConfig[] = [
+  // …existing actions (Lifestyle, Patent, Launch, etc.)…
+
+  {
+    id: 'generate-implementation-runbook-sop-pack',
+    label: 'Generate Implementation Runbook & SOP Pack',
+    endpoint: (id) =>
+      `/api/work-items/${id}/actions/generate-implementation-runbook-sop-pack`,
+    packType: 'implementation_runbook_sop',
+  },
+  {
+    id: 'generate-support-playbook-knowledge-base-pack',
+    label: 'Generate Support Playbook & KB Pack',
+    endpoint: (id) =>
+      `/api/work-items/${id}/actions/generate-support-playbook-knowledge-base-pack`,
+    packType: 'support_playbook_knowledge_base',
+  },
+  {
+    id: 'generate-retail-wholesale-readiness-pack',
+    label: 'Generate Retail & Wholesale Readiness Pack',
+    endpoint: (id) =>
+      `/api/work-items/${id}/actions/generate-retail-wholesale-readiness-pack`,
+    packType: 'retail_wholesale_readiness',
+  },
+  {
+    id: 'generate-experiment-optimization-pack',
+    label: 'Generate Experiment & Optimization Pack',
+    endpoint: (id) =>
+      `/api/work-items/${id}/actions/generate-experiment-optimization-pack`,
+    packType: 'experiment_optimization',
+  },
+  {
+    id: 'generate-localization-market-expansion-pack',
+    label: 'Generate Localization & Market Expansion Pack',
+    endpoint: (id) =>
+      `/api/work-items/${id}/actions/generate-localization-market-expansion-pack`,
+    packType: 'localization_market_expansion',
+  },
+  {
+    id: 'generate-customer-journey-lifecycle-pack',
+    label: 'Generate Customer Journey & Lifecycle Pack',
+    endpoint: (id) =>
+      `/api/work-items/${id}/actions/generate-customer-journey-lifecycle-pack`,
+    packType: 'customer_journey_lifecycle',
+  },
+];
+```
+
+After this, on `/work-items/7` you’ll see 6 new **Run** buttons corresponding to these packs.
+
+---
+
+## 4) Pack labels in the viewer (if not already there)
+
+In `WorkItemPacksPanel` (or equivalent), make sure these pack types have friendly labels:
+
+```ts
+// app/components/work-items/WorkItemPacksPanel.tsx
+
+const PACK_LABELS: Record<string, string> = {
+  // …existing ones…
+
+  implementation_runbook_sop: 'Implementation Runbook & SOP Pack',
+  support_playbook_knowledge_base: 'Support Playbook & Knowledge Base Pack',
+  retail_wholesale_readiness: 'Retail & Wholesale Readiness Pack',
+  experiment_optimization: 'Experiment & Optimization Pack',
+  localization_market_expansion: 'Localization & Market Expansion Pack',
+  customer_journey_lifecycle: 'Customer Journey & Lifecycle Pack',
+};
+```
+
+---
+
+### How to test the drop on WO-001
+
+1. Restart the server (so new routes/handlers load).
+2. Go to `/work-items/7` (Brand Guidelines – WO-001 Assets).
+3. In **Actions**, you should now see the 6 new rows.
+4. For each one:
+
+   * Click **Run** → wait for “Last run OK”.
+   * Scroll to **Work Item Packs** panel → click **Refresh**.
+   * Confirm the new pack appears (Implementation, Support, Retail, Experiment, Localization, Journey).
+
+Once they’re all showing up, WO-001 has the full **Ops + Support + Retail + Data + Market Expansion** perspective to match the creative packs you already have.

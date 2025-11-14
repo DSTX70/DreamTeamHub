@@ -1,0 +1,240 @@
+Love this part—this is where the JSON turns into real work your humans (or image engines) can do.
+
+I’ll keep it tight and practical:
+For each of the **4 brand/creative packs**, here’s **exactly which fields matter** and **how to use them** for designers + devs.
+
+---
+
+## 1) Packaging & Pre-Press Pack
+
+**Who:** Nova / packaging vendors / devs wiring downloadable dielines
+
+Look for in JSON:
+
+* `summary` / `packaging_story`
+
+  * **Use:** One-paragraph blurb you drop at the top of a packaging brief or email to the printer:
+
+    > “This line should feel like X; hero color is Y; it sits next to Z on shelf.”
+
+* `primary_formats[]`
+  For each entry:
+
+  * `name` → “5x7 card box”, “Mug box”, “Display sleeve”
+  * `dimensions_mm { width, height, depth }` → spec for your dieline
+  * `orientation` → portrait / landscape / square
+  * `notes` → anything special (window cutouts, handle, etc.)
+    **Use:**
+  * Designer: choose correct template, set artboard size, layout thinking.
+  * Vendor: exact finished size + fold depth.
+
+* `print_specs`
+
+  * `color_mode` → CMYK or CMYK+PMS
+  * `coatings[]` → matte / gloss / soft_touch / UV / spot_uv
+  * `special_finishes[]` → foil / emboss / glitter etc.
+  * `stock` → weight, finish, base color
+    **Use:**
+  * Hand this block directly to printer / production manager.
+  * Designer uses it to know “Can I assume foil? Matte only? White stock or cream stock?”
+
+* `compliance_checklist[]`
+
+  * `label` + `requirement` (“UPC barcode on bottom”, “Country of origin near logo”, “Age warning on back”).
+    **Use:**
+  * QA checklist before sending final art.
+  * Dev (if you show packaging on site) can make sure imagery doesn’t remove required marks.
+
+* `prepress_checklist[]`
+
+  * Stepwise tasks like “Verify bleed,” “Convert text to outlines,” “Export CMYK PDF/X-1a.”
+    **Use:**
+  * Your final pre-flight list in Figma/Illustrator and in your internal wiki.
+
+---
+
+## 2) Product Line Architecture & SKU Tree Pack
+
+**Who:** Nova / Ops / devs setting up SKUs, navigation & filters
+
+Look for in JSON:
+
+* `line_name`, `line_code_prefix`
+  **Use:**
+
+  * Top-level collection name and SKU prefix (`ME`, `CC`, etc.).
+  * Dev: base slug or key for this line.
+
+* `hierarchy[]`
+
+  * Each object:
+
+    * `collection` → e.g. “Midnight Express”, “ColorCue”
+    * `series[]` → e.g. “Elegant Evening”, “Joyful Day”
+
+      * Each `products[]` → title / description
+
+        * Each `variants[]` →
+
+          * `sku`
+          * `attributes` (size, finish, format, etc.)
+          * `msrp`, `wholesale`, `tier`
+            **Use:**
+  * Designers: know which cards belong to which hero / series (so visuals stay coherent).
+  * Devs:
+
+    * set up products + variants exactly per this tree,
+    * generate site filters (“Series”, “Finish”, “Occasion”) from `attributes`.
+
+* `roadmap_phases[]`
+
+  * `phase_name`, `phase_order`, `included_skus[]`
+    **Use:**
+  * Decide which SKUs go live in this **hero update** vs held for later.
+  * Dev: feature flags / staging vs prod for specific SKUs.
+
+---
+
+## 3) E-Com PDP & A+ Content Pack
+
+**Who:** Copy/brand, dev/Shopify, A+ designer
+
+Look for in JSON:
+
+* `seo_title`, `seo_slug_hint`
+  **Use (dev):**
+
+  * `<title>` tag and preferred URL slug.
+  * Use slug hint for Shopify handle / route.
+
+* `short_subtitle`
+  **Use (copy/design):**
+
+  * On-page subhead under product name.
+  * Can also be card “tagline” on hero.
+
+* `feature_bullets[]`
+  Each bullet: `label`, `body`, optional `pillar` (feature/benefit/emotion/objection).
+  **Use:**
+
+  * Main PDP bullet list.
+  * Map `pillar` to iconography or grouping if you want (e.g., benefits vs feelings).
+
+* `long_description`
+  **Use:**
+
+  * Main product description block.
+  * Good fallback text for Amazon description field.
+
+* `aplus_sections[]`
+  Each section:
+
+  * `section_type` (hero, feature_grid, story, comparison, faq, other)
+  * `heading`, `body`
+  * `image_ideas[]`, `layout_hint`
+    **Use:**
+  * A+ layout designer takes each section and chooses a module:
+
+    * `hero` → top banner
+    * `feature_grid` → 3/4-up feature tiles
+    * `story` → lifestyle panel
+  * Image team uses `image_ideas` plus Lifestyle Pack for the actual shots.
+
+* `faqs[]`
+
+  * `question`, `answer`
+    **Use:**
+  * PDP FAQ accordion.
+  * Script for support macros.
+
+* `cross_sell_suggestions[]`
+
+  * `label`, `rationale`, optional `ref_work_item_id`
+    **Use (dev):**
+  * Map these to “You may also like” carousel, linking to related SKUs.
+
+---
+
+## 4) Social Campaign & Content Calendar Pack
+
+**Who:** Echo / Prism / scheduler VA
+
+Look for in JSON:
+
+* `campaign_name`, `campaign_window_description`, `core_narrative`
+  **Use:**
+
+  * Title of the campaign in your scheduler / Notion.
+  * A one-line description you can paste into Asana / Trello / content sheet.
+
+* `primary_hashtags[]`, `secondary_hashtags[]`
+  **Use:**
+
+  * Base set of tags for all posts; Echo can mix in trend tags as needed.
+
+* `weekly_themes[]`
+
+  * `week_index`, `theme`, `focus`
+    **Use:**
+  * Gives each week a “story arc” (e.g., Week 1: Meet the collections; Week 2: Behind the scenes).
+  * Great for planning carousels/Reels series.
+
+* `posts[]`
+  For each post:
+
+  * `day_offset` → relative to campaign start day (0, 1, 2, …)
+  * `platform` → instagram / tiktok / youtube / etc.
+  * `content_type` → post / story / reel / short / live / email
+  * `working_title`
+  * `hook` (opening line)
+  * `core_message`
+  * `cta`
+  * `asset_needs[]` (e.g., “1920×1080 Reel showing ColorCue before/after hero”)
+    **Use:**
+  * Echo/practitioner:
+
+    * drop each into your scheduler (Later, Buffer, etc.).
+    * Use `hook` and `core_message` as draft caption.
+  * Design team: read `asset_needs` to know which clips/stills to produce.
+
+* `influencer_prompts[]`
+  **Use:**
+
+  * Text you literally paste into outreach emails/DMs:
+
+    > “We’d love a 30–60s Reel of you unboxing X and talking about Y.”
+
+* `performance_objectives[]`
+
+  * `metric`, `target_hint`
+    **Use:**
+  * What to watch in analytics (e.g., saves vs link clicks).
+  * Helps you decide after launch which creatives to keep or spin.
+
+---
+
+### How to brief the team in practice
+
+Once these four show up for **WO-001**, you can make a super straightforward hand-off:
+
+* **Lifestyle Pack →**
+
+  * Image prompts, filenames, SKUs, alt-text/SEO meta seeds.
+* **Product Line & SKU Tree →**
+
+  * Which SKUs exist, how they roll up into collections/series, what goes live first.
+* **E-Com PDP & A+ →**
+
+  * PDP fields (title, subtitle, bullets, description, FAQs) + A+ wireframe content.
+* **Social Campaign & Calendar →**
+
+  * 30-day content plan with hooks, CTAs, and asset requirements.
+
+If you want, tell me one specific SKU from that Lifestyle JSON (e.g. `SKU-ME-ELEGANT-001`) and I’ll turn *that one row* into:
+
+* Final hero image prompt
+* `<img>` filename + alt text
+* PDP title + description snippet
+* One Instagram caption + hashtag set
+
+so your team has a concrete “this is how we use the packs” example.

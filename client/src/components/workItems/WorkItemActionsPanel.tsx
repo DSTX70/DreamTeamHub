@@ -2,11 +2,11 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Sparkles, ChevronDown, ChevronUp, PuzzleIcon, MegaphoneIcon, SearchIcon, ShieldIcon, GraduationCapIcon, ScaleIcon, DollarSignIcon, BarChartIcon, HandshakeIcon } from "lucide-react";
+import { Sparkles, ChevronDown, ChevronUp, PuzzleIcon, MegaphoneIcon, SearchIcon, ShieldIcon, GraduationCapIcon, ScaleIcon, DollarSignIcon, BarChartIcon, HandshakeIcon, PackageIcon, NetworkIcon, ShoppingCartIcon, CalendarIcon } from "lucide-react";
 import { SavePackToDriveButton } from "../SavePackToDriveButton";
 
-type ActionKey = "lifestyle" | "patent" | "launch" | "audit" | "riskCompliance" | "agentAcademy" | "agentGovernance" | "pricingMonetization" | "dataMetrics" | "globalCollabs";
-type PackType = "lifestyle" | "patent" | "launch" | "website_audit" | "risk_compliance" | "agent_lab_academy" | "agent_governance" | "pricing_monetization" | "data_stewardship_metrics" | "globalcollabs_partnership";
+type ActionKey = "lifestyle" | "patent" | "launch" | "audit" | "riskCompliance" | "agentAcademy" | "agentGovernance" | "pricingMonetization" | "dataMetrics" | "globalCollabs" | "packagingPrePress" | "productLineSkuTree" | "ecomPdpAplus" | "socialCampaign";
+type PackType = "lifestyle" | "patent" | "launch" | "website_audit" | "risk_compliance" | "agent_lab_academy" | "agent_governance" | "pricing_monetization" | "data_stewardship_metrics" | "globalcollabs_partnership" | "packaging_prepress" | "product_line_sku_tree" | "ecom_pdp_aplus_content" | "social_campaign_content_calendar";
 
 type ActionStateStatus = "idle" | "running" | "ok" | "error";
 
@@ -88,6 +88,30 @@ const ACTION_CONFIG: Record<
     endpointSuffix: "generate-globalcollabs-partnership-pack",
     packType: "globalcollabs_partnership",
   },
+  packagingPrePress: {
+    label: "Generate Packaging & Pre-Press Pack",
+    Icon: PackageIcon,
+    endpointSuffix: "generate-packaging-pre-press-pack",
+    packType: "packaging_prepress",
+  },
+  productLineSkuTree: {
+    label: "Generate Product Line Architecture & SKU Tree Pack",
+    Icon: NetworkIcon,
+    endpointSuffix: "generate-product-line-sku-tree-pack",
+    packType: "product_line_sku_tree",
+  },
+  ecomPdpAplus: {
+    label: "Generate E-Com PDP & A+ Content Pack",
+    Icon: ShoppingCartIcon,
+    endpointSuffix: "generate-ecom-pdp-aplus-content-pack",
+    packType: "ecom_pdp_aplus_content",
+  },
+  socialCampaign: {
+    label: "Generate Social Campaign & Content Calendar Pack",
+    Icon: CalendarIcon,
+    endpointSuffix: "generate-social-campaign-content-calendar-pack",
+    packType: "social_campaign_content_calendar",
+  },
 };
 
 export function WorkItemActionsPanel({ workItemId }: WorkItemActionsPanelProps) {
@@ -103,6 +127,10 @@ export function WorkItemActionsPanel({ workItemId }: WorkItemActionsPanelProps) 
     pricingMonetization: { status: "idle" },
     dataMetrics: { status: "idle" },
     globalCollabs: { status: "idle" },
+    packagingPrePress: { status: "idle" },
+    productLineSkuTree: { status: "idle" },
+    ecomPdpAplus: { status: "idle" },
+    socialCampaign: { status: "idle" },
   });
   const { toast } = useToast();
 
