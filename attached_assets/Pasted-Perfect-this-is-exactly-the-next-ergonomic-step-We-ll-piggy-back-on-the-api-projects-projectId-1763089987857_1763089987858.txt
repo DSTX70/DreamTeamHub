@@ -1,0 +1,144 @@
+Perfect, this is exactly the next ergonomic step.
+
+We’ll piggy-back on the `/api/projects/:projectId/work-items` endpoint you just added and give each Intake card a **“Create Work Item”** button that:
+
+* Reads the Intake’s title + body
+* Posts to the project’s work-item endpoint
+* Navigates you straight to the new Work Item
+
+I’ll keep it tiny and self-contained.
+
+---
+
+## 1. (Optional) Make sure Intake rows know their target project
+
+If your Intake model doesn’t already have a project pointer, add one (or reuse whatever field you already have):
+
+```ts
+// server/db/schema.ts (or wherever Intake is defined)
+export const intakes = pgTable('intakes', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  title: text('title').notNull(),
+  body: text('body').notNull(),
+  // NEW:
+  projectId: uuid('project_id').references(() => projects.id).notNull(),
+  // ...
+});
+```
+
+If you already have `projectId` or similar, you can skip this.
+
+---
+
+## 2. Frontend: add “Create Work Item” button on Intake card
+
+Assuming you have a component like `IntakeCard.tsx` / `IntakeDetail.tsx` that renders the card you showed (the teal “Brand Guidelines – WO-001 Assets”), we’ll add one button and a click handler.
+
+### a) Add types + handler
+
+```tsx
+// app/components/intake/IntakeCard.tsx
+import React, { useState } from 'react';
+import { Button } from '@/components/ui/button'; // adjust import to your design system
+
+type Intake = {
+  id: string;
+  title: string;
+  body: string;
+  projectId: string; // must be present; see step 1
+};
+
+type IntakeCardProps = {
+  intake: Intake;
+};
+
+export function IntakeCard({ intake }: IntakeCardProps) {
+  const [creating, setCreating] = useState(false);
+
+  async function handleCreateWorkItemFromIntake() {
+    if (!intake.projectId) {
+      alert('This intake is not linked to a project yet.');
+      return;
+    }
+
+    try {
+      setCreating(true);
+
+      const resp = await fetch(
+        `/api/projects/${intake.projectId}/work-items`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            title: intake.title,
+            body: intake.body,
+            lane: 'brand-assets', // or whatever default lane makes sense
+          }),
+        }
+      );
+
+      if (!resp.ok) {
+        const text = await resp.text();
+        console.error('Failed to create work item from intake', text);
+        alert('Failed to create Work Item – see console for details.');
+        return;
+      }
+
+      const wi = await resp.json();
+
+      // Optional: mark intake as routed (if you have a flag/endpoint for that)
+      // await fetch(`/api/intake/${intake.id}/mark-routed`, { method: 'POST' });
+
+      // Navigate straight to the new Work Item
+      window.location.href = `/work-items/${wi.id}`;
+    } finally {
+      setCreating(false);
+    }
+  }
+
+  // ...existing JSX...
+```
+
+### b) Drop the button into your card actions
+
+Wherever you currently render card actions (e.g. “Archive”, “Assign”, etc.), add:
+
+```tsx
+  return (
+    <div className="flex flex-col gap-4">
+      {/* existing header / body for the Intake card */}
+
+      <div className="mt-4 flex flex-wrap gap-2">
+        {/* existing buttons, e.g. Approve / Archive / Route */}
+        <Button
+          variant="default"
+          onClick={handleCreateWorkItemFromIntake}
+          disabled={creating}
+        >
+          {creating ? 'Creating…' : 'Create Work Item'}
+        </Button>
+      </div>
+    </div>
+  );
+}
+```
+
+That’s it: visually it will appear at the bottom of the Intake card as a **“Create Work Item”** button.
+
+---
+
+## 3. How you’ll use it next time (WO-002 and beyond)
+
+1. Go to **Intake & Routing**.
+2. Open an intake card like: **“Brand Guidelines – WO-002 Something”**.
+3. Click **“Create Work Item”**.
+4. You’ll be jumped straight to `/work-items/<id>`:
+
+   * Title & body pre-populated from the intake.
+   * Lane set to `brand-assets` (or whatever you chose).
+5. From that Work Item page:
+
+   * Use the **Actions Panel** to run your Packs (Lifestyle, Packaging, PDP, etc.),
+   * Just like we’ve been planning for WO-001.
+
+No more copy-paste, no more hunting for where to create the WI—the intake becomes the WI in one click.
