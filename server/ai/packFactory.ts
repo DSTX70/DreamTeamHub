@@ -5,6 +5,43 @@ import { runSkill } from "./runSkill";
 import { db } from "../db";
 import { eq, and, desc } from "drizzle-orm";
 import { workItems, workItemPacks } from "@shared/schema";
+import { getProductsForLine, getAllProducts, type CatalogProduct } from "../services/productCatalog";
+
+/**
+ * Helper to infer product line from work item title/body
+ * Looks for keywords: ColorCue, Out Loud, Midnight Express
+ */
+function inferProductLine(workItem: { title: string; body: string | null }): string | null {
+  const text = `${workItem.title} ${workItem.body || ""}`.toLowerCase();
+  
+  if (text.includes("colorcue") || text.includes("color cue")) {
+    return "ColorCue";
+  }
+  if (text.includes("out loud") || text.includes("outloud")) {
+    return "Out Loud";
+  }
+  if (text.includes("midnight express")) {
+    return "Midnight Express";
+  }
+  
+  return null;
+}
+
+/**
+ * Convert catalog product to serializable format for LLM
+ */
+function serializeProduct(p: CatalogProduct) {
+  return {
+    sku: p.sku,
+    line: p.line,
+    collection: p.collection,
+    series: p.series,
+    product_name: p.productName,
+    variant_name: p.variantName,
+    brand_slug: p.brandSlug,
+    url_slug: p.urlSlug,
+  };
+}
 
 /**
  * Factory function to create a pack generation action handler
@@ -32,15 +69,40 @@ export function createPackActionHandler(config: PackConfig): RequestHandler {
 
       const wi = workItem[0];
 
+      // Build input for LLM skill
+      const baseInput = {
+        work_item_id: wi.id,
+        work_item_title: wi.title,
+        work_item_body: wi.body || "",
+        work_item_notes: wi.notes || "",
+      };
+
+      // For catalog-aware packs, inject product catalog
+      const catalogAwarePacks = ["lifestyle", "ecom_pdp_aplus_content"];
+      let skillInput: any = baseInput;
+
+      if (catalogAwarePacks.includes(config.packType)) {
+        const inferredLine = inferProductLine(wi);
+        let catalogProducts: CatalogProduct[] = [];
+
+        if (inferredLine) {
+          catalogProducts = await getProductsForLine(inferredLine);
+          console.log(`[${config.packType}] Fetched ${catalogProducts.length} products for line: ${inferredLine}`);
+        } else {
+          catalogProducts = await getAllProducts();
+          console.log(`[${config.packType}] Fetched ${catalogProducts.length} products (all lines)`);
+        }
+
+        skillInput = {
+          ...baseInput,
+          products: catalogProducts.map(serializeProduct),
+        };
+      }
+
       // Run LLM skill to generate pack
       const packData = await runSkill({
         skillName: config.skillName,
-        input: {
-          work_item_id: wi.id,
-          work_item_title: wi.title,
-          work_item_body: wi.body || "",
-          work_item_notes: wi.notes || "",
-        },
+        input: skillInput,
       });
 
       // Validate against schema
