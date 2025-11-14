@@ -5,14 +5,14 @@ import {
   audits, auditChecks, auditFindings, auditArtifacts, events,
   conversations, messages, agentMemories, agentRuns,
   projects, projectFiles, projectAgents, projectTasks, projectMessages,
-  agentGoldens, workOrders, playbookPreviews, brands, knowledgeLinks, products,
+  agentGoldens, workOrders, playbookPreviews, brands, knowledgeLinks, products, workItemPacks,
   type User, type UpsertUser,
   type Pod, type PodAgent, type Agent, type EvidencePack, type Person, type RoleCard, type RoleRaci, type CoverageHistory, type AgentSpec, type WorkItem, type Decision, type IdeaSpark,
   type BrainstormSession, type BrainstormParticipant, type BrainstormIdea, type BrainstormCluster, type BrainstormArtifact,
   type Audit, type AuditCheck, type AuditFinding, type AuditArtifact, type Event,
   type Conversation, type Message, type AgentMemory, type AgentRun,
   type Project, type ProjectFile, type ProjectAgent, type ProjectTask, type ProjectMessage,
-  type AgentGolden, type WorkOrder, type PlaybookPreview, type Brand, type KnowledgeLink, type Product,
+  type AgentGolden, type WorkOrder, type PlaybookPreview, type Brand, type KnowledgeLink, type Product, type WorkItemPack,
   type InsertPod, type InsertPodAgent, type InsertAgent, type InsertEvidencePack, type InsertPerson, type InsertRoleCard, type InsertRoleRaci, type InsertCoverageHistory, type InsertAgentSpec, type InsertWorkItem, type InsertDecision, type InsertIdeaSpark,
   type InsertBrainstormSession, type InsertBrainstormParticipant, type InsertBrainstormIdea, type InsertBrainstormCluster, type InsertBrainstormArtifact,
   type InsertAudit, type InsertAuditCheck, type InsertAuditFinding, type InsertAuditArtifact, type InsertEvent,
@@ -213,6 +213,9 @@ export interface IStorage {
   // Products
   getProducts(filters?: { brandId?: number }): Promise<Product[]>;
   createProduct(product: InsertProduct): Promise<Product>;
+  
+  // Work Item Packs
+  getWorkItemPacksByType(workItemId: number, packType: string): Promise<WorkItemPack[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -1081,6 +1084,18 @@ export class DatabaseStorage implements IStorage {
   async createProduct(product: InsertProduct): Promise<Product> {
     const [created] = await db.insert(products).values(product).returning();
     return created;
+  }
+
+  // ===== WORK ITEM PACKS =====
+  async getWorkItemPacksByType(workItemId: number, packType: string): Promise<WorkItemPack[]> {
+    return await db
+      .select()
+      .from(workItemPacks)
+      .where(and(
+        eq(workItemPacks.workItemId, workItemId),
+        eq(workItemPacks.packType, packType)
+      ))
+      .orderBy(desc(workItemPacks.version));
   }
 }
 

@@ -3,7 +3,7 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { db } from "./db";
 import { sql, eq, desc } from "drizzle-orm";
-import { workItemPacks } from "@shared/schema";
+import { workItemPacks, opsEvent } from "@shared/schema";
 import { setupAuth, isAuthenticated } from "./replitAuth";
 import { requireScopes } from "./security/scopes_and_csp";
 import { searchRoute } from "./api_search_route";
@@ -1219,11 +1219,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Only log ops events for actual generation (not dry runs)
         if (!body.dryRun) {
           const user = req.user as any;
-          await postOpsEvent({
-            type: "lifestyle_heroes_generated",
+          await db.insert(opsEvent).values({
+            kind: "lifestyle_heroes_generated",
             actor: user?.claims?.sub || "api_token",
-            metadata: {
-              workItemId,
+            ownerType: "work_item",
+            ownerId: String(workItemId),
+            message: `Generated ${result.generated.length} lifestyle hero images`,
+            meta: {
               shotsGenerated: result.generated.length,
               skipped: result.skippedExisting.length,
               overwrite: result.overwrite,

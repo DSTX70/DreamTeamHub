@@ -120,7 +120,8 @@ export async function generateLifestyleHeroesForWorkItem(
       };
     }
 
-    const latestPack = packs.sort((a, b) => b.version - a.version)[0];
+    // Packs are already sorted by version descending from storage query
+    const latestPack = packs[0];
     const packData = latestPack.packData as any;
 
     const exportPlan = packData.export_plan as any[];
@@ -149,7 +150,7 @@ export async function generateLifestyleHeroesForWorkItem(
     const skippedExisting: SkippedImage[] = [];
     const missingShots: string[] = [];
 
-    for (const [shotId, rows] of byShot.entries()) {
+    for (const [shotId, rows] of Array.from(byShot.entries())) {
       const board = shotBoards.find((b: any) => b.shot_id === shotId);
       if (!board) {
         missingShots.push(shotId);
@@ -200,7 +201,10 @@ export async function generateLifestyleHeroesForWorkItem(
         response_format: "b64_json",
       });
 
-      const b64 = imgResp.data[0].b64_json!;
+      if (!imgResp.data || imgResp.data.length === 0 || !imgResp.data[0].b64_json) {
+        throw new Error("OpenAI returned no image data");
+      }
+      const b64 = imgResp.data[0].b64_json;
       const masterBuffer = Buffer.from(b64, "base64");
 
       for (const t of targets) {
