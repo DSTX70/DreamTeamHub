@@ -1,0 +1,320 @@
+Perfect, this is the fun glue layer. Let’s make this so your dev can basically copy-paste the behavior.
+
+---
+
+## 1. UX Overview
+
+**Location:**
+On the **Work Item detail view** (the one that already has “Run Pack” / “AI Actions” etc.), inside the existing **Actions panel**.
+
+**New Action:**
+
+* **Label (button text):**
+  `Generate Lifestyle Hero Images`
+
+* **Tooltip / subcopy:**
+  `Uses Lifestyle Pack v2 to auto-generate Desktop/Tablet/Mobile hero images for this Work Item.`
+
+* **Default behavior:**
+
+  * POST to `/api/work-items/:id/generate-lifestyle-heroes`
+  * Body: `{ dryRun: false, overwrite: false }`
+  * No shotIds → generate for all `shot_id` in `export_plan` for this WI.
+
+Optional later: add an "Advanced" popover to:
+
+* Choose `dryRun: true`
+* Toggle `overwrite: true`
+* Select specific shot_ids
+
+But v1 can be a **single button**.
+
+---
+
+## 2. Request Shape (what the button sends)
+
+When user clicks the button:
+
+```http
+POST /api/work-items/:id/generate-lifestyle-heroes
+Content-Type: application/json
+
+{
+  "dryRun": false,
+  "overwrite": false
+}
+```
+
+* `:id` = current Work Item ID (string).
+* We omit `shotIds` to generate for all shots in the Lifestyle Pack.
+
+---
+
+## 3. States & UX Flow
+
+### 3.1 Before request
+
+* Button is visible and enabled.
+* If the WI has **no Lifestyle Pack** yet, you can:
+
+  * Either still show the button (backend will 404),
+  * Or gray it out with tooltip: “Run Lifestyle Pack v2 first.”
+
+### 3.2 On click
+
+* Set a **loading state** on the button:
+
+  * Disable button
+  * Change label to: `Generating…`
+* Optionally show a subtle inline spinner in the Actions panel.
+
+### 3.3 On success (`200`)
+
+Backend returns:
+
+```json
+{
+  "ok": true,
+  "workItemId": "7",
+  "dryRun": false,
+  "overwrite": false,
+  "generated": [
+    { "shot_id": "OL-1", "filename": "fcc/lifestyle/...", "width": 1920, "height": 800 },
+    ...
+  ],
+  "skippedExisting": [
+    { "shot_id": "OL-1", "filename": "fcc/lifestyle/...", "reason": "EXISTS" }
+  ],
+  "missingShots": []
+}
+```
+
+**UI behavior:**
+
+* Clear loading state, re-enable button.
+
+* Show a **success toast** with dynamic summary:
+
+  * Title: `Lifestyle heroes generated`
+  * Body (example):
+
+    * If some created, none skipped:
+
+      > `Created 9 images across 3 shots (OL-1, OL-2, OL-3). You can now validate them in SKU Switcher.`
+
+    * If some skipped:
+
+      > `Created 6 images across 3 shots, 3 skipped (already existed). Validate them in SKU Switcher.`
+
+    * If dryRun (later):
+
+      > `Dry run complete. 9 images would be created across 3 shots (OL-1, OL-2, OL-3).`
+
+* Optional: show a subtle link in the toast or under the button:
+
+  * `Open SKU Switcher → Validate`
+
+### 3.4 On known errors
+
+#### a) Lifestyle Pack missing (`404`, `{ error: "LIFESTYLE_PACK_NOT_FOUND" }`)
+
+* Toast:
+
+  * Title: `Lifestyle Pack not found`
+  * Body: `Run Lifestyle Pack v2 for this Work Item before generating hero images.`
+  * Type: warning
+
+#### b) Validation error (`400`, `error: "INVALID_REQUEST"`)
+
+* Toast:
+
+  * Title: `Invalid request`
+  * Body: `Check shot selection or options and try again.`
+  * Type: error
+
+(You can log `details` to console for devs.)
+
+#### c) Unexpected error (`500`, `error: "INTERNAL_ERROR"` or any unknown)
+
+* Toast:
+
+  * Title: `Couldn’t generate lifestyle images`
+  * Body: `Something went wrong on the server. Try again or contact the dev pod.`
+  * Type: error
+
+In all error cases:
+
+* Clear loading state
+* Re-enable button
+
+---
+
+## 4. Button Copy & Microtext (exact strings)
+
+To keep it simple for your devs, here’s the concrete copy set:
+
+* **Button (default):** `Generate Lifestyle Hero Images`
+* **Button (loading):** `Generating…`
+* **Tooltip (hover):** `Uses Lifestyle Pack v2 to create Desktop, Tablet, and Mobile heroes for this Work Item.`
+
+**Success toast:**
+
+* Title: `Lifestyle heroes generated`
+* Body template (JS):
+
+  ```ts
+  const shots = Array.from(new Set(result.generated.map(g => g.shot_id)));
+  const shotList = shots.join(", ");
+  const createdCount = result.generated.length;
+  const skippedCount = result.skippedExisting.length;
+
+  let body: string;
+  if (createdCount > 0 && skippedCount === 0) {
+    body = `Created ${createdCount} images across ${shots.length} shots (${shotList}). Validate them in SKU Switcher.`;
+  } else if (createdCount > 0 && skippedCount > 0) {
+    body = `Created ${createdCount} images and skipped ${skippedCount} existing images across ${shots.length} shots (${shotList}). Validate them in SKU Switcher.`;
+  } else {
+    body = `No new images created. All targets already exist.`;
+  }
+  ```
+
+---
+
+## 5. Sample React-ish Implementation
+
+Assume:
+
+* `workItemId` is passed into the component as a prop.
+* You have a `useToast()` hook.
+* Using `fetch` for simplicity.
+
+```tsx
+import React, { useState } from "react";
+import { useToast } from "@/hooks/useToast";
+
+interface GenerateLifestyleHeroesButtonProps {
+  workItemId: string;
+}
+
+export const GenerateLifestyleHeroesButton: React.FC<
+  GenerateLifestyleHeroesButtonProps
+> = ({ workItemId }) => {
+  const [isLoading, setIsLoading] = useState(false);
+  const { toast } = useToast();
+
+  const handleClick = async () => {
+    try {
+      setIsLoading(true);
+
+      const res = await fetch(
+        `/api/work-items/${encodeURIComponent(
+          workItemId
+        )}/generate-lifestyle-heroes`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            dryRun: false,
+            overwrite: false,
+          }),
+        }
+      );
+
+      const data = await res.json();
+
+      if (!res.ok || !data.ok) {
+        if (data.error === "LIFESTYLE_PACK_NOT_FOUND") {
+          toast({
+            title: "Lifestyle Pack not found",
+            description:
+              "Run Lifestyle Pack v2 for this Work Item before generating hero images.",
+            variant: "warning",
+          });
+          return;
+        }
+
+        if (data.error === "INVALID_REQUEST") {
+          toast({
+            title: "Invalid request",
+            description:
+              "Check shot selection or options and try again. See console for details.",
+            variant: "destructive",
+          });
+          console.error("generate-lifestyle-heroes INVALID_REQUEST", data);
+          return;
+        }
+
+        toast({
+          title: "Couldn’t generate lifestyle images",
+          description:
+            "Something went wrong on the server. Try again or contact the dev pod.",
+          variant: "destructive",
+        });
+        console.error("generate-lifestyle-heroes error", data);
+        return;
+      }
+
+      const result = data;
+      const created = result.generated ?? [];
+      const skipped = result.skippedExisting ?? [];
+
+      const shots = Array.from(new Set(created.map((g: any) => g.shot_id)));
+      const shotList = shots.join(", ");
+      const createdCount = created.length;
+      const skippedCount = skipped.length;
+
+      let description: string;
+      if (createdCount > 0 && skippedCount === 0) {
+        description = `Created ${createdCount} images across ${shots.length} shots (${shotList}). Validate them in SKU Switcher.`;
+      } else if (createdCount > 0 && skippedCount > 0) {
+        description = `Created ${createdCount} images and skipped ${skippedCount} existing images across ${shots.length} shots (${shotList}). Validate them in SKU Switcher.`;
+      } else {
+        description = `No new images created. All targets already exist.`;
+      }
+
+      toast({
+        title: "Lifestyle heroes generated",
+        description,
+      });
+    } catch (err) {
+      console.error("generate-lifestyle-heroes exception", err);
+      toast({
+        title: "Couldn’t generate lifestyle images",
+        description:
+          "Unexpected error. Try again or contact the dev pod with console details.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return (
+    <button
+      type="button"
+      onClick={handleClick}
+      disabled={isLoading}
+      title="Uses Lifestyle Pack v2 to create Desktop, Tablet, and Mobile heroes for this Work Item."
+      className="btn btn-secondary" // or whatever your design system uses
+    >
+      {isLoading ? "Generating…" : "Generate Lifestyle Hero Images"}
+    </button>
+  );
+};
+```
+
+Your dev just needs to:
+
+* Drop this button into the **Work Item Actions panel** component.
+* Pass `workItemId` from the route/context.
+* Optionally align styling with your DS (`<Button>` from shadcn, etc.).
+
+---
+
+If you want, next I can:
+
+* Add a tiny note to the WO-001 checklist text you already have, like:
+  “Step X: Click *Generate Lifestyle Hero Images* in Actions panel, then validate in SKU Switcher,”
+  so your future self knows the exact button to push.

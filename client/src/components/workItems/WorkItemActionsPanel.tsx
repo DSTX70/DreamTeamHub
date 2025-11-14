@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Sparkles, ChevronDown, ChevronUp, PuzzleIcon, MegaphoneIcon, SearchIcon, ShieldIcon, GraduationCapIcon, ScaleIcon, DollarSignIcon, BarChartIcon, HandshakeIcon, PackageIcon, NetworkIcon, ShoppingCartIcon, CalendarIcon, BookOpenIcon, HeadphonesIcon, StoreIcon, FlaskConicalIcon, GlobeIcon, UsersIcon } from "lucide-react";
+import { Sparkles, ChevronDown, ChevronUp, PuzzleIcon, MegaphoneIcon, SearchIcon, ShieldIcon, GraduationCapIcon, ScaleIcon, DollarSignIcon, BarChartIcon, HandshakeIcon, PackageIcon, NetworkIcon, ShoppingCartIcon, CalendarIcon, BookOpenIcon, HeadphonesIcon, StoreIcon, FlaskConicalIcon, GlobeIcon, UsersIcon, ImageIcon } from "lucide-react";
 import { SavePackToDriveButton } from "../SavePackToDriveButton";
 
 type ActionKey = "lifestyle" | "patent" | "launch" | "audit" | "riskCompliance" | "agentAcademy" | "agentGovernance" | "pricingMonetization" | "dataMetrics" | "globalCollabs" | "packagingPrePress" | "productLineSkuTree" | "ecomPdpAplus" | "socialCampaign" | "implementationRunbook" | "supportPlaybook" | "retailWholesale" | "experimentOptimization" | "localizationMarket" | "customerJourney";
@@ -174,6 +174,7 @@ export function WorkItemActionsPanel({ workItemId }: WorkItemActionsPanelProps) 
     localizationMarket: { status: "idle" },
     customerJourney: { status: "idle" },
   });
+  const [isGeneratingHeroes, setIsGeneratingHeroes] = useState(false);
   const { toast } = useToast();
 
   async function runAction(key: ActionKey) {
@@ -259,6 +260,100 @@ export function WorkItemActionsPanel({ workItemId }: WorkItemActionsPanelProps) 
     return labelMap[status];
   }
 
+  async function handleGenerateLifestyleHeroes() {
+    try {
+      setIsGeneratingHeroes(true);
+
+      const res = await fetch(
+        `/api/work-items/${workItemId}/generate-lifestyle-heroes`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            dryRun: false,
+            overwrite: false,
+          }),
+        }
+      );
+
+      const data = await res.json();
+
+      if (!res.ok || !data.ok) {
+        if (data.error === "LIFESTYLE_PACK_NOT_FOUND") {
+          toast({
+            title: "Lifestyle Pack not found",
+            description:
+              "Run Lifestyle Pack v2 for this Work Item before generating hero images.",
+            variant: "destructive",
+          });
+          return;
+        }
+
+        if (data.error === "INVALID_REQUEST") {
+          toast({
+            title: "Invalid request",
+            description:
+              "Check shot selection or options and try again. See console for details.",
+            variant: "destructive",
+          });
+          console.error("generate-lifestyle-heroes INVALID_REQUEST", data);
+          return;
+        }
+
+        toast({
+          title: "Couldn't generate lifestyle images",
+          description:
+            "Something went wrong on the server. Try again or contact the dev pod.",
+          variant: "destructive",
+        });
+        console.error("generate-lifestyle-heroes error", data);
+        return;
+      }
+
+      const result = data;
+      const created = result.generated ?? [];
+      const skipped = result.skippedExisting ?? [];
+
+      const allShotIds = Array.from(
+        new Set([
+          ...created.map((g: any) => g.shot_id),
+          ...skipped.map((s: any) => s.shot_id),
+        ])
+      );
+      const shotList = allShotIds.join(", ");
+      const createdCount = created.length;
+      const skippedCount = skipped.length;
+
+      let description: string;
+      if (createdCount > 0 && skippedCount === 0) {
+        description = `Created ${createdCount} images across ${allShotIds.length} shots (${shotList}). Validate them in SKU Switcher.`;
+      } else if (createdCount > 0 && skippedCount > 0) {
+        description = `Created ${createdCount} images and skipped ${skippedCount} existing images across ${allShotIds.length} shots (${shotList}). Validate them in SKU Switcher.`;
+      } else if (skippedCount > 0) {
+        description = `All ${skippedCount} images already exist across ${allShotIds.length} shots (${shotList}). Validate them in SKU Switcher.`;
+      } else {
+        description = `No new images created. All targets already exist.`;
+      }
+
+      toast({
+        title: "Lifestyle heroes generated",
+        description,
+      });
+    } catch (err) {
+      console.error("generate-lifestyle-heroes exception", err);
+      toast({
+        title: "Couldn't generate lifestyle images",
+        description:
+          "Unexpected error. Try again or contact the dev pod with console details.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsGeneratingHeroes(false);
+    }
+  }
+
   return (
     <div className="wi-actions-panel" data-testid="work-item-actions-panel">
       <div className="flex items-center justify-between gap-2">
@@ -278,56 +373,80 @@ export function WorkItemActionsPanel({ workItemId }: WorkItemActionsPanelProps) 
       </div>
 
       {open && (
-        <div className="mt-2 rounded-md border bg-card p-2 text-sm">
-          {(Object.keys(ACTION_CONFIG) as ActionKey[]).map((key) => {
-            const cfg = ACTION_CONFIG[key];
-            const state = actionState[key];
-            const isRunning = state.status === "running";
-            const Icon = cfg.Icon;
+        <div className="mt-2 rounded-md border bg-card p-2 text-sm space-y-4">
+          <div className="space-y-0">
+            {(Object.keys(ACTION_CONFIG) as ActionKey[]).map((key) => {
+              const cfg = ACTION_CONFIG[key];
+              const state = actionState[key];
+              const isRunning = state.status === "running";
+              const Icon = cfg.Icon;
 
-            return (
-              <div
-                key={key}
-                className="flex items-center justify-between gap-2 border-b py-2 last:border-b-0"
-                data-testid={`action-row-${key}`}
-              >
-                <div className="flex flex-col gap-1">
-                  <span className="flex items-center gap-2">
-                    <Icon className="h-4 w-4" />
-                    <span className="font-medium">{cfg.label}</span>
-                  </span>
-                  <div className="flex items-center gap-2">
-                    <Badge variant={getStatusBadgeVariant(state.status)} className="text-xs">
-                      {getStatusLabel(state.status)}
-                    </Badge>
-                    <span className="text-xs text-muted-foreground">
-                      {formatLastRun(state.lastRunAt)}
+              return (
+                <div
+                  key={key}
+                  className="flex items-center justify-between gap-2 border-b py-2 last:border-b-0"
+                  data-testid={`action-row-${key}`}
+                >
+                  <div className="flex flex-col gap-1">
+                    <span className="flex items-center gap-2">
+                      <Icon className="h-4 w-4" />
+                      <span className="font-medium">{cfg.label}</span>
                     </span>
+                    <div className="flex items-center gap-2">
+                      <Badge variant={getStatusBadgeVariant(state.status)} className="text-xs">
+                        {getStatusLabel(state.status)}
+                      </Badge>
+                      <span className="text-xs text-muted-foreground">
+                        {formatLastRun(state.lastRunAt)}
+                      </span>
+                    </div>
                   </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Button
-                    type="button"
-                    onClick={() => runAction(key)}
-                    disabled={isRunning}
-                    variant="outline"
-                    size="sm"
-                    data-testid={`button-run-${key}`}
-                  >
-                    {isRunning ? "Running…" : "Run"}
-                  </Button>
-                  {state.status === "ok" && (
-                    <SavePackToDriveButton
-                      workItemId={workItemId}
-                      packType={cfg.packType}
+                  <div className="flex items-center gap-2">
+                    <Button
+                      type="button"
+                      onClick={() => runAction(key)}
+                      disabled={isRunning}
                       variant="outline"
                       size="sm"
-                    />
-                  )}
+                      data-testid={`button-run-${key}`}
+                    >
+                      {isRunning ? "Running…" : "Run"}
+                    </Button>
+                    {state.status === "ok" && (
+                      <SavePackToDriveButton
+                        workItemId={workItemId}
+                        packType={cfg.packType}
+                        variant="outline"
+                        size="sm"
+                      />
+                    )}
+                  </div>
                 </div>
+              );
+            })}
+          </div>
+
+          <div className="border-t pt-4">
+            <div className="flex items-start gap-2">
+              <ImageIcon className="h-4 w-4 mt-1 flex-shrink-0" />
+              <div className="flex-1 min-w-0">
+                <div className="font-medium mb-1">Generate Lifestyle Hero Images</div>
+                <p className="text-xs text-muted-foreground mb-3">
+                  Uses Lifestyle Pack v2 to create Desktop, Tablet, and Mobile heroes for this Work Item.
+                </p>
+                <Button
+                  type="button"
+                  onClick={handleGenerateLifestyleHeroes}
+                  disabled={isGeneratingHeroes}
+                  variant="secondary"
+                  size="sm"
+                  data-testid="button-generate-lifestyle-heroes"
+                >
+                  {isGeneratingHeroes ? "Generating…" : "Generate Lifestyle Hero Images"}
+                </Button>
               </div>
-            );
-          })}
+            </div>
+          </div>
         </div>
       )}
     </div>
