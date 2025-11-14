@@ -1,0 +1,113 @@
+Tiny patch to make Save-to-Drive actually work
+
+If you want Save-to-Drive working now, here’s the minimal pattern.
+
+a) Backend route
+
+Add a route like:
+
+// server/routes/workItemPacksSave.ts
+import { Router } from 'express';
+import { db } from '../db';
+// import your packs + drive helpers here
+
+const router = Router();
+
+/**
+ * Save a specific pack to Drive for a work item.
+ */
+router.post('/api/work-items/:workItemId/packs/:packType/save-to-drive', async (req, res, next) => {
+  try {
+    const { workItemId, packType } = req.params;
+
+    // 1) Load the pack from DB
+    const packRow = await db.workItemPacks.findFirst({
+      where: { workItemId, packType },
+    });
+
+    if (!packRow) {
+      return res.status(404).json({ error: 'Pack not found' });
+    }
+
+    // 2) Generate a DOCX/PDF/CSV using your existing generator (pseudo-code)
+    // const file = await generateDocxFromPack(packType, packRow.payload);
+
+    // 3) Upload to Drive and get a fileRef (pseudo-code)
+    // const fileRef = await uploadToDrive({
+    //   folderId: DRIVE_FOLDER_IDS[packType] ?? DEFAULT_BRAND_ASSETS_FOLDER,
+    //   name: `WO-${workItemId}-${packType}.docx`,
+    //   mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    //   buffer: file,
+    // });
+
+    // 4) Save fileRef on the work item / pack (pseudo-code)
+    // await db.workItemFiles.insert({ workItemId, packType, ...fileRef });
+
+    // For now, just return OK so the button doesn’t error
+    return res.json({ ok: true });
+  } catch (err) {
+    next(err);
+  }
+});
+
+export default router;
+
+
+And mount it:
+
+// server/routes.ts
+import packSaveRoutes from './routes/workItemPacksSave';
+app.use(packSaveRoutes);
+
+
+(You can fill in the actual Drive upload later; the key is: it accepts a POST and returns 200.)
+
+b) Frontend Save-to-Drive button: fix the fetch call
+
+Wherever you render Save to Drive next to Generate Lifestyle Pack (likely something like WorkItemActionsPanel.tsx), make sure the handler looks like this:
+
+async function handleSavePackToDrive(packType: string) {
+  setSaving(true);
+  try {
+    const resp = await fetch(
+      `/api/work-items/${workItemId}/packs/${packType}/save-to-drive`,
+      {
+        method: 'POST',              // ✅ method is POST
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({}),    // or include options if needed
+      }
+    );
+
+    if (!resp.ok) {
+      const text = await resp.text();
+      console.error('Save to Drive failed', text);
+      alert('Save to Drive failed – see console for details.');
+      return;
+    }
+
+    // optional: show success toast
+  } finally {
+    setSaving(false);
+  }
+}
+
+
+Then wire your button to it:
+
+<Button
+  variant="outline"
+  size="sm"
+  onClick={() => handleSavePackToDrive('lifestyle')}
+  disabled={saving}
+>
+  Save to Drive
+</Button>
+
+
+The important part: method: 'POST' and the first argument to fetch is just the URL string, not something like 'POST /api/...'.
+
+Once this is in place:
+
+Click Generate Lifestyle Pack → you get “Last run OK”.
+
+Click Save to Drive → you should hit your new backend route and get a success response (even if it just returns { ok: true } for now).
