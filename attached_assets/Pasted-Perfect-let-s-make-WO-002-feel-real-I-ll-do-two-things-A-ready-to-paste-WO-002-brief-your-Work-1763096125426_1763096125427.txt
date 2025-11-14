@@ -1,0 +1,242 @@
+Perfect, let’s make WO-002 feel real.
+
+I’ll do two things:
+
+A ready-to-paste WO-002 brief (your Work Item body in DTH).
+
+A clear picture of what Lifestyle + PDP packs should output when wired to the product_catalog.csv we just defined.
+
+1️⃣ Example WO-002 Brief (Work Item Body)
+
+You can paste this markdown straight into the Description/body of a new WI:
+
+## WO-002 – ColorCue Birthday & Thank You Homepage Heroes
+
+### Objective
+
+Design and implement updated homepage hero images and supporting PDP content for a focused set of **ColorCue** SKUs, using the existing Fab Card Co. brand system.
+
+This Work Item should produce:
+
+- Lifestyle hero image specs for the selected SKUs  
+- Aligned PDP & A+ content for those same SKUs  
+- Clear mapping from each hero slot to a real SKU in the product catalog  
+- Ready-to-use copy and filenames that can be wired into the website
+
+### In-Scope Line & SKUs
+
+**Line:** ColorCue  
+**Focus:** Birthday + Thank You
+
+These SKUs must be treated as the source of truth (no invented SKUs):
+
+1. `SKU-CC-BDAY-001` – Birthday Remix – Neon Confetti  
+2. `SKU-CC-BDAY-002` – Soft Surprise – Pastel Sprinkles  
+3. `SKU-CC-THANK-001` – Grateful Waves  
+
+These exist in `product_catalog.csv` with their canonical `product_name`, `collection`, `series`, `url_slug`, and `hero_slot`.
+
+### Hero Strategy
+
+We want a small, coherent hero set that showcases ColorCue’s range:
+
+- **Hero 1 – Bold Birthday (SKU-CC-BDAY-001)**  
+  - Feeling: energetic, bright, “party in motion”  
+  - Visual: neon confetti, bold color play, strong contrast  
+  - Slot: `home-hero-1`
+
+- **Hero 2 – Soft Birthday (SKU-CC-BDAY-002)**  
+  - Feeling: warm, tender, pastel and cozy  
+  - Visual: soft-focus backgrounds, pastel sprinkles, gentle light  
+  - Slot: `home-hero-2`
+
+- **Hero 3 – Thank You (SKU-CC-THANK-001)**  
+  - Feeling: modern, calm gratitude  
+  - Visual: simple, graphic, hints of grid / wave geometry  
+  - Slot: `thankyou-hero-1`
+
+### Lifestyle Pack Expectations
+
+The **Lifestyle Banner Pack** should:
+
+- Only reference SKUs that exist in the product catalog and are listed above  
+- For each in-scope SKU, propose:
+  - A specific hero use (slot)
+  - A consistent, KDP-/web-friendly filename pattern
+  - Meta title, description, and focus keywords
+
+Each lifestyle hero spec should be safe to hand directly to:
+
+- Designers (for art direction)  
+- Devs (for filenames + mapping to hero slots)  
+- SEO (for titles / descriptions / keywords)
+
+### PDP & A+ Content Expectations
+
+The **E-Com PDP & A+ Content Pack** should:
+
+- Generate PDP copy **only** for these three SKUs  
+- Respect the canonical `product_name` and `url_slug` from the catalog  
+- Provide:
+  - SEO-aware titles and slugs
+  - A short subtitle that matches ColorCue’s tone
+  - 3–7 feature/benefit bullets per SKU
+  - A long description aligned with the Lifestyle hero mood
+  - A+ sections with headings, body copy, and image ideas that can reuse Lifestyle hero assets where appropriate
+  - A short FAQ set that addresses likely objections for these card types
+
+This WO does **not** need to cover pricing logic, discounts, or multi-pack bundles; focus on core PDP presentation for individual cards.
+
+### Constraints & Notes
+
+- Do **not** invent new SKUs or product names; if the brief mentions something not found in `product_catalog`, treat it as out of scope and flag it in your notes.
+- Maintain ColorCue’s approved brand voice: bold, inclusive, witty, emotional, modern.
+- Avoid generic filler copy; each SKU’s PDP should feel distinct and emotionally specific.
+
+
+That’s your WO-002 kickoff spec.
+
+2️⃣ What the Lifestyle Pack Output Should Look Like (When Wired Correctly)
+
+Once Lifestyle is hooked into product_catalog and respects the “don’t invent SKUs” rule, its payload for WO-002 should look something like this (conceptually):
+
+{
+  "summary": "Lifestyle hero specs for ColorCue Birthday and Thank You cards.",
+  "entries": [
+    {
+      "sku": "SKU-CC-BDAY-001",
+      "hero_slot": "home-hero-1",
+      "filename": "fcc/lifestyle/colorcue_home-hero-1_SKU-CC-BDAY-001_1920x800.webp",
+      "meta_title": "Birthday Remix – Neon Confetti | ColorCue Birthday Card",
+      "meta_description": "A bold, neon confetti birthday card from ColorCue that turns any celebration into a party remix.",
+      "focus_keywords": [
+        "birthday card",
+        "neon confetti",
+        "colorful greeting card",
+        "ColorCue"
+      ],
+      "visual_direction": "Bright, high-energy birthday scene with neon confetti, bold geometric shapes, and a clear focal card. Cinematic 1920x800 crop with safe space on left/right for headlines.",
+      "notes": "Use ColorCue brand palette; avoid cluttered backgrounds so the card art remains the hero."
+    },
+    {
+      "sku": "SKU-CC-BDAY-002",
+      "hero_slot": "home-hero-2",
+      "filename": "fcc/lifestyle/colorcue_home-hero-2_SKU-CC-BDAY-002_1920x800.webp",
+      "meta_title": "Soft Surprise – Pastel Sprinkles | ColorCue Birthday Card",
+      "meta_description": "A warm pastel birthday card from ColorCue with soft, celebratory sprinkles and gentle light.",
+      "focus_keywords": [
+        "pastel birthday card",
+        "soft greeting card",
+        "ColorCue birthday"
+      ],
+      "visual_direction": "Soft-focus tabletop or mantle scene with pastel sprinkles, warm ambient light, and a single featured card in the foreground. 1920x800 hero crop.",
+      "notes": "Lean into creamy backgrounds and gentle gradients; avoid harsh shadows or high contrast."
+    },
+    {
+      "sku": "SKU-CC-THANK-001",
+      "hero_slot": "thankyou-hero-1",
+      "filename": "fcc/lifestyle/colorcue_thankyou-hero-1_SKU-CC-THANK-001_1920x800.webp",
+      "meta_title": "Grateful Waves | ColorCue Thank You Card",
+      "meta_description": "A modern, minimalist thank you card from ColorCue featuring a calm wave-inspired design.",
+      "focus_keywords": [
+        "thank you card",
+        "modern thank you",
+        "minimalist greeting card"
+      ],
+      "visual_direction": "Clean, modern desk or flat-lay with the Grateful Waves card centered, soft shadows, and subtle geometric props hinting at wave/grid motion.",
+      "notes": "Keep the scene uncluttered; this hero should feel calm and confident, not busy."
+    }
+  ],
+  "missing_products": []
+}
+
+
+Key things to notice:
+
+sku values are exactly from product_catalog.csv.
+
+hero_slot matches the column there (home-hero-1, etc.), or is inferred.
+
+filename uses a consistent, deterministic pattern combining line, hero slot, SKU, and resolution.
+
+meta_title / meta_description / focus_keywords are based on the real product_name + line, not made up names.
+
+No new SKUs, no “mystery” products.
+
+3️⃣ What the PDP & A+ Pack Output Should Look Like
+
+For the E-Com PDP & A+ Content Pack, wired to the same catalog and WO-002 brief, you’d expect something like:
+
+{
+  "seo_title": "Birthday Remix – Neon Confetti | ColorCue Greeting Card",
+  "seo_slug_hint": "birthday-remix-neon-confetti",
+  "short_subtitle": "A neon-splashed birthday remix for the friend who loves to go big.",
+  "feature_bullets": [
+    {
+      "label": "Bold neon confetti design",
+      "body": "A high-energy layout that makes the front of the card feel like a mini party.",
+      "pillar": "feature"
+    },
+    {
+      "label": "Perfect for big personalities",
+      "body": "Send it to the people who light up every room—they’ll appreciate the drama.",
+      "pillar": "benefit"
+    },
+    {
+      "label": "ColorCue quality you can feel",
+      "body": "Thick cardstock and vibrant inks that stand out on any shelf or mantle.",
+      "pillar": "emotion"
+    }
+  ],
+  "long_description": "Birthday Remix – Neon Confetti is ColorCue’s loud love letter to the friend who never does anything halfway. Think neon confetti, bold shapes, and a design that lets them know you see their big energy and celebrate it. Printed on premium cardstock with a smooth matte finish, this card feels just as good as it looks.",
+  "aplus_sections": [
+    {
+      "section_type": "hero",
+      "heading": "Turn Their Birthday Into a Remix",
+      "body": "Pair this card with a playlist, a party invite, or a surprise night out. It’s the perfect starting point for a celebration that feels like them.",
+      "image_ideas": [
+        "Lifestyle hero of the card on a party table with neon confetti and ColorCue branding subtly present."
+      ]
+    },
+    {
+      "section_type": "feature_grid",
+      "heading": "Why You’ll Love Birthday Remix",
+      "body": "Three quick reasons this card earns a permanent spot in your stash.",
+      "image_ideas": [
+        "Close-up of card texture",
+        "Flat-lay with matching envelopes and other ColorCue birthday cards"
+      ]
+    }
+  ],
+  "faqs": [
+    {
+      "question": "Does this card come with an envelope?",
+      "answer": "Yes, each card includes a coordinating envelope."
+    },
+    {
+      "question": "Is there writing inside the card?",
+      "answer": "This design is blank inside so you can write your own message."
+    }
+  ],
+  "cross_sell_suggestions": [
+    {
+      "label": "Soft Surprise – Pastel Sprinkles",
+      "rationale": "Recommend SKU-CC-BDAY-002 as a softer birthday option."
+    },
+    {
+      "label": "Grateful Waves",
+      "rationale": "Suggest SKU-CC-THANK-001 as a follow-up thank you card."
+    }
+  ]
+}
+
+
+In a fully multi-SKU setup, you might have an array of PDP entries keyed by sku, but the core principles stay the same:
+
+All content maps to real SKUs from product_catalog.
+
+seo_slug_hint lines up with url_slug.
+
+Names reflect product_name and not some invented variant.
+
+Cross-sell suggestions point to known SKUs (and ideally pass those SKUs through, not just labels).

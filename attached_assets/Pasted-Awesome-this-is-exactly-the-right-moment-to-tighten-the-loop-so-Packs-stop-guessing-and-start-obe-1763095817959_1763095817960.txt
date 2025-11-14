@@ -1,0 +1,319 @@
+Awesome, this is exactly the right moment to tighten the loop so Packs stop “guessing” and start obeying your real catalog.
+
+I’ll sketch:
+
+1. A **tiny `product_catalog.csv`** that fits your world (ColorCue / Out Loud / Midnight Express, etc.).
+2. How to **pipe that into DTH** and
+3. How to **point Lifestyle + PDP Packs at it so they can’t invent SKUs.**
+
+---
+
+## 1️⃣ Tiny `product_catalog.csv` spec
+
+Think of this as the **single source of truth** for products that Packs are allowed to talk about.
+
+Minimal, but powerful:
+
+```csv
+sku,line,collection,series,product_name,variant_name,format,size,finish,brand_slug,url_slug,hero_slot,is_active,price_msrp,currency,tags
+SKU-CC-BDAY-001,ColorCue,Birthday,Bold Brights,"Birthday Remix – Neon Confetti","Standard","card","5x7","matte","colorcue","birthday-remix-neon-confetti",home-hero-1,true,5.95,USD,"birthday;colorful;fun"
+SKU-CC-THANK-001,ColorCue,Thank You,Soft Pastels,"Grateful Waves","Standard","card","5x7","matte","colorcue","grateful-waves",home-hero-2,true,5.95,USD,"thank you;soft;minimal"
+SKU-OL-IDENTITY-001,Out Loud,Identity Pride,Core,"Who You Are Is Enough","Standard","card","5x7","silk","outloud","who-you-are-is-enough",home-hero-3,true,5.95,USD,"lgbtq;affirmation;pride"
+SKU-ME-ELEGANT-001,Midnight Express,Holiday,Elegant Evening,"Midnight Snowfall – Gold Foil","Standard","card","5x7","foil","midnightexpress","midnight-snowfall-gold-foil",holiday-hero-1,true,6.95,USD,"holiday;luxury;foil"
+```
+
+**Columns (short rationale):**
+
+* `sku` → canonical ID everything else references.
+* `line` → ColorCue / Out Loud / Midnight Express.
+* `collection` → Birthday / Identity Pride / Holiday, etc.
+* `series` → smaller grouping (“Bold Brights”, “Elegant Evening”, etc.).
+* `product_name` → what you show as main name on PDP / hero copy.
+* `variant_name` → if multiple variants exist; otherwise can be “Standard”.
+* `format` / `size` / `finish` → helpful for Packaging & Pre-Press and filters.
+* `brand_slug` → used to build URLs & routing.
+* `url_slug` → PDP slug (e.g. `/shop/colorcue/birthday-remix-neon-confetti`).
+* `hero_slot` → where this might appear (`home-hero-1`, `holiday-hero-1` etc.).
+* `is_active` → filter out archived SKUs.
+* `price_msrp` / `currency` → nice but optional for Packs.
+* `tags` → freeform keywords for search & clustering.
+
+You can expand later (occasion, audience, tone), but this is enough to stop hallucination and give Packs concrete anchors.
+
+---
+
+## 2️⃣ Get the catalog into DTH
+
+### Option A – quick & dirty: in-repo CSV → DB table
+
+1. Put `product_catalog.csv` somewhere like:
+   `server/data/product_catalog.csv`
+
+2. Create a DB table `product_catalog` (Drizzle/Prisma, pseudo):
+
+```ts
+// db/schema.ts
+export const productCatalog = pgTable('product_catalog', {
+  sku: text('sku').primaryKey(),
+  line: text('line').notNull(),
+  collection: text('collection').notNull(),
+  series: text('series').notNull(),
+  productName: text('product_name').notNull(),
+  variantName: text('variant_name').notNull(),
+  format: text('format').notNull(),
+  size: text('size').notNull(),
+  finish: text('finish').notNull(),
+  brandSlug: text('brand_slug').notNull(),
+  urlSlug: text('url_slug').notNull(),
+  heroSlot: text('hero_slot'),
+  isActive: boolean('is_active').default(true),
+  priceMsrp: numeric('price_msrp'),
+  currency: text('currency'),
+  tags: text('tags'),
+});
+```
+
+3. Simple importer script (run on deploy or nightly):
+
+```ts
+// scripts/importProductCatalog.ts
+import fs from 'node:fs';
+import Papa from 'papaparse';
+import { db } from '../server/db';
+import { productCatalog } from '../server/db/schema';
+
+async function run() {
+  const csv = fs.readFileSync('server/data/product_catalog.csv', 'utf8');
+  const parsed = Papa.parse(csv, { header: true });
+
+  const rows = parsed.data as any[];
+
+  await db.delete(productCatalog); // truncate then reinsert, or upsert
+
+  for (const row of rows) {
+    if (!row.sku) continue;
+
+    await db.insert(productCatalog).values({
+      sku: row.sku,
+      line: row.line,
+      collection: row.collection,
+      series: row.series,
+      productName: row.product_name,
+      variantName: row.variant_name,
+      format: row.format,
+      size: row.size,
+      finish: row.finish,
+      brandSlug: row.brand_slug,
+      urlSlug: row.url_slug,
+      heroSlot: row.hero_slot,
+      isActive: row.is_active === 'true',
+      priceMsrp: row.price_msrp ? Number(row.price_msrp) : null,
+      currency: row.currency || null,
+      tags: row.tags || '',
+    });
+  }
+}
+
+run().catch(console.error);
+```
+
+Now you have a **real table** the Packs can query.
+
+---
+
+## 3️⃣ Helper: `searchProductCatalog` for Packs
+
+Add a small helper in server:
+
+```ts
+// server/services/productCatalog.ts
+import { db } from '../db';
+import { productCatalog } from '../db/schema';
+
+export async function getProductsForLine(line: string) {
+  return db
+    .select()
+    .from(productCatalog)
+    .where(productCatalog.line.eq(line).and(productCatalog.isActive.eq(true)));
+}
+
+export async function getProductsForSkus(skus: string[]) {
+  return db
+    .select()
+    .from(productCatalog)
+    .where(productCatalog.sku.in(skus));
+}
+```
+
+You can also add variants like `getHeroProducts()` filtering on `hero_slot IS NOT NULL`.
+
+---
+
+## 4️⃣ Wire Lifestyle Pack to the catalog
+
+Right now, Lifestyle Pack probably just gets:
+
+```ts
+runSkill('generateLifestyleBannerPack', {
+  work_item_id,
+  work_item_title,
+  work_item_body,
+  work_item_notes,
+});
+```
+
+We’ll add a **`products` array** to that input, populated from the catalog.
+
+### a) Update the skill JSON input_schema
+
+`server/ai/skills/generateLifestyleBannerPack.json`:
+
+```jsonc
+{
+  "name": "generateLifestyleBannerPack",
+  "description": "Generate Lifestyle Banner Pack for a Work Item.",
+  "system_prompt": "You are the creative pod... [we'll tweak below]",
+  "input_schema": {
+    "type": "object",
+    "properties": {
+      "work_item_id": { "type": "string" },
+      "work_item_title": { "type": "string" },
+      "work_item_body": { "type": "string" },
+      "work_item_notes": { "type": "string" },
+      "products": {
+        "type": "array",
+        "description": "Canonical product catalog entries relevant to this work item.",
+        "items": {
+          "type": "object",
+          "properties": {
+            "sku": { "type": "string" },
+            "line": { "type": "string" },
+            "collection": { "type": "string" },
+            "series": { "type": "string" },
+            "product_name": { "type": "string" },
+            "variant_name": { "type": "string" },
+            "brand_slug": { "type": "string" },
+            "url_slug": { "type": "string" }
+          },
+          "required": ["sku", "product_name"]
+        }
+      }
+    },
+    "required": ["work_item_id", "work_item_title", "products"]
+  }
+}
+```
+
+### b) Strengthen the system prompt
+
+In the same skill JSON:
+
+```jsonc
+"system_prompt": "You are the Creative Pod for i³ Collective. You are given the canonical product catalog entries in `products`. You MUST:\n\n- Treat `products` as the only source of truth for SKUs and product names.\n- ONLY reference SKUs that appear in `products`.\n- NEVER invent new SKUs.\n- If the work item text mentions a product you cannot find in `products`, add it to a `missing_products` list in your output instead of guessing.\n\nGenerate lifestyle hero specs that map directly to these SKUs. Do not change sku values; reuse them exactly as provided."
+```
+
+### c) Change the handler to include products
+
+In `generateLifestyleBannerPack` handler:
+
+```ts
+// server/routes/workItemActions/generateLifestyleBannerPack.ts
+import { getProductsForLine } from '../../services/productCatalog';
+
+export const generateLifestyleBannerPack = createWorkItemActionHandler({
+  skillName: 'generateLifestyleBannerPack',
+  outputSchema: LifestyleBannerPackSchema,
+  save: saveLifestyleBannerPack,
+  buildInput: async ({ workItem, db }) => {
+    // Example: infer line from WI or tags; for now, you may hard-code for testing
+    const inferredLine = 'ColorCue'; // or parse from workItem.title/body
+
+    const products = await getProductsForLine(inferredLine);
+
+    return {
+      work_item_id: workItem.id,
+      work_item_title: workItem.title,
+      work_item_body: workItem.body,
+      work_item_notes: workItem.notes ?? '',
+      products: products.map((p) => ({
+        sku: p.sku,
+        line: p.line,
+        collection: p.collection,
+        series: p.series,
+        product_name: p.productName,
+        variant_name: p.variantName,
+        brand_slug: p.brandSlug,
+        url_slug: p.urlSlug,
+      })),
+    };
+  },
+});
+```
+
+(If your `createWorkItemActionHandler` already builds input, you can extend it with an optional `buildInput` or call `runSkill` manually; the key idea is: **include products**.)
+
+### d) Add Zod guard to enforce catalog SKUs
+
+You can go one step further and refine the Zod schema:
+
+```ts
+// when validating the pack output
+const output = LifestyleBannerPackSchema.superRefine((val, ctx) => {
+  const allowedSkus = new Set(input.products.map((p) => p.sku));
+  for (const item of val.entries) {
+    if (!allowedSkus.has(item.sku)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['entries', val.entries.indexOf(item), 'sku'],
+        message: `SKU ${item.sku} is not in catalog`,
+      });
+    }
+  }
+});
+```
+
+This way, if the model ever tries to invent `SKU-FAKE-123`, validation fails and you see a clear error instead of silently saving bad data.
+
+---
+
+## 5️⃣ Wire PDP/A+ pack similarly
+
+Same pattern for `generateEcomPdpAplusContentPack`:
+
+* Extend `input_schema` to include `products` (maybe narrowed to 1–3 SKUs that PDP is for).
+* Update `system_prompt`:
+
+  * “Only generate PDP/A+ content for SKUs present in `products`.”
+  * “Don’t invent new SKUs or product names.”
+* In the handler:
+
+  * Use `getProductsForSkus([...])` or `getProductsForLine(line)` depending on the WI.
+  * Pass those rows in as `products`.
+* Optional Zod refinement:
+
+  * Ensure `pdp_entries[].sku` values are all in `products[].sku`.
+
+---
+
+### Result: WO-002 and beyond use **real catalog**, not guesses
+
+Once this is in place:
+
+* For **Lifestyle Pack**:
+
+  * Every hero plan is tied to actual SKUs from `product_catalog`.
+  * If something’s missing, the pack tells you (“missing_products”) instead of inventing it.
+
+* For **PDP & A+ Content Pack**:
+
+  * All copy is attached to real SKUs and canonical product names.
+  * It becomes safe to auto-fill PDP fields in your CMS or Shopify import templates.
+
+Your workflow then becomes:
+
+1. Update `product_catalog.csv` → run importer.
+2. Create WO-00X for a line/segment.
+3. Run Packs.
+4. Know that **any SKU in the pack output is guaranteed to exist in your catalog.**
+
+If you’d like, I can next draft a **`product_catalog.csv` template specifically for Fab Card Co (ColorCue / Out Loud / Midnight Express)** with 5–10 example rows so you can literally paste it into a file and start testing this pattern on WO-002.
