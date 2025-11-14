@@ -1149,9 +1149,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   app.post("/api/work-items/:id/generate-lifestyle-heroes", 
-    isAuthenticated, 
-    requireOpsRole('ops_admin', 'design_pod', 'admin'),
-    async (req, res) => {
+    isDualAuthenticated,
+    async (req, res, next) => {
+      // If authenticated via session (req.user present), enforce RBAC
+      // If authenticated via API token (no req.user), skip RBAC
+      if (req.user) {
+        const allowedRoles = ['ops_admin', 'design_pod', 'admin'];
+        const userRoles = req.user.claims?.roles || [];
+        const hasPermission = allowedRoles.some(role => userRoles.includes(role));
+        
+        if (!hasPermission) {
+          return res.status(403).json({
+            ok: false,
+            error: "FORBIDDEN",
+            message: `Requires one of: ${allowedRoles.join(', ')}`,
+          });
+        }
+      }
+
       try {
         const workItemId = parseInt(req.params.id, 10);
         if (isNaN(workItemId)) {
@@ -1169,6 +1184,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         const body = bodyResult.data;
 
+        // Validate shotIds is not empty if provided
+        if (body.shotIds && body.shotIds.length === 0) {
+          return res.status(400).json({
+            ok: false,
+            error: "INVALID_REQUEST",
+            message: "shotIds array cannot be empty",
+          });
+        }
+
+        // Warn if dryRun and overwrite are both true (overwrite has no effect in dry run)
+        if (body.dryRun && body.overwrite) {
+          console.warn(`[LifestyleHeroes] Warning: overwrite flag has no effect when dryRun is true`);
+        }
+
         console.log(`[LifestyleHeroes] Generating heroes for WI-${workItemId}, dryRun=${body.dryRun}, overwrite=${body.overwrite}`);
 
         const result = await generateLifestyleHeroesForWorkItem(workItemId, {
@@ -1182,17 +1211,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
           return res.status(status).json(result);
         }
 
-        await postOpsEvent({
-          type: "lifestyle_heroes_generated",
-          actor: req.user?.claims?.sub || "system",
-          metadata: {
-            workItemId,
-            shotsGenerated: result.generated.length,
-            skipped: result.skippedExisting.length,
-            dryRun: result.dryRun,
-            overwrite: result.overwrite,
-          },
-        });
+        // Only log ops events for actual generation (not dry runs)
+        if (!body.dryRun) {
+          await postOpsEvent({
+            type: "lifestyle_heroes_generated",
+            actor: req.user?.claims?.sub || "api_token",
+            metadata: {
+              workItemId,
+              shotsGenerated: result.generated.length,
+              skipped: result.skippedExisting.length,
+              overwrite: result.overwrite,
+            },
+          });
+        }
 
         return res.status(200).json(result);
       } catch (err: any) {
