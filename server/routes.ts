@@ -2,7 +2,8 @@ import type { Express, RequestHandler } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { db } from "./db";
-import { sql } from "drizzle-orm";
+import { sql, eq, desc } from "drizzle-orm";
+import { workItemPacks } from "@shared/schema";
 import { setupAuth, isAuthenticated } from "./replitAuth";
 import { requireScopes } from "./security/scopes_and_csp";
 import { searchRoute } from "./api_search_route";
@@ -1128,7 +1129,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Register all pack generation routes from the pack registry
   for (const config of PACK_REGISTRY) {
-    const path = `/api/work-items/:id/${config.endpointSuffix}`;
+    const path = `/api/work-items/:id/actions/${config.endpointSuffix}`;
     const handler = createPackActionHandler(config);
     app.post(path, isAuthenticated, handler);
   }

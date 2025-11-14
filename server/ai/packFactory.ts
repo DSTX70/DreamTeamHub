@@ -112,7 +112,6 @@ export async function saveWorkItemPackGeneric(input: {
         packData: packData as any,
         version: nextVersion,
         createdAt: now,
-        updatedAt: now,
       })
       .returning();
 

@@ -73,6 +73,11 @@ Recent improvements (November 2025):
 - Aligned all 14 skill JSON prompts with their Zod schemas to eliminate LLM validation failures
 - Updated prompts with **CRITICAL: YOU MUST RETURN VALID JSON** instructions and comprehensive examples
 - Verified e2e pack generation with proper version history (agent_governance v1, pricing_monetization v1/v2/v3)
+- **November 14, 2025**: Fixed pack generation persistence bugs:
+  - Added missing imports (`eq`, `desc` from drizzle-orm, `workItemPacks` from schema) to server/routes.ts
+  - Removed invalid `updatedAt` field from `saveWorkItemPackGeneric` function (schema only has `createdAt`)
+  - Fixed route registration path mismatch: backend now correctly registers `/api/work-items/:id/actions/${endpointSuffix}` to match frontend calls
+  - Verified end-to-end pack generation with automated testing: lifecycle pack v1/v2 successfully created and displayed in WorkItemPacksPanel
 
 The CI/CD pipeline uses GitHub Actions for automated testing and environment health validation. Production health checks include `/api/healthz` (readiness) and `/api/healthz/livez` (liveness) endpoints, with Prometheus metrics and deployment tracking for observability.
 
