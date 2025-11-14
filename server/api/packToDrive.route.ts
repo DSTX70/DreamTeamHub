@@ -65,7 +65,28 @@ export async function postSavePackToDrive(req: Request, res: Response) {
       return res.status(400).json({ error: "Invalid work item ID" });
     }
 
-    const validPackTypes: PackType[] = ["lifestyle", "patent", "launch", "website_audit"];
+    const validPackTypes: PackType[] = [
+      "lifestyle", 
+      "patent", 
+      "launch", 
+      "website_audit",
+      "risk_compliance",
+      "agent_lab_academy",
+      "agent_governance",
+      "pricing_monetization",
+      "data_stewardship_metrics",
+      "globalcollabs_partnership",
+      "packaging_prepress",
+      "product_line_sku_tree",
+      "ecom_pdp_aplus_content",
+      "social_campaign_content_calendar",
+      "implementation_runbook_sop",
+      "support_playbook_knowledge_base",
+      "retail_wholesale_readiness",
+      "experiment_optimization",
+      "localization_market_expansion",
+      "customer_journey_lifecycle"
+    ];
     if (!validPackTypes.includes(packType)) {
       return res.status(400).json({ error: `Invalid pack type: ${packType}` });
     }

@@ -2,9 +2,29 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { Upload, Loader2, ExternalLink } from "lucide-react";
-import { apiRequest, queryClient } from "@/lib/queryClient";
+import { queryClient } from "@/lib/queryClient";
 
-type PackType = "lifestyle" | "patent" | "launch" | "website_audit";
+type PackType = 
+  | "lifestyle" 
+  | "patent" 
+  | "launch" 
+  | "website_audit" 
+  | "risk_compliance" 
+  | "agent_lab_academy"
+  | "agent_governance"
+  | "pricing_monetization"
+  | "data_stewardship_metrics"
+  | "globalcollabs_partnership"
+  | "packaging_prepress"
+  | "product_line_sku_tree"
+  | "ecom_pdp_aplus_content"
+  | "social_campaign_content_calendar"
+  | "implementation_runbook_sop"
+  | "support_playbook_knowledge_base"
+  | "retail_wholesale_readiness"
+  | "experiment_optimization"
+  | "localization_market_expansion"
+  | "customer_journey_lifecycle";
 
 interface SavePackToDriveButtonProps {
   workItemId: number;
@@ -19,6 +39,22 @@ const packTypeLabels: Record<PackType, string> = {
   patent: "Patent Claims Pack",
   launch: "Launch Plan Pack",
   website_audit: "Website Audit Pack",
+  risk_compliance: "Risk & Compliance Pack",
+  agent_lab_academy: "Agent Lab Academy Pack",
+  agent_governance: "Agent Governance Pack",
+  pricing_monetization: "Pricing & Monetization Pack",
+  data_stewardship_metrics: "Data Stewardship & Metrics Pack",
+  globalcollabs_partnership: "GlobalCollabs Partnership Pack",
+  packaging_prepress: "Packaging & Pre-Press Pack",
+  product_line_sku_tree: "Product Line & SKU Tree Pack",
+  ecom_pdp_aplus_content: "E-Com PDP & A+ Content Pack",
+  social_campaign_content_calendar: "Social Campaign & Content Calendar Pack",
+  implementation_runbook_sop: "Implementation Runbook & SOP Pack",
+  support_playbook_knowledge_base: "Support Playbook & Knowledge Base Pack",
+  retail_wholesale_readiness: "Retail & Wholesale Readiness Pack",
+  experiment_optimization: "Experiment & Optimization Pack",
+  localization_market_expansion: "Localization & Market Expansion Pack",
+  customer_journey_lifecycle: "Customer Journey & Lifecycle Pack",
 };
 
 export function SavePackToDriveButton({
@@ -39,10 +75,12 @@ export function SavePackToDriveButton({
   const handleSaveToDrive = async () => {
     setIsSaving(true);
     try {
-      const response = await apiRequest(
+      const response = await fetch(
         `/api/work-items/${workItemId}/packs/${packType}/save-to-drive`,
         {
           method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
         }
       );
 

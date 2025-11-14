@@ -1,0 +1,243 @@
+Exactly — you’re not missing anything.
+Right now the page shows:
+
+* Description
+* Details (Work Order WO-001)
+* AI Actions
+* Files
+
+…and **no Packs viewer**. The packs are being generated & saved, but there’s no UI yet to *display* them. So yes, we need to add a small **“Work Item Packs” panel** under AI Actions.
+
+I’ll give you a tiny, self-contained patch:
+
+1. A backend route to fetch all packs for a work item.
+2. A React `<WorkItemPacksPanel>` that shows them (starting with a simple JSON view).
+3. How to drop it into the work-item page right under “AI Actions”.
+
+---
+
+## 1️⃣ Backend: list packs for a Work Item
+
+Add a route like this:
+
+```ts
+// server/routes/workItemPacksList.ts
+import { Router } from 'express';
+import { db } from '../db';
+// adjust import for your Drizzle/Prisma schema:
+import { workItemPacks } from '../db/schema';
+
+const router = Router();
+
+/**
+ * GET /api/work-items/:workItemId/packs
+ * Returns all packs for this work item.
+ */
+router.get('/api/work-items/:workItemId/packs', async (req, res, next) => {
+  try {
+    const { workItemId } = req.params;
+
+    const rows = await db
+      .select()
+      .from(workItemPacks)
+      .where(workItemPacks.workItemId.eq(workItemId))
+      .orderBy(workItemPacks.createdAt.desc());
+
+    res.json(rows);
+  } catch (err) {
+    next(err);
+  }
+});
+
+export default router;
+```
+
+Mount it in your main routes:
+
+```ts
+// server/routes.ts
+import workItemPacksListRoutes from './routes/workItemPacksList';
+
+app.use(workItemPacksListRoutes);
+```
+
+> This assumes your `workItemPacks` table has columns like `workItemId`, `packType`, `payload`, `createdAt`.
+> If the names differ, just tweak the query accordingly.
+
+---
+
+## 2️⃣ Frontend: WorkItemPacksPanel component
+
+Create a simple panel that:
+
+* Fetches `/api/work-items/:id/packs`
+* Groups by `packType`
+* Renders each pack with a friendly label and a `<pre>` JSON view (we can pretty it up later; right now you just need to *see* the Lifestyle data).
+
+```tsx
+// app/components/work-items/WorkItemPacksPanel.tsx
+import React, { useEffect, useState } from 'react';
+import { Button } from '@/components/ui/button';
+
+type WorkItemPackRow = {
+  id: string;
+  workItemId: string;
+  packType: string;
+  payload: any;
+  createdAt?: string;
+};
+
+const PACK_LABELS: Record<string, string> = {
+  lifestyle_banner: 'Lifestyle Pack',
+  patent_claims: 'Patent Claims Pack',
+  launch_plan: 'Launch Plan Pack',
+  website_audit: 'Website Audit Pack',
+  risk_compliance: 'Risk & Compliance Pack',
+  agent_lab_academy: 'Agent Lab Academy Pack',
+  agent_governance: 'Agent Governance Pack',
+  pricing_monetization: 'Pricing & Monetization Pack',
+  data_stewardship_metrics: 'Data Stewardship & Metrics Pack',
+  globalcollabs_partnership: 'GlobalCollabs Partnerships Pack',
+  packaging_prepress: 'Packaging & Pre-Press Pack',
+  product_line_sku_tree: 'Product Line & SKU Tree Pack',
+  ecom_pdp_aplus_content: 'E-Com PDP & A+ Content Pack',
+  social_campaign_content_calendar: 'Social Campaign & Content Calendar Pack',
+  implementation_runbook_sop: 'Implementation Runbook & SOP Pack',
+  support_playbook_knowledge_base: 'Support Playbook & Knowledge Base Pack',
+  retail_wholesale_readiness: 'Retail & Wholesale Readiness Pack',
+  experiment_optimization: 'Experiment & Optimization Pack',
+  localization_market_expansion: 'Localization & Market Expansion Pack',
+  customer_journey_lifecycle: 'Customer Journey & Lifecycle Pack',
+};
+
+type Props = {
+  workItemId: string;
+};
+
+export function WorkItemPacksPanel({ workItemId }: Props) {
+  const [packs, setPacks] = useState<WorkItemPackRow[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  async function loadPacks() {
+    setLoading(true);
+    try {
+      const resp = await fetch(`/api/work-items/${workItemId}/packs`);
+      if (!resp.ok) {
+        console.error('Failed to fetch packs', await resp.text());
+        return;
+      }
+      const data = await resp.json();
+      setPacks(data);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    loadPacks();
+  }, [workItemId]);
+
+  if (!packs.length) {
+    return (
+      <div className="mt-8 rounded-xl border border-border bg-card p-4">
+        <div className="mb-2 flex items-center justify-between">
+          <h2 className="text-sm font-semibold">Work Item Packs</h2>
+          <Button size="xs" variant="outline" onClick={loadPacks} disabled={loading}>
+            {loading ? 'Refreshing…' : 'Refresh'}
+          </Button>
+        </div>
+        <p className="text-xs text-muted-foreground">
+          No packs generated yet for this work item.
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="mt-8 rounded-xl border border-border bg-card p-4">
+      <div className="mb-4 flex items-center justify-between">
+        <h2 className="text-sm font-semibold">Work Item Packs</h2>
+        <Button size="xs" variant="outline" onClick={loadPacks} disabled={loading}>
+          {loading ? 'Refreshing…' : 'Refresh'}
+        </Button>
+      </div>
+
+      <div className="space-y-4">
+        {packs.map((pack) => {
+          const label = PACK_LABELS[pack.packType] ?? pack.packType;
+          return (
+            <details
+              key={pack.id}
+              className="rounded-lg border border-border bg-background p-3"
+              open={pack.packType === 'lifestyle_banner'} // auto-open Lifestyle if present
+            >
+              <summary className="cursor-pointer text-sm font-medium">
+                {label}
+                {pack.createdAt && (
+                  <span className="ml-2 text-xs text-muted-foreground">
+                    ({new Date(pack.createdAt).toLocaleString()})
+                  </span>
+                )}
+              </summary>
+              <pre className="mt-2 max-h-96 overflow-auto rounded bg-muted p-3 text-xs">
+                {JSON.stringify(pack.payload, null, 2)}
+              </pre>
+            </details>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+```
+
+> This is intentionally simple: one expand/collapse card per pack, JSON rendered underneath.
+> Later we can replace the JSON with a pretty layout for Lifestyle, PDP, etc.
+
+---
+
+## 3️⃣ Mount the Packs panel on the Work Item page
+
+Now hook this into the work-item detail page (the one at `/work-items/7` that currently shows Description, AI Actions, Files).
+
+In whatever component renders that page (likely `WorkItemPage.tsx` or `WorkItemDetail.tsx`), import and drop the panel under **AI Actions** and above **Files**.
+
+Roughly:
+
+```tsx
+// app/pages/work-items/[id].tsx (or similar)
+import { WorkItemPacksPanel } from '@/components/work-items/WorkItemPacksPanel';
+
+// inside the component render:
+return (
+  <div className="space-y-8">
+    {/* existing Description / Details section */}
+
+    {/* existing AI Actions section */}
+
+    <WorkItemPacksPanel workItemId={workItem.id} />
+
+    {/* existing Files / Attachments section */}
+  </div>
+);
+```
+
+Re-build / refresh, then:
+
+1. Go back to `/work-items/7`
+2. Scroll past **AI Actions**
+3. You should now see a **“Work Item Packs”** box.
+4. Because you already ran `Generate Lifestyle Pack`, you should see at least one card:
+
+   * Title: **Lifestyle Pack**
+   * JSON payload showing headline, story, visual directions, etc.
+
+If it says “No packs generated yet” even after you’ve run `Generate Lifestyle Pack`, hit **Refresh** in that panel. If it still shows nothing, that would mean the saver isn’t writing to `workItemPacks` correctly; but given `Generate Lifestyle Pack` showed “Last run OK”, it’s very likely there *is* a row, and the viewer will pick it up once this panel is in place.
+
+---
+
+So to answer your question directly:
+
+> “None of these options exist. Do we need to add them?”
+
+Yes. The Packs viewer didn’t exist yet; the steps above add a **Work Item Packs panel** so you can finally see the Lifestyle pack for WO-001 and every other Pack you run going forward.
