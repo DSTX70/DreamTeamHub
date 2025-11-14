@@ -2,11 +2,11 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Sparkles, ChevronDown, ChevronUp, PuzzleIcon, MegaphoneIcon, SearchIcon, ShieldIcon, GraduationCapIcon, ScaleIcon, DollarSignIcon, BarChartIcon, HandshakeIcon, PackageIcon, NetworkIcon, ShoppingCartIcon, CalendarIcon } from "lucide-react";
+import { Sparkles, ChevronDown, ChevronUp, PuzzleIcon, MegaphoneIcon, SearchIcon, ShieldIcon, GraduationCapIcon, ScaleIcon, DollarSignIcon, BarChartIcon, HandshakeIcon, PackageIcon, NetworkIcon, ShoppingCartIcon, CalendarIcon, BookOpenIcon, HeadphonesIcon, StoreIcon, FlaskConicalIcon, GlobeIcon, UsersIcon } from "lucide-react";
 import { SavePackToDriveButton } from "../SavePackToDriveButton";
 
-type ActionKey = "lifestyle" | "patent" | "launch" | "audit" | "riskCompliance" | "agentAcademy" | "agentGovernance" | "pricingMonetization" | "dataMetrics" | "globalCollabs" | "packagingPrePress" | "productLineSkuTree" | "ecomPdpAplus" | "socialCampaign";
-type PackType = "lifestyle" | "patent" | "launch" | "website_audit" | "risk_compliance" | "agent_lab_academy" | "agent_governance" | "pricing_monetization" | "data_stewardship_metrics" | "globalcollabs_partnership" | "packaging_prepress" | "product_line_sku_tree" | "ecom_pdp_aplus_content" | "social_campaign_content_calendar";
+type ActionKey = "lifestyle" | "patent" | "launch" | "audit" | "riskCompliance" | "agentAcademy" | "agentGovernance" | "pricingMonetization" | "dataMetrics" | "globalCollabs" | "packagingPrePress" | "productLineSkuTree" | "ecomPdpAplus" | "socialCampaign" | "implementationRunbook" | "supportPlaybook" | "retailWholesale" | "experimentOptimization" | "localizationMarket" | "customerJourney";
+type PackType = "lifestyle" | "patent" | "launch" | "website_audit" | "risk_compliance" | "agent_lab_academy" | "agent_governance" | "pricing_monetization" | "data_stewardship_metrics" | "globalcollabs_partnership" | "packaging_prepress" | "product_line_sku_tree" | "ecom_pdp_aplus_content" | "social_campaign_content_calendar" | "implementation_runbook_sop" | "support_playbook_knowledge_base" | "retail_wholesale_readiness" | "experiment_optimization" | "localization_market_expansion" | "customer_journey_lifecycle";
 
 type ActionStateStatus = "idle" | "running" | "ok" | "error";
 
@@ -112,6 +112,42 @@ const ACTION_CONFIG: Record<
     endpointSuffix: "generate-social-campaign-content-calendar-pack",
     packType: "social_campaign_content_calendar",
   },
+  implementationRunbook: {
+    label: "Generate Implementation Runbook & SOP Pack",
+    Icon: BookOpenIcon,
+    endpointSuffix: "generate-implementation-runbook-sop-pack",
+    packType: "implementation_runbook_sop",
+  },
+  supportPlaybook: {
+    label: "Generate Support Playbook & Knowledge Base Pack",
+    Icon: HeadphonesIcon,
+    endpointSuffix: "generate-support-playbook-knowledge-base-pack",
+    packType: "support_playbook_knowledge_base",
+  },
+  retailWholesale: {
+    label: "Generate Retail & Wholesale Readiness Pack",
+    Icon: StoreIcon,
+    endpointSuffix: "generate-retail-wholesale-readiness-pack",
+    packType: "retail_wholesale_readiness",
+  },
+  experimentOptimization: {
+    label: "Generate Experiment & Optimization Pack",
+    Icon: FlaskConicalIcon,
+    endpointSuffix: "generate-experiment-optimization-pack",
+    packType: "experiment_optimization",
+  },
+  localizationMarket: {
+    label: "Generate Localization & Market Expansion Pack",
+    Icon: GlobeIcon,
+    endpointSuffix: "generate-localization-market-expansion-pack",
+    packType: "localization_market_expansion",
+  },
+  customerJourney: {
+    label: "Generate Customer Journey & Lifecycle Pack",
+    Icon: UsersIcon,
+    endpointSuffix: "generate-customer-journey-lifecycle-pack",
+    packType: "customer_journey_lifecycle",
+  },
 };
 
 export function WorkItemActionsPanel({ workItemId }: WorkItemActionsPanelProps) {
@@ -131,6 +167,12 @@ export function WorkItemActionsPanel({ workItemId }: WorkItemActionsPanelProps) 
     productLineSkuTree: { status: "idle" },
     ecomPdpAplus: { status: "idle" },
     socialCampaign: { status: "idle" },
+    implementationRunbook: { status: "idle" },
+    supportPlaybook: { status: "idle" },
+    retailWholesale: { status: "idle" },
+    experimentOptimization: { status: "idle" },
+    localizationMarket: { status: "idle" },
+    customerJourney: { status: "idle" },
   });
   const { toast } = useToast();
 
