@@ -1154,8 +1154,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // If authenticated via session (req.user present), enforce RBAC
       // If authenticated via API token (no req.user), skip RBAC
       if (req.user) {
+        const { getUserRoles } = await import("./security/roles");
+        const user = req.user as any;
+        const userId = user?.claims?.sub || "";
+        const email = user?.claims?.email || "";
+        const userRoles = getUserRoles(userId, email);
+        
         const allowedRoles = ['ops_admin', 'design_pod', 'admin'];
-        const userRoles = req.user.claims?.roles || [];
         const hasPermission = allowedRoles.some(role => userRoles.includes(role));
         
         if (!hasPermission) {
@@ -1213,9 +1218,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         // Only log ops events for actual generation (not dry runs)
         if (!body.dryRun) {
+          const user = req.user as any;
           await postOpsEvent({
             type: "lifestyle_heroes_generated",
-            actor: req.user?.claims?.sub || "api_token",
+            actor: user?.claims?.sub || "api_token",
             metadata: {
               workItemId,
               shotsGenerated: result.generated.length,
