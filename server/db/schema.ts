@@ -55,3 +55,26 @@ export const inventoryEvents = pgTable("inventory_events", {
   idxTypeTime: index("inv_events_type_time_idx").on(t.type, t.createdAt),
   idxSkuTime: index("inv_events_sku_time_idx").on(t.sku, t.createdAt),
 }));
+
+export const productCatalog = pgTable("product_catalog", {
+  sku: varchar("sku", { length: 128 }).primaryKey(),
+  line: text("line").notNull(),
+  collection: text("collection").notNull(),
+  series: text("series").notNull(),
+  productName: text("product_name").notNull(),
+  variantName: text("variant_name").notNull(),
+  format: text("format").notNull(),
+  size: text("size").notNull(),
+  finish: text("finish").notNull(),
+  brandSlug: text("brand_slug").notNull(),
+  urlSlug: text("url_slug").notNull(),
+  heroSlot: text("hero_slot"),
+  isActive: boolean("is_active").default(true).notNull(),
+  priceMsrp: numeric("price_msrp", { precision: 10, scale: 2 }),
+  currency: varchar("currency", { length: 3 }),
+  tags: text("tags"),
+}, (t) => ({
+  idxLine: index("product_catalog_line_idx").on(t.line),
+  idxBrandSlug: index("product_catalog_brand_slug_idx").on(t.brandSlug),
+  idxActive: index("product_catalog_active_idx").on(t.isActive),
+}));

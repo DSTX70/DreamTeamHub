@@ -1,0 +1,10 @@
+sku,line,collection,series,product_name,variant_name,format,size,finish,brand_slug,url_slug,hero_slot,is_active,price_msrp,currency,tags
+SKU-CC-BDAY-001,ColorCue,Birthday,Neon Remix,"Birthday Remix – Neon Confetti","Standard","card","5x7","matte","colorcue","birthday-remix-neon-confetti","home-hero-1",true,5.95,USD,"birthday;colorful;fun"
+SKU-CC-BDAY-002,ColorCue,Birthday,Soft Surprises,"Soft Surprise – Pastel Sprinkles","Standard","card","5x7","matte","colorcue","soft-surprise-pastel-sprinkles","home-hero-2",true,5.95,USD,"birthday;soft;pastel"
+SKU-CC-THANK-001,ColorCue,Thank You,Gratitude Grid,"Grateful Waves","Standard","card","5x7","matte","colorcue","grateful-waves","thankyou-hero-1",true,5.95,USD,"thank you;modern;minimal"
+SKU-OL-IDENTITY-001,Out Loud,Identity Pride,Core,"Who You Are Is Enough","Standard","card","5x7","silk","outloud","who-you-are-is-enough","outloud-hero-1",true,5.95,USD,"lgbtq;affirmation;pride"
+SKU-OL-LOVE-001,Out Loud,Love & Romance,Neon Hearts,"Say It Like You Mean It","Standard","card","5x7","silk","outloud","say-it-like-you-mean-it","outloud-hero-2",true,5.95,USD,"love;romance;bold"
+SKU-OL-COMINGOUT-001,Out Loud,Milestones,Coming Out,"Welcome To Your Out Loud Era","Standard","card","5x7","silk","outloud","welcome-to-your-out-loud-era","milestone-hero-1",true,5.95,USD,"coming out;milestone;celebration"
+SKU-ME-ELEGANT-001,Midnight Express,Holiday,Elegant Evening,"Midnight Snowfall – Gold Foil","Standard","card","5x7","foil","midnightexpress","midnight-snowfall-gold-foil","holiday-hero-1",true,6.95,USD,"holiday;luxury;foil"
+SKU-ME-KWANZAA-001,Midnight Express,Kwanzaa,Luminous Kwanzaa,"Luminous Kwanzaa Lights","Standard","card","5x7","foil","midnightexpress","luminous-kwanzaa-lights","holiday-hero-2",true,6.95,USD,"kwanzaa;celebration;foil"
+SKU-ME-NEWYEAR-001,Midnight Express,New Year,Midnight Countdown,"Midnight Countdown – Glitter Skyline","Standard","card","5x7","glitter","midnightexpress","midnight-countdown-glitter-skyline","newyear-hero-1",true,6.95,USD,"new year;celebration;glitter"
