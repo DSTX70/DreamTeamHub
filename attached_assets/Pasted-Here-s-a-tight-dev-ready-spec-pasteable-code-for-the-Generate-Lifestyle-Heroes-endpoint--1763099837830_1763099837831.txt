@@ -1,0 +1,483 @@
+Here’s a tight, dev-ready spec + pasteable code for the **Generate Lifestyle Heroes** endpoint.
+
+---
+
+## Tiny Spec – `Generate Lifestyle Heroes` (Dev Pod)
+
+### Feature Name
+
+**Lifestyle Hero Image Generator**
+
+### Goal
+
+Automate creation of lifestyle hero images (Desktop / Tablet / Mobile) for a Work Item using existing **Lifestyle Pack v2** data (export_plan + shot_boards) and upload them to object storage with the exact keys the pack defines.
+
+---
+
+### Inputs
+
+**Route:**
+
+* `POST /api/work-items/:id/generate-lifestyle-heroes`
+
+**Path params:**
+
+* `id` – Work Item ID (string or number depending on your DB schema; spec assumes string).
+
+**Request body (JSON):**
+
+Validated by Zod:
+
+```ts
+{
+  shotIds?: string[];   // optional subset of shot_ids to generate (e.g., ["OL-1", "OL-2"])
+  dryRun?: boolean;     // if true, don’t call image model or upload, just compute plan
+  overwrite?: boolean;  // if false, skip sizes that already exist in S3
+}
+```
+
+---
+
+### Behavior
+
+1. **Auth & permissions**
+
+   * Require authenticated user.
+   * Require role that can mutate Work Items / generate assets (e.g., `role in ["admin","ops","design_pod"]`).
+
+2. **Validate inputs**
+
+   * Validate `req.params.id` is a valid Work Item ID.
+   * Validate body with Zod schema above.
+
+3. **Fetch Lifestyle Pack for Work Item**
+
+   * Load **Lifestyle Pack v2** for `workItemId` from DB / packs table.
+   * If not found → `404 { ok: false, error: "LIFESTYLE_PACK_NOT_FOUND" }`.
+
+4. **Extract data**
+
+   * `export_plan`: array of entries like:
+
+     ```ts
+     {
+       sku: string;
+       width: number;
+       height: number;
+       format: "webp";
+       shot_id: string;
+       base_key: string;
+       filename: string;      // "fcc/lifestyle/..."
+       size_label: string;    // "Desktop" | "Tablet" | "Mobile"
+       is_primary?: boolean;
+     }
+     ```
+
+   * `shot_boards`: array of entries like:
+
+     ```ts
+     {
+       shot_id: string;
+       scenario: string;
+       camera: string;
+       framing: string;
+       lighting: string;
+       color_palette: string;
+       notes?: string;
+       sku: string;
+       card_title: string;
+       collection: string;
+     }
+     ```
+
+5. **Filter by shotIds (optional)**
+
+   * If `body.shotIds` is provided, only consider `export_plan` rows where `shot_id` is in that list.
+   * Otherwise, use all `export_plan` rows.
+
+6. **Group export_plan by shot_id**
+
+   * Build a map: `shot_id -> export_plan[]` (rows for Desktop/Tablet/Mobile).
+
+7. **Determine work to do**
+   For each `shot_id` group:
+
+   * If `dryRun === true` → just record planned sizes and filenames; do **not** call the model or upload.
+   * If `overwrite === false`:
+
+     * For each export row, check S3 (or storage) to see if `filename` already exists:
+
+       * If exists → add to `skippedExisting`.
+       * If missing → add to `toGenerate`.
+
+8. **Generate master image per shot_id**
+
+   * For each `shot_id` that has at least one size in `toGenerate`:
+
+     * Find corresponding `shot_board`.
+     * Build prompt from `shot_board` + your hero brief generator (the natural-language text we wrote for OL-1/2/3 – that can be a helper).
+     * Call OpenAI Images (or your chosen model) once to create a **master image** (e.g., `1792x1024` or similar).
+     * Store the image as a Buffer in memory (`masterBuffer`).
+
+9. **Crop + upload**
+
+   * For each target row in `toGenerate` for that `shot_id`:
+
+     * Use `sharp` (or equivalent) to:
+
+       * Resize/crop to `(width, height)` with `fit: "cover"` and `position: "centre"` or per-shot rules.
+       * Encode as WEBP at quality ~90.
+     * Upload to S3 (or your bucket) with:
+
+       * `Key = filename` from `export_plan`.
+       * `ContentType = "image/webp"`.
+
+10. **Logging / Ops**
+
+    * Log one analytics event per Work Item:
+
+      * `work_item_id`
+      * `shots_generated`, `sizes_generated`, `sizes_skippedExisting`
+      * `dryRun`, `overwrite`
+    * Optionally attach a short note to the Work Item activity log:
+
+      * Example:
+        “Generated 9 lifestyle hero images for shots OL-1, OL-2, OL-3 (Desktop/Tablet/Mobile).”
+
+---
+
+### API Shape – Responses
+
+**Success (200):**
+
+```ts
+{
+  ok: true;
+  workItemId: string;
+  dryRun: boolean;
+  overwrite: boolean;
+  generated: Array<{
+    shot_id: string;
+    filename: string;
+    width: number;
+    height: number;
+  }>;
+  skippedExisting: Array<{
+    shot_id: string;
+    filename: string;
+    reason: "EXISTS";
+  }>;
+  missingShots: string[]; // shot_ids present in shotIds/body but not found in pack
+}
+```
+
+**Error examples:**
+
+* 404:
+
+  ```ts
+  { ok: false, error: "LIFESTYLE_PACK_NOT_FOUND" }
+  ```
+
+* 400 (Zod validation / bad input):
+
+  ```ts
+  { ok: false, error: "INVALID_REQUEST", details: zodErrors }
+  ```
+
+* 500 (unexpected):
+
+  ```ts
+  { ok: false, error: "INTERNAL_ERROR" }
+  ```
+
+---
+
+## Minimal Zod Schema + Express Route
+
+Assuming:
+
+* TypeScript
+* Express
+* `zod`
+* A service function `generateLifestyleHeroesForWorkItem(workItemId, options)` that implements the behavior above.
+* An auth middleware `requireUser` that sets `req.user`.
+
+### 1. Zod schema (e.g., in `schemas/workItemImageGeneration.ts`)
+
+```ts
+// schemas/workItemImageGeneration.ts
+import { z } from "zod";
+
+export const generateLifestyleHeroesParamsSchema = z.object({
+  id: z.string().min(1, "workItemId is required"),
+});
+
+export const generateLifestyleHeroesBodySchema = z.object({
+  shotIds: z.array(z.string().min(1)).optional(),
+  dryRun: z.boolean().optional().default(false),
+  overwrite: z.boolean().optional().default(false),
+});
+
+export type GenerateLifestyleHeroesParams = z.infer<
+  typeof generateLifestyleHeroesParamsSchema
+>;
+
+export type GenerateLifestyleHeroesBody = z.infer<
+  typeof generateLifestyleHeroesBodySchema
+>;
+```
+
+---
+
+### 2. Service function (skeleton) – `services/lifestyleHeroes.ts`
+
+This is intentionally stripped to the essentials; your dev can fill in integrations:
+
+```ts
+// services/lifestyleHeroes.ts
+import OpenAI from "openai";
+import sharp from "sharp";
+import { getLifestylePackForWorkItem } from "../packs/lifestyle";
+import { checkObjectExists, putObject } from "../lib/storage"; // wrap S3 here
+
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY!,
+});
+
+interface GenerateOptions {
+  shotIds?: string[];
+  dryRun?: boolean;
+  overwrite?: boolean;
+}
+
+export async function generateLifestyleHeroesForWorkItem(
+  workItemId: string,
+  options: GenerateOptions = {}
+) {
+  const { shotIds, dryRun = false, overwrite = false } = options;
+
+  const pack = await getLifestylePackForWorkItem(workItemId);
+  if (!pack) {
+    return {
+      ok: false as const,
+      error: "LIFESTYLE_PACK_NOT_FOUND" as const,
+    };
+  }
+
+  const exportPlan = pack.export_plan as any[];
+  const shotBoards = pack.shot_boards as any[];
+
+  // Optional filter by shotIds
+  const filteredPlan = shotIds && shotIds.length > 0
+    ? exportPlan.filter((row) => shotIds.includes(row.shot_id))
+    : exportPlan;
+
+  const byShot = new Map<string, any[]>();
+  for (const row of filteredPlan) {
+    if (!byShot.has(row.shot_id)) byShot.set(row.shot_id, []);
+    byShot.get(row.shot_id)!.push(row);
+  }
+
+  const generated: Array<{ shot_id: string; filename: string; width: number; height: number }> = [];
+  const skippedExisting: Array<{ shot_id: string; filename: string; reason: "EXISTS" }> = [];
+  const missingShots: string[] = [];
+
+  for (const [shotId, rows] of byShot.entries()) {
+    const board = shotBoards.find((b: any) => b.shot_id === shotId);
+    if (!board) {
+      missingShots.push(shotId);
+      continue;
+    }
+
+    // Decide which sizes we actually need to generate
+    const targets: typeof rows = [];
+    for (const row of rows) {
+      if (!overwrite) {
+        const exists = await checkObjectExists(row.filename);
+        if (exists) {
+          skippedExisting.push({
+            shot_id: shotId,
+            filename: row.filename,
+            reason: "EXISTS",
+          });
+          continue;
+        }
+      }
+      targets.push(row);
+    }
+
+    if (targets.length === 0) continue;
+
+    if (dryRun) {
+      // Just record plan, no model calls
+      for (const t of targets) {
+        generated.push({
+          shot_id: shotId,
+          filename: t.filename,
+          width: t.width,
+          height: t.height,
+        });
+      }
+      continue;
+    }
+
+    // Build prompt from board (you can swap in your nicer hero-brief helper here)
+    const prompt = buildPromptFromShotBoard(board);
+
+    // 1) Generate master image
+    const imgResp = await openai.images.generate({
+      model: "gpt-image-1",
+      prompt,
+      size: "1792x1024", // adjust as needed
+      n: 1,
+    });
+
+    const b64 = imgResp.data[0].b64_json!;
+    const masterBuffer = Buffer.from(b64, "base64");
+
+    // 2) Crop & upload each target
+    for (const t of targets) {
+      const resized = await sharp(masterBuffer)
+        .resize(t.width, t.height, {
+          fit: "cover",
+          position: "centre",
+        })
+        .webp({ quality: 90 })
+        .toBuffer();
+
+      await putObject({
+        Key: t.filename, // e.g. "fcc/lifestyle/OL-1_..._1920x800.webp"
+        Body: resized,
+        ContentType: "image/webp",
+      });
+
+      generated.push({
+        shot_id: shotId,
+        filename: t.filename,
+        width: t.width,
+        height: t.height,
+      });
+    }
+  }
+
+  return {
+    ok: true as const,
+    workItemId,
+    dryRun,
+    overwrite,
+    generated,
+    skippedExisting,
+    missingShots,
+  };
+}
+
+function buildPromptFromShotBoard(board: any): string {
+  // Super minimal; your dev can replace this with the full hero-brief text we wrote.
+  const {
+    scenario,
+    camera,
+    framing,
+    lighting,
+    color_palette,
+    notes,
+    card_title,
+    collection,
+  } = board;
+
+  return [
+    `Photorealistic lifestyle image for a greeting card titled "${card_title}" from the "${collection}" collection.`,
+    `Scenario: ${scenario}.`,
+    `Camera: ${camera}. Framing: ${framing}.`,
+    `Lighting: ${lighting}.`,
+    `Color palette: ${color_palette}.`,
+    notes ? `Notes: ${notes}.` : "",
+    `High resolution, shallow depth of field, modern editorial style, no extra text except the card.`,
+  ]
+    .filter(Boolean)
+    .join(" ");
+}
+```
+
+---
+
+### 3. Express route – `routes/workItems.ts` (or similar)
+
+```ts
+// routes/workItems.ts
+import express from "express";
+import { z } from "zod";
+import { requireUser } from "../middleware/requireUser";
+import {
+  generateLifestyleHeroesParamsSchema,
+  generateLifestyleHeroesBodySchema,
+} from "../schemas/workItemImageGeneration";
+import { generateLifestyleHeroesForWorkItem } from "../services/lifestyleHeroes";
+
+export const workItemsRouter = express.Router();
+
+// POST /api/work-items/:id/generate-lifestyle-heroes
+workItemsRouter.post(
+  "/:id/generate-lifestyle-heroes",
+  requireUser,
+  async (req, res) => {
+    try {
+      // Validate params
+      const paramsResult = generateLifestyleHeroesParamsSchema.safeParse({
+        id: req.params.id,
+      });
+      if (!paramsResult.success) {
+        return res.status(400).json({
+          ok: false,
+          error: "INVALID_REQUEST",
+          details: paramsResult.error.flatten(),
+        });
+      }
+
+      // Validate body
+      const bodyResult = generateLifestyleHeroesBodySchema.safeParse(req.body);
+      if (!bodyResult.success) {
+        return res.status(400).json({
+          ok: false,
+          error: "INVALID_REQUEST",
+          details: bodyResult.error.flatten(),
+        });
+      }
+
+      const { id } = paramsResult.data;
+      const body = bodyResult.data;
+
+      // (Optional) check user permissions here:
+      // if (!userCanGenerateHeroes(req.user)) { ... }
+
+      const result = await generateLifestyleHeroesForWorkItem(id, {
+        shotIds: body.shotIds,
+        dryRun: body.dryRun,
+        overwrite: body.overwrite,
+      });
+
+      if (!result.ok && result.error === "LIFESTYLE_PACK_NOT_FOUND") {
+        return res.status(404).json(result);
+      }
+
+      if (!result.ok) {
+        return res.status(500).json(result);
+      }
+
+      return res.status(200).json(result);
+    } catch (err) {
+      console.error("generate-lifestyle-heroes error", err);
+      return res.status(500).json({
+        ok: false,
+        error: "INTERNAL_ERROR",
+      });
+    }
+  }
+);
+```
+
+---
+
+If you want, next I can:
+
+* Draft the **front-end action**: what the button in DTH’s Work Item view should be called, what request it sends, and what success/error toasts to show, so your devs can wire the whole loop without guessing.

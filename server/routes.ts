@@ -30,6 +30,8 @@ import { getFccSkuMapByKey } from "./lib/fccSkuMap";
 import { PACK_REGISTRY } from "./ai/packRegistry";
 import { createPackActionHandler } from "./ai/packFactory";
 import multer from "multer";
+import { z } from "zod";
+import { generateLifestyleHeroesForWorkItem } from "./services/lifestyleHeroes";
 import { uploadFileToS3, getWorkItemFiles, getUploaderConfig } from "./services/uploader";
 import { getEffectiveUploadsConfig, updateUploadsConfig } from "./services/opsUploadsConfig";
 import { 
@@ -1138,6 +1140,71 @@ export async function registerRoutes(app: Express): Promise<Server> {
   const { postSavePackToDrive, getWorkItemDriveFiles } = await import("./api/packToDrive.route");
   app.post("/api/work-items/:workItemId/packs/:packType/save-to-drive", isAuthenticated, postSavePackToDrive);
   app.get("/api/work-items/:workItemId/drive-files", isAuthenticated, getWorkItemDriveFiles);
+
+  // Generate Lifestyle Heroes from existing pack
+  const generateLifestyleHeroesBodySchema = z.object({
+    shotIds: z.array(z.string().min(1)).optional(),
+    dryRun: z.boolean().optional().default(false),
+    overwrite: z.boolean().optional().default(false),
+  });
+
+  app.post("/api/work-items/:id/generate-lifestyle-heroes", 
+    isAuthenticated, 
+    requireOpsRole('ops_admin', 'design_pod', 'admin'),
+    async (req, res) => {
+      try {
+        const workItemId = parseInt(req.params.id, 10);
+        if (isNaN(workItemId)) {
+          return res.status(400).json({ ok: false, error: "INVALID_REQUEST", message: "Invalid work item ID" });
+        }
+
+        const bodyResult = generateLifestyleHeroesBodySchema.safeParse(req.body);
+        if (!bodyResult.success) {
+          return res.status(400).json({
+            ok: false,
+            error: "INVALID_REQUEST",
+            details: bodyResult.error.flatten(),
+          });
+        }
+
+        const body = bodyResult.data;
+
+        console.log(`[LifestyleHeroes] Generating heroes for WI-${workItemId}, dryRun=${body.dryRun}, overwrite=${body.overwrite}`);
+
+        const result = await generateLifestyleHeroesForWorkItem(workItemId, {
+          shotIds: body.shotIds,
+          dryRun: body.dryRun,
+          overwrite: body.overwrite,
+        });
+
+        if (!result.ok) {
+          const status = result.error === "LIFESTYLE_PACK_NOT_FOUND" ? 404 : 500;
+          return res.status(status).json(result);
+        }
+
+        await postOpsEvent({
+          type: "lifestyle_heroes_generated",
+          actor: req.user?.claims?.sub || "system",
+          metadata: {
+            workItemId,
+            shotsGenerated: result.generated.length,
+            skipped: result.skippedExisting.length,
+            dryRun: result.dryRun,
+            overwrite: result.overwrite,
+          },
+        });
+
+        return res.status(200).json(result);
+      } catch (err: any) {
+        console.error("[LifestyleHeroes] Error:", err);
+        return res.status(500).json({
+          ok: false,
+          error: "INTERNAL_ERROR",
+          message: err.message,
+        });
+      }
+    }
+  );
   
   // List all packs for a work item
   app.get("/api/work-items/:workItemId/packs", isAuthenticated, async (req, res, next) => {
