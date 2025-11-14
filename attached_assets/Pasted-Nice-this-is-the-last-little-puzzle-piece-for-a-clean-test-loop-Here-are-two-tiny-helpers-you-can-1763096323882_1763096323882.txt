@@ -1,0 +1,223 @@
+Nice, this is the last little puzzle piece for a clean test loop.
+
+Here are two tiny helpers you can drop into `tests/packs/helpers.ts` (or similar) that:
+
+* Create a **throwaway Work Item** from the golden WO-002 brief
+* Pull real products from `product_catalog`
+* Call `runSkill` directly
+* Return **parsed** pack outputs (already Zod-validated)
+
+You can then use them in your golden tests like:
+
+```ts
+const lifestylePack = await runLifestylePackForWorkItem(golden.work_item);
+const pdpPack = await runPdpPackForWorkItem(golden.work_item);
+```
+
+---
+
+## `tests/packs/helpers.ts`
+
+```ts
+// tests/packs/helpers.ts
+import { randomUUID } from 'node:crypto';
+import { db } from '../../server/db';
+import { workItems } from '../../server/db/schema';
+import { productCatalog } from '../../server/db/schema';
+import { runSkill } from '../../server/ai/runSkill';
+
+import { LifestyleBannerPackSchema } from '../../server/ai/schemas/lifestyleBannerPack';
+import { EcomPdpAplusContentPackSchema } from '../../server/ai/schemas/ecomPdpAplusContentPack';
+
+type GoldenWorkItem = {
+  title: string;
+  body_markdown: string;
+  in_scope_skus: string[];
+};
+
+/**
+ * Helper: insert a throwaway Work Item row for tests.
+ */
+async function createTestWorkItemFromGolden(workItem: GoldenWorkItem) {
+  const id = randomUUID();
+  const [wi] = await db
+    .insert(workItems)
+    .values({
+      id,
+      title: workItem.title,
+      body: workItem.body_markdown,
+      notes: '',
+      lane: 'test',     // or whatever lane enum you have
+      status: 'open',
+    })
+    .returning();
+
+  return wi;
+}
+
+/**
+ * Helper: fetch product catalog rows for a set of SKUs.
+ */
+async function getProductsForSkus(skus: string[]) {
+  if (!skus.length) return [];
+  return db
+    .select()
+    .from(productCatalog)
+    .where(productCatalog.sku.in(skus));
+}
+
+/**
+ * runLifestylePackForWorkItem
+ *
+ * - Inserts a test Work Item based on the golden brief
+ * - Fetches catalog products for in_scope_skus
+ * - Calls generateLifestyleBannerPack via runSkill
+ * - Returns Zod-parsed pack output
+ */
+export async function runLifestylePackForWorkItem(
+  workItem: GoldenWorkItem
+) {
+  const wi = await createTestWorkItemFromGolden(workItem);
+
+  const products = await getProductsForSkus(workItem.in_scope_skus);
+
+  const skillInput = {
+    work_item_id: wi.id,
+    work_item_title: wi.title,
+    work_item_body: wi.body,
+    work_item_notes: wi.notes ?? '',
+    products: products.map((p) => ({
+      sku: p.sku,
+      line: p.line,
+      collection: p.collection,
+      series: p.series,
+      product_name: p.productName,
+      variant_name: p.variantName,
+      brand_slug: p.brandSlug,
+      url_slug: p.urlSlug,
+    })),
+  };
+
+  const raw = await runSkill('generateLifestyleBannerPack', skillInput);
+
+  // Zod-validate before returning
+  const parsed = LifestyleBannerPackSchema.parse(raw);
+  return parsed;
+}
+
+/**
+ * runPdpPackForWorkItem
+ *
+ * - Inserts a test Work Item based on the golden brief
+ * - Fetches catalog products for in_scope_skus
+ * - Calls generateEcomPdpAplusContentPack via runSkill
+ * - Returns Zod-parsed pack output
+ */
+export async function runPdpPackForWorkItem(
+  workItem: GoldenWorkItem
+) {
+  const wi = await createTestWorkItemFromGolden(workItem);
+
+  const products = await getProductsForSkus(workItem.in_scope_skus);
+
+  const skillInput = {
+    work_item_id: wi.id,
+    work_item_title: wi.title,
+    work_item_body: wi.body_markdown,
+    work_item_notes: '',
+    products: products.map((p) => ({
+      sku: p.sku,
+      line: p.line,
+      collection: p.collection,
+      series: p.series,
+      product_name: p.productName,
+      variant_name: p.variantName,
+      brand_slug: p.brandSlug,
+      url_slug: p.urlSlug,
+    })),
+  };
+
+  const raw = await runSkill('generateEcomPdpAplusContentPack', skillInput);
+
+  const parsed = EcomPdpAplusContentPackSchema.parse(raw);
+  return parsed;
+}
+```
+
+> Notes / things to tweak to your codebase:
+>
+> * Adjust `workItems` / `productCatalog` imports to match your Drizzle/Prisma schema.
+> * If your `workItems` table uses different columns (e.g. `projectId`, `createdAt`), add minimal required fields.
+> * If your `runSkill` signature takes an options object (`runSkill({ name, input })`), adapt the call accordingly.
+> * If your Lifestyle/PDP schemas are named slightly differently, update the imports.
+
+---
+
+## How this plugs into your golden test
+
+In your `wo002_colorcue` test:
+
+```ts
+import fs from 'node:fs';
+import path from 'node:path';
+import { runLifestylePackForWorkItem, runPdpPackForWorkItem } from './helpers';
+
+const golden = JSON.parse(
+  fs.readFileSync(
+    path.join(__dirname, 'goldens', 'wo002_colorcue.json'),
+    'utf8'
+  )
+);
+
+describe('WO-002 – ColorCue Birthday & Thank You – Goldens', () => {
+  const { work_item, goldens } = golden;
+
+  test('Lifestyle Pack meets golden expectations', async () => {
+    const lifestylePack = await runLifestylePackForWorkItem(work_item);
+    const cfg = goldens.lifestyle_pack;
+
+    expect(lifestylePack.entries.length).toBeGreaterThanOrEqual(cfg.min_entries);
+    expect(lifestylePack.entries.length).toBeLessThanOrEqual(cfg.max_entries);
+
+    const allowed = new Set(cfg.allowed_skus);
+
+    for (const entry of lifestylePack.entries) {
+      expect(allowed.has(entry.sku)).toBe(true);
+
+      // hero slot check
+      const expectedSlot = cfg.expected_hero_slots[entry.sku];
+      if (expectedSlot) {
+        expect(entry.hero_slot).toBe(expectedSlot);
+      }
+
+      // filename checks, etc…
+    }
+  });
+
+  test('PDP Pack meets golden expectations', async () => {
+    const pdpPack = await runPdpPackForWorkItem(work_item);
+    const cfg = goldens.pdp_pack;
+
+    cfg.required_top_level_fields.forEach((field: string) => {
+      expect((pdpPack as any)[field]).toBeTruthy();
+    });
+
+    expect(pdpPack.feature_bullets.length).toBeGreaterThanOrEqual(
+      cfg.feature_bullets_expectations.min_count
+    );
+    // …more structural checks
+  });
+});
+```
+
+Because these helpers:
+
+* Create a **fresh test WI** each time,
+* Pull real products from `product_catalog`,
+* And call `runSkill` directly,
+
+…your golden tests are fast, hermetic, and very close to real behavior without needing to go through HTTP or click UI.
+
+If you want, next I can help you add a **single Jest setup file** that:
+
+* Runs the `product_catalog.csv` importer once before all pack tests, so WO-002 goldens always have real SKUs available.
