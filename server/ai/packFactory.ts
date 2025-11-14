@@ -44,6 +44,89 @@ function serializeProduct(p: CatalogProduct) {
 }
 
 /**
+ * Extract and validate all SKUs from a generated pack
+ * Supports different pack types with different structures
+ * Throws error if required SKU fields are missing or empty
+ * For Lifestyle packs, also validates inter-section SKU consistency
+ */
+function extractSKUsFromPack(packData: any, packType: string): string[] {
+  const skus = new Set<string>();
+
+  if (packType === "lifestyle") {
+    // Lifestyle packs MUST have SKUs in shot_boards, export_plan, alt_text_rows, seo_meta_rows
+    const sections = [
+      { name: "shot_boards", data: packData.shot_boards },
+      { name: "export_plan", data: packData.export_plan },
+      { name: "alt_text_rows", data: packData.alt_text_rows },
+      { name: "seo_meta_rows", data: packData.seo_meta_rows },
+    ];
+
+    // Track SKUs per section for inter-section consistency validation
+    const sectionSKUs = new Map<string, Set<string>>();
+
+    for (const section of sections) {
+      if (!section.data || !Array.isArray(section.data) || section.data.length === 0) {
+        throw new Error(`Lifestyle pack missing required section: ${section.name}`);
+      }
+
+      const sectionSkuSet = new Set<string>();
+
+      section.data.forEach((item: any, index: number) => {
+        if (!item.sku || typeof item.sku !== "string" || item.sku.trim() === "") {
+          throw new Error(
+            `Missing or empty SKU in ${section.name}[${index}]. All ${section.name} items must have valid SKU fields.`
+          );
+        }
+        const normalizedSKU = item.sku.trim();
+        skus.add(normalizedSKU);
+        sectionSkuSet.add(normalizedSKU);
+      });
+
+      sectionSKUs.set(section.name, sectionSkuSet);
+    }
+
+    // Validate that we have at least one SKU
+    if (skus.size === 0) {
+      throw new Error("Lifestyle pack contains no valid SKUs");
+    }
+
+    // Validate inter-section consistency:
+    // All SKUs used in export_plan, alt_text_rows, and seo_meta_rows must be from shot_boards
+    const shotBoardSKUs = sectionSKUs.get("shot_boards")!;
+    
+    for (const [sectionName, sectionSkuSet] of sectionSKUs.entries()) {
+      if (sectionName === "shot_boards") continue;
+      
+      for (const sku of sectionSkuSet) {
+        if (!shotBoardSKUs.has(sku)) {
+          throw new Error(
+            `SKU consistency violation: ${sectionName} contains SKU "${sku}" which is not defined in shot_boards. All SKUs must originate from shot_boards.`
+          );
+        }
+      }
+    }
+  } else if (packType === "ecom_pdp_aplus_content") {
+    // PDP packs may have optional SKUs in cross_sell_suggestions.sku_hint
+    // These are optional, so we don't enforce them, but if present they must be valid
+    if (packData.cross_sell_suggestions && Array.isArray(packData.cross_sell_suggestions)) {
+      packData.cross_sell_suggestions.forEach((cs: any, index: number) => {
+        // sku_hint is optional, so only validate if present
+        if (cs.sku_hint) {
+          if (typeof cs.sku_hint !== "string" || cs.sku_hint.trim() === "") {
+            throw new Error(
+              `Invalid SKU in cross_sell_suggestions[${index}]. If sku_hint is provided, it must be a non-empty string.`
+            );
+          }
+          skus.add(cs.sku_hint.trim());
+        }
+      });
+    }
+  }
+
+  return Array.from(skus);
+}
+
+/**
  * Factory function to create a pack generation action handler
  * Returns an Express-compatible RequestHandler that closes over the global db
  */
@@ -107,6 +190,36 @@ export function createPackActionHandler(config: PackConfig): RequestHandler {
 
       // Validate against schema
       const validated = config.schema.parse(packData);
+
+      // For catalog-aware packs, validate SKUs against catalog
+      if (catalogAwarePacks.includes(config.packType) && skillInput.products) {
+        try {
+          const catalogSKUs = new Set(skillInput.products.map((p: any) => p.sku));
+          const extractedSKUs = extractSKUsFromPack(validated, config.packType);
+          
+          // Check for SKUs not in catalog
+          const invalidSKUs = extractedSKUs.filter(sku => !catalogSKUs.has(sku));
+          
+          if (invalidSKUs.length > 0) {
+            console.error(`[${config.packType}] Invalid SKUs detected: ${invalidSKUs.join(", ")}`);
+            return res.status(400).json({
+              error: "Catalog validation failed",
+              message: "Generated pack contains SKUs not found in product catalog",
+              invalidSKUs,
+              validSKUs: Array.from(catalogSKUs),
+            });
+          }
+          
+          console.log(`[${config.packType}] ✅ All ${extractedSKUs.length} SKU(s) validated against catalog`);
+        } catch (extractionError: any) {
+          // Handle SKU extraction/validation errors (missing/empty SKU fields)
+          console.error(`[${config.packType}] SKU extraction failed:`, extractionError.message);
+          return res.status(400).json({
+            error: "SKU validation failed",
+            message: extractionError.message,
+          });
+        }
+      }
 
       // Save to database using generic saver (with transaction support)
       await saveWorkItemPackGeneric({
