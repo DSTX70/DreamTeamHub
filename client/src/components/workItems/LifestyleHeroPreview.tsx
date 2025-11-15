@@ -101,13 +101,14 @@ function VersionSelector({ workItemId, shotId }: { workItemId: number; shotId: s
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  // Lazy-load versions only when opened
+  // Always fetch versions to show count
   const { data: versionsData, isLoading, error, isError, refetch } = useQuery<{ ok: boolean; versions: LifestyleHeroVersion[] }>({
     queryKey: ['/api/work-items', workItemId, 'lifestyle-hero-versions', shotId],
-    enabled: isOpen,
+    refetchInterval: 30000,
   });
 
   const versions = versionsData?.versions || [];
+  const activeVersion = versions.find(v => v.isActive);
 
   // Mutation to set active version
   const setActiveMutation = useMutation({
@@ -204,37 +205,57 @@ function VersionSelector({ workItemId, shotId }: { workItemId: number; shotId: s
       </Button>
 
       {isOpen && (
-        <div className="mt-1 space-y-1 border-l-2 border-border pl-2 ml-2">
+        <div className="mt-1 space-y-2 border-l-2 border-border pl-2 ml-2">
           {isLoading ? (
             <div className="text-xs text-muted-foreground">Loading versions...</div>
           ) : (
             versions.map((version) => (
               <div
                 key={version.id}
-                className="flex items-center justify-between gap-2 py-1"
+                className="flex gap-2"
                 data-testid={`version-item-${shotId}-${version.versionNumber}`}
               >
-                <div className="flex items-center gap-2 flex-1 min-w-0">
-                  <Badge variant={version.isActive ? "default" : "outline"} className="text-[10px] px-1.5 py-0 h-4">
-                    v{version.versionNumber}
-                  </Badge>
-                  {version.isActive && <Check className="h-3 w-3 text-primary flex-shrink-0" />}
-                  <span className="text-[10px] text-muted-foreground truncate">
-                    {new Date(version.generatedAt).toLocaleDateString()}
-                  </span>
+                {/* Thumbnail preview */}
+                <div className="flex-shrink-0">
+                  <img
+                    src={`${ASSET_BASE_URL}${version.desktopS3Key}`}
+                    alt={`Version ${version.versionNumber}`}
+                    className="w-16 h-16 object-cover rounded border border-border"
+                    onError={(e) => {
+                      e.currentTarget.style.display = "none";
+                    }}
+                  />
                 </div>
-                {!version.isActive && (
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={() => setActiveMutation.mutate(version.versionNumber)}
-                    disabled={setActiveMutation.isPending}
-                    className="h-5 px-2 text-[10px]"
-                    data-testid={`button-set-active-${shotId}-${version.versionNumber}`}
-                  >
-                    Set Active
-                  </Button>
-                )}
+                
+                {/* Version info and actions */}
+                <div className="flex flex-col flex-1 min-w-0 justify-between">
+                  <div className="flex items-center gap-2">
+                    <Badge variant={version.isActive ? "default" : "outline"} className="text-[10px] px-1.5 py-0 h-4">
+                      v{version.versionNumber}
+                    </Badge>
+                    {version.isActive && (
+                      <span className="flex items-center gap-1 text-[10px] text-primary">
+                        <Check className="h-3 w-3" />
+                        Active
+                      </span>
+                    )}
+                  </div>
+                  <span className="text-[10px] text-muted-foreground">
+                    {new Date(version.generatedAt).toLocaleDateString()} {new Date(version.generatedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  </span>
+                  {!version.isActive && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => setActiveMutation.mutate(version.versionNumber)}
+                      disabled={setActiveMutation.isPending}
+                      className="h-6 px-2 text-[10px] mt-1"
+                      data-testid={`button-set-active-${shotId}-${version.versionNumber}`}
+                    >
+                      Set Active
+                    </Button>
+                  )}
+                </div>
               </div>
             ))
           )}
