@@ -56,23 +56,28 @@ interface LifestyleHeroPreviewProps {
 
 const ASSET_BASE_URL = "/img/";
 
-// Custom debounced callback hook
+// Custom debounced callback hook with stable ref
 function useDebouncedCallback<T extends (...args: any[]) => void>(
   callback: T,
   delay: number
 ): T {
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const callbackRef = useRef(callback);
+  
+  useEffect(() => {
+    callbackRef.current = callback;
+  }, [callback]);
+  
   return useMemo(() => {
-    let timeoutId: NodeJS.Timeout | null = null;
-    
     const debouncedFn = (...args: Parameters<T>) => {
-      if (timeoutId) clearTimeout(timeoutId);
-      timeoutId = setTimeout(() => {
-        callback(...args);
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+      timeoutRef.current = setTimeout(() => {
+        callbackRef.current(...args);
       }, delay);
     };
     
     return debouncedFn as T;
-  }, [callback, delay]);
+  }, [delay]);
 }
 
 export function LifestyleHeroPreview({ workItemId }: LifestyleHeroPreviewProps) {
@@ -212,6 +217,95 @@ export function LifestyleHeroPreview({ workItemId }: LifestyleHeroPreviewProps) 
       });
     },
   });
+
+  // Save instructions mutation
+  const saveInstructionsMutation = useMutation({
+    mutationFn: async ({ shotId, instructions }: { shotId: string; instructions: string }) => {
+      return await apiRequest(`/api/work-items/${workItemId}/lifestyle-hero-instructions/${shotId}`, {
+        method: "PATCH",
+        body: JSON.stringify({ instructions }),
+        headers: { "Content-Type": "application/json" },
+      });
+    },
+    onMutate: async ({ shotId, instructions }) => {
+      // Optimistically update local state with defensive initialization
+      setInstructionsState(prev => ({
+        ...prev,
+        [shotId]: {
+          value: prev[shotId]?.value || instructions,
+          isSaving: true,
+          lastSavedAt: prev[shotId]?.lastSavedAt || null,
+          error: null,
+        },
+      }));
+    },
+    onSuccess: (data, { shotId }) => {
+      // Update state to reflect saved
+      setInstructionsState(prev => ({
+        ...prev,
+        [shotId]: {
+          value: prev[shotId]?.value || "",
+          isSaving: false,
+          lastSavedAt: new Date(),
+          error: null,
+        },
+      }));
+      // Update cache with defensive guard
+      queryClient.setQueryData(
+        ['/api/work-items', workItemId, 'lifestyle-hero-instructions'],
+        (old: any) => {
+          if (!old) {
+            return {
+              ok: true,
+              instructions: { [shotId]: data.instructions },
+            };
+          }
+          return {
+            ...old,
+            instructions: {
+              ...old.instructions,
+              [shotId]: data.instructions,
+            },
+          };
+        }
+      );
+    },
+    onError: (error: Error, { shotId }) => {
+      setInstructionsState(prev => ({
+        ...prev,
+        [shotId]: {
+          value: prev[shotId]?.value || "",
+          isSaving: false,
+          lastSavedAt: prev[shotId]?.lastSavedAt || null,
+          error: error.message,
+        },
+      }));
+    },
+  });
+
+  // Debounced save handler
+  const debouncedSave = useDebouncedCallback(
+    (shotId: string, value: string) => {
+      saveInstructionsMutation.mutate({ shotId, instructions: value });
+    },
+    750
+  );
+
+  const handleInstructionsChange = (shotId: string, value: string) => {
+    // Update local state immediately with defensive initialization
+    setInstructionsState(prev => ({
+      ...prev,
+      [shotId]: {
+        value,
+        isSaving: false,
+        lastSavedAt: prev[shotId]?.lastSavedAt || null,
+        error: null,
+      },
+    }));
+    
+    // Trigger debounced save
+    debouncedSave(shotId, value);
+  };
 
   const handleClickUploadRef = (shotId: string) => {
     const input = fileInputRefs.current[shotId];
@@ -374,6 +468,43 @@ export function LifestyleHeroPreview({ workItemId }: LifestyleHeroPreviewProps) 
                   )}
                 </div>
               )}
+
+              {/* Regeneration instructions */}
+              <div className="mb-2">
+                <Textarea
+                  placeholder="Add regeneration instructions (e.g., Make background darker, Add more plants...)"
+                  value={instructionsState[shotId]?.value || ""}
+                  onChange={(e) => handleInstructionsChange(shotId, e.target.value)}
+                  className="min-h-[60px] text-xs resize-none"
+                  data-testid={`textarea-instructions-${shotId}`}
+                />
+                {instructionsState[shotId] && (
+                  <div className="mt-1 flex items-center justify-between">
+                    <span className="text-[10px] text-muted-foreground">
+                      {instructionsState[shotId].isSaving && "Saving…"}
+                      {!instructionsState[shotId].isSaving && instructionsState[shotId].lastSavedAt && (
+                        `Saved ${Math.round((Date.now() - instructionsState[shotId].lastSavedAt!.getTime()) / 1000)}s ago`
+                      )}
+                      {instructionsState[shotId].error && (
+                        <span className="text-destructive">
+                          Error: {instructionsState[shotId].error}
+                        </span>
+                      )}
+                    </span>
+                    {instructionsState[shotId].error && (
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => handleInstructionsChange(shotId, instructionsState[shotId].value)}
+                        className="h-5 text-[10px] px-2"
+                        data-testid={`button-retry-save-${shotId}`}
+                      >
+                        Retry
+                      </Button>
+                    )}
+                  </div>
+                )}
+              </div>
 
               {/* Actions row */}
               <div className="flex items-center justify-between gap-2 mt-2">
