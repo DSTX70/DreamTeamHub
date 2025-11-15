@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, integer, timestamp, jsonb, boolean, index, primaryKey, unique } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, integer, serial, timestamp, jsonb, boolean, index, primaryKey, unique } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
@@ -302,13 +302,11 @@ export const workItemFiles = pgTable("work_item_files", {
 // ===========================
 
 export const lifestyleHeroReferences = pgTable("lifestyle_hero_references", {
-  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  id: serial("id").primaryKey(),
   workItemId: integer("work_item_id").notNull().references(() => workItems.id, { onDelete: 'cascade' }),
   shotId: varchar("shot_id", { length: 50 }).notNull(),
-  filename: varchar("filename", { length: 255 }).notNull(),
-  s3Key: varchar("s3_key", { length: 512 }).notNull(),
-  s3Url: text("s3_url").notNull(),
-  uploadedByUserId: varchar("uploaded_by_user_id", { length: 255 }).notNull(),
+  s3Key: varchar("s3_key", { length: 500 }).notNull(),
+  cdnUrl: varchar("cdn_url", { length: 500 }).notNull(),
   uploadedAt: timestamp("uploaded_at").defaultNow(),
 }, (table) => ({
   workItemShotIdx: index("idx_lifestyle_hero_refs_wi_shot").on(table.workItemId, table.shotId),

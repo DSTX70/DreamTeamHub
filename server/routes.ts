@@ -1196,16 +1196,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const ref = await storage.createLifestyleHeroReference({
             workItemId,
             shotId,
-            filename: file.originalname,
             s3Key,
-            s3Url: `/img/${s3Key}`,
-            uploadedByUserId: userId,
+            cdnUrl: `/img/${s3Key}`,
           });
 
           references.push({
             id: ref.id,
-            url: ref.s3Url,
-            filename: ref.filename,
+            cdnUrl: ref.cdnUrl,
+            s3Key: ref.s3Key,
+            shotId: ref.shotId,
             uploadedAt: ref.uploadedAt,
           });
         }
