@@ -476,7 +476,7 @@ export function LifestyleHeroPreview({ workItemId }: LifestyleHeroPreviewProps) 
                   placeholder="Add regeneration instructions (e.g., Make background darker, Add more plants...)"
                   value={instructionsState[shotId]?.value || ""}
                   onChange={(e) => handleInstructionsChange(shotId, e.target.value)}
-                  className="min-h-[60px] text-xs resize-none"
+                  className="min-h-[60px] text-xs resize-none text-foreground"
                   data-testid={`textarea-instructions-${shotId}`}
                 />
                 {instructionsState[shotId] && (
