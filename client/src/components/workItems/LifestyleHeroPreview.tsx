@@ -1,8 +1,9 @@
 import { useState, useRef, useEffect, useMemo, type ChangeEvent } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { ImageIcon, Upload, RefreshCw } from "lucide-react";
+import { ImageIcon, Upload, RefreshCw, ChevronDown, ChevronUp, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 
@@ -50,6 +51,20 @@ type InstructionState = {
   error: string | null;
 };
 
+type LifestyleHeroVersion = {
+  id: number;
+  workItemId: number;
+  shotId: string;
+  versionNumber: number;
+  masterS3Key: string;
+  desktopS3Key: string;
+  tabletS3Key: string;
+  mobileS3Key: string;
+  promptUsed: string;
+  isActive: boolean;
+  generatedAt: string;
+};
+
 interface LifestyleHeroPreviewProps {
   workItemId: number;
 }
@@ -80,6 +95,120 @@ function useDebouncedCallback<T extends (...args: any[]) => void>(
   }, [delay]);
 }
 
+// Version Selector Sub-component
+function VersionSelector({ workItemId, shotId }: { workItemId: number; shotId: string }) {
+  const [isOpen, setIsOpen] = useState(false);
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+
+  // Lazy-load versions only when opened
+  const { data: versionsData, isLoading } = useQuery<{ ok: boolean; versions: LifestyleHeroVersion[] }>({
+    queryKey: ['/api/work-items', workItemId, 'lifestyle-hero-versions', shotId],
+    enabled: isOpen,
+  });
+
+  const versions = versionsData?.versions || [];
+
+  // Mutation to set active version
+  const setActiveMutation = useMutation({
+    mutationFn: async (versionNumber: number) => {
+      return await apiRequest("POST", `/api/work-items/${workItemId}/lifestyle-hero-versions/${shotId}/set-active`, {
+        versionNumber,
+      });
+    },
+    onSuccess: (_data, versionNumber) => {
+      queryClient.invalidateQueries({ queryKey: ['/api/work-items', workItemId, 'lifestyle-hero-versions', shotId] });
+      queryClient.invalidateQueries({ queryKey: [`/api/work-items/${workItemId}/packs`] });
+      toast({
+        title: "Version activated",
+        description: `Version ${versionNumber} is now active for this shot`,
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Failed to set active version",
+        description: error.message || "Something went wrong",
+        variant: "destructive",
+      });
+    },
+  });
+
+  if (versions.length === 0 && !isLoading && isOpen) {
+    return (
+      <div className="mb-2">
+        <Button
+          size="sm"
+          variant="ghost"
+          onClick={() => setIsOpen(!isOpen)}
+          className="h-6 px-2 text-xs"
+          data-testid={`button-toggle-versions-${shotId}`}
+        >
+          {isOpen ? <ChevronUp className="h-3 w-3 mr-1" /> : <ChevronDown className="h-3 w-3 mr-1" />}
+          Versions (0)
+        </Button>
+        {isOpen && (
+          <div className="mt-1 text-xs text-muted-foreground px-2">
+            No versions available yet. Generate images to create versions.
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <div className="mb-2">
+      <Button
+        size="sm"
+        variant="ghost"
+        onClick={() => setIsOpen(!isOpen)}
+        className="h-6 px-2 text-xs"
+        data-testid={`button-toggle-versions-${shotId}`}
+      >
+        {isOpen ? <ChevronUp className="h-3 w-3 mr-1" /> : <ChevronDown className="h-3 w-3 mr-1" />}
+        Versions ({versions.length})
+      </Button>
+
+      {isOpen && (
+        <div className="mt-1 space-y-1 border-l-2 border-border pl-2 ml-2">
+          {isLoading ? (
+            <div className="text-xs text-muted-foreground">Loading versions...</div>
+          ) : (
+            versions.map((version) => (
+              <div
+                key={version.id}
+                className="flex items-center justify-between gap-2 py-1"
+                data-testid={`version-item-${shotId}-${version.versionNumber}`}
+              >
+                <div className="flex items-center gap-2 flex-1 min-w-0">
+                  <Badge variant={version.isActive ? "default" : "outline"} className="text-[10px] px-1.5 py-0 h-4">
+                    v{version.versionNumber}
+                  </Badge>
+                  {version.isActive && <Check className="h-3 w-3 text-primary flex-shrink-0" />}
+                  <span className="text-[10px] text-muted-foreground truncate">
+                    {new Date(version.generatedAt).toLocaleDateString()}
+                  </span>
+                </div>
+                {!version.isActive && (
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => setActiveMutation.mutate(version.versionNumber)}
+                    disabled={setActiveMutation.isPending}
+                    className="h-5 px-2 text-[10px]"
+                    data-testid={`button-set-active-${shotId}-${version.versionNumber}`}
+                  >
+                    Set Active
+                  </Button>
+                )}
+              </div>
+            ))
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function LifestyleHeroPreview({ workItemId }: LifestyleHeroPreviewProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -88,6 +217,7 @@ export function LifestyleHeroPreview({ workItemId }: LifestyleHeroPreviewProps) 
   const [isUploadingRef, setIsUploadingRef] = useState<string | null>(null);
   const [isRegenerating, setIsRegenerating] = useState<string | null>(null);
   const [instructionsState, setInstructionsState] = useState<Record<string, InstructionState>>({});
+  const [previewedVersions, setPreviewedVersions] = useState<Record<string, number>>({});
 
   // Fetch packs
   const { data: packs = [], isLoading } = useQuery<WorkItemPack[]>({
@@ -469,6 +599,9 @@ export function LifestyleHeroPreview({ workItemId }: LifestyleHeroPreviewProps) 
                   )}
                 </div>
               )}
+
+              {/* Version Selector */}
+              <VersionSelector workItemId={workItemId} shotId={shotId} />
 
               {/* Regeneration instructions */}
               <div className="mb-2">
