@@ -1295,6 +1295,65 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get all versions for a specific shot
+  app.get("/api/work-items/:id/lifestyle-hero-versions/:shotId", isAuthenticated, async (req, res) => {
+    try {
+      const workItemId = parseInt(req.params.id, 10);
+      const shotId = req.params.shotId;
+
+      if (isNaN(workItemId)) {
+        return res.status(400).json({ ok: false, error: "Invalid work item ID" });
+      }
+      
+      if (!shotId) {
+        return res.status(400).json({ ok: false, error: "Missing shot ID" });
+      }
+
+      const versions = await storage.getLifestyleHeroVersions(workItemId, shotId);
+      return res.json({ ok: true, versions });
+    } catch (error: any) {
+      console.error("[LifestyleHeroVersions] Fetch error:", error);
+      return res.status(500).json({ ok: false, error: "Fetch failed", message: error.message });
+    }
+  });
+
+  // Set active version for a shot
+  const setActiveVersionSchema = z.object({
+    versionNumber: z.number().int().positive(),
+  });
+
+  app.post("/api/work-items/:id/lifestyle-hero-versions/:shotId/set-active", isAuthenticated, async (req, res) => {
+    try {
+      const workItemId = parseInt(req.params.id, 10);
+      const shotId = req.params.shotId;
+
+      if (isNaN(workItemId)) {
+        return res.status(400).json({ ok: false, error: "Invalid work item ID" });
+      }
+      
+      if (!shotId) {
+        return res.status(400).json({ ok: false, error: "Missing shot ID" });
+      }
+
+      const bodyResult = setActiveVersionSchema.safeParse(req.body);
+      if (!bodyResult.success) {
+        return res.status(400).json({
+          ok: false,
+          error: "INVALID_REQUEST",
+          details: bodyResult.error.flatten(),
+        });
+      }
+
+      const { versionNumber } = bodyResult.data;
+      await storage.setActiveLifestyleHeroVersion(workItemId, shotId, versionNumber);
+
+      return res.json({ ok: true, shotId, versionNumber, message: "Active version updated" });
+    } catch (error: any) {
+      console.error("[LifestyleHeroVersions] Set active error:", error);
+      return res.status(500).json({ ok: false, error: "Failed to set active version", message: error.message });
+    }
+  });
+
   // Generate Lifestyle Heroes from existing pack
   const generateLifestyleHeroesBodySchema = z.object({
     shotIds: z.array(z.string().min(1)).optional(),
