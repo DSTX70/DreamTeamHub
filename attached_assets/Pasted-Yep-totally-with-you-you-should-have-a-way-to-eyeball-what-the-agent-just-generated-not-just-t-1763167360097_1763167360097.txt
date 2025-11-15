@@ -1,0 +1,266 @@
+Yep, totally with you — you *should* have a way to eyeball what the agent just generated, not just trust the green checks. Let’s wire a tiny **Lifestyle Hero Preview** right into the Work Item view so you can see OL-1/2/3 (and future shots) visually.
+
+I’ll give you:
+
+1. A **tiny spec** for the previewer.
+2. A **drop-in React component** you can plug into your existing Work Item page.
+
+No new tab, no extra Ops page — just previews where you already run the packs.
+
+---
+
+## 1. Tiny Spec – Lifestyle Hero Preview
+
+### Placement
+
+* **Location:** Work Item detail view, under the existing **Work Item Packs** section.
+* **Section title:** `Lifestyle Hero Preview`
+* **Scope:** Uses **Lifestyle Pack v2** for the current Work Item.
+
+### Inputs
+
+* Current **workItemId**.
+
+* Existing **Work Item Packs** data (you already fetch this to render the JSON).
+
+  * Specifically `Lifestyle Pack v2`:
+
+    * `export_plan`: filenames, sizes, shot_id, etc.
+
+* An asset base URL (one of):
+
+  * Environment variable like `VITE_ASSET_BASE_URL` (e.g. `https://your-cdn.com/`), or
+  * If assets are served from the same host, a simple prefix: `/` so `src = "/" + filename`.
+
+### Behavior
+
+1. **Find Lifestyle Pack v2** for this Work Item:
+
+   * From your in-memory `workItemPacks` array, find the entry where `pack.type === "Lifestyle Pack"` (or however you label it) and use the latest version.
+
+2. **Group `export_plan` by `shot_id`:**
+
+   * For each `shot_id` (e.g., `OL-1`, `OL-2`, `OL-3`):
+
+     * Get all rows for that shot.
+     * Pick the **Desktop** row (`size_label === "Desktop"`) as the preview image.
+     * Keep `sku` and `filename`.
+
+3. **Render a simple grid of cards:**
+
+   * For each `shot_id`:
+
+     * Show:
+
+       * **Image preview**: `<img src={assetBaseUrl + filename} />`
+       * Shot label: `OL-1 – Who You Are Is Enough` (or just `OL-1 (SKU-OL-IDENTITY-001)` if you don’t have card_title handy).
+       * Size: `1920×800 Desktop`.
+   * If the image 404s, show a “Missing image” placeholder.
+
+4. **Empty state:**
+
+   * If no Lifestyle Pack found or no `export_plan`, show:
+
+     * `“Run Lifestyle Pack v2 and Generate Lifestyle Hero Images to see previews here.”`
+
+5. **Refresh behavior (optional but nice):**
+
+   * Add a little “Refresh” icon/button that simply re-requests the Work Item Packs (you already have `Refresh` in that area).
+   * That way after generation you can click **Generate Lifestyle Hero Images → Refresh → see previews**.
+
+---
+
+## 2. Drop-in React Component
+
+Assumptions:
+
+* You already have a hook or prop that gives you `packs` for the current Work Item, something like:
+
+```ts
+type WorkItemPack = {
+  type: string;          // e.g. "Lifestyle Pack"
+  version: string;       // e.g. "v2"
+  data: any;             // JSON with export_plan, shot_boards, ...
+};
+```
+
+* You’re okay with a simple env for asset base:
+
+```ts
+const ASSET_BASE_URL = import.meta.env.VITE_ASSET_BASE_URL ?? "/";
+```
+
+Here’s a self-contained component:
+
+```tsx
+// client/src/components/workItems/LifestyleHeroPreview.tsx
+import React from "react";
+
+type ExportPlanRow = {
+  sku: string;
+  width: number;
+  height: number;
+  format: string;
+  shot_id: string;
+  base_key: string;
+  filename: string;
+  size_label: string; // "Desktop" | "Tablet" | "Mobile"
+  is_primary?: boolean;
+};
+
+type LifestylePackData = {
+  export_plan?: ExportPlanRow[];
+  shot_boards?: any[];
+};
+
+type WorkItemPack = {
+  type: string;     // e.g., "Lifestyle Pack"
+  version: string;  // e.g., "v2"
+  data: LifestylePackData;
+};
+
+interface LifestyleHeroPreviewProps {
+  packs: WorkItemPack[];
+}
+
+const ASSET_BASE_URL =
+  (import.meta as any).env?.VITE_ASSET_BASE_URL ?? "/";
+
+export const LifestyleHeroPreview: React.FC<LifestyleHeroPreviewProps> = ({
+  packs,
+}) => {
+  const lifestylePack = React.useMemo(() => {
+    if (!packs || packs.length === 0) return null;
+
+    // Prefer latest "Lifestyle Pack"
+    const lifestylePacks = packs.filter(
+      (p) => p.type === "Lifestyle Pack"
+    );
+    if (lifestylePacks.length === 0) return null;
+
+    // Assume last is latest; adjust if you explicitly track versions
+    return lifestylePacks[lifestylePacks.length - 1];
+  }, [packs]);
+
+  if (!lifestylePack || !lifestylePack.data?.export_plan) {
+    return (
+      <div className="mt-6 rounded-lg border border-dashed border-slate-600 p-4 text-sm text-slate-300">
+        <div className="font-medium mb-1">Lifestyle Hero Preview</div>
+        <p>
+          Run <span className="font-mono">Lifestyle Pack v2</span> and click{" "}
+          <span className="font-mono">Generate Lifestyle Hero Images</span> to
+          see hero previews here.
+        </p>
+      </div>
+    );
+  }
+
+  const exportPlan = lifestylePack.data.export_plan;
+
+  // Group by shot_id and pick Desktop as preview
+  const byShot = new Map<string, ExportPlanRow[]>();
+  for (const row of exportPlan) {
+    if (!byShot.has(row.shot_id)) byShot.set(row.shot_id, []);
+    byShot.get(row.shot_id)!.push(row);
+  }
+
+  const previews = Array.from(byShot.entries()).map(([shotId, rows]) => {
+    const desktop =
+      rows.find((r) => r.size_label === "Desktop") ?? rows[0];
+    return {
+      shotId,
+      sku: desktop.sku,
+      row: desktop,
+    };
+  });
+
+  if (previews.length === 0) {
+    return (
+      <div className="mt-6 rounded-lg border border-dashed border-slate-600 p-4 text-sm text-slate-300">
+        <div className="font-medium mb-1">Lifestyle Hero Preview</div>
+        <p>No export_plan rows found for this Lifestyle Pack.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="mt-6">
+      <div className="mb-2 flex items-center justify-between">
+        <div className="font-medium text-slate-100">
+          Lifestyle Hero Preview
+        </div>
+        <span className="text-xs text-slate-400">
+          Showing Desktop crops from export_plan (Lifestyle Pack v2)
+        </span>
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-3 sm:grid-cols-2 grid-cols-1">
+        {previews.map(({ shotId, sku, row }) => {
+          const src = `${ASSET_BASE_URL}${row.filename}`;
+          return (
+            <div
+              key={shotId}
+              className="rounded-lg border border-slate-700 bg-slate-900/60 p-3 text-xs text-slate-200"
+            >
+              <div className="mb-2 rounded-md bg-slate-800 overflow-hidden">
+                <img
+                  src={src}
+                  alt={`${shotId} hero preview`}
+                  className="block w-full max-h-40 object-cover"
+                  onError={(e) => {
+                    (e.currentTarget as HTMLImageElement).style.display =
+                      "none";
+                  }}
+                />
+                {/* Simple fallback if image missing */}
+                <div className="p-3 text-center text-slate-400 text-[11px]">
+                  {row.filename}
+                </div>
+              </div>
+              <div className="font-mono text-[11px] text-slate-400 mb-1">
+                {shotId} · {sku}
+              </div>
+              <div className="flex justify-between text-[11px] text-slate-400">
+                <span>{row.size_label}</span>
+                <span>
+                  {row.width}×{row.height}
+                </span>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+};
+```
+
+---
+
+## 3. Where to plug this in
+
+In `WorkItemActionsPanel` (or whatever component renders the **Work Item detail + packs**):
+
+```tsx
+import { LifestyleHeroPreview } from "./LifestyleHeroPreview";
+
+// ...inside your main render, where you already have packs:
+<>
+  {/* Existing Work Item Packs JSON viewer */}
+  <WorkItemPacksViewer packs={packs} />
+
+  {/* New visual preview right below */}
+  <LifestyleHeroPreview packs={packs} />
+</>
+```
+
+As long as:
+
+* `packs` includes the Lifestyle Pack with `data.export_plan`, and
+* your asset URLs are reachable via `ASSET_BASE_URL + filename`,
+
+you’ll get a neat little grid showing OL-1/2/3 Desktop heroes as soon as the generator finishes.
+
+---
+
+If you tell me how your asset URLs are currently built for SKU Switcher (e.g., `/assets/{key}` vs `https://dthawsbucket.s3.../{key}`), I can tweak the `ASSET_BASE_URL` line to match your reality exactly.

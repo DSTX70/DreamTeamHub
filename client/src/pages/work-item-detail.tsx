@@ -7,6 +7,7 @@ import { StatusBadge } from "@/components/status-badge";
 import { FilesPanel } from "@/components/FilesPanel";
 import { WorkItemActionsPanel } from "@/components/workItems/WorkItemActionsPanel";
 import { WorkItemPacksPanel } from "@/components/workItems/WorkItemPacksPanel";
+import { LifestyleHeroPreview } from "@/components/workItems/LifestyleHeroPreview";
 import { ArrowLeft, Calendar, User, Target } from "lucide-react";
 import { format } from "date-fns";
 import type { WorkItem } from "@shared/schema";
@@ -113,6 +114,9 @@ export default function WorkItemDetail() {
 
           {/* Work Item Packs Viewer */}
           <WorkItemPacksPanel workItemId={workItem.id} />
+
+          {/* Lifestyle Hero Preview */}
+          <LifestyleHeroPreview workItemId={workItem.id} />
 
           {/* Files */}
           {workItem.workOrderId && (
