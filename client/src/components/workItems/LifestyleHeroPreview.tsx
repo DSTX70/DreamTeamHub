@@ -583,6 +583,7 @@ export function LifestyleHeroPreview({ workItemId }: LifestyleHeroPreviewProps) 
       shotId,
       sku: desktop.sku,
       row: desktop,
+      rows, // Pass all rows for Desktop/Tablet/Mobile
     };
   });
 
@@ -613,7 +614,7 @@ export function LifestyleHeroPreview({ workItemId }: LifestyleHeroPreviewProps) 
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3">
-        {previews.map(({ shotId, sku, row }) => {
+        {previews.map(({ shotId, sku, row, rows }) => {
           const refs = refsByShot[shotId] || [];
           const isShotRegenerating = isRegenerating === shotId;
           const isShotUploading = isUploadingRef === shotId;
@@ -625,6 +626,7 @@ export function LifestyleHeroPreview({ workItemId }: LifestyleHeroPreviewProps) 
               shotId={shotId}
               sku={sku}
               row={row}
+              rows={rows}
               refs={refs}
               isShotRegenerating={isShotRegenerating}
               isShotUploading={isShotUploading}
@@ -644,12 +646,23 @@ export function LifestyleHeroPreview({ workItemId }: LifestyleHeroPreviewProps) 
   );
 }
 
+// Image size status type
+type SizeStatus = {
+  sizeLabel: string;
+  width: number;
+  height: number;
+  filename: string;
+  url: string;
+  ok: boolean | null; // null = still checking
+};
+
 // Shot Preview Card Component with Version Preview
 function ShotPreviewCard({
   workItemId,
   shotId,
   sku,
   row,
+  rows,
   refs,
   isShotRegenerating,
   isShotUploading,
@@ -666,6 +679,7 @@ function ShotPreviewCard({
   shotId: string;
   sku: string;
   row: ExportPlanRow;
+  rows: ExportPlanRow[];
   refs: LifestyleHeroReference[];
   isShotRegenerating: boolean;
   isShotUploading: boolean;
@@ -678,6 +692,11 @@ function ShotPreviewCard({
   onRegenerateShot: () => void;
   fileInputRef: (el: HTMLInputElement | null) => void;
 }) {
+  // Image status tracking
+  const [sizeStatuses, setSizeStatuses] = useState<SizeStatus[]>([]);
+  const checkGenerationRef = useRef(0);
+  const activeImagesRef = useRef<HTMLImageElement[]>([]);
+
   // Fetch versions for this shot
   const { data: versionsData } = useQuery<{ ok: boolean; versions: LifestyleHeroVersion[] }>({
     queryKey: ['/api/work-items', workItemId, 'lifestyle-hero-versions', shotId],
@@ -692,6 +711,76 @@ function ShotPreviewCard({
   const mainPreviewSrc = selectedVersion 
     ? `${ASSET_BASE_URL}${selectedVersion.desktopS3Key}`
     : `${ASSET_BASE_URL}${row.filename}`;
+
+  // Check image availability for all sizes with cleanup
+  const checkImagesForShot = useCallback(() => {
+    // Increment generation to invalidate previous checks
+    checkGenerationRef.current += 1;
+    const currentGeneration = checkGenerationRef.current;
+
+    // Clean up previous Image objects
+    activeImagesRef.current.forEach(img => {
+      img.onload = null;
+      img.onerror = null;
+    });
+    activeImagesRef.current = [];
+
+    const sizes: SizeStatus[] = rows.map((r) => ({
+      sizeLabel: r.size_label,
+      width: r.width,
+      height: r.height,
+      filename: r.filename,
+      url: `${ASSET_BASE_URL}${r.filename}`,
+      ok: null,
+    }));
+
+    setSizeStatuses(sizes);
+
+    sizes.forEach((size, idx) => {
+      const img = new Image();
+      activeImagesRef.current.push(img);
+
+      img.onload = () => {
+        // Only update if this is still the current generation
+        if (checkGenerationRef.current === currentGeneration) {
+          setSizeStatuses((prev) => {
+            const next = [...prev];
+            if (next[idx] && next[idx].filename === size.filename) {
+              next[idx] = { ...next[idx], ok: true };
+            }
+            return next;
+          });
+        }
+      };
+      img.onerror = () => {
+        // Only update if this is still the current generation
+        if (checkGenerationRef.current === currentGeneration) {
+          setSizeStatuses((prev) => {
+            const next = [...prev];
+            if (next[idx] && next[idx].filename === size.filename) {
+              next[idx] = { ...next[idx], ok: false };
+            }
+            return next;
+          });
+        }
+      };
+      img.src = size.url;
+    });
+  }, [rows]);
+
+  // Run image checks on mount and when rows change, with cleanup on unmount
+  useEffect(() => {
+    checkImagesForShot();
+
+    return () => {
+      // Clean up all active Image objects on unmount
+      activeImagesRef.current.forEach(img => {
+        img.onload = null;
+        img.onerror = null;
+      });
+      activeImagesRef.current = [];
+    };
+  }, [checkImagesForShot]);
 
   return (
     <div
@@ -795,6 +884,75 @@ function ShotPreviewCard({
           </div>
         )}
       </div>
+
+      {/* Image Status Strip */}
+      {sizeStatuses.length > 0 && (
+        <div className="mt-3 border-t border-border pt-2">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-[11px] font-medium text-foreground">
+              Image status
+            </span>
+            <Button
+              type="button"
+              size="sm"
+              variant="ghost"
+              onClick={checkImagesForShot}
+              className="h-5 text-[10px] px-2"
+              data-testid={`button-recheck-${shotId}`}
+            >
+              Recheck
+            </Button>
+          </div>
+
+          <div className="space-y-1">
+            {sizeStatuses.map((s) => {
+              const badge =
+                s.ok === null
+                  ? "Checking…"
+                  : s.ok
+                  ? "OK"
+                  : "Missing";
+
+              const badgeColor =
+                s.ok === null
+                  ? "bg-muted text-muted-foreground"
+                  : s.ok
+                  ? "bg-emerald-500/90 text-emerald-950 dark:bg-emerald-500/20 dark:text-emerald-400"
+                  : "bg-amber-500/90 text-amber-950 dark:bg-amber-500/20 dark:text-amber-400";
+
+              return (
+                <div
+                  key={s.sizeLabel}
+                  className="flex items-center justify-between text-[11px] text-foreground"
+                  data-testid={`status-${shotId}-${s.sizeLabel.toLowerCase()}`}
+                >
+                  <span className="text-muted-foreground">
+                    {s.sizeLabel} – {s.width}×{s.height}
+                  </span>
+                  <div className="flex items-center gap-2">
+                    <span
+                      className={`inline-flex items-center rounded-full px-2 py-[1px] text-[10px] font-medium ${badgeColor}`}
+                    >
+                      {badge}
+                    </span>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="ghost"
+                      disabled={!s.ok}
+                      onClick={() => window.open(s.url, "_blank")}
+                      className="h-5 text-[10px] px-2 disabled:opacity-40"
+                      data-testid={`button-open-${shotId}-${s.sizeLabel.toLowerCase()}`}
+                    >
+                      Open
+                    </Button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* Actions row */}
       <div className="flex items-center gap-2 mt-2 flex-wrap">

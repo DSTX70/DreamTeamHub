@@ -1,0 +1,198 @@
+Yep, totally agree – if you have to spelunk through a hidden Ops tool to know if the images are good, the UX is broken. Let’s make **Lifestyle Hero Preview = design pod’s SKU Switcher**.
+
+We’ll keep Ops’ SKU Switcher as a deep tool, but give normal users a **built-in status + preview panel** right under the heroes.
+
+---
+
+## Goal
+
+For each shot card (OL-1 / OL-2 / OL-3):
+
+* Show **Desktop / Tablet / Mobile** status (✅ exists / ⚠️ missing).
+* Let the user **open each size** in a new tab.
+* All of this is visible **right inside the Work Item**, no extra Ops nav.
+
+We can do this **purely from the front-end**, because we already know:
+
+* Asset base URL (`ASSET_BASE_URL`)
+* Exact keys from `export_plan` (`row.filename`, `width`, `height`, `size_label`)
+
+---
+
+## Tiny Spec – “Hero Image Status” strip on each card
+
+### Where
+
+In `LifestyleHeroPreview.tsx`, inside each shot card, add a small block:
+
+* Title: `Image status`
+* Rows:
+
+  * `Desktop – 1920×800  •  ✅ Open`
+  * `Tablet – 960×600    •  ✅ Open`
+  * `Mobile – 1080×1350  •  ⚠️ Missing` (if it 404s)
+
+### Behavior
+
+For each `export_plan` row (Desktop/Tablet/Mobile) for that `shotId`:
+
+* Build full URL: `ASSET_BASE_URL + filename`
+* Try to load the image (via `Image()` in the browser).
+* Set status:
+
+  * `ok: true` → ✅ and “Open” link enabled
+  * `ok: false` → ⚠️ and “Open” disabled
+* Add a **“Recheck”** button per shot that re-runs these checks.
+
+No backend changes required.
+
+---
+
+## Concrete React Patch (inside LifestyleHeroPreview)
+
+I’ll show this as if you’re already in the per-shot block where you have `rows` for that shot.
+
+### 1. Add state & helper at top of the per-shot card
+
+```tsx
+type SizeStatus = {
+  sizeLabel: string;
+  width: number;
+  height: number;
+  filename: string;
+  url: string;
+  ok: boolean | null; // null = still checking
+};
+
+const [sizeStatuses, setSizeStatuses] = React.useState<SizeStatus[]>([]);
+
+const checkImagesForShot = React.useCallback(() => {
+  const sizes: SizeStatus[] = rows.map((row) => ({
+    sizeLabel: row.size_label,
+    width: row.width,
+    height: row.height,
+    filename: row.filename,
+    url: `${ASSET_BASE_URL}${row.filename}`,
+    ok: null,
+  }));
+
+  setSizeStatuses(sizes);
+
+  sizes.forEach((size, idx) => {
+    const img = new Image();
+    img.onload = () => {
+      setSizeStatuses((prev) => {
+        const next = [...prev];
+        if (next[idx] && next[idx].filename === size.filename) {
+          next[idx] = { ...next[idx], ok: true };
+        }
+        return next;
+      });
+    };
+    img.onerror = () => {
+      setSizeStatuses((prev) => {
+        const next = [...prev];
+        if (next[idx] && next[idx].filename === size.filename) {
+          next[idx] = { ...next[idx], ok: false };
+        }
+        return next;
+      });
+    };
+    img.src = size.url;
+  });
+}, [rows]);
+```
+
+### 2. Run the check when the card mounts or rows change
+
+```tsx
+React.useEffect(() => {
+  checkImagesForShot();
+}, [checkImagesForShot]);
+```
+
+### 3. Render the status strip under your existing card content
+
+Drop this **near the bottom of the card**, above the Regenerate/Upload buttons:
+
+```tsx
+<div className="mt-3 border-t border-slate-800 pt-2">
+  <div className="flex items-center justify-between mb-1">
+    <span className="text-[11px] font-medium text-slate-300">
+      Image status
+    </span>
+    <button
+      type="button"
+      onClick={checkImagesForShot}
+      className="text-[10px] text-slate-400 hover:text-slate-100"
+    >
+      Recheck
+    </button>
+  </div>
+
+  <div className="space-y-1">
+    {sizeStatuses.map((s) => {
+      const badge =
+        s.ok === null
+          ? "Checking…"
+          : s.ok
+          ? "OK"
+          : "Missing";
+
+      const badgeColor =
+        s.ok === null
+          ? "bg-slate-700 text-slate-200"
+          : s.ok
+          ? "bg-emerald-500/90 text-emerald-950"
+          : "bg-amber-500/90 text-amber-950";
+
+      return (
+        <div
+          key={s.sizeLabel}
+          className="flex items-center justify-between text-[11px] text-slate-300"
+        >
+          <span>
+            {s.sizeLabel} – {s.width}×{s.height}
+          </span>
+          <div className="flex items-center gap-2">
+            <span
+              className={`inline-flex items-center rounded-full px-2 py-[1px] text-[10px] ${badgeColor}`}
+            >
+              {badge}
+            </span>
+            <button
+              type="button"
+              disabled={!s.ok}
+              onClick={() => window.open(s.url, "_blank")}
+              className="text-[10px] text-slate-400 hover:text-slate-100 disabled:opacity-40"
+            >
+              Open
+            </button>
+          </div>
+        </div>
+      );
+    })}
+  </div>
+</div>
+```
+
+### What this gives you
+
+For each hero card:
+
+* You and Nova can see at a glance:
+
+  * Are **all three sizes** present and reachable?
+  * Click **Open** to see the full Desktop/Tablet/Mobile versions.
+* No separate Ops page needed for day-to-day work.
+* Ops can still keep their deep SKU Switcher for bulk checks.
+
+---
+
+If you’d like, I can now:
+
+* Add a one-line note into the WO-001 checklist that says something like:
+
+  > “Use the Lifestyle Hero Preview ‘Image status’ strip to confirm Desktop/Tablet/Mobile exist and open before marking this step complete.”
+
+so it’s baked into your process for future Work Orders too.
