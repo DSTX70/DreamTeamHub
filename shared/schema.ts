@@ -298,6 +298,28 @@ export const workItemFiles = pgTable("work_item_files", {
 });
 
 // ===========================
+// LIFESTYLE HERO REFERENCES
+// ===========================
+
+export const lifestyleHeroReferences = pgTable("lifestyle_hero_references", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  workItemId: integer("work_item_id").notNull().references(() => workItems.id, { onDelete: 'cascade' }),
+  shotId: varchar("shot_id", { length: 50 }).notNull(),
+  filename: varchar("filename", { length: 255 }).notNull(),
+  s3Key: varchar("s3_key", { length: 512 }).notNull(),
+  s3Url: text("s3_url").notNull(),
+  uploadedByUserId: varchar("uploaded_by_user_id", { length: 255 }).notNull(),
+  uploadedAt: timestamp("uploaded_at").defaultNow(),
+});
+
+export const insertLifestyleHeroReferenceSchema = createInsertSchema(lifestyleHeroReferences).omit({
+  id: true,
+  uploadedAt: true,
+});
+export type InsertLifestyleHeroReference = z.infer<typeof insertLifestyleHeroReferenceSchema>;
+export type LifestyleHeroReference = typeof lifestyleHeroReferences.$inferSelect;
+
+// ===========================
 // ALT TEXT REGISTRY
 // ===========================
 

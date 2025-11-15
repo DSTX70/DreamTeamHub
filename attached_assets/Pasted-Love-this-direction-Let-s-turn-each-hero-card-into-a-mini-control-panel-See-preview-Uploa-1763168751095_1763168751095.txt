@@ -1,0 +1,413 @@
+Love this direction. Let’s turn each hero card into a **mini control panel**:
+
+* See preview
+* Upload one or more reference images for that shot
+* Regenerate just that shot (optionally using the refs)
+
+I’ll give you:
+
+1. A tiny UX/API spec for devs
+2. The React additions for the **per-shot Regenerate** button
+3. A small per-shot **Reference Upload** UI (with a backend endpoint shape)
+
+---
+
+## 1) Tiny Spec – Per-shot Regenerate + Reference Upload
+
+### Where
+
+* On the **Lifestyle Hero Preview** cards (one card per `shot_id`).
+* Each card gets a footer row:
+
+  * `Upload reference` (small button)
+  * `Regenerate shot` (primary button)
+
+### Behavior
+
+#### A. Upload reference(s)
+
+**Button:** `Upload reference`
+**What happens:**
+
+1. Opens a file picker (`accept="image/*"`, `multiple` allowed).
+
+2. On selection, POSTs a `FormData` payload:
+
+   ```http
+   POST /api/work-items/:id/lifestyle-hero-references
+   Content-Type: multipart/form-data
+
+   fields:
+     workItemId: <id from route/context>
+     shotId: <this card's shot_id, e.g. "OL-2">
+     files[]: one or more images
+   ```
+
+3. Backend saves refs to S3 (e.g. `fcc/lifestyle_refs/{workItemId}/{shotId}/...`) and returns:
+
+   ```json
+   {
+     "ok": true,
+     "shotId": "OL-2",
+     "references": [
+       {
+         "id": "ref_123",
+         "url": "https://cdn.../fcc/lifestyle_refs/7/OL-2/ref_123.png",
+         "filename": "ref_123.png"
+       }
+     ]
+   }
+   ```
+
+4. UI:
+
+   * Shows tiny thumbnails of reference images under that card (so you know they’re attached).
+   * Toast success:
+     `Saved 2 reference images for OL-2.`
+
+#### B. Regenerate shot
+
+**Button:** `Regenerate shot`
+**What happens:**
+
+1. Calls the existing generator endpoint, **scoped to this shot**:
+
+   ```http
+   POST /api/work-items/:id/generate-lifestyle-heroes
+   Content-Type: application/json
+
+   {
+     "shotIds": ["OL-2"],
+     "dryRun": false,
+     "overwrite": true
+   }
+   ```
+
+2. Backend:
+
+   * Looks up Lifestyle Pack v2 for this WI.
+   * Optionally also looks up any stored reference images for `shot_id` (e.g. from a `references` table) and passes them into the image model.
+   * Regenerates Desktop/Tablet/Mobile for `OL-2` only.
+
+3. UI:
+
+   * Button text: `Regenerating…` (disabled while running)
+   * Success toast:
+     `Regenerated lifestyle heroes for OL-2. Validate in SKU Switcher.`
+   * On success, re-fetches packs (or at least forces the `<img>` to reload) so you see the updated preview.
+
+---
+
+## 2) Minimal Backend Shape for References (just enough for devs)
+
+### Upload endpoint
+
+```ts
+// POST /api/work-items/:id/lifestyle-hero-references
+// multipart/form-data: workItemId, shotId, files[]
+```
+
+* Saves each file to storage.
+* Inserts a DB row like `{ work_item_id, shot_id, url, created_at }`.
+* Returns `{ ok: true, shotId, references: [...] }`.
+
+### Generator extension (optional but recommended)
+
+Inside `generateLifestyleHeroesForWorkItem`:
+
+* Before calling `openai.images.generate`, fetch refs for this `(workItemId, shotId)`:
+
+  ```ts
+  const refs = await getLifestyleHeroReferences(workItemId, shotId);
+  ```
+
+* If your image model supports reference images (OpenAI does via `referenced_image_ids`), pass them through; otherwise, you still have them recorded for humans.
+
+---
+
+## 3) React Additions – Per-shot Buttons + Ref Upload
+
+Below is an updated version of the **card body** from `LifestyleHeroPreview`. I’ll show just the **inside of the map** and the extra state/hooks you need.
+
+### A. Extra state at top of `LifestyleHeroPreview`
+
+Add:
+
+```tsx
+const [selected, setSelected] = React.useState<{
+  shotId: string;
+  sku: string;
+  row: ExportPlanRow;
+} | null>(null);
+
+const [isRegenerating, setIsRegenerating] = React.useState<string | null>(null);
+const [isUploadingRef, setIsUploadingRef] = React.useState<string | null>(null);
+const [refsByShot, setRefsByShot] = React.useState<
+  Record<string, { url: string; id: string }[]>
+>({});
+```
+
+And you’ll want `workItemId` and a `toast` hook passed in via props or context; I’ll assume you have:
+
+```tsx
+interface LifestyleHeroPreviewProps {
+  packs: WorkItemPack[];
+  workItemId: string;
+  toast: (opts: { title: string; description?: string; variant?: string }) => void;
+}
+```
+
+### B. Helper: hidden file input per shot
+
+Inside the component, add a tiny helper:
+
+```tsx
+const fileInputRefs = React.useRef<Record<string, HTMLInputElement | null>>({});
+
+const handleClickUploadRef = (shotId: string) => {
+  const input = fileInputRefs.current[shotId];
+  if (input) input.click();
+};
+
+const handleUploadRefChange = async (
+  e: React.ChangeEvent<HTMLInputElement>,
+  shotId: string
+) => {
+  const files = e.target.files;
+  if (!files || files.length === 0) return;
+
+  try {
+    setIsUploadingRef(shotId);
+
+    const formData = new FormData();
+    formData.append("shotId", shotId);
+    formData.append("workItemId", workItemId);
+    Array.from(files).forEach((file) => {
+      formData.append("files", file);
+    });
+
+    const res = await fetch(
+      `/api/work-items/${encodeURIComponent(
+        workItemId
+      )}/lifestyle-hero-references`,
+      {
+        method: "POST",
+        body: formData,
+      }
+    );
+
+    const data = await res.json();
+
+    if (!res.ok || !data.ok) {
+      toast({
+        title: "Couldn’t save reference images",
+        description: "Check console for details.",
+        variant: "destructive",
+      });
+      console.error("upload refs error", data);
+      return;
+    }
+
+    const newRefs = (data.references ?? []).map((r: any) => ({
+      id: r.id,
+      url: r.url,
+    }));
+
+    setRefsByShot((prev) => ({
+      ...prev,
+      [shotId]: [...(prev[shotId] ?? []), ...newRefs],
+    }));
+
+    toast({
+      title: "Reference images saved",
+      description: `Saved ${newRefs.length} reference image(s) for ${shotId}.`,
+    });
+  } catch (err) {
+    console.error("upload refs exception", err);
+    toast({
+      title: "Couldn’t save reference images",
+      description: "Unexpected error. Try again or contact the dev pod.",
+      variant: "destructive",
+    });
+  } finally {
+    setIsUploadingRef(null);
+    // Reset value so selecting the same file again still fires change
+    if (e.target) e.target.value = "";
+  }
+};
+```
+
+### C. Helper: regenerate a single shot
+
+```tsx
+const handleRegenerateShot = async (shotId: string) => {
+  try {
+    setIsRegenerating(shotId);
+
+    const res = await fetch(
+      `/api/work-items/${encodeURIComponent(
+        workItemId
+      )}/generate-lifestyle-heroes`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          shotIds: [shotId],
+          dryRun: false,
+          overwrite: true,
+        }),
+      }
+    );
+
+    const data = await res.json();
+
+    if (!res.ok || !data.ok) {
+      toast({
+        title: "Couldn’t regenerate shot",
+        description: `Something went wrong while regenerating ${shotId}.`,
+        variant: "destructive",
+      });
+      console.error("regenerate shot error", data);
+      return;
+    }
+
+    toast({
+      title: "Lifestyle heroes regenerated",
+      description: `Regenerated lifestyle heroes for ${shotId}. Validate in SKU Switcher.`,
+    });
+
+    // Force image reload by bumping a cache-buster or by refetching packs
+    // Easiest: include a timestamp query param
+  } catch (err) {
+    console.error("regenerate shot exception", err);
+    toast({
+      title: "Couldn’t regenerate shot",
+      description: `Unexpected error while regenerating ${shotId}.`,
+      variant: "destructive",
+    });
+  } finally {
+    setIsRegenerating(null);
+  }
+};
+```
+
+### D. Updated card JSX (inside `previews.map`)
+
+Replace your current card JSX with this variant:
+
+```tsx
+{previews.map(({ shotId, sku, row }) => {
+  const src = `${ASSET_BASE_URL}${row.filename}`;
+  const refs = refsByShot[shotId] ?? [];
+  const isShotRegenerating = isRegenerating === shotId;
+  const isShotUploading = isUploadingRef === shotId;
+
+  return (
+    <div
+      key={shotId}
+      className="rounded-lg border border-slate-700 bg-slate-900/60 p-3 text-xs text-slate-200"
+    >
+      <div
+        className="mb-2 rounded-md bg-slate-800 overflow-hidden cursor-pointer"
+        onClick={() => setSelected({ shotId, sku, row })}
+        title="Click to view larger"
+      >
+        <img
+          src={src}
+          alt={`${shotId} hero preview`}
+          className="block w-full max-h-40 object-cover"
+          onError={(e) => {
+            (e.currentTarget as HTMLImageElement).style.display = "none";
+          }}
+        />
+        <div className="p-3 text-center text-slate-400 text-[11px]">
+          {row.filename}
+        </div>
+      </div>
+
+      <div className="font-mono text-[11px] text-slate-400 mb-1">
+        {shotId} · {sku}
+      </div>
+      <div className="flex justify-between text-[11px] text-slate-400 mb-2">
+        <span>{row.size_label}</span>
+        <span>
+          {row.width}×{row.height}
+        </span>
+      </div>
+
+      {/* Reference thumbnails, if any */}
+      {refs.length > 0 && (
+        <div className="mb-2 flex gap-1">
+          {refs.slice(0, 3).map((r) => (
+            <img
+              key={r.id}
+              src={r.url}
+              alt={`${shotId} ref`}
+              className="h-8 w-8 rounded object-cover border border-slate-700"
+            />
+          ))}
+          {refs.length > 3 && (
+            <span className="text-[10px] text-slate-400 self-center">
+              +{refs.length - 3} more
+            </span>
+          )}
+        </div>
+      )}
+
+      {/* Actions row */}
+      <div className="flex items-center justify-between gap-2 mt-1">
+        {/* Hidden file input for this shot */}
+        <input
+          type="file"
+          accept="image/*"
+          multiple
+          ref={(el) => {
+            fileInputRefs.current[shotId] = el;
+          }}
+          className="hidden"
+          onChange={(e) => handleUploadRefChange(e, shotId)}
+        />
+
+        <button
+          type="button"
+          onClick={() => handleClickUploadRef(shotId)}
+          disabled={isShotUploading || isShotRegenerating}
+          className="px-2 py-1 rounded border border-slate-600 text-[11px] text-slate-200 hover:bg-slate-800 disabled:opacity-50"
+          title="Upload one or more reference images for this shot."
+        >
+          {isShotUploading ? "Uploading…" : "Upload reference"}
+        </button>
+
+        <button
+          type="button"
+          onClick={() => handleRegenerateShot(shotId)}
+          disabled={isShotRegenerating || isShotUploading}
+          className="px-2 py-1 rounded bg-teal-500 text-[11px] font-medium text-slate-900 hover:bg-teal-400 disabled:opacity-50"
+          title="Regenerate Desktop, Tablet, and Mobile heroes for this shot."
+        >
+          {isShotRegenerating ? "Regenerating…" : "Regenerate shot"}
+        </button>
+      </div>
+    </div>
+  );
+})}
+```
+
+### E. Modal for large view (optional, but recommended)
+
+Keep the `selected` state and modal from my previous message so clicking the preview gives you a full-width look.
+
+---
+
+Once your dev wires:
+
+* `/api/work-items/:id/lifestyle-hero-references` (upload)
+* (Optional) using those refs in the generator,
+
+you’ll be able to:
+
+1. Click **Upload reference** under OL-2, drag in 2–3 inspiration shots.
+2. Click **Regenerate shot**.
+3. Refresh packs / let the preview auto-refresh, and visually compare v1 vs v2 for that one hero.
+
+If you’d like, next we can draft the **reference upload endpoint spec** in the same style we did for the generator so they have zero ambiguity server-side.
