@@ -1,5 +1,8 @@
-import { useQuery } from "@tanstack/react-query";
-import { ImageIcon } from "lucide-react";
+import { useState, useRef, type ChangeEvent } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { ImageIcon, Upload, RefreshCw } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { useToast } from "@/hooks/use-toast";
 
 type ExportPlanRow = {
   sku: string;
@@ -28,6 +31,16 @@ type WorkItemPack = {
   createdAt: string;
 };
 
+type LifestyleHeroReference = {
+  id: number;
+  workItemId: number;
+  shotId: string;
+  filename: string;
+  s3Key: string;
+  s3Url: string;
+  uploadedAt: string;
+};
+
 interface LifestyleHeroPreviewProps {
   workItemId: number;
 }
@@ -35,10 +48,141 @@ interface LifestyleHeroPreviewProps {
 const ASSET_BASE_URL = "/img/";
 
 export function LifestyleHeroPreview({ workItemId }: LifestyleHeroPreviewProps) {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const fileInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
+  
+  const [isUploadingRef, setIsUploadingRef] = useState<string | null>(null);
+  const [isRegenerating, setIsRegenerating] = useState<string | null>(null);
+
+  // Fetch packs
   const { data: packs = [], isLoading } = useQuery<WorkItemPack[]>({
     queryKey: [`/api/work-items/${workItemId}/packs`],
     refetchInterval: 30000,
   });
+
+  // Fetch references
+  const { data: referencesData } = useQuery<{ ok: boolean; references: LifestyleHeroReference[] }>({
+    queryKey: [`/api/work-items/${workItemId}/lifestyle-hero-references`],
+    refetchInterval: 30000,
+  });
+
+  const references = referencesData?.references || [];
+
+  // Group references by shotId
+  const refsByShot: Record<string, LifestyleHeroReference[]> = {};
+  for (const ref of references) {
+    if (!refsByShot[ref.shotId]) {
+      refsByShot[ref.shotId] = [];
+    }
+    refsByShot[ref.shotId].push(ref);
+  }
+
+  // Upload mutation
+  const uploadMutation = useMutation({
+    mutationFn: async ({ shotId, files }: { shotId: string; files: FileList }) => {
+      const formData = new FormData();
+      formData.append("shotId", shotId);
+      Array.from(files).forEach((file) => {
+        formData.append("files", file);
+      });
+
+      const res = await fetch(`/api/work-items/${workItemId}/lifestyle-hero-references`, {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "Upload failed");
+      }
+
+      return await res.json();
+    },
+    onSuccess: (data) => {
+      toast({
+        title: "Reference images saved",
+        description: `Saved ${data.references.length} reference image(s) for ${data.shotId}.`,
+      });
+      queryClient.invalidateQueries({ queryKey: [`/api/work-items/${workItemId}/lifestyle-hero-references`] });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Couldn't save reference images",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Regenerate mutation
+  const regenerateMutation = useMutation({
+    mutationFn: async (shotId: string) => {
+      const res = await fetch(`/api/work-items/${workItemId}/generate-lifestyle-heroes`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          shotIds: [shotId],
+          dryRun: false,
+          overwrite: true,
+        }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.message || "Regeneration failed");
+      }
+
+      return await res.json();
+    },
+    onSuccess: (data, shotId) => {
+      toast({
+        title: "Lifestyle heroes regenerated",
+        description: `Regenerated lifestyle heroes for ${shotId}. Images will update shortly.`,
+      });
+      // Invalidate queries to trigger refetch
+      queryClient.invalidateQueries({ queryKey: [`/api/work-items/${workItemId}/packs`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/work-items/${workItemId}/lifestyle-hero-references`] });
+    },
+    onError: (error: Error, shotId) => {
+      toast({
+        title: "Couldn't regenerate shot",
+        description: `Something went wrong while regenerating ${shotId}: ${error.message}`,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleClickUploadRef = (shotId: string) => {
+    const input = fileInputRefs.current[shotId];
+    if (input) input.click();
+  };
+
+  const handleUploadRefChange = async (
+    e: ChangeEvent<HTMLInputElement>,
+    shotId: string
+  ) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    setIsUploadingRef(shotId);
+    try {
+      await uploadMutation.mutateAsync({ shotId, files });
+    } finally {
+      setIsUploadingRef(null);
+      // Reset value so selecting the same file again still fires change
+      if (e.target) e.target.value = "";
+    }
+  };
+
+  const handleRegenerateShot = async (shotId: string) => {
+    setIsRegenerating(shotId);
+    try {
+      await regenerateMutation.mutateAsync(shotId);
+    } finally {
+      setIsRegenerating(null);
+    }
+  };
 
   if (isLoading) {
     return null;
@@ -95,7 +239,7 @@ export function LifestyleHeroPreview({ workItemId }: LifestyleHeroPreviewProps) 
 
   return (
     <div className="mt-6 rounded-xl border border-border bg-card p-4">
-      <div className="mb-4 flex items-center justify-between">
+      <div className="mb-4 flex items-center justify-between flex-wrap gap-2">
         <div className="flex items-center gap-2">
           <ImageIcon className="h-4 w-4" />
           <h3 className="text-sm font-semibold">Lifestyle Hero Preview</h3>
@@ -108,13 +252,17 @@ export function LifestyleHeroPreview({ workItemId }: LifestyleHeroPreviewProps) 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3">
         {previews.map(({ shotId, sku, row }) => {
           const src = `${ASSET_BASE_URL}${row.filename}`;
+          const refs = refsByShot[shotId] || [];
+          const isShotRegenerating = isRegenerating === shotId;
+          const isShotUploading = isUploadingRef === shotId;
+
           return (
             <div
               key={shotId}
-              className="rounded-lg border border-border bg-background p-3 hover-elevate"
+              className="rounded-lg border border-border bg-background p-3"
               data-testid={`lifestyle-preview-${shotId}`}
             >
-              <div className="mb-2 overflow-hidden rounded-md bg-muted">
+              <div className="mb-2 overflow-hidden rounded-md bg-muted cursor-pointer hover-elevate">
                 <img
                   src={src}
                   alt={`${shotId} hero preview`}
@@ -132,6 +280,7 @@ export function LifestyleHeroPreview({ workItemId }: LifestyleHeroPreviewProps) 
                   data-testid={`lifestyle-preview-img-${shotId}`}
                 />
               </div>
+
               <div className="mb-1 font-mono text-xs text-muted-foreground">
                 {shotId} · {sku}
               </div>
@@ -140,11 +289,69 @@ export function LifestyleHeroPreview({ workItemId }: LifestyleHeroPreviewProps) 
                   {row.card_title}
                 </div>
               )}
-              <div className="flex justify-between text-xs text-muted-foreground">
+              <div className="flex justify-between text-xs text-muted-foreground mb-2">
                 <span>{row.size_label}</span>
                 <span>
                   {row.width}×{row.height}
                 </span>
+              </div>
+
+              {/* Reference thumbnails, if any */}
+              {refs.length > 0 && (
+                <div className="mb-2 flex gap-1 flex-wrap">
+                  {refs.slice(0, 3).map((r) => (
+                    <img
+                      key={r.id}
+                      src={r.s3Url}
+                      alt={`${shotId} ref`}
+                      className="h-8 w-8 rounded object-cover border border-border"
+                    />
+                  ))}
+                  {refs.length > 3 && (
+                    <span className="text-[10px] text-muted-foreground self-center">
+                      +{refs.length - 3} more
+                    </span>
+                  )}
+                </div>
+              )}
+
+              {/* Actions row */}
+              <div className="flex items-center justify-between gap-2 mt-2">
+                {/* Hidden file input for this shot */}
+                <input
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  ref={(el) => {
+                    fileInputRefs.current[shotId] = el;
+                  }}
+                  className="hidden"
+                  onChange={(e) => handleUploadRefChange(e, shotId)}
+                  data-testid={`input-upload-ref-${shotId}`}
+                />
+
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => handleClickUploadRef(shotId)}
+                  disabled={isShotUploading || isShotRegenerating}
+                  title="Upload one or more reference images for this shot."
+                  data-testid={`button-upload-ref-${shotId}`}
+                >
+                  <Upload className="h-3 w-3 mr-1" />
+                  {isShotUploading ? "Uploading…" : "Upload ref"}
+                </Button>
+
+                <Button
+                  size="sm"
+                  onClick={() => handleRegenerateShot(shotId)}
+                  disabled={isShotRegenerating || isShotUploading}
+                  title="Regenerate Desktop, Tablet, and Mobile heroes for this shot."
+                  data-testid={`button-regenerate-${shotId}`}
+                >
+                  <RefreshCw className={`h-3 w-3 mr-1 ${isShotRegenerating ? 'animate-spin' : ''}`} />
+                  {isShotRegenerating ? "Regenerating…" : "Regenerate"}
+                </Button>
               </div>
             </div>
           );
