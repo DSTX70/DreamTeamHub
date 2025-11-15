@@ -417,11 +417,11 @@ export function LifestyleHeroPreview({ workItemId }: LifestyleHeroPreviewProps) 
               className="rounded-lg border border-border bg-background p-3"
               data-testid={`lifestyle-preview-${shotId}`}
             >
-              <div className="mb-2 overflow-hidden rounded-md bg-muted cursor-pointer hover-elevate">
+              <div className="mb-2 overflow-hidden rounded-md bg-muted cursor-pointer">
                 <img
                   src={src}
                   alt={`${shotId} hero preview`}
-                  className="block h-32 w-full object-cover"
+                  className="block h-32 w-full object-cover transition-transform hover:scale-105"
                   onError={(e) => {
                     e.currentTarget.style.display = "none";
                     const parent = e.currentTarget.parentElement;
@@ -508,7 +508,7 @@ export function LifestyleHeroPreview({ workItemId }: LifestyleHeroPreviewProps) 
               </div>
 
               {/* Actions row */}
-              <div className="flex items-center justify-between gap-2 mt-2">
+              <div className="flex items-center gap-2 mt-2 flex-wrap">
                 {/* Hidden file input for this shot */}
                 <input
                   type="file"
