@@ -242,6 +242,18 @@ export async function generateLifestyleHeroesForWorkItem(
       const b64 = imgResp.data[0].b64_json;
       const masterBuffer = Buffer.from(b64, "base64");
 
+      // Get next version number
+      const versionNumber = await storage.getNextVersionNumber(workItemId, shotId);
+      const versionPath = `fcc/lifestyle_heroes/${workItemId}/${shotId}/v${versionNumber}`;
+
+      // Upload master image
+      const masterS3Key = `${versionPath}/master.webp`;
+      await s3Put(masterS3Key, masterBuffer, "image/webp");
+      console.log(`[LifestyleHeroes] Uploaded master image to ${masterS3Key}`);
+
+      // Upload cropped versions
+      const s3Keys: { [key: string]: string } = { master: masterS3Key };
+
       for (const t of targets) {
         console.log(
           `[LifestyleHeroes] Cropping and uploading ${t.size_label} (${t.width}x${t.height}) for shot ${shotId}...`
@@ -255,6 +267,11 @@ export async function generateLifestyleHeroesForWorkItem(
           .webp({ quality: 90 })
           .toBuffer();
 
+        const versionedKey = `${versionPath}/${t.size_label.toLowerCase()}.webp`;
+        await s3Put(versionedKey, resized, "image/webp");
+        s3Keys[t.size_label.toLowerCase()] = versionedKey;
+
+        // Also upload to original path for backward compatibility
         await s3Put(t.filename, resized, "image/webp");
 
         generated.push({
@@ -264,6 +281,22 @@ export async function generateLifestyleHeroesForWorkItem(
           height: t.height,
         });
       }
+
+      // Save version to database
+      const isFirstVersion = versionNumber === 1;
+      await storage.createLifestyleHeroVersion({
+        workItemId,
+        shotId,
+        versionNumber,
+        masterS3Key: s3Keys.master,
+        desktopS3Key: s3Keys.desktop || s3Keys.master,
+        tabletS3Key: s3Keys.tablet || s3Keys.master,
+        mobileS3Key: s3Keys.mobile || s3Keys.master,
+        promptUsed: prompt,
+        isActive: isFirstVersion,
+      });
+
+      console.log(`[LifestyleHeroes] Saved version ${versionNumber} for shot ${shotId} (active: ${isFirstVersion})`);
     }
 
     console.log(
