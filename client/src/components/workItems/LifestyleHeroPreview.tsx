@@ -102,7 +102,7 @@ function VersionSelector({ workItemId, shotId }: { workItemId: number; shotId: s
   const queryClient = useQueryClient();
 
   // Lazy-load versions only when opened
-  const { data: versionsData, isLoading } = useQuery<{ ok: boolean; versions: LifestyleHeroVersion[] }>({
+  const { data: versionsData, isLoading, error, isError, refetch } = useQuery<{ ok: boolean; versions: LifestyleHeroVersion[] }>({
     queryKey: ['/api/work-items', workItemId, 'lifestyle-hero-versions', shotId],
     enabled: isOpen,
   });
@@ -133,7 +133,42 @@ function VersionSelector({ workItemId, shotId }: { workItemId: number; shotId: s
     },
   });
 
-  if (versions.length === 0 && !isLoading && isOpen) {
+  // Handle error state
+  if (isError && isOpen) {
+    return (
+      <div className="mb-2">
+        <Button
+          size="sm"
+          variant="ghost"
+          onClick={() => setIsOpen(!isOpen)}
+          className="h-6 px-2 text-xs"
+          data-testid={`button-toggle-versions-${shotId}`}
+        >
+          {isOpen ? <ChevronUp className="h-3 w-3 mr-1" /> : <ChevronDown className="h-3 w-3 mr-1" />}
+          Versions
+        </Button>
+        {isOpen && (
+          <div className="mt-1 space-y-1 px-2">
+            <div className="text-xs text-destructive">
+              Failed to load versions: {error instanceof Error ? error.message : 'Unknown error'}
+            </div>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => refetch()}
+              className="h-6 px-2 text-xs"
+              data-testid={`button-retry-versions-${shotId}`}
+            >
+              Retry
+            </Button>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // Handle empty state
+  if (versions.length === 0 && !isLoading && !isError && isOpen) {
     return (
       <div className="mb-2">
         <Button
