@@ -96,7 +96,17 @@ function useDebouncedCallback<T extends (...args: any[]) => void>(
 }
 
 // Version Selector Sub-component
-function VersionSelector({ workItemId, shotId }: { workItemId: number; shotId: string }) {
+function VersionSelector({ 
+  workItemId, 
+  shotId,
+  selectedVersionId,
+  onSelectVersion,
+}: { 
+  workItemId: number; 
+  shotId: string;
+  selectedVersionId?: number;
+  onSelectVersion: (versionId: number) => void;
+}) {
   const [isOpen, setIsOpen] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -209,23 +219,32 @@ function VersionSelector({ workItemId, shotId }: { workItemId: number; shotId: s
           {isLoading ? (
             <div className="text-xs text-muted-foreground">Loading versions...</div>
           ) : (
-            versions.map((version) => (
-              <div
-                key={version.id}
-                className="flex gap-2"
-                data-testid={`version-item-${shotId}-${version.versionNumber}`}
-              >
-                {/* Thumbnail preview */}
-                <div className="flex-shrink-0">
-                  <img
-                    src={`${ASSET_BASE_URL}${version.desktopS3Key}`}
-                    alt={`Version ${version.versionNumber}`}
-                    className="w-16 h-16 object-cover rounded border border-border"
-                    onError={(e) => {
-                      e.currentTarget.style.display = "none";
-                    }}
-                  />
-                </div>
+            versions.map((version) => {
+              const isSelected = selectedVersionId === version.id;
+              
+              return (
+                <div
+                  key={version.id}
+                  className="flex gap-2"
+                  data-testid={`version-item-${shotId}-${version.versionNumber}`}
+                >
+                  {/* Thumbnail preview - clickable to preview version */}
+                  <div 
+                    className={`flex-shrink-0 cursor-pointer rounded transition-all ${
+                      isSelected ? "ring-2 ring-primary" : "hover:ring-2 hover:ring-primary/50"
+                    }`}
+                    onClick={() => onSelectVersion(version.id)}
+                    title={`Preview version ${version.versionNumber}`}
+                  >
+                    <img
+                      src={`${ASSET_BASE_URL}${version.desktopS3Key}`}
+                      alt={`Version ${version.versionNumber}`}
+                      className="w-16 h-16 object-cover rounded"
+                      onError={(e) => {
+                        e.currentTarget.style.display = "none";
+                      }}
+                    />
+                  </div>
                 
                 {/* Version info and actions */}
                 <div className="flex flex-col flex-1 min-w-0 justify-between">
@@ -257,7 +276,8 @@ function VersionSelector({ workItemId, shotId }: { workItemId: number; shotId: s
                   )}
                 </div>
               </div>
-            ))
+            );
+            })
           )}
         </div>
       )}
@@ -273,7 +293,7 @@ export function LifestyleHeroPreview({ workItemId }: LifestyleHeroPreviewProps) 
   const [isUploadingRef, setIsUploadingRef] = useState<string | null>(null);
   const [isRegenerating, setIsRegenerating] = useState<string | null>(null);
   const [instructionsState, setInstructionsState] = useState<Record<string, InstructionState>>({});
-  const [previewedVersions, setPreviewedVersions] = useState<Record<string, number>>({});
+  const [selectedVersionIds, setSelectedVersionIds] = useState<Record<string, number>>({});
 
   // Fetch packs
   const { data: packs = [], isLoading } = useQuery<WorkItemPack[]>({
@@ -394,6 +414,8 @@ export function LifestyleHeroPreview({ workItemId }: LifestyleHeroPreviewProps) 
       // Invalidate queries to trigger refetch
       queryClient.invalidateQueries({ queryKey: [`/api/work-items/${workItemId}/packs`] });
       queryClient.invalidateQueries({ queryKey: [`/api/work-items/${workItemId}/lifestyle-hero-references`] });
+      // Invalidate versions query so new version appears immediately
+      queryClient.invalidateQueries({ queryKey: ['/api/work-items', workItemId, 'lifestyle-hero-versions', shotId] });
     },
     onError: (error: Error, shotId) => {
       toast({
@@ -592,151 +614,223 @@ export function LifestyleHeroPreview({ workItemId }: LifestyleHeroPreviewProps) 
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3">
         {previews.map(({ shotId, sku, row }) => {
-          const src = `${ASSET_BASE_URL}${row.filename}`;
           const refs = refsByShot[shotId] || [];
           const isShotRegenerating = isRegenerating === shotId;
           const isShotUploading = isUploadingRef === shotId;
 
           return (
-            <div
+            <ShotPreviewCard
               key={shotId}
-              className="rounded-lg border border-border bg-background p-3"
-              data-testid={`lifestyle-preview-${shotId}`}
-            >
-              <div className="mb-2 overflow-hidden rounded-md bg-muted cursor-pointer">
-                <img
-                  src={src}
-                  alt={`${shotId} hero preview`}
-                  className="block h-32 w-full object-cover transition-transform hover:scale-105"
-                  onError={(e) => {
-                    e.currentTarget.style.display = "none";
-                    const parent = e.currentTarget.parentElement;
-                    if (parent) {
-                      const placeholder = document.createElement("div");
-                      placeholder.className = "flex h-32 items-center justify-center text-xs text-muted-foreground";
-                      placeholder.textContent = "Image not found";
-                      parent.appendChild(placeholder);
-                    }
-                  }}
-                  data-testid={`lifestyle-preview-img-${shotId}`}
-                />
-              </div>
-
-              <div className="mb-1 font-mono text-xs text-muted-foreground">
-                {shotId} · {sku}
-              </div>
-              {row.card_title && (
-                <div className="mb-1 text-xs font-medium line-clamp-1">
-                  {row.card_title}
-                </div>
-              )}
-              <div className="flex justify-between text-xs text-muted-foreground mb-2">
-                <span>{row.size_label}</span>
-                <span>
-                  {row.width}×{row.height}
-                </span>
-              </div>
-
-              {/* Reference thumbnails, if any */}
-              {refs.length > 0 && (
-                <div className="mb-2 flex gap-1 flex-wrap">
-                  {refs.slice(0, 3).map((r) => (
-                    <img
-                      key={r.id}
-                      src={r.s3Url}
-                      alt={`${shotId} ref`}
-                      className="h-8 w-8 rounded object-cover border border-border"
-                    />
-                  ))}
-                  {refs.length > 3 && (
-                    <span className="text-[10px] text-muted-foreground self-center">
-                      +{refs.length - 3} more
-                    </span>
-                  )}
-                </div>
-              )}
-
-              {/* Version Selector */}
-              <VersionSelector workItemId={workItemId} shotId={shotId} />
-
-              {/* Regeneration instructions */}
-              <div className="mb-2">
-                <Textarea
-                  placeholder="Add regeneration instructions (e.g., Make background darker, Add more plants...)"
-                  value={instructionsState[shotId]?.value || ""}
-                  onChange={(e) => handleInstructionsChange(shotId, e.target.value)}
-                  className="min-h-[60px] text-xs resize-none"
-                  data-testid={`textarea-instructions-${shotId}`}
-                />
-                {instructionsState[shotId] && (
-                  <div className="mt-1 flex items-center justify-between">
-                    <span className="text-[10px] text-muted-foreground">
-                      {instructionsState[shotId].isSaving && "Saving…"}
-                      {!instructionsState[shotId].isSaving && instructionsState[shotId].lastSavedAt && (
-                        `Saved ${Math.round((Date.now() - instructionsState[shotId].lastSavedAt!.getTime()) / 1000)}s ago`
-                      )}
-                      {instructionsState[shotId].error && (
-                        <span className="text-destructive">
-                          Error: {instructionsState[shotId].error}
-                        </span>
-                      )}
-                    </span>
-                    {instructionsState[shotId].error && (
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => handleInstructionsChange(shotId, instructionsState[shotId].value)}
-                        className="h-5 text-[10px] px-2"
-                        data-testid={`button-retry-save-${shotId}`}
-                      >
-                        Retry
-                      </Button>
-                    )}
-                  </div>
-                )}
-              </div>
-
-              {/* Actions row */}
-              <div className="flex items-center gap-2 mt-2 flex-wrap">
-                {/* Hidden file input for this shot */}
-                <input
-                  type="file"
-                  accept="image/*"
-                  multiple
-                  ref={(el) => {
-                    fileInputRefs.current[shotId] = el;
-                  }}
-                  className="hidden"
-                  onChange={(e) => handleUploadRefChange(e, shotId)}
-                  data-testid={`input-upload-ref-${shotId}`}
-                />
-
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => handleClickUploadRef(shotId)}
-                  disabled={isShotUploading || isShotRegenerating}
-                  title="Upload one or more reference images for this shot."
-                  data-testid={`button-upload-ref-${shotId}`}
-                >
-                  <Upload className="h-3 w-3 mr-1" />
-                  {isShotUploading ? "Uploading…" : "Upload ref"}
-                </Button>
-
-                <Button
-                  size="sm"
-                  onClick={() => handleRegenerateShot(shotId)}
-                  disabled={isShotRegenerating || isShotUploading}
-                  title="Regenerate Desktop, Tablet, and Mobile heroes for this shot."
-                  data-testid={`button-regenerate-${shotId}`}
-                >
-                  <RefreshCw className={`h-3 w-3 mr-1 ${isShotRegenerating ? 'animate-spin' : ''}`} />
-                  {isShotRegenerating ? "Regenerating…" : "Regenerate"}
-                </Button>
-              </div>
-            </div>
+              workItemId={workItemId}
+              shotId={shotId}
+              sku={sku}
+              row={row}
+              refs={refs}
+              isShotRegenerating={isShotRegenerating}
+              isShotUploading={isShotUploading}
+              selectedVersionId={selectedVersionIds[shotId]}
+              onSelectVersion={(versionId) => setSelectedVersionIds(prev => ({ ...prev, [shotId]: versionId }))}
+              instructionsState={instructionsState[shotId]}
+              onInstructionsChange={(value) => handleInstructionsChange(shotId, value)}
+              onClickUploadRef={() => handleClickUploadRef(shotId)}
+              onUploadRefChange={(e) => handleUploadRefChange(e, shotId)}
+              onRegenerateShot={() => handleRegenerateShot(shotId)}
+              fileInputRef={(el) => { fileInputRefs.current[shotId] = el; }}
+            />
           );
         })}
+      </div>
+    </div>
+  );
+}
+
+// Shot Preview Card Component with Version Preview
+function ShotPreviewCard({
+  workItemId,
+  shotId,
+  sku,
+  row,
+  refs,
+  isShotRegenerating,
+  isShotUploading,
+  selectedVersionId,
+  onSelectVersion,
+  instructionsState,
+  onInstructionsChange,
+  onClickUploadRef,
+  onUploadRefChange,
+  onRegenerateShot,
+  fileInputRef,
+}: {
+  workItemId: number;
+  shotId: string;
+  sku: string;
+  row: ExportPlanRow;
+  refs: LifestyleHeroReference[];
+  isShotRegenerating: boolean;
+  isShotUploading: boolean;
+  selectedVersionId?: number;
+  onSelectVersion: (versionId: number) => void;
+  instructionsState?: InstructionState;
+  onInstructionsChange: (value: string) => void;
+  onClickUploadRef: () => void;
+  onUploadRefChange: (e: ChangeEvent<HTMLInputElement>) => void;
+  onRegenerateShot: () => void;
+  fileInputRef: (el: HTMLInputElement | null) => void;
+}) {
+  // Fetch versions for this shot
+  const { data: versionsData } = useQuery<{ ok: boolean; versions: LifestyleHeroVersion[] }>({
+    queryKey: ['/api/work-items', workItemId, 'lifestyle-hero-versions', shotId],
+    refetchInterval: 30000,
+  });
+
+  const versions = versionsData?.versions || [];
+  const activeVersion = versions.find((v) => v.isActive) ?? versions[0];
+  const selectedVersion = versions.find((v) => v.id === selectedVersionId) ?? activeVersion;
+
+  // Use selected version's desktop key for main preview, or fallback to row filename
+  const mainPreviewSrc = selectedVersion 
+    ? `${ASSET_BASE_URL}${selectedVersion.desktopS3Key}`
+    : `${ASSET_BASE_URL}${row.filename}`;
+
+  return (
+    <div
+      className="rounded-lg border border-border bg-background p-3"
+      data-testid={`lifestyle-preview-${shotId}`}
+    >
+      <div className="mb-2 overflow-hidden rounded-md bg-muted">
+        <img
+          src={mainPreviewSrc}
+          alt={`${shotId} hero preview`}
+          className="block h-32 w-full object-cover transition-transform hover:scale-105"
+          onError={(e) => {
+            e.currentTarget.style.display = "none";
+            const parent = e.currentTarget.parentElement;
+            if (parent) {
+              const placeholder = document.createElement("div");
+              placeholder.className = "flex h-32 items-center justify-center text-xs text-muted-foreground";
+              placeholder.textContent = "Image not found";
+              parent.appendChild(placeholder);
+            }
+          }}
+          data-testid={`lifestyle-preview-img-${shotId}`}
+        />
+      </div>
+
+      <div className="mb-1 font-mono text-xs text-muted-foreground">
+        {shotId} · {sku}
+      </div>
+      {row.card_title && (
+        <div className="mb-1 text-xs font-medium line-clamp-1">
+          {row.card_title}
+        </div>
+      )}
+      <div className="flex justify-between text-xs text-muted-foreground mb-2">
+        <span>{row.size_label}</span>
+        <span>
+          {row.width}×{row.height}
+        </span>
+      </div>
+
+      {/* Reference thumbnails, if any */}
+      {refs.length > 0 && (
+        <div className="mb-2 flex gap-1 flex-wrap">
+          {refs.slice(0, 3).map((r) => (
+            <img
+              key={r.id}
+              src={r.s3Url}
+              alt={`${shotId} ref`}
+              className="h-8 w-8 rounded object-cover border border-border"
+            />
+          ))}
+          {refs.length > 3 && (
+            <span className="text-[10px] text-muted-foreground self-center">
+              +{refs.length - 3} more
+            </span>
+          )}
+        </div>
+      )}
+
+      {/* Version Selector */}
+      <VersionSelector 
+        workItemId={workItemId} 
+        shotId={shotId}
+        selectedVersionId={selectedVersionId}
+        onSelectVersion={onSelectVersion}
+      />
+
+      {/* Regeneration instructions */}
+      <div className="mb-2">
+        <Textarea
+          placeholder="Add regeneration instructions (e.g., Make background darker, Add more plants...)"
+          value={instructionsState?.value || ""}
+          onChange={(e) => onInstructionsChange(e.target.value)}
+          className="min-h-[60px] text-xs resize-none"
+          data-testid={`textarea-instructions-${shotId}`}
+        />
+        {instructionsState && (
+          <div className="mt-1 flex items-center justify-between">
+            <span className="text-[10px] text-muted-foreground">
+              {instructionsState.isSaving && "Saving…"}
+              {!instructionsState.isSaving && instructionsState.lastSavedAt && (
+                `Saved ${Math.round((Date.now() - instructionsState.lastSavedAt.getTime()) / 1000)}s ago`
+              )}
+              {instructionsState.error && (
+                <span className="text-destructive">
+                  Error: {instructionsState.error}
+                </span>
+              )}
+            </span>
+            {instructionsState.error && (
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => onInstructionsChange(instructionsState.value)}
+                className="h-5 text-[10px] px-2"
+                data-testid={`button-retry-save-${shotId}`}
+              >
+                Retry
+              </Button>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Actions row */}
+      <div className="flex items-center gap-2 mt-2 flex-wrap">
+        {/* Hidden file input for this shot */}
+        <input
+          type="file"
+          accept="image/*"
+          multiple
+          ref={fileInputRef}
+          className="hidden"
+          onChange={onUploadRefChange}
+          data-testid={`input-upload-ref-${shotId}`}
+        />
+
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={onClickUploadRef}
+          disabled={isShotUploading || isShotRegenerating}
+          title="Upload one or more reference images for this shot."
+          data-testid={`button-upload-ref-${shotId}`}
+        >
+          <Upload className="h-3 w-3 mr-1" />
+          {isShotUploading ? "Uploading…" : "Upload ref"}
+        </Button>
+
+        <Button
+          size="sm"
+          onClick={onRegenerateShot}
+          disabled={isShotRegenerating || isShotUploading}
+          title="Regenerate Desktop, Tablet, and Mobile heroes for this shot."
+          data-testid={`button-regenerate-${shotId}`}
+        >
+          <RefreshCw className={`h-3 w-3 mr-1 ${isShotRegenerating ? 'animate-spin' : ''}`} />
+          {isShotRegenerating ? "Regenerating…" : "Regenerate"}
+        </Button>
       </div>
     </div>
   );

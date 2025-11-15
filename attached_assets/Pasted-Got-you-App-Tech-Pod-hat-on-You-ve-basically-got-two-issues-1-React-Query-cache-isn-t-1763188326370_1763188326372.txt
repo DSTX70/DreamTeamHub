@@ -1,0 +1,214 @@
+Got you. 💻 App/Tech Pod hat on.
+
+You’ve basically got **two issues**:
+
+1. **React Query cache isn’t being invalidated** for the versions list → new version doesn’t show until hard refresh.
+2. **Thumbnail click doesn’t update the main preview** → only “Set Active” changes what you see.
+
+I’ll keep your intent, but make the fixes a bit more “React-y” and less brittle than direct `querySelector`.
+
+---
+
+## 1. Fix: New versions don’t appear after Regenerate
+
+You’re already invalidating some queries in the regenerate mutation’s `onSuccess`. You just need to **invalidate the same key you use in `useQuery` for your versions**.
+
+### A. Identify your versions query key
+
+Somewhere you have something like:
+
+```ts
+const { data: versions } = useQuery({
+  queryKey: ["/api/work-items", workItemId, "lifestyle-hero-versions", shotId],
+  queryFn: () => fetcher(`/api/work-items/${workItemId}/lifestyle-hero-versions?shotId=${shotId}`),
+});
+```
+
+If that’s your pattern, **that’s the key you must invalidate**.
+
+### B. Update regenerate mutation `onSuccess`
+
+In your mutation for “Regenerate shot”, add:
+
+```ts
+const regenerateMutation = useMutation({
+  mutationFn: (shotId: string) => {
+    return fetcher(`/api/work-items/${workItemId}/generate-lifestyle-heroes`, {
+      method: "POST",
+      body: JSON.stringify({
+        shotIds: [shotId],
+        dryRun: false,
+        overwrite: true,
+      }),
+    });
+  },
+  onSuccess: (data, shotId) => {
+    toast({
+      title: "Lifestyle heroes regenerated",
+      description: `Regenerated lifestyle heroes for ${shotId}. Images will update shortly.`,
+    });
+
+    // Existing invalidations
+    queryClient.invalidateQueries({
+      queryKey: [`/api/work-items/${workItemId}/packs`],
+    });
+    queryClient.invalidateQueries({
+      queryKey: [`/api/work-items/${workItemId}/lifestyle-hero-references`],
+    });
+
+    // ✅ IMPORTANT: invalidate the versions query so new version shows up
+    queryClient.invalidateQueries({
+      queryKey: ["/api/work-items", workItemId, "lifestyle-hero-versions", shotId],
+    });
+  },
+  onError: (err, shotId) => {
+    toast({
+      title: "Couldn’t regenerate shot",
+      description: `Something went wrong while regenerating ${shotId}.`,
+      variant: "destructive",
+    });
+  },
+});
+```
+
+> If your actual query key differs, just swap in whatever you’re using in `useQuery`. The key has to be **identical** (array shape + values).
+
+That should fix **Issue 1**: after regenerate completes, React Query refetches versions → the new version row appears in the versions list automatically.
+
+---
+
+## 2. Fix: Clicking thumbnails should preview that version (without changing active)
+
+Right now you suggested a `querySelector` that directly mutates the `<img>`’s `src`. That *works*, but it’s brittle and fights React. Let’s do it with **local state**, so React stays in control:
+
+### A. Add per-shot “selected version” state
+
+Inside the per-shot card in `LifestyleHeroPreview.tsx` (where you map over `versions` for a single `shotId`), add state:
+
+```tsx
+const [selectedVersionId, setSelectedVersionId] = React.useState<number | null>(null);
+```
+
+Assuming each `version` has a unique `id` (from your `lifestyleHeroVersions` table).
+
+### B. Derive which version to show as main preview
+
+Still inside that per-shot block:
+
+```tsx
+// versions: Exported from your versions query for this shot
+const activeVersion = versions.find((v) => v.isActive) ?? versions[0];
+const selectedVersion =
+  versions.find((v) => v.id === selectedVersionId) ?? activeVersion;
+
+const mainPreviewUrl = `${ASSET_BASE_URL}${selectedVersion.desktopS3Key}`;
+```
+
+Now change your main preview `<img>` to use this URL and a test id:
+
+```tsx
+<img
+  src={mainPreviewUrl}
+  alt={`${shotId} hero preview`}
+  data-testid={`lifestyle-preview-img-${shotId}`}
+  className="block w-full max-h-40 object-cover rounded-md"
+/>
+```
+
+### C. Make thumbnails update the selected version
+
+In your thumbnail loop, change the wrapper to:
+
+```tsx
+{versions.map((version) => {
+  const thumbUrl = `${ASSET_BASE_URL}${version.desktopS3Key}`;
+  const isSelected = selectedVersionId === version.id;
+
+  return (
+    <div
+      key={version.id}
+      className={`flex-shrink-0 cursor-pointer rounded border ${
+        isSelected ? "ring-2 ring-primary" : "border-border"
+      } hover:ring-2 hover:ring-primary transition-all`}
+      onClick={() => {
+        // ✅ This is the preview behavior: just update local state
+        setSelectedVersionId(version.id);
+      }}
+      title={`Preview version ${version.versionNumber}`}
+    >
+      <img
+        src={thumbUrl}
+        alt={`Version ${version.versionNumber}`}
+        className="w-16 h-16 object-cover rounded"
+        onError={(e) => {
+          e.currentTarget.style.display = "none";
+        }}
+      />
+    </div>
+  );
+})}
+```
+
+Result:
+
+* Clicking a thumbnail:
+
+  * **Does not** flip `isActive` in DB.
+  * **Does** update `selectedVersionId`.
+  * Which **does** change `selectedVersion` → `mainPreviewUrl` → the big `<img>` updates.
+* “Set Active” button still calls your existing mutation, which:
+
+  * Updates DB `isActive`.
+  * On success, you can:
+
+    * Just invalidate versions query (so `activeVersion` updates), and optionally:
+    * `setSelectedVersionId(version.id)` so the preview follows the new active.
+
+Example for “Set Active” onSuccess:
+
+```ts
+const setActiveMutation = useMutation({
+  mutationFn: (payload: { shotId: string; versionId: number }) => {
+    // existing API call...
+  },
+  onSuccess: (data, { shotId, versionId }) => {
+    toast({
+      title: "Active version updated",
+      description: `Set version ${versionId} as active for ${shotId}.`,
+    });
+
+    queryClient.invalidateQueries({
+      queryKey: ["/api/work-items", workItemId, "lifestyle-hero-versions", shotId],
+    });
+
+    // Optional: keep preview in sync with active
+    setSelectedVersionId(versionId);
+  },
+});
+```
+
+---
+
+## TL;DR for your dev pod
+
+1. **New versions not showing** → Make sure regenerate mutation’s `onSuccess` includes:
+
+   ```ts
+   queryClient.invalidateQueries({
+     queryKey: ["/api/work-items", workItemId, "lifestyle-hero-versions", shotId],
+   });
+   ```
+
+   with the **exact** key used in `useQuery` for versions.
+
+2. **Thumbnails should preview, not mutate DOM:**
+
+   * Add `selectedVersionId` state at the per-shot card level.
+   * Derive `selectedVersion` from `versions` and use its `desktopS3Key` for the main preview image.
+   * In thumbnail `onClick`, call `setSelectedVersionId(version.id)` instead of using `document.querySelector`.
+
+That will give you:
+
+* Fresh versions immediately after regenerate (no manual refresh).
+* Smooth, React-controlled preview switching by clicking thumbnails.
+* “Set Active” still doing the real DB flip, with preview syncing to that choice.
