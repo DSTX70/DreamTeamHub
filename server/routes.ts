@@ -1141,6 +1141,101 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/work-items/:workItemId/packs/:packType/save-to-drive", isAuthenticated, postSavePackToDrive);
   app.get("/api/work-items/:workItemId/drive-files", isAuthenticated, getWorkItemDriveFiles);
 
+  // Lifestyle Hero References - Upload reference images for specific shots
+  const lifestyleRefUpload = multer({ 
+    storage: multer.memoryStorage(), 
+    limits: { fileSize: 10 * 1024 * 1024, files: 10 } // 10MB per file, max 10 files
+  });
+
+  app.post("/api/work-items/:id/lifestyle-hero-references", 
+    isAuthenticated, 
+    lifestyleRefUpload.array("files", 10),
+    async (req, res) => {
+      try {
+        const workItemId = parseInt(req.params.id, 10);
+        if (isNaN(workItemId)) {
+          return res.status(400).json({ ok: false, error: "Invalid work item ID" });
+        }
+
+        const shotId = String(req.body?.shotId || "").trim();
+        if (!shotId) {
+          return res.status(400).json({ ok: false, error: "shotId is required" });
+        }
+
+        const files = req.files as Express.Multer.File[];
+        if (!files || files.length === 0) {
+          return res.status(400).json({ ok: false, error: "No files uploaded" });
+        }
+
+        // Validate work item exists
+        const workItem = await storage.getWorkItem(workItemId);
+        if (!workItem) {
+          return res.status(404).json({ ok: false, error: "Work item not found" });
+        }
+
+        const { s3Put } = await import("./images/s3");
+        const user = req.user as any;
+        const userId = user?.claims?.sub || "unknown";
+        const references = [];
+
+        for (const file of files) {
+          // Validate image MIME type
+          if (!file.mimetype.startsWith('image/')) {
+            continue; // Skip non-image files
+          }
+
+          // Generate unique filename with timestamp
+          const timestamp = Date.now();
+          const sanitizedName = file.originalname.replace(/[^a-zA-Z0-9.-]/g, '_');
+          const s3Key = `fcc/lifestyle_refs/${workItemId}/${shotId}/${timestamp}-${sanitizedName}`;
+          
+          // Upload to S3
+          await s3Put(s3Key, file.buffer, file.mimetype);
+          
+          // Store metadata in database
+          const ref = await storage.createLifestyleHeroReference({
+            workItemId,
+            shotId,
+            filename: file.originalname,
+            s3Key,
+            s3Url: `/img/${s3Key}`,
+            uploadedByUserId: userId,
+          });
+
+          references.push({
+            id: ref.id,
+            url: ref.s3Url,
+            filename: ref.filename,
+            uploadedAt: ref.uploadedAt,
+          });
+        }
+
+        return res.json({ ok: true, shotId, references });
+      } catch (error: any) {
+        console.error("[LifestyleHeroRefs] Upload error:", error);
+        return res.status(500).json({ ok: false, error: "Upload failed", message: error.message });
+      }
+    }
+  );
+
+  // Get lifestyle hero references for a work item
+  app.get("/api/work-items/:id/lifestyle-hero-references", isAuthenticated, async (req, res) => {
+    try {
+      const workItemId = parseInt(req.params.id, 10);
+      if (isNaN(workItemId)) {
+        return res.status(400).json({ ok: false, error: "Invalid work item ID" });
+      }
+
+      const shotId = req.query.shotId as string | undefined;
+      const references = await storage.getLifestyleHeroReferences(workItemId, shotId);
+
+      return res.json({ ok: true, references });
+    } catch (error: any) {
+      console.error("[LifestyleHeroRefs] Fetch error:", error);
+      return res.status(500).json({ ok: false, error: "Fetch failed", message: error.message });
+    }
+  });
+
   // Generate Lifestyle Heroes from existing pack
   const generateLifestyleHeroesBodySchema = z.object({
     shotIds: z.array(z.string().min(1)).optional(),
