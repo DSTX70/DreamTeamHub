@@ -310,7 +310,10 @@ export const lifestyleHeroReferences = pgTable("lifestyle_hero_references", {
   s3Url: text("s3_url").notNull(),
   uploadedByUserId: varchar("uploaded_by_user_id", { length: 255 }).notNull(),
   uploadedAt: timestamp("uploaded_at").defaultNow(),
-});
+}, (table) => ({
+  workItemShotIdx: index("idx_lifestyle_hero_refs_wi_shot").on(table.workItemId, table.shotId),
+  uniqueRefKey: unique("unique_lifestyle_hero_ref_key").on(table.workItemId, table.shotId, table.s3Key),
+}));
 
 export const insertLifestyleHeroReferenceSchema = createInsertSchema(lifestyleHeroReferences).omit({
   id: true,
