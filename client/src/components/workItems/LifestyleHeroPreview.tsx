@@ -1,8 +1,10 @@
-import { useState, useRef, type ChangeEvent } from "react";
+import { useState, useRef, useEffect, useMemo, type ChangeEvent } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { ImageIcon, Upload, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
+import { apiRequest } from "@/lib/queryClient";
 
 type ExportPlanRow = {
   sku: string;
@@ -41,11 +43,37 @@ type LifestyleHeroReference = {
   uploadedAt: string;
 };
 
+type InstructionState = {
+  value: string;
+  isSaving: boolean;
+  lastSavedAt: Date | null;
+  error: string | null;
+};
+
 interface LifestyleHeroPreviewProps {
   workItemId: number;
 }
 
 const ASSET_BASE_URL = "/img/";
+
+// Custom debounced callback hook
+function useDebouncedCallback<T extends (...args: any[]) => void>(
+  callback: T,
+  delay: number
+): T {
+  return useMemo(() => {
+    let timeoutId: NodeJS.Timeout | null = null;
+    
+    const debouncedFn = (...args: Parameters<T>) => {
+      if (timeoutId) clearTimeout(timeoutId);
+      timeoutId = setTimeout(() => {
+        callback(...args);
+      }, delay);
+    };
+    
+    return debouncedFn as T;
+  }, [callback, delay]);
+}
 
 export function LifestyleHeroPreview({ workItemId }: LifestyleHeroPreviewProps) {
   const { toast } = useToast();
@@ -54,6 +82,7 @@ export function LifestyleHeroPreview({ workItemId }: LifestyleHeroPreviewProps) 
   
   const [isUploadingRef, setIsUploadingRef] = useState<string | null>(null);
   const [isRegenerating, setIsRegenerating] = useState<string | null>(null);
+  const [instructionsState, setInstructionsState] = useState<Record<string, InstructionState>>({});
 
   // Fetch packs
   const { data: packs = [], isLoading } = useQuery<WorkItemPack[]>({
@@ -68,6 +97,37 @@ export function LifestyleHeroPreview({ workItemId }: LifestyleHeroPreviewProps) 
   });
 
   const references = referencesData?.references || [];
+
+  // Fetch instructions
+  const { data: instructionsData } = useQuery<{ ok: boolean; instructions: Record<string, string | null> }>({
+    queryKey: ['/api/work-items', workItemId, 'lifestyle-hero-instructions'],
+    refetchInterval: 30000,
+  });
+
+  const backendInstructions = instructionsData?.instructions || {};
+
+  // Initialize state from backend data
+  useEffect(() => {
+    if (!instructionsData) return;
+    
+    setInstructionsState(prev => {
+      const updated: Record<string, InstructionState> = {};
+      for (const [shotId, value] of Object.entries(backendInstructions)) {
+        // Only initialize if we don't already have state for this shot
+        if (!prev[shotId]) {
+          updated[shotId] = {
+            value: value || "",
+            isSaving: false,
+            lastSavedAt: null,
+            error: null,
+          };
+        } else {
+          updated[shotId] = prev[shotId];
+        }
+      }
+      return { ...prev, ...updated };
+    });
+  }, [instructionsData]);
 
   // Group references by shotId
   const refsByShot: Record<string, LifestyleHeroReference[]> = {};

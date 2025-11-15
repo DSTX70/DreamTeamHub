@@ -64,7 +64,22 @@ async function checkObjectExists(key: string): Promise<boolean> {
   }
 }
 
-function buildPromptFromShotBoard(board: any): string {
+function sanitizeInstructions(instructions: string | null | undefined): string | null {
+  if (!instructions) return null;
+  
+  // Trim and collapse whitespace
+  const cleaned = instructions.trim().replace(/\s+/g, ' ');
+  
+  // Enforce max length (600 chars)
+  if (cleaned.length === 0) return null;
+  if (cleaned.length > 600) {
+    return cleaned.substring(0, 600);
+  }
+  
+  return cleaned;
+}
+
+function buildPromptFromShotBoard(board: any, userInstructions?: string | null): string {
   const {
     scenario,
     camera,
@@ -97,6 +112,18 @@ function buildPromptFromShotBoard(board: any): string {
     `The greeting card should be prominently featured and clearly visible in the scene.`,
     `No additional text overlays. Natural, authentic lifestyle composition.`
   );
+
+  // Add user refinement block if instructions exist
+  const sanitized = sanitizeInstructions(userInstructions);
+  if (sanitized) {
+    parts.push(
+      ``,
+      `USER REFINEMENT:`,
+      sanitized,
+      ``,
+      `Important: Respect all base scenario details above and keep the greeting card hero prominent. User refinement should enhance, not replace, the core composition.`
+    );
+  }
 
   return parts.join("\n");
 }
@@ -134,6 +161,13 @@ export async function generateLifestyleHeroesForWorkItem(
         message: "Pack missing required export_plan or shot_boards data",
       };
     }
+
+    // Fetch all shot settings for this work item (once)
+    const shotSettings = await storage.getLifestyleHeroShotSettingsForWorkItem(workItemId);
+    const instructionsMap: Record<string, string | null> = {};
+    shotSettings.forEach(setting => {
+      instructionsMap[setting.shotId] = setting.promptInstructions;
+    });
 
     const filteredPlan =
       shotIds && shotIds.length > 0
@@ -190,7 +224,8 @@ export async function generateLifestyleHeroesForWorkItem(
       console.log(
         `[LifestyleHeroes] Generating master image for shot ${shotId}...`
       );
-      const prompt = buildPromptFromShotBoard(board);
+      const userInstructions = instructionsMap[shotId] || null;
+      const prompt = buildPromptFromShotBoard(board, userInstructions);
 
       const imgResp = await openai.images.generate({
         model: "dall-e-3",
