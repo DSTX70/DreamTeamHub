@@ -221,11 +221,12 @@ export function LifestyleHeroPreview({ workItemId }: LifestyleHeroPreviewProps) 
   // Save instructions mutation
   const saveInstructionsMutation = useMutation({
     mutationFn: async ({ shotId, instructions }: { shotId: string; instructions: string }) => {
-      return await apiRequest(`/api/work-items/${workItemId}/lifestyle-hero-instructions/${shotId}`, {
-        method: "PATCH",
-        body: JSON.stringify({ instructions }),
-        headers: { "Content-Type": "application/json" },
-      });
+      const response = await apiRequest(
+        "PATCH",
+        `/api/work-items/${workItemId}/lifestyle-hero-instructions/${shotId}`,
+        { instructions }
+      );
+      return await response.json();
     },
     onMutate: async ({ shotId, instructions }) => {
       // Optimistically update local state with defensive initialization

@@ -1237,15 +1237,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Upsert lifestyle hero shot instructions
   const upsertShotInstructionsSchema = z.object({
-    shotId: z.string().min(1),
     instructions: z.string().nullable(),
   });
 
-  app.patch("/api/work-items/:id/lifestyle-hero-instructions", isAuthenticated, async (req, res) => {
+  app.patch("/api/work-items/:id/lifestyle-hero-instructions/:shotId", isAuthenticated, async (req, res) => {
     try {
       const workItemId = parseInt(req.params.id, 10);
+      const shotId = req.params.shotId;
+      
       if (isNaN(workItemId)) {
         return res.status(400).json({ ok: false, error: "Invalid work item ID" });
+      }
+      
+      if (!shotId) {
+        return res.status(400).json({ ok: false, error: "Missing shot ID" });
       }
 
       const bodyResult = upsertShotInstructionsSchema.safeParse(req.body);
@@ -1257,10 +1262,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      const { shotId, instructions } = bodyResult.data;
+      const { instructions } = bodyResult.data;
       const result = await storage.upsertLifestyleHeroShotSettings(workItemId, shotId, instructions);
 
-      return res.json({ ok: true, settings: result });
+      return res.json({ ok: true, shotId, instructions: result.promptInstructions });
     } catch (error: any) {
       console.error("[LifestyleHeroInstructions] Upsert error:", error);
       return res.status(500).json({ ok: false, error: "Upsert failed", message: error.message });
