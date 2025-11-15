@@ -5,7 +5,7 @@ import {
   audits, auditChecks, auditFindings, auditArtifacts, events,
   conversations, messages, agentMemories, agentRuns,
   projects, projectFiles, projectAgents, projectTasks, projectMessages,
-  agentGoldens, workOrders, playbookPreviews, brands, knowledgeLinks, products, workItemPacks, lifestyleHeroReferences, lifestyleHeroShotSettings,
+  agentGoldens, workOrders, playbookPreviews, brands, knowledgeLinks, products, workItemPacks, lifestyleHeroReferences, lifestyleHeroShotSettings, lifestyleHeroVersions,
   type User, type UpsertUser,
   type Pod, type PodAgent, type Agent, type EvidencePack, type Person, type RoleCard, type RoleRaci, type CoverageHistory, type AgentSpec, type WorkItem, type Decision, type IdeaSpark,
   type BrainstormSession, type BrainstormParticipant, type BrainstormIdea, type BrainstormCluster, type BrainstormArtifact,
