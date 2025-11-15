@@ -5,14 +5,14 @@ import {
   audits, auditChecks, auditFindings, auditArtifacts, events,
   conversations, messages, agentMemories, agentRuns,
   projects, projectFiles, projectAgents, projectTasks, projectMessages,
-  agentGoldens, workOrders, playbookPreviews, brands, knowledgeLinks, products, workItemPacks, lifestyleHeroReferences,
+  agentGoldens, workOrders, playbookPreviews, brands, knowledgeLinks, products, workItemPacks, lifestyleHeroReferences, lifestyleHeroShotSettings,
   type User, type UpsertUser,
   type Pod, type PodAgent, type Agent, type EvidencePack, type Person, type RoleCard, type RoleRaci, type CoverageHistory, type AgentSpec, type WorkItem, type Decision, type IdeaSpark,
   type BrainstormSession, type BrainstormParticipant, type BrainstormIdea, type BrainstormCluster, type BrainstormArtifact,
   type Audit, type AuditCheck, type AuditFinding, type AuditArtifact, type Event,
   type Conversation, type Message, type AgentMemory, type AgentRun,
   type Project, type ProjectFile, type ProjectAgent, type ProjectTask, type ProjectMessage,
-  type AgentGolden, type WorkOrder, type PlaybookPreview, type Brand, type KnowledgeLink, type Product, type WorkItemPack, type LifestyleHeroReference,
+  type AgentGolden, type WorkOrder, type PlaybookPreview, type Brand, type KnowledgeLink, type Product, type WorkItemPack, type LifestyleHeroReference, type LifestyleHeroShotSettings,
   type InsertPod, type InsertPodAgent, type InsertAgent, type InsertEvidencePack, type InsertPerson, type InsertRoleCard, type InsertRoleRaci, type InsertCoverageHistory, type InsertAgentSpec, type InsertWorkItem, type InsertDecision, type InsertIdeaSpark,
   type InsertBrainstormSession, type InsertBrainstormParticipant, type InsertBrainstormIdea, type InsertBrainstormCluster, type InsertBrainstormArtifact,
   type InsertAudit, type InsertAuditCheck, type InsertAuditFinding, type InsertAuditArtifact, type InsertEvent,
@@ -1124,6 +1124,49 @@ export class DatabaseStorage implements IStorage {
   async deleteLifestyleHeroReference(id: number): Promise<boolean> {
     const result = await db.delete(lifestyleHeroReferences).where(eq(lifestyleHeroReferences.id, id));
     return result.rowCount !== null && result.rowCount > 0;
+  }
+
+  // ===== LIFESTYLE HERO SHOT SETTINGS =====
+  async upsertLifestyleHeroShotSettings(
+    workItemId: number,
+    shotId: string,
+    instructions: string | null
+  ): Promise<LifestyleHeroShotSettings> {
+    const [result] = await db
+      .insert(lifestyleHeroShotSettings)
+      .values({
+        workItemId,
+        shotId,
+        promptInstructions: instructions,
+      })
+      .onConflictDoUpdate({
+        target: [lifestyleHeroShotSettings.workItemId, lifestyleHeroShotSettings.shotId],
+        set: {
+          promptInstructions: instructions,
+          updatedAt: sql`CURRENT_TIMESTAMP`,
+        },
+      })
+      .returning();
+    return result;
+  }
+
+  async getLifestyleHeroShotSettings(workItemId: number, shotId: string): Promise<LifestyleHeroShotSettings | null> {
+    const results = await db
+      .select()
+      .from(lifestyleHeroShotSettings)
+      .where(and(
+        eq(lifestyleHeroShotSettings.workItemId, workItemId),
+        eq(lifestyleHeroShotSettings.shotId, shotId)
+      ))
+      .limit(1);
+    return results[0] || null;
+  }
+
+  async getLifestyleHeroShotSettingsForWorkItem(workItemId: number): Promise<LifestyleHeroShotSettings[]> {
+    return await db
+      .select()
+      .from(lifestyleHeroShotSettings)
+      .where(eq(lifestyleHeroShotSettings.workItemId, workItemId));
   }
 }
 

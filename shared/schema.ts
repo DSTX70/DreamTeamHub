@@ -321,6 +321,28 @@ export type InsertLifestyleHeroReference = z.infer<typeof insertLifestyleHeroRef
 export type LifestyleHeroReference = typeof lifestyleHeroReferences.$inferSelect;
 
 // ===========================
+// LIFESTYLE HERO SHOT SETTINGS
+// ===========================
+
+export const lifestyleHeroShotSettings = pgTable("lifestyle_hero_shot_settings", {
+  id: serial("id").primaryKey(),
+  workItemId: integer("work_item_id").notNull().references(() => workItems.id, { onDelete: 'cascade' }),
+  shotId: varchar("shot_id", { length: 50 }).notNull(),
+  promptInstructions: text("prompt_instructions"),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  workItemIdx: index("idx_lifestyle_hero_shot_settings_wi").on(table.workItemId),
+  uniqueShotKey: unique("unique_lifestyle_hero_shot_key").on(table.workItemId, table.shotId),
+}));
+
+export const insertLifestyleHeroShotSettingsSchema = createInsertSchema(lifestyleHeroShotSettings).omit({
+  id: true,
+  updatedAt: true,
+});
+export type InsertLifestyleHeroShotSettings = z.infer<typeof insertLifestyleHeroShotSettingsSchema>;
+export type LifestyleHeroShotSettings = typeof lifestyleHeroShotSettings.$inferSelect;
+
+// ===========================
 // ALT TEXT REGISTRY
 // ===========================
 

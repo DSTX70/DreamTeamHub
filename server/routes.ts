@@ -1235,6 +1235,61 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Upsert lifestyle hero shot instructions
+  const upsertShotInstructionsSchema = z.object({
+    shotId: z.string().min(1),
+    instructions: z.string().nullable(),
+  });
+
+  app.patch("/api/work-items/:id/lifestyle-hero-instructions", isAuthenticated, async (req, res) => {
+    try {
+      const workItemId = parseInt(req.params.id, 10);
+      if (isNaN(workItemId)) {
+        return res.status(400).json({ ok: false, error: "Invalid work item ID" });
+      }
+
+      const bodyResult = upsertShotInstructionsSchema.safeParse(req.body);
+      if (!bodyResult.success) {
+        return res.status(400).json({
+          ok: false,
+          error: "INVALID_REQUEST",
+          details: bodyResult.error.flatten(),
+        });
+      }
+
+      const { shotId, instructions } = bodyResult.data;
+      const result = await storage.upsertLifestyleHeroShotSettings(workItemId, shotId, instructions);
+
+      return res.json({ ok: true, settings: result });
+    } catch (error: any) {
+      console.error("[LifestyleHeroInstructions] Upsert error:", error);
+      return res.status(500).json({ ok: false, error: "Upsert failed", message: error.message });
+    }
+  });
+
+  // Get lifestyle hero shot settings for a work item
+  app.get("/api/work-items/:id/lifestyle-hero-instructions", isAuthenticated, async (req, res) => {
+    try {
+      const workItemId = parseInt(req.params.id, 10);
+      if (isNaN(workItemId)) {
+        return res.status(400).json({ ok: false, error: "Invalid work item ID" });
+      }
+
+      const settings = await storage.getLifestyleHeroShotSettingsForWorkItem(workItemId);
+      
+      // Transform to a map for easier client consumption
+      const instructionsMap: Record<string, string | null> = {};
+      settings.forEach(setting => {
+        instructionsMap[setting.shotId] = setting.promptInstructions;
+      });
+
+      return res.json({ ok: true, instructions: instructionsMap });
+    } catch (error: any) {
+      console.error("[LifestyleHeroInstructions] Fetch error:", error);
+      return res.status(500).json({ ok: false, error: "Fetch failed", message: error.message });
+    }
+  });
+
   // Generate Lifestyle Heroes from existing pack
   const generateLifestyleHeroesBodySchema = z.object({
     shotIds: z.array(z.string().min(1)).optional(),
