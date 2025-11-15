@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useMemo, type ChangeEvent } from "react";
+import { useState, useRef, useEffect, useMemo, useCallback, type ChangeEvent } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { ImageIcon, Upload, RefreshCw, ChevronDown, ChevronUp, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
