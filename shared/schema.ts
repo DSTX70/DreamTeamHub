@@ -343,6 +343,35 @@ export type InsertLifestyleHeroShotSettings = z.infer<typeof insertLifestyleHero
 export type LifestyleHeroShotSettings = typeof lifestyleHeroShotSettings.$inferSelect;
 
 // ===========================
+// LIFESTYLE HERO VERSIONS
+// ===========================
+
+export const lifestyleHeroVersions = pgTable("lifestyle_hero_versions", {
+  id: serial("id").primaryKey(),
+  workItemId: integer("work_item_id").notNull().references(() => workItems.id, { onDelete: 'cascade' }),
+  shotId: varchar("shot_id", { length: 50 }).notNull(),
+  versionNumber: integer("version_number").notNull(),
+  masterS3Key: varchar("master_s3_key", { length: 500 }).notNull(),
+  desktopS3Key: varchar("desktop_s3_key", { length: 500 }).notNull(),
+  tabletS3Key: varchar("tablet_s3_key", { length: 500 }).notNull(),
+  mobileS3Key: varchar("mobile_s3_key", { length: 500 }).notNull(),
+  promptUsed: text("prompt_used").notNull(),
+  isActive: boolean("is_active").default(false).notNull(),
+  generatedAt: timestamp("generated_at").defaultNow().notNull(),
+}, (table) => ({
+  workItemShotIdx: index("idx_lifestyle_hero_versions_wi_shot").on(table.workItemId, table.shotId),
+  activeIdx: index("idx_lifestyle_hero_versions_active").on(table.workItemId, table.shotId, table.isActive),
+  uniqueVersion: unique("unique_lifestyle_hero_version").on(table.workItemId, table.shotId, table.versionNumber),
+}));
+
+export const insertLifestyleHeroVersionSchema = createInsertSchema(lifestyleHeroVersions).omit({
+  id: true,
+  generatedAt: true,
+});
+export type InsertLifestyleHeroVersion = z.infer<typeof insertLifestyleHeroVersionSchema>;
+export type LifestyleHeroVersion = typeof lifestyleHeroVersions.$inferSelect;
+
+// ===========================
 // ALT TEXT REGISTRY
 // ===========================
 
