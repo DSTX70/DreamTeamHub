@@ -12,13 +12,13 @@ import {
   type Audit, type AuditCheck, type AuditFinding, type AuditArtifact, type Event,
   type Conversation, type Message, type AgentMemory, type AgentRun,
   type Project, type ProjectFile, type ProjectAgent, type ProjectTask, type ProjectMessage,
-  type AgentGolden, type WorkOrder, type PlaybookPreview, type Brand, type KnowledgeLink, type Product, type WorkItemPack, type LifestyleHeroReference, type LifestyleHeroShotSettings,
+  type AgentGolden, type WorkOrder, type PlaybookPreview, type Brand, type KnowledgeLink, type Product, type WorkItemPack, type LifestyleHeroReference, type LifestyleHeroShotSettings, type LifestyleHeroVersion,
   type InsertPod, type InsertPodAgent, type InsertAgent, type InsertEvidencePack, type InsertPerson, type InsertRoleCard, type InsertRoleRaci, type InsertCoverageHistory, type InsertAgentSpec, type InsertWorkItem, type InsertDecision, type InsertIdeaSpark,
   type InsertBrainstormSession, type InsertBrainstormParticipant, type InsertBrainstormIdea, type InsertBrainstormCluster, type InsertBrainstormArtifact,
   type InsertAudit, type InsertAuditCheck, type InsertAuditFinding, type InsertAuditArtifact, type InsertEvent,
   type InsertConversation, type InsertMessage, type InsertAgentMemory, type InsertAgentRun,
   type InsertProject, type InsertProjectFile, type InsertProjectAgent, type InsertProjectTask, type InsertProjectMessage,
-  type InsertAgentGolden, type InsertWorkOrder, type InsertPlaybookPreview, type InsertBrand, type InsertKnowledgeLink, type InsertProduct, type InsertLifestyleHeroReference,
+  type InsertAgentGolden, type InsertWorkOrder, type InsertPlaybookPreview, type InsertBrand, type InsertKnowledgeLink, type InsertProduct, type InsertLifestyleHeroReference, type InsertLifestyleHeroVersion,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, or, sql, inArray, isNotNull } from "drizzle-orm";
@@ -221,6 +221,13 @@ export interface IStorage {
   createLifestyleHeroReference(ref: InsertLifestyleHeroReference): Promise<LifestyleHeroReference>;
   getLifestyleHeroReferences(workItemId: number, shotId?: string): Promise<LifestyleHeroReference[]>;
   deleteLifestyleHeroReference(id: number): Promise<boolean>;
+
+  // Lifestyle Hero Versions
+  createLifestyleHeroVersion(version: InsertLifestyleHeroVersion): Promise<LifestyleHeroVersion>;
+  getLifestyleHeroVersions(workItemId: number, shotId: string): Promise<LifestyleHeroVersion[]>;
+  getActiveLifestyleHeroVersion(workItemId: number, shotId: string): Promise<LifestyleHeroVersion | null>;
+  getNextVersionNumber(workItemId: number, shotId: string): Promise<number>;
+  setActiveLifestyleHeroVersion(workItemId: number, shotId: string, versionNumber: number): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -1167,6 +1174,72 @@ export class DatabaseStorage implements IStorage {
       .select()
       .from(lifestyleHeroShotSettings)
       .where(eq(lifestyleHeroShotSettings.workItemId, workItemId));
+  }
+
+  // ===== LIFESTYLE HERO VERSIONS =====
+  async createLifestyleHeroVersion(version: InsertLifestyleHeroVersion): Promise<LifestyleHeroVersion> {
+    const [created] = await db.insert(lifestyleHeroVersions).values(version).returning();
+    return created;
+  }
+
+  async getLifestyleHeroVersions(workItemId: number, shotId: string): Promise<LifestyleHeroVersion[]> {
+    return await db
+      .select()
+      .from(lifestyleHeroVersions)
+      .where(and(
+        eq(lifestyleHeroVersions.workItemId, workItemId),
+        eq(lifestyleHeroVersions.shotId, shotId)
+      ))
+      .orderBy(desc(lifestyleHeroVersions.versionNumber));
+  }
+
+  async getActiveLifestyleHeroVersion(workItemId: number, shotId: string): Promise<LifestyleHeroVersion | null> {
+    const results = await db
+      .select()
+      .from(lifestyleHeroVersions)
+      .where(and(
+        eq(lifestyleHeroVersions.workItemId, workItemId),
+        eq(lifestyleHeroVersions.shotId, shotId),
+        eq(lifestyleHeroVersions.isActive, true)
+      ))
+      .limit(1);
+    return results[0] || null;
+  }
+
+  async getNextVersionNumber(workItemId: number, shotId: string): Promise<number> {
+    const result = await db
+      .select({ maxVersion: sql<number>`COALESCE(MAX(${lifestyleHeroVersions.versionNumber}), 0)` })
+      .from(lifestyleHeroVersions)
+      .where(and(
+        eq(lifestyleHeroVersions.workItemId, workItemId),
+        eq(lifestyleHeroVersions.shotId, shotId)
+      ));
+    return (result[0]?.maxVersion || 0) + 1;
+  }
+
+  async setActiveLifestyleHeroVersion(workItemId: number, shotId: string, versionNumber: number): Promise<void> {
+    await db.transaction(async (tx) => {
+      await tx
+        .update(lifestyleHeroVersions)
+        .set({ isActive: false })
+        .where(and(
+          eq(lifestyleHeroVersions.workItemId, workItemId),
+          eq(lifestyleHeroVersions.shotId, shotId)
+        ));
+
+      const result = await tx
+        .update(lifestyleHeroVersions)
+        .set({ isActive: true })
+        .where(and(
+          eq(lifestyleHeroVersions.workItemId, workItemId),
+          eq(lifestyleHeroVersions.shotId, shotId),
+          eq(lifestyleHeroVersions.versionNumber, versionNumber)
+        ));
+
+      if (result.rowCount === 0) {
+        throw new Error(`Version ${versionNumber} not found for shot ${shotId} in work item ${workItemId}`);
+      }
+    });
   }
 }
 
