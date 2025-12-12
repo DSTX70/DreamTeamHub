@@ -87,12 +87,26 @@ export const podAgents = pgTable("pod_agents", {
 export const agents = pgTable("agents", {
   id: text("id").primaryKey(), // agent_os, agent_helm, agent_governance_designer, etc.
   title: text("title").notNull(), // OS, Helm, Governance Designer, etc.
-  type: text("type").notNull().default('dream_team'), // dream_team | pod_role
-  pillar: text("pillar"), // Imagination | Innovation | Impact
+  type: text("type").notNull().default('dream_team'), // dream_team | pod_role | council | system_capability
+  pillar: text("pillar"), // Imagination | Innovation | Impact | Core Operating Layer
   podId: integer("pod_id").references(() => pods.id), // nullable - some agents span multiple pods
   podName: text("pod_name"), // For display/reference
   autonomyLevel: text("autonomy_level").notNull().default('L1'), // L0, L1, L2, L3
   status: text("status").notNull().default('active'), // active | inactive
+  
+  // DROP A: Canonical Dream Team fields
+  slug: text("slug").unique(), // Canonical slug from persona registry (e.g., 'os', 'sparkster')
+  role: text("role"), // System Orchestrator, Brand Strategist, etc.
+  toneVoice: text("tone_voice"), // neutral-system, creative-warm, etc.
+  autonomyMax: text("autonomy_max"), // L0, L1, L2, L3 - maximum allowed autonomy from canon
+  canonVersion: text("canon_version"), // v1.0 - tracks which canon version synced this agent
+  isActive: boolean("is_active").default(true), // canonical active state
+  meta: jsonb("meta").$type<{
+    scope?: string[];
+    outOfScope?: string[];
+    deliverables?: string[];
+    definitionOfDone?: string[];
+  }>().default(sql`'{}'`), // JSONB for scope, DoD, deliverables from canon
   
   // Skill Pack fields
   skillPackPath: text("skill_pack_path"), // agents/agent_os

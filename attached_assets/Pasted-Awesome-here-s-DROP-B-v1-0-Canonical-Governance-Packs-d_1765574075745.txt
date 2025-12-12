@@ -1,0 +1,405 @@
+Awesome — here’s DROP B (v1.0): Canonical Governance Packs, designed to match your existing Replit build patterns (Pack Registry → skillName → endpointSuffix → zod schema → Drive folder → exportEnabled).
+
+This drop makes the Dream Team Hub canon exportable + versioned inside the product, so the build stays aligned with the canvas without copy/paste drift.
+
+⸻
+
+🔽 DROP B — Canonical Governance Packs (v1.0)
+
+What this drop adds
+
+5 new Dream Team Hub governance packs that generate/export canonical artifacts:
+	1.	Persona Registry Pack
+	2.	Pod Activation + RACI Pack
+	3.	Agent Lab Boundary Spec Pack
+	4.	Monetization & Packaging Pack (you already have pricing_monetization; this adds the Dream Team Hub-specific version)
+	5.	Governance Change Log Pack
+
+These packs will:
+	•	read from canonical files in /data/dream-team/
+	•	validate with zod schemas
+	•	export to Drive folders consistent with your registry pattern
+	•	expose endpoints via your existing pack generation router
+
+⸻
+
+B1) Add canonical governance source files
+
+Create these files (they are the product’s canonical copy of what’s in the canvas):
+
+/data/dream-team/dth_pod-activation_raci_v1-0.md
+/data/dream-team/dth_agent-lab_boundary_v1-0.md
+/data/dream-team/dth_monetization_packaging_v1-0.md
+/data/dream-team/dth_change-log_v1-0.md
+
+Notes
+	•	Persona Registry is already in Drop A as JSON:
+	•	/data/dream-team/dth_persona_registry_v1-0.json
+	•	These MD files are the “canon text” that packs export verbatim (plus metadata), so your build can always regenerate the same artifacts.
+
+⸻
+
+B2) Add Pack Schemas (zod)
+
+Create:
+
+1) /server/ai/schemas/dthPersonaRegistryPack.ts
+
+import { z } from "zod";
+
+export const DthPersonaRegistryPackSchema = z.object({
+  canonVersion: z.string(),
+  generatedAt: z.string(),
+  title: z.literal("Dream Team Hub — Persona Registry"),
+  format: z.enum(["json", "md", "both"]).default("both"),
+  counts: z.object({
+    total: z.number(),
+    byType: z.record(z.string(), z.number()),
+    byPillar: z.record(z.string(), z.number()),
+  }),
+  personas: z.array(
+    z.object({
+      slug: z.string(),
+      displayName: z.string(),
+      type: z.enum(["dream_team", "pod_role", "council", "system_capability"]),
+      pillar: z.string(),
+      pod: z.string(),
+      role: z.string().optional(),
+      toneVoice: z.string().optional(),
+      autonomyMax: z.enum(["L0", "L1", "L2", "L3"]).optional(),
+      scope: z.array(z.string()).optional(),
+      outOfScope: z.array(z.string()).optional(),
+      deliverables: z.array(z.string()).optional(),
+      definitionOfDone: z.array(z.string()).optional(),
+      isActive: z.boolean().optional(),
+    })
+  ),
+});
+export type DthPersonaRegistryPack = z.infer<typeof DthPersonaRegistryPackSchema>;
+
+2) /server/ai/schemas/dthPodActivationRaciPack.ts
+
+import { z } from "zod";
+
+export const DthPodActivationRaciPackSchema = z.object({
+  canonVersion: z.string(),
+  generatedAt: z.string(),
+  title: z.literal("Dream Team Hub — Pod Activation Rules + RACI"),
+  contentMd: z.string(),
+});
+export type DthPodActivationRaciPack = z.infer<typeof DthPodActivationRaciPackSchema>;
+
+3) /server/ai/schemas/dthAgentLabBoundaryPack.ts
+
+import { z } from "zod";
+
+export const DthAgentLabBoundaryPackSchema = z.object({
+  canonVersion: z.string(),
+  generatedAt: z.string(),
+  title: z.literal("Dream Team Hub — Agent Lab vs Dream Team Boundary Spec"),
+  contentMd: z.string(),
+});
+export type DthAgentLabBoundaryPack = z.infer<typeof DthAgentLabBoundaryPackSchema>;
+
+4) /server/ai/schemas/dthMonetizationPackagingPack.ts
+
+import { z } from "zod";
+
+export const DthMonetizationPackagingPackSchema = z.object({
+  canonVersion: z.string(),
+  generatedAt: z.string(),
+  title: z.literal("Dream Team Hub — Monetization & Packaging Map"),
+  contentMd: z.string(),
+});
+export type DthMonetizationPackagingPack = z.infer<typeof DthMonetizationPackagingPackSchema>;
+
+5) /server/ai/schemas/dthGovernanceChangeLogPack.ts
+
+import { z } from "zod";
+
+export const DthGovernanceChangeLogPackSchema = z.object({
+  canonVersion: z.string(),
+  generatedAt: z.string(),
+  title: z.literal("Dream Team Hub — Governance Change Log"),
+  contentMd: z.string(),
+});
+export type DthGovernanceChangeLogPack = z.infer<typeof DthGovernanceChangeLogPackSchema>;
+
+
+⸻
+
+B3) Add Pack Skills (generators)
+
+Create:
+
+1) /server/ai/skills/generateDthPersonaRegistryPack.ts
+
+import fs from "node:fs";
+import path from "node:path";
+import { DthPersonaRegistryPackSchema } from "../schemas/dthPersonaRegistryPack";
+
+function isoNow() {
+  return new Date().toISOString();
+}
+
+export async function generateDthPersonaRegistryPack(args?: { canonPath?: string; format?: "json" | "md" | "both" }) {
+  const canonPath =
+    args?.canonPath ?? path.join(process.cwd(), "data/dream-team/dth_persona_registry_v1-0.json");
+
+  const raw = fs.readFileSync(canonPath, "utf8");
+  const canon = JSON.parse(raw) as { canonVersion: string; personas: any[] };
+
+  const byType: Record<string, number> = {};
+  const byPillar: Record<string, number> = {};
+  for (const p of canon.personas ?? []) {
+    byType[p.type] = (byType[p.type] ?? 0) + 1;
+    byPillar[p.pillar] = (byPillar[p.pillar] ?? 0) + 1;
+  }
+
+  const pack = {
+    canonVersion: canon.canonVersion ?? "v1.0",
+    generatedAt: isoNow(),
+    title: "Dream Team Hub — Persona Registry" as const,
+    format: args?.format ?? "both",
+    counts: {
+      total: (canon.personas ?? []).length,
+      byType,
+      byPillar,
+    },
+    personas: canon.personas ?? [],
+  };
+
+  return DthPersonaRegistryPackSchema.parse(pack);
+}
+
+2) /server/ai/skills/generateDthPodActivationRaciPack.ts
+
+import fs from "node:fs";
+import path from "node:path";
+import { DthPodActivationRaciPackSchema } from "../schemas/dthPodActivationRaciPack";
+
+export async function generateDthPodActivationRaciPack(args?: { canonVersion?: string; mdPath?: string }) {
+  const canonVersion = args?.canonVersion ?? "v1.0";
+  const mdPath =
+    args?.mdPath ?? path.join(process.cwd(), "data/dream-team/dth_pod-activation_raci_v1-0.md");
+
+  const contentMd = fs.readFileSync(mdPath, "utf8");
+
+  return DthPodActivationRaciPackSchema.parse({
+    canonVersion,
+    generatedAt: new Date().toISOString(),
+    title: "Dream Team Hub — Pod Activation Rules + RACI" as const,
+    contentMd,
+  });
+}
+
+3) /server/ai/skills/generateDthAgentLabBoundaryPack.ts
+
+import fs from "node:fs";
+import path from "node:path";
+import { DthAgentLabBoundaryPackSchema } from "../schemas/dthAgentLabBoundaryPack";
+
+export async function generateDthAgentLabBoundaryPack(args?: { canonVersion?: string; mdPath?: string }) {
+  const canonVersion = args?.canonVersion ?? "v1.0";
+  const mdPath =
+    args?.mdPath ?? path.join(process.cwd(), "data/dream-team/dth_agent-lab_boundary_v1-0.md");
+
+  const contentMd = fs.readFileSync(mdPath, "utf8");
+
+  return DthAgentLabBoundaryPackSchema.parse({
+    canonVersion,
+    generatedAt: new Date().toISOString(),
+    title: "Dream Team Hub — Agent Lab vs Dream Team Boundary Spec" as const,
+    contentMd,
+  });
+}
+
+4) /server/ai/skills/generateDthMonetizationPackagingPack.ts
+
+import fs from "node:fs";
+import path from "node:path";
+import { DthMonetizationPackagingPackSchema } from "../schemas/dthMonetizationPackagingPack";
+
+export async function generateDthMonetizationPackagingPack(args?: { canonVersion?: string; mdPath?: string }) {
+  const canonVersion = args?.canonVersion ?? "v1.0";
+  const mdPath =
+    args?.mdPath ?? path.join(process.cwd(), "data/dream-team/dth_monetization_packaging_v1-0.md");
+
+  const contentMd = fs.readFileSync(mdPath, "utf8");
+
+  return DthMonetizationPackagingPackSchema.parse({
+    canonVersion,
+    generatedAt: new Date().toISOString(),
+    title: "Dream Team Hub — Monetization & Packaging Map" as const,
+    contentMd,
+  });
+}
+
+5) /server/ai/skills/generateDthGovernanceChangeLogPack.ts
+
+import fs from "node:fs";
+import path from "node:path";
+import { DthGovernanceChangeLogPackSchema } from "../schemas/dthGovernanceChangeLogPack";
+
+export async function generateDthGovernanceChangeLogPack(args?: { canonVersion?: string; mdPath?: string }) {
+  const canonVersion = args?.canonVersion ?? "v1.0";
+  const mdPath =
+    args?.mdPath ?? path.join(process.cwd(), "data/dream-team/dth_change-log_v1-0.md");
+
+  const contentMd = fs.readFileSync(mdPath, "utf8");
+
+  return DthGovernanceChangeLogPackSchema.parse({
+    canonVersion,
+    generatedAt: new Date().toISOString(),
+    title: "Dream Team Hub — Governance Change Log" as const,
+    contentMd,
+  });
+}
+
+
+⸻
+
+B4) Register these packs in your Pack Registry
+
+You already have server/ai/packRegistry.ts and patterns like:
+	•	packType
+	•	skillName
+	•	endpointSuffix
+	•	schema
+	•	driveFolder
+	•	exportEnabled
+	•	category
+
+Add to /server/ai/packRegistry.ts imports
+
+import { DthPersonaRegistryPackSchema } from "./schemas/dthPersonaRegistryPack";
+import { DthPodActivationRaciPackSchema } from "./schemas/dthPodActivationRaciPack";
+import { DthAgentLabBoundaryPackSchema } from "./schemas/dthAgentLabBoundaryPack";
+import { DthMonetizationPackagingPackSchema } from "./schemas/dthMonetizationPackagingPack";
+import { DthGovernanceChangeLogPackSchema } from "./schemas/dthGovernanceChangeLogPack";
+
+Add these pack entries (category: governance)
+
+{
+  id: "dthPersonaRegistry",
+  packType: "dth_persona_registry",
+  label: "Generate Dream Team Persona Registry Pack",
+  skillName: "generateDthPersonaRegistryPack",
+  endpointSuffix: "generate-dth-persona-registry-pack",
+  schema: DthPersonaRegistryPackSchema,
+  icon: "Users",
+  driveFolder: "DRIVE_DTH_PERSONA_REGISTRY_PACKS_FOLDER",
+  exportEnabled: true,
+  category: "governance",
+},
+{
+  id: "dthPodActivationRaci",
+  packType: "dth_pod_activation_raci",
+  label: "Generate Pod Activation + RACI Pack (Dream Team Hub)",
+  skillName: "generateDthPodActivationRaciPack",
+  endpointSuffix: "generate-dth-pod-activation-raci-pack",
+  schema: DthPodActivationRaciPackSchema,
+  icon: "GitBranch",
+  driveFolder: "DRIVE_DTH_POD_ACTIVATION_RACI_PACKS_FOLDER",
+  exportEnabled: true,
+  category: "governance",
+},
+{
+  id: "dthAgentLabBoundary",
+  packType: "dth_agent_lab_boundary",
+  label: "Generate Agent Lab Boundary Spec Pack (Dream Team Hub)",
+  skillName: "generateDthAgentLabBoundaryPack",
+  endpointSuffix: "generate-dth-agent-lab-boundary-pack",
+  schema: DthAgentLabBoundaryPackSchema,
+  icon: "ShieldCheck",
+  driveFolder: "DRIVE_DTH_AGENT_LAB_BOUNDARY_PACKS_FOLDER",
+  exportEnabled: true,
+  category: "governance",
+},
+{
+  id: "dthMonetizationPackaging",
+  packType: "dth_monetization_packaging",
+  label: "Generate Monetization & Packaging Pack (Dream Team Hub)",
+  skillName: "generateDthMonetizationPackagingPack",
+  endpointSuffix: "generate-dth-monetization-packaging-pack",
+  schema: DthMonetizationPackagingPackSchema,
+  icon: "DollarSign",
+  driveFolder: "DRIVE_DTH_MONETIZATION_PACKAGING_PACKS_FOLDER",
+  exportEnabled: true,
+  category: "governance",
+},
+{
+  id: "dthGovernanceChangeLog",
+  packType: "dth_governance_change_log",
+  label: "Generate Governance Change Log Pack (Dream Team Hub)",
+  skillName: "generateDthGovernanceChangeLogPack",
+  endpointSuffix: "generate-dth-governance-change-log-pack",
+  schema: DthGovernanceChangeLogPackSchema,
+  icon: "FileClock",
+  driveFolder: "DRIVE_DTH_GOVERNANCE_CHANGELOG_PACKS_FOLDER",
+  exportEnabled: true,
+  category: "governance",
+},
+
+
+⸻
+
+B5) Wire skillName → function in your packFactory
+
+Your export mentions packFactory. Add these to wherever you map skill names.
+
+Example:
+
+/server/ai/packFactory.ts (or your existing equivalent)
+
+import { generateDthPersonaRegistryPack } from "./skills/generateDthPersonaRegistryPack";
+import { generateDthPodActivationRaciPack } from "./skills/generateDthPodActivationRaciPack";
+import { generateDthAgentLabBoundaryPack } from "./skills/generateDthAgentLabBoundaryPack";
+import { generateDthMonetizationPackagingPack } from "./skills/generateDthMonetizationPackagingPack";
+import { generateDthGovernanceChangeLogPack } from "./skills/generateDthGovernanceChangeLogPack";
+
+export const skillRunners: Record<string, (args?: any) => Promise<any>> = {
+  // ...existing skills
+  generateDthPersonaRegistryPack,
+  generateDthPodActivationRaciPack,
+  generateDthAgentLabBoundaryPack,
+  generateDthMonetizationPackagingPack,
+  generateDthGovernanceChangeLogPack,
+};
+
+
+⸻
+
+B6) Add Drive folder env vars (consistent with your registry style)
+
+Add to .env.example and your config:
+
+DRIVE_DTH_PERSONA_REGISTRY_PACKS_FOLDER=
+DRIVE_DTH_POD_ACTIVATION_RACI_PACKS_FOLDER=
+DRIVE_DTH_AGENT_LAB_BOUNDARY_PACKS_FOLDER=
+DRIVE_DTH_MONETIZATION_PACKAGING_PACKS_FOLDER=
+DRIVE_DTH_GOVERNANCE_CHANGELOG_PACKS_FOLDER=
+
+(If you already have a Drive Steward folder mapping file, add them there too.)
+
+⸻
+
+B7) Verification (Drop B DoD)
+
+After implementing Drop B:
+	•	These 5 packs appear in the Packs UI list (registry-driven)
+	•	Each endpoint returns validated output (zod passes)
+	•	Each pack exports to its Drive folder (if export is enabled in your system)
+	•	Persona Registry pack count matches /api/agents after Drop A sync
+	•	Re-running pack generation yields stable, versioned artifacts (canonVersion: v1.0)
+
+⸻
+
+✅ Drop B Complete (Spec)
+
+If you want, next I’ll deliver DROP C — UI Sync as:
+	•	badges + filters + agent detail panel
+	•	“canonVersion” and “DoD” surfaced in UI
+	•	explicit “Agent Mode vs Agent Lab” labeling so the confusion disappears permanently
+
+Say: “Proceed to Drop C.”

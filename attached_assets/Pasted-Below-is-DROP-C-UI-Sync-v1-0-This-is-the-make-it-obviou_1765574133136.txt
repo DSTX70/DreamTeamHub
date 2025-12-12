@@ -1,0 +1,212 @@
+Below is DROP C — UI Sync (v1.0). This is the “make it obvious + make it governable” layer: badges, filters, and a detail panel so the UI reflects the canvas canon and your Agent Lab / Agent Mode boundaries are unambiguous.
+
+⸻
+
+🔽 DROP C — UI SYNC (v1.0)
+
+Goal
+
+Ensure the UI clearly communicates:
+	•	Dream Team vs Pod Role vs Council vs System Capability
+	•	Agent Mode vs Agent Lab
+	•	Autonomy bounds (L0–L3)
+	•	Canon version + DoD + scope boundaries
+	•	Active vs inactive
+…and makes it easy to filter/search.
+
+This removes drift and prevents “is Agent Lab included?” confusion forever.
+
+⸻
+
+C1) UI Requirements (What must appear)
+
+1) Global badges (visible on every agent card)
+
+Badges
+	•	Dream Team
+	•	Pod Role
+	•	Council
+	•	System (for Agent Mode)
+
+Autonomy badge
+	•	L0, L1, L2, L3
+
+Canon badge
+	•	Canon v1.0 (from canonVersion)
+
+Status badge
+	•	Active / Inactive
+
+2) “Agent Lab included?” is a UI-level truth
+
+Add a badge based on autonomy + type:
+	•	Show Agent Lab Eligible when:
+	•	autonomyMax >= L1 AND type !== system_capability
+	•	Show Agent Mode when:
+	•	type === system_capability AND slug === "agent_mode" (or name match)
+
+Note: The Lifestyle Hero Preview UI remains execution UI — but the Agents system UI should explicitly show Agent Lab eligibility.
+
+3) Agent Detail Panel (single source of truth)
+
+When clicking an agent:
+	•	show Role, Pod, Pillar
+	•	show Scope
+	•	show Out of Scope
+	•	show Deliverables
+	•	show Definition of Done
+	•	show autonomy: current autonomyLevel + autonomyMax
+	•	show canonVersion
+	•	show source string if you store it in meta (recommended)
+
+⸻
+
+C2) API/DTO change (if needed)
+
+If /api/agents doesn’t already return these, add them:
+	•	canonVersion
+	•	autonomyMax
+	•	meta.scope
+	•	meta.outOfScope
+	•	meta.deliverables
+	•	meta.definitionOfDone
+	•	type, pillar, pod, role, toneVoice, isActive
+
+Do not do additional endpoints unless necessary—prefer enriching /api/agents.
+
+⸻
+
+C3) Frontend changes
+
+Assuming you already have:
+	•	client/src/pages/roles.tsx (Agents listing)
+	•	client/src/pages/academy.tsx (Academy)
+…and shadcn components.
+
+C3.1 Add a unified “AgentCard” component
+
+File
+
+/client/src/components/agents/AgentCard.tsx
+
+Behavior
+	•	Displays name + role
+	•	Shows badges
+	•	Click opens Detail Drawer
+
+Badge logic (canonical)
+
+Type badge
+	•	dream_team → “Dream Team”
+	•	pod_role → “Pod Role”
+	•	council → “Council”
+	•	system_capability → “System”
+
+Agent Lab badge
+	•	if type != system_capability and autonomyMax in L1–L3 → “Agent Lab Eligible”
+	•	if type == system_capability → “Agent Mode”
+
+⸻
+
+C3.2 Add “AgentDetailDrawer” (or modal)
+
+File
+
+/client/src/components/agents/AgentDetailDrawer.tsx
+
+Sections
+	•	Header: Name + badges
+	•	Identity: pillar/pod/role/toneVoice
+	•	Autonomy: autonomyLevel + autonomyMax
+	•	Canon: canonVersion
+	•	Tabs or stacked blocks:
+	•	Scope
+	•	Out of Scope
+	•	Deliverables
+	•	Definition of Done
+
+⸻
+
+C3.3 Add filters/search to Agents page
+
+On roles.tsx, add:
+	•	Search box: name/role/pod/pillar match
+	•	Filters:
+	•	Type (multi-select)
+	•	Pillar
+	•	Pod
+	•	Autonomy max (>= Lx)
+	•	Canon version (v1.0, etc.)
+	•	Active only toggle
+
+Default view
+	•	Active only = ON
+	•	Canon = latest (v1.0 until future)
+
+⸻
+
+C4) Academy page sync (Agent Lab Academy)
+
+Your academy page currently groups by toneVoice as proxy bands. Keep that, but add:
+	•	Autonomy filters
+	•	Certification requirement indicator:
+	•	L2 requires certified
+	•	L3 requires OS approval + audit trail
+
+Add display text to avoid confusion:
+	•	“Agent Lab Academy trains operators for bounded autonomy (L1–L3). Agent Mode is execution-only.”
+
+⸻
+
+C5) UI Copy (canonical microcopy)
+
+Agents page banner
+
+“Dream Team Hub canon governs these roles. Autonomy is gated. Agent Mode executes only explicit instructions. Agent Lab iterates within rails.”
+
+Agent Lab badge tooltip
+
+“Eligible for Agent Lab runs (goal-based iteration) if OS grants and constraints are defined.”
+
+Agent Mode badge tooltip
+
+“Execution-only. No planning. No judgment.”
+
+⸻
+
+C6) Verification Checklist (Drop C DoD)
+
+After implementing Drop C:
+	•	Every agent card shows:
+	•	Type badge
+	•	Autonomy badge
+	•	Canon version badge
+	•	Active status
+	•	Agent Lab Eligible or Agent Mode where appropriate
+	•	Clicking an agent shows full:
+	•	Scope / Out of scope / Deliverables / DoD
+	•	Filtering works:
+	•	by Type, Pod, Pillar, Autonomy, Canon version, Active
+	•	Academy page clearly distinguishes:
+	•	Agent Lab training vs Agent Mode execution
+	•	Zero ambiguity remains about whether Agent Lab is included
+
+⸻
+
+Optional (Very Worth It): “Canon Sync Status” chip
+
+If you add a lightweight endpoint:
+	•	/api/canon/status → returns current canonVersion and last sync timestamp
+…you can display:
+	•	“Canon synced: v1.0 @ 2025-12-12T…”
+This turns governance into a visible system invariant.
+
+⸻
+
+Drop C Ready
+
+If you want, I can now:
+	•	convert this into a Replit Drop-style patch kit structure (file tree + exact code stubs), or
+	•	keep it as implementation instructions for Forge/LexiCode.
+
+Your call—either way, Drop C is fully specified and aligned with the canvas canon.
