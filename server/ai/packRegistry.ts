@@ -19,6 +19,11 @@ import { RetailWholesaleReadinessPackSchema } from "./schemas/retailWholesaleRea
 import { ExperimentOptimizationPackSchema } from "./schemas/experimentOptimizationPack";
 import { LocalizationMarketExpansionPackSchema } from "./schemas/localizationMarketExpansionPack";
 import { CustomerJourneyLifecyclePackSchema } from "./schemas/customerJourneyLifecyclePack";
+import { DthPersonaRegistryPackSchema } from "./schemas/dthPersonaRegistryPack";
+import { DthPodActivationRaciPackSchema } from "./schemas/dthPodActivationRaciPack";
+import { DthAgentLabBoundaryPackSchema } from "./schemas/dthAgentLabBoundaryPack";
+import { DthMonetizationPackagingPackSchema } from "./schemas/dthMonetizationPackagingPack";
+import { DthGovernanceChangeLogPackSchema } from "./schemas/dthGovernanceChangeLogPack";
 import type { LucideIcon } from "lucide-react";
 
 export interface PackConfig {
@@ -285,6 +290,68 @@ export const PACK_REGISTRY: PackConfig[] = [
     driveFolder: "DRIVE_CUSTOMER_JOURNEY_LIFECYCLE_PACKS_FOLDER",
     exportEnabled: true,
     category: "expansion",
+  },
+  
+  // Dream Team Hub Governance Packs
+  {
+    id: "dthPersonaRegistry",
+    packType: "dth_persona_registry",
+    label: "Generate Dream Team Persona Registry Pack",
+    skillName: "generateDthPersonaRegistryPack",
+    endpointSuffix: "generate-dth-persona-registry-pack",
+    schema: DthPersonaRegistryPackSchema,
+    icon: "Users",
+    driveFolder: "DRIVE_DTH_PERSONA_REGISTRY_PACKS_FOLDER",
+    exportEnabled: true,
+    category: "governance",
+  },
+  {
+    id: "dthPodActivationRaci",
+    packType: "dth_pod_activation_raci",
+    label: "Generate Pod Activation + RACI Pack (Dream Team Hub)",
+    skillName: "generateDthPodActivationRaciPack",
+    endpointSuffix: "generate-dth-pod-activation-raci-pack",
+    schema: DthPodActivationRaciPackSchema,
+    icon: "GitBranch",
+    driveFolder: "DRIVE_DTH_POD_ACTIVATION_RACI_PACKS_FOLDER",
+    exportEnabled: true,
+    category: "governance",
+  },
+  {
+    id: "dthAgentLabBoundary",
+    packType: "dth_agent_lab_boundary",
+    label: "Generate Agent Lab Boundary Spec Pack (Dream Team Hub)",
+    skillName: "generateDthAgentLabBoundaryPack",
+    endpointSuffix: "generate-dth-agent-lab-boundary-pack",
+    schema: DthAgentLabBoundaryPackSchema,
+    icon: "ShieldCheck",
+    driveFolder: "DRIVE_DTH_AGENT_LAB_BOUNDARY_PACKS_FOLDER",
+    exportEnabled: true,
+    category: "governance",
+  },
+  {
+    id: "dthMonetizationPackaging",
+    packType: "dth_monetization_packaging",
+    label: "Generate Monetization & Packaging Pack (Dream Team Hub)",
+    skillName: "generateDthMonetizationPackagingPack",
+    endpointSuffix: "generate-dth-monetization-packaging-pack",
+    schema: DthMonetizationPackagingPackSchema,
+    icon: "DollarSign",
+    driveFolder: "DRIVE_DTH_MONETIZATION_PACKAGING_PACKS_FOLDER",
+    exportEnabled: true,
+    category: "governance",
+  },
+  {
+    id: "dthGovernanceChangeLog",
+    packType: "dth_governance_change_log",
+    label: "Generate Governance Change Log Pack (Dream Team Hub)",
+    skillName: "generateDthGovernanceChangeLogPack",
+    endpointSuffix: "generate-dth-governance-change-log-pack",
+    schema: DthGovernanceChangeLogPackSchema,
+    icon: "FileClock",
+    driveFolder: "DRIVE_DTH_GOVERNANCE_CHANGELOG_PACKS_FOLDER",
+    exportEnabled: true,
+    category: "governance",
   },
 ];
 

@@ -2,6 +2,7 @@ import type { Request, Response, RequestHandler } from "express";
 import type { DB } from "../db/types";
 import type { PackConfig } from "./packRegistry";
 import { runSkill } from "./runSkill";
+import { isFileBasedSkill, runFileBasedSkill } from "./fileBasedSkillRunner";
 import { db } from "../db";
 import { eq, and, desc } from "drizzle-orm";
 import { workItems, workItemPacks } from "@shared/schema";
@@ -182,11 +183,16 @@ export function createPackActionHandler(config: PackConfig): RequestHandler {
         };
       }
 
-      // Run LLM skill to generate pack
-      const packData = await runSkill({
-        skillName: config.skillName,
-        input: skillInput,
-      });
+      // Run skill to generate pack (file-based or LLM-based)
+      let packData: any;
+      if (isFileBasedSkill(config.skillName)) {
+        packData = await runFileBasedSkill(config.skillName, skillInput);
+      } else {
+        packData = await runSkill({
+          skillName: config.skillName,
+          input: skillInput,
+        });
+      }
 
       // Validate against schema
       const validated = config.schema.parse(packData);
