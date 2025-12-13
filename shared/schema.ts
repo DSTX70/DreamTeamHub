@@ -1404,3 +1404,23 @@ export const opsEvent = pgTable("ops_event", {
 export const insertOpsEventSchema = createInsertSchema(opsEvent).omit({ id: true, createdAt: true });
 export type InsertOpsEvent = z.infer<typeof insertOpsEventSchema>;
 export type OpsEvent = typeof opsEvent.$inferSelect;
+
+// ===========================
+// CANON SYNC EVENTS
+// ===========================
+
+export const canonSyncEvents = pgTable("canon_sync_events", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  canonKey: text("canon_key").notNull(), // e.g., "dream_team_hub"
+  canonVersion: text("canon_version").notNull(), // e.g., "v1.0"
+  source: text("source"), // e.g., "Dream Team Hub — Master Canvas (v1.0)"
+  syncedBy: text("synced_by"), // script or user that triggered sync
+  syncedAt: timestamp("synced_at").defaultNow().notNull(),
+}, (table) => [
+  index("idx_canon_sync_key").on(table.canonKey),
+  index("idx_canon_sync_at").on(table.syncedAt),
+]);
+
+export const insertCanonSyncEventSchema = createInsertSchema(canonSyncEvents).omit({ id: true, syncedAt: true });
+export type InsertCanonSyncEvent = z.infer<typeof insertCanonSyncEventSchema>;
+export type CanonSyncEvent = typeof canonSyncEvents.$inferSelect;
