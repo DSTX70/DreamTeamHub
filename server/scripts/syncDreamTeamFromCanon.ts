@@ -16,6 +16,7 @@
 import { db } from '../db';
 import { agents } from '@shared/schema';
 import { eq } from 'drizzle-orm';
+import { writeCanonSyncEvent } from '../lib/canonSync';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -162,6 +163,15 @@ async function syncDreamTeamFromCanon() {
   console.log(`   - pod_role: ${podRoles.length}`);
   console.log(`   - council: ${councils.length}`);
   console.log(`   - system_capability: ${systemCaps.length}`);
+
+  // Write canon sync event for status tracking
+  await writeCanonSyncEvent(db, {
+    canonKey: "dream_team_hub",
+    canonVersion: registry.canonVersion,
+    source: registry.source,
+    syncedBy: "syncDreamTeamFromCanon.ts",
+  });
+  console.log('\n✅ Canon sync event recorded');
 
   process.exit(0);
 }

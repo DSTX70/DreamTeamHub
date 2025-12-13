@@ -9,6 +9,7 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { EmptyState } from "@/components/empty-state";
 import { AgentCard, AgentDetailDrawer } from "@/components/agents";
+import { CanonStatusChip } from "@/components/CanonStatusChip";
 import { Search, Users, Plus, Info } from "lucide-react";
 import { PageBreadcrumb, buildBreadcrumbs } from "@/components/PageBreadcrumb";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -91,7 +92,10 @@ export default function Roles() {
       
       <div className="flex items-center justify-between gap-4 flex-wrap">
         <div>
-          <h1 className="text-2xl font-semibold mb-2" data-testid="page-title">Dream Team Agents</h1>
+          <div className="flex items-center gap-3 mb-2">
+            <h1 className="text-2xl font-semibold" data-testid="page-title">Dream Team Agents</h1>
+            <CanonStatusChip canonKey="dream_team_hub" />
+          </div>
           <p className="text-sm text-muted-foreground">
             {isLoading ? 'Loading agents...' : `${totalCount} AI agents with complete Skill Pack specifications`}
           </p>

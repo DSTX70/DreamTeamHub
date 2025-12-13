@@ -25,6 +25,7 @@ import { router as coverageTrendsRouter } from "./api/coverage_trends.route";
 import { seoAltTextRouter } from "./routes/seo_alt_text";
 import { seoMetaRouter, seoMetaPublicRouter } from "./routes/seo_meta";
 import { fccSkuMapRouter } from "./routes/fcc_sku_map";
+import { canonRouter } from "./routes/canon.route";
 import { getFccSkuMapByKey } from "./lib/fccSkuMap";
 // Pack generation handlers now use the registry pattern
 import { PACK_REGISTRY } from "./ai/packRegistry";
@@ -294,6 +295,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.use("/api", isDualAuthenticated, seoAltTextRouter);
   app.use("/api", isDualAuthenticated, seoMetaRouter);
   app.use("/api", isAuthenticated, fccSkuMapRouter);
+  app.use("/api/canon", canonRouter);
 
   // ===========================
   // CONTROL TOWER

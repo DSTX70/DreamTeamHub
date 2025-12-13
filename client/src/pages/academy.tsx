@@ -11,6 +11,7 @@ import {
 import { PageBreadcrumb, buildBreadcrumbs } from "@/components/PageBreadcrumb";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { AgentDetailDrawer } from "@/components/agents";
+import { CanonStatusChip } from "@/components/CanonStatusChip";
 import type { Agent } from "@shared/schema";
 
 interface AgentLabRole {
@@ -127,9 +128,12 @@ export default function AcademyPage() {
             <GraduationCap className="h-6 w-6 text-primary" />
           </div>
           <div>
-            <h1 className="text-2xl font-bold" data-testid="heading-academy">
-              Agentic AI Lab & Training Academy
-            </h1>
+            <div className="flex items-center gap-3">
+              <h1 className="text-2xl font-bold" data-testid="heading-academy">
+                Agentic AI Lab & Training Academy
+              </h1>
+              <CanonStatusChip canonKey="dream_team_hub" />
+            </div>
             <p className="text-sm text-muted-foreground">
               At-a-glance status of agents, training, and promotions
             </p>
