@@ -1,0 +1,21 @@
+{
+  "projectKey": "DreamTeamHub",
+  "timestamp": "2025-12-22T22:43:53.074Z",
+  "commands_run": [
+    "export_bundle"
+  ],
+  "export_paths": [],
+  "hashes": {},
+  "notes": "export_bundle created a shareable archive.",
+  "releaseNotes": {
+    "path": "RELEASE_NOTES.md"
+  },
+  "mission": {
+    "path": "MISSION.md"
+  },
+  "releaseNotesMode": "sinceTag",
+  "releaseTagPrefix": "i3/DreamTeamHub/",
+  "releaseTag": null,
+  "releaseRange": "HEAD~10..HEAD",
+  "releaseHeadSha": "e357f45"
+}

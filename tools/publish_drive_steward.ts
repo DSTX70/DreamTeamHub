@@ -8,10 +8,6 @@ function reqEnv(name: string): string {
   return v;
 }
 
-function safeEnv(name: string, fallback: string) {
-  return process.env[name] || fallback;
-}
-
 function findNewestTar(exportsDir: string): string {
   const entries = fs.readdirSync(exportsDir)
     .filter(f => f.endsWith(".tar.gz"))
@@ -21,10 +17,24 @@ function findNewestTar(exportsDir: string): string {
   return path.join(exportsDir, entries[0].f);
 }
 
+function runCurl(url: string, tarPath: string, manifestPath: string, token: string) {
+  const cmd = [
+    `curl -sS -w "\\n__HTTP_CODE__:%{http_code}\\n" -X POST "${url}"`,
+    `-H "Authorization: Bearer ${token}"`,
+    `-F "bundle=@${tarPath}"`,
+    `-F "manifest=@${manifestPath}"`,
+  ].join(" ");
+
+  const out = execSync(cmd, { stdio: ["ignore", "pipe", "pipe"] }).toString("utf8");
+  const m = out.match(/__HTTP_CODE__:(\d{3})\s*$/);
+  const code = m ? Number(m[1]) : 0;
+  const body = out.replace(/__HTTP_CODE__:\d{3}\s*$/, "").trim();
+  return { code, body };
+}
+
 async function main() {
   const DRIVE_STEWARD_URL = reqEnv("DRIVE_STEWARD_URL").replace(/\/$/, "");
   const DRIVE_STEWARD_TOKEN = reqEnv("DRIVE_STEWARD_TOKEN");
-  const PUBLISH_PATH = safeEnv("DRIVE_STEWARD_PUBLISH_PATH", "/api/exports/publish");
 
   const EXPORTS_DIR = path.resolve(process.cwd(), "exports");
   const tarPath = findNewestTar(EXPORTS_DIR);
@@ -35,20 +45,51 @@ async function main() {
   execSync(`tar -xzf "${tarPath}" -C "${tmpDir}" "MANIFEST.json"`, { stdio: "inherit" });
   const manifestPath = path.join(tmpDir, "MANIFEST.json");
 
-  const url = `${DRIVE_STEWARD_URL}${PUBLISH_PATH}`;
+  const override = process.env.DRIVE_STEWARD_PUBLISH_PATH?.trim();
 
-  // Multipart upload via curl (keeps this repo dependency-light)
-  // Server expected fields: bundle + manifest; if your Drive Steward uses different field names, adjust here.
-  const cmd = [
-    `curl -sS -X POST "${url}"`,
-    `-H "Authorization: Bearer ${DRIVE_STEWARD_TOKEN}"`,
-    `-F "bundle=@${tarPath}"`,
-    `-F "manifest=@${manifestPath}"`,
-  ].join(" ");
+  // Try override first (if set), otherwise try common known endpoints
+  const candidatePaths = [
+    ...(override ? [override] : []),
+    "/api/exports/publish",
+    "/api/exports/push",
+  ];
 
-  console.log(`Publishing to Drive Steward: ${url}`);
-  const out = execSync(cmd, { stdio: ["ignore", "pipe", "pipe"] }).toString("utf8");
-  console.log(out);
+  let last: { code: number; body: string } | null = null;
+
+  for (const p of candidatePaths) {
+    const url = `${DRIVE_STEWARD_URL}${p.startsWith("/") ? "" : "/"}${p}`;
+    console.log(`Publishing to Drive Steward (attempt): ${url}`);
+
+    last = runCurl(url, tarPath, manifestPath, DRIVE_STEWARD_TOKEN);
+
+    // Success
+    if (last.code >= 200 && last.code < 300) {
+      console.log(last.body);
+      console.log(`✅ Publish succeeded via path: ${p}`);
+      return;
+    }
+
+    // If not found, try next candidate
+    if (last.code === 404) {
+      console.log(`Path not found (404): ${p} — trying next...`);
+      continue;
+    }
+
+    // Other errors: stop and show response
+    console.error(`Publish failed (HTTP ${last.code}) via path: ${p}`);
+    console.error(last.body);
+    process.exit(1);
+  }
+
+  console.error("Publish failed. No candidate endpoint succeeded.");
+  if (last) {
+    console.error(`Last HTTP ${last.code}`);
+    console.error(last.body);
+  }
+  console.error(
+    "If Drive Steward uses a different publish route, set DRIVE_STEWARD_PUBLISH_PATH explicitly."
+  );
+  process.exit(1);
 }
 
 main().catch((e: any) => {
