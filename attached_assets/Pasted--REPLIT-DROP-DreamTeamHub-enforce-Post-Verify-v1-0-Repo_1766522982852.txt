@@ -1,0 +1,139 @@
+## REPLIT DROP — DreamTeamHub: enforce Post-Verify (v1.0)
+
+**Repo:** ✅ **DreamTeamHub**
+**Goal:** Make DreamTeamHub ship output match GigsterGarage by **always running post-verify** and failing if the SHA isn’t in Drive Steward history.
+
+### VERSIONING
+
+* Project: DreamTeamHub
+* Patch: `dreamteamhub_post_verify_enforce_v1_0`
+* Date: 2025-12-23
+* Mode: additive (script edit only)
+
+### CHANGE_LOG
+
+* Ensure `tools/ship_publish.sh` exports `EXPECTED_SHA256` before calling post-verify
+* Always run `tools/post_verify_history.sh` (no “skipped” path)
+* Print standard “Post-verify ✅ …” line on success
+
+---
+
+### FILE: tools/ship_publish.sh
+
+```bash
+#!/usr/bin/env bash
+set -euo pipefail
+
+# i³ Step 4 Publisher Pack — ship_publish.sh
+# gate → export → publish → post-verify
+#
+# DreamTeamHub patch v1.0:
+# - Always enforce post-verify by exporting EXPECTED_SHA256 (and SHA256 for compatibility)
+
+: "${PROJECT_KEY:?Missing PROJECT_KEY}"
+: "${DRIVE_STEWARD_URL:?Missing DRIVE_STEWARD_URL}"
+: "${DRIVE_STEWARD_TOKEN:?Missing DRIVE_STEWARD_TOKEN}"
+
+echo "SHIP: start"
+echo "CMD: bash tools/ship_publish.sh"
+echo ""
+
+echo "SHIP PUBLISH: ${PROJECT_KEY}"
+echo "CI GATE: export bundle (no publish)"
+bash tools/ci_gate.sh
+
+echo "Build bundle"
+EXPORT_JSON="$(tsx tools/export_bundle.ts)"
+
+# Extract fields from export JSON (bundlePath and sha256 are required)
+BUNDLE_PATH="$(echo "$EXPORT_JSON" | node -e "let s='';process.stdin.on('data',d=>s+=d).on('end',()=>{const j=JSON.parse(s);process.stdout.write(j.bundlePath||'');});")"
+SHA256="$(echo "$EXPORT_JSON" | node -e "let s='';process.stdin.on('data',d=>s+=d).on('end',()=>{const j=JSON.parse(s);process.stdout.write(j.sha256||'');});")"
+
+if [ -z "${BUNDLE_PATH}" ] || [ -z "${SHA256}" ]; then
+  echo "SHIP_PUBLISH: FAIL — export_bundle.ts did not return bundlePath/sha256"
+  echo "$EXPORT_JSON"
+  exit 1
+fi
+
+# Export both names (some repos/scripts check one or the other)
+export SHA256
+export EXPECTED_SHA256="${SHA256}"
+
+echo ""
+echo "CI GATE PASS ✅"
+echo "Publishing to Drive Steward: ${DRIVE_STEWARD_URL%/}/api/exports/push"
+
+PUBLISH_JSON="$(tsx tools/publish_drive_steward.ts "$BUNDLE_PATH")"
+echo "$PUBLISH_JSON"
+
+echo ""
+echo "Post-verify: enforcing history inclusion (EXPECTED_SHA256=${EXPECTED_SHA256:0:12}...)"
+bash tools/post_verify_history.sh
+
+echo ""
+echo "SHIP PUBLISH DONE ✅"
+echo "Bundle: $(basename "$BUNDLE_PATH")"
+echo "SHA256: $SHA256"
+echo "Post-verify ✅ SHA found in Drive Steward history."
+echo ""
+echo "SHIP: done (exit=0)"
+```
+
+---
+
+### FILE: tools/post_verify_history.sh
+
+```bash
+#!/usr/bin/env bash
+set -euo pipefail
+
+# i³ Step 4 Publisher Pack — post_verify_history.sh
+# Enforced check: fails unless EXPECTED_SHA256 appears in Drive Steward history for PROJECT_KEY.
+
+: "${DRIVE_STEWARD_URL:?Missing DRIVE_STEWARD_URL}"
+: "${DRIVE_STEWARD_TOKEN:?Missing DRIVE_STEWARD_TOKEN}"
+: "${PROJECT_KEY:?Missing PROJECT_KEY}"
+: "${EXPECTED_SHA256:?Missing EXPECTED_SHA256}"
+
+BASE="${DRIVE_STEWARD_URL%/}"
+
+echo "POST_VERIFY: checking history for project=${PROJECT_KEY} sha=${EXPECTED_SHA256}"
+
+# Prefer find endpoint (fast), then fallback to by-project
+FIND_URL="${BASE}/api/debug/exports/find?sha256=${EXPECTED_SHA256:0:12}&limit=25"
+RESP="$(curl -sS -H "x-i3-token: ${DRIVE_STEWARD_TOKEN}" "${FIND_URL}" || true)"
+
+if echo "$RESP" | grep -q "$EXPECTED_SHA256"; then
+  echo "POST_VERIFY: PASS (found via find)"
+  exit 0
+fi
+
+BYPROJ_URL="${BASE}/api/debug/exports/by-project?projectKey=${PROJECT_KEY}&limit=50"
+RESP2="$(curl -sS -H "x-i3-token: ${DRIVE_STEWARD_TOKEN}" "${BYPROJ_URL}" || true)"
+
+if echo "$RESP2" | grep -q "$EXPECTED_SHA256"; then
+  echo "POST_VERIFY: PASS (found via by-project)"
+  exit 0
+fi
+
+echo "POST_VERIFY: FAIL — SHA not present in Drive Steward history"
+exit 1
+```
+
+---
+
+## Run test (DreamTeamHub)
+
+**Repo:** ✅ DreamTeamHub
+From Replit Shell:
+
+```bash
+bash tools/ship_publish.sh
+```
+
+✅ Expected tail:
+
+* `POST_VERIFY: PASS ...`
+* `SHIP PUBLISH DONE ✅`
+* `Post-verify ✅ SHA found in Drive Steward history.`
+* exit=0
