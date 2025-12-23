@@ -28,10 +28,14 @@ function findNewestTar(exportsDir: string): string {
   return path.join(exportsDir, entries[0].f);
 }
 
-function runCurl(url: string, tarPath: string, token: string) {
+function runCurl(url: string, tarPath: string, token: string, authStyle: "bearer" | "apikey" = "bearer") {
+  const authHeader = authStyle === "bearer" 
+    ? `-H "Authorization: Bearer ${token}"`
+    : `-H "X-API-Key: ${token}"`;
+  
   const cmd = [
     `curl -sS -w "\\n__HTTP_CODE__:%{http_code}\\n" -X POST "${url}"`,
-    `-H "Authorization: Bearer ${token}"`,
+    authHeader,
     `-F "bundle=@${tarPath}"`,
   ].join(" ");
 
@@ -59,48 +63,58 @@ async function main() {
   ];
 
   let last: { code: number; body: string } | null = null;
+  const authStyles: Array<"bearer" | "apikey"> = ["bearer", "apikey"];
 
   for (const p of candidatePaths) {
     const url = `${DRIVE_STEWARD_URL}${p.startsWith("/") ? "" : "/"}${p}`;
-    console.log(`Publishing to Drive Steward (attempt): ${url}`);
+    
+    for (const authStyle of authStyles) {
+      console.log(`Publishing to Drive Steward (attempt): ${url} [auth: ${authStyle}]`);
 
-    last = runCurl(url, tarPath, DRIVE_STEWARD_TOKEN);
+      last = runCurl(url, tarPath, DRIVE_STEWARD_TOKEN, authStyle);
 
-    // Success
-    if (last.code >= 200 && last.code < 300) {
-      console.log(last.body);
-      console.log(`✅ Publish succeeded via path: ${p}`);
+      // Success
+      if (last.code >= 200 && last.code < 300) {
+        console.log(last.body);
+        console.log(`✅ Publish succeeded via path: ${p} [auth: ${authStyle}]`);
 
-      // Post-publish verification: ensure SHA is actually in Drive Steward history
-      const projectKey = process.env.PROJECT_KEY || "DreamTeamHub";
-      const expectedSha = process.env.EXPECTED_SHA256 || "";
+        // Post-publish verification: ensure SHA is actually in Drive Steward history
+        const projectKey = process.env.PROJECT_KEY || "DreamTeamHub";
+        const expectedSha = process.env.EXPECTED_SHA256 || "";
 
-      if (expectedSha) {
-        const h = fetchHistory(DRIVE_STEWARD_URL, projectKey, 50);
-        const rows = Array.isArray(h?.rows) ? h.rows : [];
-        const found = rows.some((r: any) => String(r?.sha256 || "") === expectedSha);
-        if (!found) {
-          console.error(`FAIL ❌ Publish returned 2xx but history did not include SHA ${expectedSha}`);
-          process.exit(1);
+        if (expectedSha) {
+          const h = fetchHistory(DRIVE_STEWARD_URL, projectKey, 50);
+          const rows = Array.isArray(h?.rows) ? h.rows : [];
+          const found = rows.some((r: any) => String(r?.sha256 || "") === expectedSha);
+          if (!found) {
+            console.error(`FAIL ❌ Publish returned 2xx but history did not include SHA ${expectedSha}`);
+            process.exit(1);
+          }
+          console.log(`Post-verify ✅ history contains SHA ${expectedSha}`);
+        } else {
+          console.log("Post-verify skipped (set EXPECTED_SHA256 to enforce history inclusion).");
         }
-        console.log(`Post-verify ✅ history contains SHA ${expectedSha}`);
-      } else {
-        console.log("Post-verify skipped (set EXPECTED_SHA256 to enforce history inclusion).");
+
+        return;
       }
 
-      return;
-    }
+      // 401 Unauthorized - try next auth style
+      if (last.code === 401) {
+        console.log(`Auth failed (401) with ${authStyle} — trying next auth style...`);
+        continue;
+      }
 
-    // If not found, try next candidate
-    if (last.code === 404) {
-      console.log(`Path not found (404): ${p} — trying next...`);
-      continue;
-    }
+      // 404 Not found - break inner loop and try next path
+      if (last.code === 404) {
+        console.log(`Path not found (404): ${p} — trying next path...`);
+        break;
+      }
 
-    // Other errors: stop and show response
-    console.error(`Publish failed (HTTP ${last.code}) via path: ${p}`);
-    console.error(last.body);
-    process.exit(1);
+      // Other errors: stop and show response
+      console.error(`Publish failed (HTTP ${last.code}) via path: ${p}`);
+      console.error(last.body);
+      process.exit(1);
+    }
   }
 
   console.error("Publish failed. No candidate endpoint succeeded.");
