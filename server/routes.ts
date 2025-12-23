@@ -26,6 +26,7 @@ import { seoAltTextRouter } from "./routes/seo_alt_text";
 import { seoMetaRouter, seoMetaPublicRouter } from "./routes/seo_meta";
 import { fccSkuMapRouter } from "./routes/fcc_sku_map";
 import { canonRouter } from "./routes/canon.route";
+import { registerI3DropReceiver } from "./routes/i3_drop_receiver";
 import { getFccSkuMapByKey } from "./lib/fccSkuMap";
 // Pack generation handlers now use the registry pattern
 import { PACK_REGISTRY } from "./ai/packRegistry";
@@ -296,6 +297,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.use("/api", isDualAuthenticated, seoMetaRouter);
   app.use("/api", isAuthenticated, fccSkuMapRouter);
   app.use("/api/canon", canonRouter);
+  
+  // i3 Drop Receiver (remote repo driver for VSuiteHQ)
+  registerI3DropReceiver(app);
 
   // ===========================
   // CONTROL TOWER
