@@ -1,9 +1,10 @@
 # Release Notes
 
 **Project:** DreamTeamHub
-**Head:** 44d07e9
+**Head:** f5d6799
 **Tag:** (none found, using last 10 commits)
 **Range:** HEAD~10..HEAD
+- 2025-12-23 f5d6799 Update bundle publishing to better check for successful uploads
 - 2025-12-23 44d07e9 Update bundle publishing to better check for successful uploads
 - 2025-12-23 09f1426 Add post-publish verification to check bundle inclusion in history
 - 2025-12-23 529a351 Update project bundle details for DreamTeamHub in manifest and release notes
@@ -13,4 +14,3 @@
 - 2025-12-22 908038b Update project bundle release notes and manifest files
 - 2025-12-22 eae736e Improve how project bundles are published to the drive steward
 - 2025-12-22 e357f45 Add release and publishing tools for project bundles
-- 2025-12-13 fc2fb10 Add status indicator for data synchronization with external sources

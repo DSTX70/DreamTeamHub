@@ -28,15 +28,13 @@ function findNewestTar(exportsDir: string): string {
   return path.join(exportsDir, entries[0].f);
 }
 
-function runCurl(url: string, tarPath: string, token: string, authStyle: "bearer" | "apikey" = "bearer") {
-  const authHeader = authStyle === "bearer" 
-    ? `-H "Authorization: Bearer ${token}"`
-    : `-H "X-API-Key: ${token}"`;
-  
+function runCurl(url: string, tarPath: string, token: string, meta: object) {
+  const metaJson = JSON.stringify(meta);
   const cmd = [
     `curl -sS -w "\\n__HTTP_CODE__:%{http_code}\\n" -X POST "${url}"`,
-    authHeader,
+    `-H "x-i3-token: ${token}"`,
     `-F "bundle=@${tarPath}"`,
+    `-F 'meta=${metaJson}'`,
   ].join(" ");
 
   const out = execSync(cmd, { stdio: ["ignore", "pipe", "pipe"] }).toString("utf8");
@@ -53,68 +51,73 @@ async function main() {
   const EXPORTS_DIR = path.resolve(process.cwd(), "exports");
   const tarPath = findNewestTar(EXPORTS_DIR);
 
+  // Extract MANIFEST.json from tar to get metadata
+  const tmpDir = path.join(EXPORTS_DIR, ".tmp_manifest_extract");
+  fs.mkdirSync(tmpDir, { recursive: true });
+  execSync(`tar -xzf "${tarPath}" -C "${tmpDir}" "MANIFEST.json"`, { stdio: "inherit" });
+  const manifestPath = path.join(tmpDir, "MANIFEST.json");
+  const manifest = JSON.parse(fs.readFileSync(manifestPath, "utf8"));
+
+  const projectKey = process.env.PROJECT_KEY || manifest.projectKey || "DreamTeamHub";
+  const bundleName = path.basename(tarPath);
+  const meta = {
+    projectKey,
+    bundleName,
+    version: manifest.version || "0.0.0",
+    sha256: manifest.sha256 || "",
+    timestamp: manifest.timestamp || new Date().toISOString(),
+    releaseHeadSha: manifest.releaseHeadSha || "",
+  };
+
   const override = process.env.DRIVE_STEWARD_PUBLISH_PATH?.trim();
 
-  // ✅ canonical first: Drive Steward has /api/exports/push
   const candidatePaths = [
     ...(override ? [override] : []),
     "/api/exports/push",
-    "/api/exports/publish", // keep as last resort in case it exists elsewhere
   ];
 
   let last: { code: number; body: string } | null = null;
-  const authStyles: Array<"bearer" | "apikey"> = ["bearer", "apikey"];
 
   for (const p of candidatePaths) {
     const url = `${DRIVE_STEWARD_URL}${p.startsWith("/") ? "" : "/"}${p}`;
-    
-    for (const authStyle of authStyles) {
-      console.log(`Publishing to Drive Steward (attempt): ${url} [auth: ${authStyle}]`);
+    console.log(`Publishing to Drive Steward: ${url}`);
 
-      last = runCurl(url, tarPath, DRIVE_STEWARD_TOKEN, authStyle);
+    last = runCurl(url, tarPath, DRIVE_STEWARD_TOKEN, meta);
 
-      // Success
-      if (last.code >= 200 && last.code < 300) {
-        console.log(last.body);
-        console.log(`✅ Publish succeeded via path: ${p} [auth: ${authStyle}]`);
+    // Success
+    if (last.code >= 200 && last.code < 300) {
+      console.log(last.body);
+      console.log(`✅ Publish succeeded via path: ${p}`);
 
-        // Post-publish verification: ensure SHA is actually in Drive Steward history
-        const projectKey = process.env.PROJECT_KEY || "DreamTeamHub";
-        const expectedSha = process.env.EXPECTED_SHA256 || "";
+      // Post-publish verification: ensure SHA is actually in Drive Steward history
+      const expectedSha = process.env.EXPECTED_SHA256 || "";
 
-        if (expectedSha) {
-          const h = fetchHistory(DRIVE_STEWARD_URL, projectKey, 50);
-          const rows = Array.isArray(h?.rows) ? h.rows : [];
-          const found = rows.some((r: any) => String(r?.sha256 || "") === expectedSha);
-          if (!found) {
-            console.error(`FAIL ❌ Publish returned 2xx but history did not include SHA ${expectedSha}`);
-            process.exit(1);
-          }
-          console.log(`Post-verify ✅ history contains SHA ${expectedSha}`);
-        } else {
-          console.log("Post-verify skipped (set EXPECTED_SHA256 to enforce history inclusion).");
+      if (expectedSha) {
+        const h = fetchHistory(DRIVE_STEWARD_URL, projectKey, 50);
+        const rows = Array.isArray(h?.rows) ? h.rows : [];
+        const found = rows.some((r: any) => String(r?.sha256 || "") === expectedSha);
+        if (!found) {
+          console.error(`FAIL ❌ Publish returned 2xx but history did not include SHA ${expectedSha}`);
+          process.exit(1);
         }
-
-        return;
+        console.log(`Post-verify ✅ history contains SHA ${expectedSha}`);
+      } else {
+        console.log("Post-verify skipped (set EXPECTED_SHA256 to enforce history inclusion).");
       }
 
-      // 401 Unauthorized - try next auth style
-      if (last.code === 401) {
-        console.log(`Auth failed (401) with ${authStyle} — trying next auth style...`);
-        continue;
-      }
-
-      // 404 Not found - break inner loop and try next path
-      if (last.code === 404) {
-        console.log(`Path not found (404): ${p} — trying next path...`);
-        break;
-      }
-
-      // Other errors: stop and show response
-      console.error(`Publish failed (HTTP ${last.code}) via path: ${p}`);
-      console.error(last.body);
-      process.exit(1);
+      return;
     }
+
+    // 404 Not found - try next path
+    if (last.code === 404) {
+      console.log(`Path not found (404): ${p} — trying next path...`);
+      continue;
+    }
+
+    // Other errors: stop and show response
+    console.error(`Publish failed (HTTP ${last.code}) via path: ${p}`);
+    console.error(last.body);
+    process.exit(1);
   }
 
   console.error("Publish failed. No candidate endpoint succeeded.");
