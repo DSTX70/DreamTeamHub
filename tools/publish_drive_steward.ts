@@ -8,6 +8,17 @@ function reqEnv(name: string): string {
   return v;
 }
 
+function fetchHistory(urlBase: string, projectKey: string, limit = 25) {
+  const url =
+    `${urlBase.replace(/\/$/, "")}/api/exports/history?projectKey=${encodeURIComponent(projectKey)}&limit=${limit}`;
+  const out = execSync(`curl -sS "${url}"`, { stdio: ["ignore", "pipe", "pipe"] }).toString("utf8");
+  try {
+    return JSON.parse(out);
+  } catch {
+    return { ok: false, raw: out };
+  }
+}
+
 function findNewestTar(exportsDir: string): string {
   const entries = fs.readdirSync(exportsDir)
     .filter(f => f.endsWith(".tar.gz"))
@@ -66,6 +77,24 @@ async function main() {
     if (last.code >= 200 && last.code < 300) {
       console.log(last.body);
       console.log(`✅ Publish succeeded via path: ${p}`);
+
+      // Post-publish verification: ensure SHA is actually in Drive Steward history
+      const projectKey = process.env.PROJECT_KEY || "DreamTeamHub";
+      const expectedSha = process.env.EXPECTED_SHA256 || "";
+
+      if (expectedSha) {
+        const h = fetchHistory(DRIVE_STEWARD_URL, projectKey, 50);
+        const rows = Array.isArray(h?.rows) ? h.rows : [];
+        const found = rows.some((r: any) => String(r?.sha256 || "") === expectedSha);
+        if (!found) {
+          console.error(`FAIL ❌ Publish returned 2xx but history did not include SHA ${expectedSha}`);
+          process.exit(1);
+        }
+        console.log(`Post-verify ✅ history contains SHA ${expectedSha}`);
+      } else {
+        console.log("Post-verify skipped (set EXPECTED_SHA256 to enforce history inclusion).");
+      }
+
       return;
     }
 
