@@ -44,9 +44,11 @@ export function registerI3DropReceiver(app: Express) {
     res.setHeader("Content-Type", "text/plain; charset=utf-8");
     res.setHeader("Transfer-Encoding", "chunked");
 
+    const projectKey = req.body?.projectKey || process.env.PROJECT_KEY || "DreamTeamHub";
+
     const child = spawn("bash", ["tools/ship_publish.sh"], {
       cwd: process.cwd(),
-      env: process.env,
+      env: { ...process.env, PROJECT_KEY: projectKey },
       stdio: ["ignore", "pipe", "pipe"],
     });
 

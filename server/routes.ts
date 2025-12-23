@@ -102,6 +102,12 @@ const isDualAuthenticated: RequestHandler = (req, res, next) => {
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // ===========================
+  // i3 DROP RECEIVER (must be before session auth)
+  // ===========================
+  // Register before setupAuth so i3 drop endpoints use their own token auth
+  registerI3DropReceiver(app);
+
+  // ===========================
   // STATIC FILES
   // ===========================
   
@@ -297,9 +303,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.use("/api", isDualAuthenticated, seoMetaRouter);
   app.use("/api", isAuthenticated, fccSkuMapRouter);
   app.use("/api/canon", canonRouter);
-  
-  // i3 Drop Receiver (remote repo driver for VSuiteHQ)
-  registerI3DropReceiver(app);
 
   // ===========================
   // CONTROL TOWER
