@@ -1,9 +1,11 @@
 # Release Notes
 
 **Project:** DreamTeamHub
-**Head:** eae736e
+**Head:** 1aab5f0
 **Tag:** (none found, using last 10 commits)
 **Range:** HEAD~10..HEAD
+- 2025-12-22 1aab5f0 Update manifest file to include project and release details
+- 2025-12-22 908038b Update project bundle release notes and manifest files
 - 2025-12-22 eae736e Improve how project bundles are published to the drive steward
 - 2025-12-22 e357f45 Add release and publishing tools for project bundles
 - 2025-12-13 fc2fb10 Add status indicator for data synchronization with external sources
@@ -12,5 +14,3 @@
 - 2025-12-13 d9b9481 Add table for tracking canon sync events and their details
 - 2025-12-12 0892dad Saved progress at the end of the loop
 - 2025-12-12 208a36d Enhance agent display and filtering with new interactive features
-- 2025-12-12 921c1fb Add new governance packs for Dream Team Hub functionality
-- 2025-12-12 c163378 Saved progress at the end of the loop
