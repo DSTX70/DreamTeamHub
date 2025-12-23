@@ -11,6 +11,6 @@ npm -v
 echo "Smoke: (none yet) PASS"
 
 echo "Build bundle"
-PROJECT_KEY="$PROJECT_KEY" npm run export:bundle
+PROJECT_KEY="$PROJECT_KEY" npx tsx tools/export_bundle.ts
 
 echo "CI GATE PASS ✅"
