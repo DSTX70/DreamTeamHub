@@ -28,12 +28,11 @@ function findNewestTar(exportsDir: string): string {
   return path.join(exportsDir, entries[0].f);
 }
 
-function runCurl(url: string, tarPath: string, manifestPath: string, token: string) {
+function runCurl(url: string, tarPath: string, token: string) {
   const cmd = [
     `curl -sS -w "\\n__HTTP_CODE__:%{http_code}\\n" -X POST "${url}"`,
     `-H "Authorization: Bearer ${token}"`,
     `-F "bundle=@${tarPath}"`,
-    `-F "manifest=@${manifestPath}"`,
   ].join(" ");
 
   const out = execSync(cmd, { stdio: ["ignore", "pipe", "pipe"] }).toString("utf8");
@@ -50,19 +49,13 @@ async function main() {
   const EXPORTS_DIR = path.resolve(process.cwd(), "exports");
   const tarPath = findNewestTar(EXPORTS_DIR);
 
-  // Extract MANIFEST.json from tar to upload alongside
-  const tmpDir = path.join(EXPORTS_DIR, ".tmp_manifest_extract");
-  fs.mkdirSync(tmpDir, { recursive: true });
-  execSync(`tar -xzf "${tarPath}" -C "${tmpDir}" "MANIFEST.json"`, { stdio: "inherit" });
-  const manifestPath = path.join(tmpDir, "MANIFEST.json");
-
   const override = process.env.DRIVE_STEWARD_PUBLISH_PATH?.trim();
 
-  // Try override first (if set), otherwise try common known endpoints
+  // ✅ canonical first: Drive Steward has /api/exports/push
   const candidatePaths = [
     ...(override ? [override] : []),
-    "/api/exports/publish",
     "/api/exports/push",
+    "/api/exports/publish", // keep as last resort in case it exists elsewhere
   ];
 
   let last: { code: number; body: string } | null = null;
@@ -71,7 +64,7 @@ async function main() {
     const url = `${DRIVE_STEWARD_URL}${p.startsWith("/") ? "" : "/"}${p}`;
     console.log(`Publishing to Drive Steward (attempt): ${url}`);
 
-    last = runCurl(url, tarPath, manifestPath, DRIVE_STEWARD_TOKEN);
+    last = runCurl(url, tarPath, DRIVE_STEWARD_TOKEN);
 
     // Success
     if (last.code >= 200 && last.code < 300) {
