@@ -43,7 +43,6 @@ export function registerI3DropReceiver(app: Express) {
     if (!auth.ok) return res.status(403).send(auth.error);
 
     const verbose = Boolean(req.body?.verbose);
-    const projectKey = req.body?.projectKey || process.env.PROJECT_KEY || "DreamTeamHub";
 
     res.setHeader("Content-Type", "text/plain; charset=utf-8");
     res.setHeader("Transfer-Encoding", "chunked");
@@ -52,7 +51,6 @@ export function registerI3DropReceiver(app: Express) {
       cwd: process.cwd(),
       env: {
         ...process.env,
-        PROJECT_KEY: projectKey,
         VERBOSE: verbose ? "1" : (process.env.VERBOSE || "0"),
       },
       stdio: ["ignore", "pipe", "pipe"],
