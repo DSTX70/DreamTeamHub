@@ -17,6 +17,7 @@ function isSafeRelativePath(p: string): boolean {
 }
 
 function getReadAllowPrefixes(): string[] {
+  // Keep this conservative; expand only if needed.
   const raw = process.env.I3_VERIFY_READ_ALLOWED_PREFIXES_JSON;
   if (raw) {
     try {
@@ -132,7 +133,7 @@ export function registerI3DropReceiver(app: Express) {
     return res.json(out);
   });
 
-  // Runtime verification after ship/apply
+  // NEW: runtime verification after ship/apply
   app.post("/api/i3/drop/verify", async (req: Request, res: Response) => {
     const auth = requireRepoOpsToken(req);
     if (!auth.ok) return res.status(403).json(auth);
@@ -144,13 +145,11 @@ export function registerI3DropReceiver(app: Express) {
         const urlPath = String(req.body?.urlPath || "");
         if (!urlPath) return res.status(400).json({ ok: false, error: "Missing urlPath" });
 
-        const rawStatus = req.body?.expectStatus;
-        const rawTimeout = req.body?.timeoutMs;
         const out = await verifyHttpLocal({
           urlPath,
-          expectStatus: typeof rawStatus === "number" ? rawStatus : (rawStatus ? Number(rawStatus) : undefined),
+          expectStatus: typeof req.body?.expectStatus === "number" ? req.body.expectStatus : Number(req.body?.expectStatus),
           expectContains: req.body?.expectContains ? String(req.body.expectContains) : "",
-          timeoutMs: typeof rawTimeout === "number" ? rawTimeout : (rawTimeout ? Number(rawTimeout) : undefined),
+          timeoutMs: typeof req.body?.timeoutMs === "number" ? req.body.timeoutMs : Number(req.body?.timeoutMs),
         });
 
         return res.json({ ok: out.ok, kind: "http", matched: out.ok, details: out.details });
@@ -160,11 +159,10 @@ export function registerI3DropReceiver(app: Express) {
         const filePath = String(req.body?.filePath || "");
         if (!filePath) return res.status(400).json({ ok: false, error: "Missing filePath" });
 
-        const rawMaxBytes = req.body?.maxBytes;
         const out = verifyFile({
           filePath,
           expectContains: req.body?.expectContains ? String(req.body.expectContains) : "",
-          maxBytes: typeof rawMaxBytes === "number" ? rawMaxBytes : (rawMaxBytes ? Number(rawMaxBytes) : undefined),
+          maxBytes: typeof req.body?.maxBytes === "number" ? req.body.maxBytes : Number(req.body?.maxBytes),
         });
 
         return res.json({ ok: out.ok, kind: "file", matched: out.ok, details: out.details });
@@ -182,18 +180,13 @@ export function registerI3DropReceiver(app: Express) {
     if (!auth.ok) return res.status(403).send(auth.error);
 
     const verbose = Boolean(req.body?.verbose);
-    const projectKey = req.body?.projectKey || process.env.PROJECT_KEY || "DreamTeamHub";
 
     res.setHeader("Content-Type", "text/plain; charset=utf-8");
     res.setHeader("Transfer-Encoding", "chunked");
 
     const child = spawn("bash", ["tools/ship_publish.sh"], {
       cwd: process.cwd(),
-      env: {
-        ...process.env,
-        PROJECT_KEY: projectKey,
-        VERBOSE: verbose ? "1" : (process.env.VERBOSE || "0"),
-      },
+      env: { ...process.env, VERBOSE: verbose ? "1" : (process.env.VERBOSE || "0") },
       stdio: ["ignore", "pipe", "pipe"],
     });
 
