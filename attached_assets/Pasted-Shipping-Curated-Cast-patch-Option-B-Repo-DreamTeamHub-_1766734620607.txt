@@ -1,3 +1,213 @@
+Shipping Curated-Cast patch (Option B) ✅
+Repo: DreamTeamHub (Replit)
+Where to paste: replace/update the files below exactly.
+
+This patch adds Auto vs Curated casting on /intent while keeping your sidebar clean and Outcome-first. Curated mode supports:
+	•	Pod multi-select (auto-loaded if /api/pods exists; otherwise manual entry)
+	•	Persona multi-select (auto-loaded if /api/roles exists; otherwise manual entry)
+	•	A Cast Receipt is embedded into the created work item description so the system can generate non-generic, curated outputs downstream.
+
+⸻
+
+
+FILE: client/src/lib/castingPrefs.ts
+const MODE_KEY = "dth_cast_mode"; // "auto" | "curated"
+const PODS_KEY = "dth_cast_pods"; // JSON string[]
+const PERSONAS_KEY = "dth_cast_personas"; // JSON string[]
+
+export type CastMode = "auto" | "curated";
+
+function safeParseArray(raw: string | null): string[] {
+  if (!raw) return [];
+  try {
+    const v = JSON.parse(raw);
+    return Array.isArray(v) ? v.filter((x) => typeof x === "string") : [];
+  } catch {
+    return [];
+  }
+}
+
+export function getCastMode(): CastMode {
+  try {
+    const v = window.localStorage.getItem(MODE_KEY);
+    return v === "curated" ? "curated" : "auto";
+  } catch {
+    return "auto";
+  }
+}
+
+export function setCastMode(mode: CastMode): void {
+  try {
+    window.localStorage.setItem(MODE_KEY, mode);
+    window.dispatchEvent(new Event("storage"));
+  } catch {
+    // ignore
+  }
+}
+
+export function getSelectedPods(): string[] {
+  try {
+    return safeParseArray(window.localStorage.getItem(PODS_KEY));
+  } catch {
+    return [];
+  }
+}
+
+export function setSelectedPods(pods: string[]): void {
+  try {
+    window.localStorage.setItem(PODS_KEY, JSON.stringify(pods));
+    window.dispatchEvent(new Event("storage"));
+  } catch {
+    // ignore
+  }
+}
+
+export function getSelectedPersonas(): string[] {
+  try {
+    return safeParseArray(window.localStorage.getItem(PERSONAS_KEY));
+  } catch {
+    return [];
+  }
+}
+
+export function setSelectedPersonas(personas: string[]): void {
+  try {
+    window.localStorage.setItem(PERSONAS_KEY, JSON.stringify(personas));
+    window.dispatchEvent(new Event("storage"));
+  } catch {
+    // ignore
+  }
+}
+END_FILE
+
+FILE: client/src/hooks/useCastingPrefs.ts
+import { useEffect, useState } from "react";
+import {
+  CastMode,
+  getCastMode,
+  getSelectedPods,
+  getSelectedPersonas,
+  setCastMode as persistMode,
+  setSelectedPods as persistPods,
+  setSelectedPersonas as persistPersonas,
+} from "@/lib/castingPrefs";
+
+/**
+ * Casting preferences are user-level ergonomics:
+ * - Auto: system selects pods/personas
+ * - Curated: user selects pods/personas for non-generic outcomes
+ *
+ * Stored in localStorage; can be upgraded to profile persistence later.
+ */
+export function useCastingPrefs() {
+  const [mode, setModeState] = useState<CastMode>(() => getCastMode());
+  const [pods, setPodsState] = useState<string[]>(() => getSelectedPods());
+  const [personas, setPersonasState] = useState<string[]>(() => getSelectedPersonas());
+
+  useEffect(() => {
+    const onStorage = () => {
+      setModeState(getCastMode());
+      setPodsState(getSelectedPods());
+      setPersonasState(getSelectedPersonas());
+    };
+    window.addEventListener("storage", onStorage);
+    return () => window.removeEventListener("storage", onStorage);
+  }, []);
+
+  const setMode = (next: CastMode) => {
+    setModeState(next);
+    persistMode(next);
+  };
+
+  const setPods = (next: string[]) => {
+    setPodsState(next);
+    persistPods(next);
+  };
+
+  const setPersonas = (next: string[]) => {
+    setPersonasState(next);
+    persistPersonas(next);
+  };
+
+  return { mode, setMode, pods, setPods, personas, setPersonas };
+}
+END_FILE
+
+FILE: client/src/hooks/useCastOptions.ts
+import { useQuery } from "@tanstack/react-query";
+
+type Pod = { id?: string; name?: string; title?: string; slug?: string };
+type Role = { id?: string; name?: string; title?: string; handle?: string };
+
+async function safeFetchJSON<T>(url: string): Promise<T | null> {
+  try {
+    const res = await fetch(url, { credentials: "include" });
+    if (!res.ok) return null;
+    return (await res.json()) as T;
+  } catch {
+    return null;
+  }
+}
+
+function normalizeNames(items: any[], keys: string[]): string[] {
+  const out: string[] = [];
+  for (const it of items || []) {
+    if (!it || typeof it !== "object") continue;
+    for (const k of keys) {
+      const v = (it as any)[k];
+      if (typeof v === "string" && v.trim()) {
+        out.push(v.trim());
+        break;
+      }
+    }
+  }
+  // de-dupe
+  return Array.from(new Set(out)).sort((a, b) => a.localeCompare(b));
+}
+
+/**
+ * Best-effort discovery of pods/personas.
+ * If endpoints do not exist, UI still works with manual entry.
+ */
+export function useCastOptions() {
+  const podsQ = useQuery({
+    queryKey: ["/api/pods"],
+    queryFn: async () => {
+      const data = await safeFetchJSON<any>("/api/pods");
+      if (!data) return { ok: false as const, names: [] as string[] };
+      // supports either array payloads or { pods: [] }
+      const list = Array.isArray(data) ? data : Array.isArray(data?.pods) ? data.pods : [];
+      return { ok: true as const, names: normalizeNames(list, ["name", "title", "slug", "id"]) };
+    },
+    staleTime: 60_000,
+    retry: false,
+  });
+
+  const personasQ = useQuery({
+    queryKey: ["/api/roles"],
+    queryFn: async () => {
+      const data = await safeFetchJSON<any>("/api/roles");
+      if (!data) return { ok: false as const, names: [] as string[] };
+      // supports either array payloads or { roles: [] }
+      const list = Array.isArray(data) ? data : Array.isArray(data?.roles) ? data.roles : [];
+      return { ok: true as const, names: normalizeNames(list, ["name", "title", "handle", "id"]) };
+    },
+    staleTime: 60_000,
+    retry: false,
+  });
+
+  return {
+    pods: podsQ.data?.names ?? [],
+    podsOk: podsQ.data?.ok ?? false,
+    podsLoading: podsQ.isLoading,
+    personas: personasQ.data?.names ?? [],
+    personasOk: personasQ.data?.ok ?? false,
+    personasLoading: personasQ.isLoading,
+  };
+}
+END_FILE
+
+FILE: client/src/pages/intent-console.tsx
 import { useMemo, useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -153,7 +363,7 @@ export default function IntentConsolePage() {
             What are you trying to accomplish?
           </CardTitle>
           <CardDescription>
-            Outcome-first. You can optionally "cast the orchestra" below.
+            Outcome-first. You can optionally “cast the orchestra” below.
           </CardDescription>
         </CardHeader>
 
@@ -385,3 +595,28 @@ export default function IntentConsolePage() {
     </div>
   );
 }
+END_FILE
+
+
+⸻
+
+Post-apply verification checklist (Option B)
+
+In DreamTeamHub Replit:
+	1.	Typecheck
+	•	npm run check
+	2.	Run dev
+	•	npm run dev
+	3.	Manual UX checks
+	•	Go to /intent
+	•	Confirm you can switch Auto-Cast / Curated-Cast
+	•	In Curated mode:
+	•	If your backend has /api/pods and /api/roles, chips load and can be selected
+	•	If not, the manual comma-entry inputs appear and still work
+	•	Create Work Item and confirm it contains a Cast Receipt in description
+
+⸻
+
+If pods/personas don’t auto-load
+
+That’s expected if your API routes are named differently. Paste the actual endpoints you have (or the server routes file that defines them) and I’ll do a tiny follow-up patch to point useCastOptions() at the correct URLs (still Option B, still DreamTeamHub repo).
