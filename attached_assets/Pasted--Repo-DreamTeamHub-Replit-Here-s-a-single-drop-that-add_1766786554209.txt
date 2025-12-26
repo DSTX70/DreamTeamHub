@@ -1,3 +1,53 @@
+**Repo:** `DreamTeamHub` (Replit)
+Here’s a **single drop** that adds a curated `canonPods.ts` fallback (only the pods we actually want selectable in Curated-Cast), and wires it into `useCastOptions()` so **Pods chips always populate** even if `/api/pods` is missing or returns an unexpected shape.
+
+I’m intentionally keeping the fallback pod list **tight + outcome-aligned** (not “every internal pod concept”):
+
+* **OS / System** (Helm / orchestration)
+* **Product + UX**
+* **Engineering**
+* **Brand + Marketing**
+* **Narrative + PR**
+* **IP / Legal**
+* **Security / Risk**
+* **Evidence / QA**
+* **Ops / Delivery**
+* **Medical** (because you actively use it)
+
+You can rename/expand later, but this prevents the UI from exploding.
+
+---
+
+```tsx
+FILE: client/src/lib/canonPods.ts
+/**
+ * Canonical fallback list of selectable pods for Curated-Cast.
+ * Intentionally curated to avoid exposing every internal construct.
+ *
+ * These are "user-meaningful" pods that map to outcomes and real workflows.
+ */
+
+export type CanonPod = { slug: string; label: string };
+
+export const CANON_PODS: CanonPod[] = [
+  { slug: "pod_os", label: "OS / System" },
+  { slug: "pod_product_ux", label: "Product + UX" },
+  { slug: "pod_engineering", label: "Engineering" },
+  { slug: "pod_brand_marketing", label: "Brand + Marketing" },
+  { slug: "pod_narrative_pr", label: "Narrative + PR" },
+  { slug: "pod_ip_legal", label: "IP / Legal" },
+  { slug: "pod_security_risk", label: "Security / Risk" },
+  { slug: "pod_evidence_qa", label: "Evidence / QA" },
+  { slug: "pod_ops_delivery", label: "Ops / Delivery" },
+  { slug: "pod_medical", label: "Medical" },
+];
+
+export function canonPodsAsOptions() {
+  return CANON_PODS.map((p) => ({ slug: p.slug, label: p.label }));
+}
+END_FILE
+
+FILE: client/src/hooks/useCastOptions.ts
 import { useQuery } from "@tanstack/react-query";
 import { canonAgentsAsOptions } from "@/lib/canonAgents";
 import { canonPodsAsOptions } from "@/lib/canonPods";
@@ -117,3 +167,19 @@ export function useCastOptions() {
     personasLoading: personasQ.isLoading,
   };
 }
+END_FILE
+```
+
+---
+
+## Post-apply verification
+
+1. `npm run check`
+2. `npm run dev`
+3. `/intent` → Curated-Cast → **Pods chips** should always appear (your curated list), even if `/api/pods` fails.
+
+---
+
+## Tiny note (so this stays clean)
+
+These fallback pod slugs (`pod_os`, `pod_product_ux`, etc.) are **UI-level curated pods**. They don’t have to match your internal DB pod IDs yet. Later, we can add a server-side resolver that maps these curated pod slugs → real internal pods/personas during routing.
