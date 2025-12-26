@@ -1,0 +1,70 @@
+PASTE INTO REPO: **Artistic Notation** (Replit repo: `Artistic Notation`)
+
+Interpreting your message canonically as:
+
+* **Broadcast release event: NO (not yet)**
+* **DreamTeamHub context selector: YES, but pending an update/spec** (so we’ll **stage it off** until you give the selector contract you want)
+
+Here’s the patch to lock those decisions into config without adding any Broadcast/DTH code yet:
+
+```text
+FILE: i3.project.json
+{
+  "projectKey": "ArtisticNotation",
+  "repoSlug": "artistic-notation",
+  "integrations": {
+    "driveSteward": {
+      "enabled": true
+    },
+    "vsuitehqIngest": {
+      "enabled": true
+    },
+    "dreamTeamHubContext": {
+      "enabled": false,
+      "note": "YES requested but pending updated selector contract/spec from DreamTeamHub. Staged OFF."
+    },
+    "broadcast": {
+      "enabled": false,
+      "note": "Not yet."
+    }
+  }
+}
+END_FILE
+```
+
+## Scope / thread placement (canonical)
+
+* Anything that **changes DreamTeamHub UI/selector** is **out of scope** for this DriveSteward root thread and also **not in Artistic Notation**. That work belongs in the **DreamTeamHub thread**.
+* Artistic Notation will only need a **small client** once the DTH selector contract is finalized.
+
+### Paste-ready NEW THREAD STARTER (DreamTeamHub selector update)
+
+Use this to start the correct thread for that work:
+
+```text
+DreamTeamHub — Repo/Context Selector Update (Canonical)
+Confidential and proprietary and copyright Dustin Sparks 2025
+
+PASTE TARGET
+- Repo/Replit: DreamTeamHub
+
+GOAL
+- Implement/adjust the Repo/Context selector (no BU pages)
+- Define the canonical context contract that other repos will follow:
+  - projectKey
+  - baseUrl (if needed)
+  - capabilities (ops routing)
+  - persistence (local storage key + schema)
+
+REQUEST
+1) Current selector location (route/component paths)
+2) Desired repos list (including ArtisticNotation)
+3) Any capability flags required per repo
+4) Definition of Done: selector persists + drives routing cleanly
+
+OUTPUT REQUIRED
+- Single FILE:…END_FILE patch drop
+- MUST state: “PASTE INTO REPO: DreamTeamHub”
+```
+
+When you’re ready with the updated selector requirements, drop them in that DreamTeamHub thread and I’ll produce the patch drop there.
