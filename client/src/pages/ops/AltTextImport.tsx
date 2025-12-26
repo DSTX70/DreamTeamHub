@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
+import type { WorkItem } from '@shared/schema';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
@@ -8,13 +9,6 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { FileText, Upload, CheckCircle, AlertCircle, Download } from 'lucide-react';
 import { apiRequest, queryClient } from '@/lib/queryClient';
-
-interface WorkItem {
-  id: number;
-  title: string;
-  description?: string;
-  status: string;
-}
 
 interface WorkItemFile {
   id: number;
