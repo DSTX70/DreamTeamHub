@@ -1,5 +1,6 @@
-import { Home, Users, Lightbulb, Shield, FileText, Inbox, Sparkles, Layers, MessageSquare, Bot, Radio, Settings, RefreshCw, Palette, HelpCircle, FolderKanban, Presentation, GraduationCap, Cpu, Plug, ClipboardList, Building2, FileBarChart, Activity, BookOpen } from "lucide-react";
+import { Home, Settings, Target, Briefcase, Package, BadgeCheck, Wrench, Sparkles } from "lucide-react";
 import { Link, useLocation } from "wouter";
+import { useSystemInternals } from "@/hooks/useSystemInternals";
 import {
   Sidebar,
   SidebarContent,
@@ -11,77 +12,47 @@ import {
   SidebarMenuItem,
   SidebarHeader,
 } from "@/components/ui/sidebar";
+import { Button } from "@/components/ui/button";
 
-const navigation = [
+type NavItem = { title: string; url: string; icon: any };
+type NavGroup = { title: string; items: NavItem[] };
+
+const coreNavigation: NavGroup[] = [
   {
-    title: "Dream Team Hub by i³ collective",
+    title: "Core",
+    items: [
+      { title: "Intent", url: "/intent", icon: Target },
+      { title: "Work", url: "/work-orders", icon: Briefcase },
+      { title: "Artifacts", url: "/artifacts", icon: Package },
+      { title: "Verification", url: "/verification", icon: BadgeCheck },
+      { title: "System", url: "/help", icon: Settings },
+    ],
+  },
+];
+
+const advancedNavigation: NavGroup[] = [
+  {
+    title: "System Internals (Advanced)",
     items: [
       { title: "Dashboard", url: "/", icon: Home },
-    ],
-  },
-  {
-    title: "Business Units",
-    items: [
-      { title: "IMAGINATION", url: "/bu/imagination", icon: Sparkles },
-      { title: "INNOVATION", url: "/bu/innovation", icon: Lightbulb },
-      { title: "IMPACT", url: "/bu/impact", icon: Shield },
-    ],
-  },
-  {
-    title: "Orchestration",
-    items: [
-      { title: "Intake & Routing", url: "/intake", icon: Inbox },
-      { title: "Work Orders (Drafts)", url: "/work-orders", icon: ClipboardList },
-      { title: "Playbooks Registry", url: "/playbooks", icon: BookOpen },
-      { title: "Coverage", url: "/coverage", icon: Users },
-      { title: "Decision Log", url: "/decisions", icon: FileText },
-    ],
-  },
-  {
-    title: "Projects",
-    items: [
-      { title: "All Projects", url: "/projects", icon: FolderKanban },
-      { title: "Imagination", url: "/projects/imagination", icon: Sparkles },
-      { title: "Innovation", url: "/projects/innovation", icon: Lightbulb },
-      { title: "Impact", url: "/projects/impact", icon: Shield },
-    ],
-  },
-  {
-    title: "Collaboration",
-    items: [
-      { title: "Dream Team Chat", url: "/chat", icon: MessageSquare },
-      { title: "Agent Console", url: "/agent-console", icon: Bot },
-      { title: "Copilot & Integrations", url: "/copilot", icon: Cpu },
-      { title: "Summon & Mirror", url: "/summon-mirror", icon: Radio },
-      { title: "Brainstorm Studio", url: "/brainstorm", icon: Lightbulb },
-      { title: "Audit Engine", url: "/audits", icon: Shield },
-    ],
-  },
-  {
-    title: "Foundation",
-    items: [
-      { title: "Pods & Persons", url: "/pods", icon: Layers },
-      { title: "Role Cards", url: "/roles", icon: Users },
-      { title: "Roster Admin", url: "/roster-admin", icon: Settings },
-      { title: "Roles ⇄ Specs Sync", url: "/role-agent-sync", icon: RefreshCw },
-      { title: "Brand Guide", url: "/brand-guide", icon: Palette },
-      { title: "Agent Lab Academy", url: "/academy", icon: GraduationCap },
-    ],
-  },
-  {
-    title: "Support",
-    items: [
-      { title: "Ops Dashboard", url: "/ops-dashboard", icon: Activity },
-      { title: "Operations Logs", url: "/ops-logs", icon: FileBarChart },
-      { title: "Integrations", url: "/integrations", icon: Plug },
-      { title: "Platform Guide", url: "/help", icon: HelpCircle },
-      { title: "Interactive Demo", url: "/demo", icon: Presentation },
+      { title: "Intake & Routing", url: "/intake", icon: Wrench },
+      { title: "Dream Team Chat", url: "/chat", icon: Wrench },
+      { title: "Agent Console", url: "/agent-console", icon: Wrench },
+      { title: "Pods", url: "/pods", icon: Wrench },
+      { title: "Roles", url: "/roles", icon: Wrench },
+      { title: "Roster Admin", url: "/roster-admin", icon: Wrench },
+      { title: "Ops Dashboard", url: "/ops-dashboard", icon: Wrench },
     ],
   },
 ];
 
 export function AppSidebar() {
   const [location] = useLocation();
+  const { showSystemInternals, setShowSystemInternals } = useSystemInternals();
+
+  const navigation = showSystemInternals
+    ? [...coreNavigation, ...advancedNavigation]
+    : coreNavigation;
 
   return (
     <Sidebar>
@@ -92,8 +63,21 @@ export function AppSidebar() {
           </div>
           <div>
             <div className="text-sm font-semibold">Dream Team Hub</div>
-            <div className="text-xs text-muted-foreground">Multi-Pod Orchestration</div>
+            <div className="text-xs text-muted-foreground">Outcome-first orchestration</div>
           </div>
+        </div>
+
+        <div className="mt-3">
+          <Button
+            variant={showSystemInternals ? "default" : "outline"}
+            size="sm"
+            className="w-full justify-start gap-2"
+            onClick={() => setShowSystemInternals(!showSystemInternals)}
+            data-testid="toggle-system-internals"
+          >
+            <Wrench className="h-4 w-4" />
+            {showSystemInternals ? "Advanced: ON" : "Advanced: OFF"}
+          </Button>
         </div>
       </SidebarHeader>
       <SidebarContent>
@@ -108,7 +92,11 @@ export function AppSidebar() {
                   const isActive = location === item.url;
                   return (
                     <SidebarMenuItem key={item.title}>
-                      <SidebarMenuButton asChild isActive={isActive} data-testid={`nav-${item.title.toLowerCase().replace(/\s+/g, '-')}`}>
+                      <SidebarMenuButton
+                        asChild
+                        isActive={isActive}
+                        data-testid={`nav-${item.title.toLowerCase().replace(/\s+/g, "-")}`}
+                      >
                         <Link href={item.url}>
                           <item.icon className="h-4 w-4" />
                           <span>{item.title}</span>

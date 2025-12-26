@@ -1,0 +1,605 @@
+Option B confirmed ✅
+Repo to paste into: DreamTeamHub (your Replit project)
+
+Below is a single paste-ready patch drop implementing the simplification moves we just locked:
+	•	New Intent Console primary surface at /intent
+	•	Sidebar collapsed to 5 outcome lenses by default
+	•	Advanced toggle (localStorage-backed) to reveal system internals (pods/personas/admin/etc.)
+	•	Adds /artifacts and /verification outcome lens routes (aliases)
+
+FILE: client/src/App.tsx
+import { Switch, Route } from "wouter";
+import { queryClient } from "./lib/queryClient";
+import { QueryClientProvider } from "@tanstack/react-query";
+import { Toaster } from "@/components/ui/toaster";
+import { TooltipProvider } from "@/components/ui/tooltip";
+import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
+import { AppSidebar } from "@/components/app-sidebar";
+import { useAuth } from "@/hooks/useAuth";
+import NotFound from "@/pages/not-found";
+import Landing from "@/pages/landing";
+import ControlTower from "@/pages/control-tower";
+import Roles from "@/pages/roles";
+import Brainstorm from "@/pages/brainstorm";
+import Audits from "@/pages/audits";
+import Decisions from "@/pages/decisions";
+import Intake from "@/pages/intake";
+import WorkItemDetail from "@/pages/work-item-detail";
+import Pods from "@/pages/pods";
+import ChatPage from "@/pages/chat";
+import AgentConsole from "@/pages/agent-console";
+import SummonMirrorPage from "@/pages/summon-mirror";
+import RosterAdminPage from "@/pages/roster-admin";
+import RoleAgentSyncPage from "@/pages/role-agent-sync";
+import BrandGuidePage from "@/pages/brand-guide";
+import HelpPage from "@/pages/help";
+import Projects from "@/pages/projects";
+import ProjectCreate from "@/pages/project-create";
+import ProjectDetail from "@/pages/project-detail";
+import AgentCreate from "@/pages/agent-create";
+import Demo from "@/pages/demo";
+import Academy from "@/pages/academy";
+import CopilotPage from "@/pages/copilot";
+import IntegrationsPage from "@/pages/integrations";
+import WorkOrdersPage from "@/pages/work-orders";
+import BUHomePage from "@/pages/bu-home";
+import OpsLogsPage from "@/pages/ops-logs";
+import OpsDashboardPage from "@/pages/ops-dashboard";
+import CoveragePage from "@/pages/coverage";
+import PlaybooksPage from "@/pages/playbooks";
+import PlaybooksEditPage from "@/pages/playbooks-edit";
+import PlaybookPreview from "@/pages/wo/PlaybookPreview";
+import OnboardingSuccess from "@/pages/onboarding/Success";
+import CoverageDeepDive from "@/pages/coverage/DeepDive";
+import OpsAlertHooksDemo from "@/pages/ops/AlertHooksDemo";
+import AffiliatesReport from "@/pages/ops/AffiliateReport";
+import AffiliatesAdmin from "@/pages/ops/AffiliatesAdmin";
+import AffiliatePayouts from "@/pages/ops/AffiliatePayouts";
+import InventoryLowStock from "@/pages/ops/InventoryLowStock";
+import ImagesAdmin from "@/pages/ops/ImagesAdmin";
+import SettingsLayout from "@/pages/ops/settings/SettingsLayout";
+import OpsOverview from "@/pages/ops/OpsOverview";
+import OpsLogs from "@/pages/ops/OpsLogs";
+import AuditTrail from "@/pages/ops/AuditTrail";
+import LogsStreamPlus from "@/pages/ops/LogsStreamPlus";
+import AltTextImport from "@/pages/ops/AltTextImport";
+import ContentImports from "@/pages/ops/ContentImports";
+import FCCSkuSwitcher from "@/pages/ops/FCCSkuSwitcher";
+import LLMProviderSelect from "@/pages/llm/ProviderSelect";
+import ProviderPromptLinter from "@/pages/llm/ProviderPromptLinter";
+import LinterAugment from "@/pages/llm/Linter_Augment";
+import Checkout from "@/pages/checkout/Checkout";
+import ChatTest from "@/pages/chat-test";
+import FabCardCoHomePage from "@/pages/fcc-home";
+import IntentConsolePage from "@/pages/intent-console";
+import ArtifactsPage from "@/pages/artifacts";
+import VerificationPage from "@/pages/verification";
+import { Button } from "@/components/ui/button";
+import { LogOut, User as UserIcon, Search } from "lucide-react";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { IdeaSparkButton } from "@/components/idea-spark";
+import { SearchModal, useSearchShortcut } from "@/components/search-modal";
+import HeaderOpsMenu from "@/components/HeaderOpsMenu";
+import OpsHotkeys from "@/components/OpsHotkeys";
+import FooterStatus from "@/components/FooterStatus";
+import { useState } from "react";
+import { useLocation } from "wouter";
+
+function AuthenticatedRoutes() {
+  return (
+    <Switch>
+      <Route path="/intent" component={IntentConsolePage} />
+      <Route path="/" component={ControlTower} />
+      <Route path="/artifacts" component={ArtifactsPage} />
+      <Route path="/verification" component={VerificationPage} />
+      <Route path="/roles" component={Roles} />
+      <Route path="/agents" component={Roles} />
+      <Route path="/agents/new" component={AgentCreate} />
+      <Route path="/brainstorm" component={Brainstorm} />
+      <Route path="/audits" component={Audits} />
+      <Route path="/decisions" component={Decisions} />
+      <Route path="/intake" component={Intake} />
+      <Route path="/work-items/:id" component={WorkItemDetail} />
+      <Route path="/pods" component={Pods} />
+      <Route path="/projects/new" component={ProjectCreate} />
+      <Route path="/project/:id" component={ProjectDetail} />
+      <Route path="/projects" component={Projects} />
+      <Route path="/projects/:category" component={Projects} />
+      <Route path="/chat" component={ChatPage} />
+      <Route path="/chat-test" component={ChatTest} />
+      <Route path="/agent-console" component={AgentConsole} />
+      <Route path="/summon-mirror" component={SummonMirrorPage} />
+      <Route path="/roster-admin" component={RosterAdminPage} />
+      <Route path="/role-agent-sync" component={RoleAgentSyncPage} />
+      <Route path="/brand-guide" component={BrandGuidePage} />
+      <Route path="/academy" component={Academy} />
+      <Route path="/copilot" component={CopilotPage} />
+      <Route path="/integrations" component={IntegrationsPage} />
+      <Route path="/work-orders" component={WorkOrdersPage} />
+      <Route path="/ops-dashboard" component={OpsDashboardPage} />
+      <Route path="/ops-logs" component={OpsLogsPage} />
+      <Route path="/coverage" component={CoveragePage} />
+      <Route path="/coverage/deep-dive" component={CoverageDeepDive} />
+      <Route path="/playbooks" component={PlaybooksPage} />
+      <Route path="/playbooks/:handle" component={PlaybooksEditPage} />
+      <Route path="/wo/playbook-preview" component={PlaybookPreview} />
+      <Route path="/onboarding/success" component={OnboardingSuccess} />
+      <Route path="/ops/overview" component={OpsOverview} />
+      <Route path="/ops/alerts" component={OpsAlertHooksDemo} />
+      <Route path="/ops/affiliates" component={AffiliatesReport} />
+      <Route path="/ops/affiliates/admin" component={AffiliatesAdmin} />
+      <Route path="/ops/affiliates/payouts" component={AffiliatePayouts} />
+      <Route path="/ops/inventory" component={InventoryLowStock} />
+      <Route path="/ops/images" component={ImagesAdmin} />
+      <Route path="/ops/logs" component={OpsLogs} />
+      <Route path="/ops/logs-stream-plus" component={LogsStreamPlus} />
+      <Route path="/ops/audit" component={AuditTrail} />
+      <Route path="/ops/alt-text" component={AltTextImport} />
+      <Route path="/ops/content-imports" component={ContentImports} />
+      <Route path="/ops/fcc-sku-switcher" component={FCCSkuSwitcher} />
+      <Route path="/ops/settings/:rest*" component={SettingsLayout} />
+      <Route path="/llm/provider" component={LLMProviderSelect} />
+      <Route path="/llm/provider/linter" component={ProviderPromptLinter} />
+      <Route path="/llm/linter/augment" component={LinterAugment} />
+      <Route path="/bu/:slug" component={BUHomePage} />
+      <Route path="/checkout" component={Checkout} />
+      <Route path="/help" component={HelpPage} />
+      <Route path="/demo" component={Demo} />
+      <Route component={NotFound} />
+    </Switch>
+  );
+}
+
+function UnauthenticatedRoutes() {
+  return (
+    <Switch>
+      <Route path="/" component={Landing} />
+      <Route component={Landing} />
+    </Switch>
+  );
+}
+
+function AppContent() {
+  const { user, isAuthenticated, isLoading } = useAuth();
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [location] = useLocation();
+
+  const style = {
+    "--sidebar-width": "16rem",
+    "--sidebar-width-icon": "3rem",
+  };
+
+  // Setup Cmd+K shortcut
+  useSearchShortcut(() => setIsSearchOpen(true));
+
+  // Render standalone brand pages (no DTH layout)
+  if (location === "/fcc") {
+    return <FabCardCoHomePage />;
+  }
+
+  // Show landing page without sidebar for unauthenticated users
+  if (isLoading || !isAuthenticated) {
+    return <UnauthenticatedRoutes />;
+  }
+
+  // Show full app with sidebar for authenticated users
+  return (
+    <SidebarProvider style={style as React.CSSProperties}>
+      <div className="flex h-screen w-full">
+        <AppSidebar />
+        <div className="flex flex-col flex-1 overflow-hidden">
+          <header className="flex items-center justify-between p-4 border-b bg-background">
+            <div className="flex items-center gap-3">
+              <SidebarTrigger data-testid="button-sidebar-toggle" />
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setIsSearchOpen(true)}
+                data-testid="button-open-search"
+                className="gap-2"
+              >
+                <Search className="h-4 w-4" />
+                <span className="hidden sm:inline">Search</span>
+                <kbd className="hidden sm:inline px-1.5 py-0.5 bg-muted rounded text-xs">
+                  ⌘K
+                </kbd>
+              </Button>
+            </div>
+            <div className="flex items-center gap-3">
+              <HeaderOpsMenu />
+              <div className="flex items-center gap-2">
+                <Avatar className="h-8 w-8">
+                  <AvatarImage
+                    src={user?.profileImageUrl || undefined}
+                    alt={user?.firstName || "User"}
+                  />
+                  <AvatarFallback>
+                    {user?.firstName?.[0] ||
+                      user?.email?.[0] || <UserIcon className="h-4 w-4" />}
+                  </AvatarFallback>
+                </Avatar>
+                <span className="text-sm text-muted-foreground">
+                  {user?.firstName} {user?.lastName || user?.email}
+                </span>
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => (window.location.href = "/api/logout")}
+                data-testid="button-logout"
+              >
+                <LogOut className="h-4 w-4 mr-2" />
+                Sign Out
+              </Button>
+            </div>
+          </header>
+          <main className="flex-1 overflow-y-auto p-8">
+            <div className="mx-auto max-w-screen-2xl">
+              <AuthenticatedRoutes />
+            </div>
+          </main>
+          <footer className="flex items-center justify-end px-4 py-2 border-t bg-background">
+            <FooterStatus />
+          </footer>
+        </div>
+        <IdeaSparkButton />
+        <SearchModal open={isSearchOpen} onOpenChange={setIsSearchOpen} />
+        <OpsHotkeys />
+      </div>
+    </SidebarProvider>
+  );
+}
+
+export default function App() {
+  return (
+    <QueryClientProvider client={queryClient}>
+      <TooltipProvider>
+        <AppContent />
+        <Toaster />
+      </TooltipProvider>
+    </QueryClientProvider>
+  );
+}
+END_FILE
+
+FILE: client/src/components/app-sidebar.tsx
+import { Home, Settings, Target, Briefcase, Package, BadgeCheck, Wrench, Sparkles } from "lucide-react";
+import { Link, useLocation } from "wouter";
+import { useSystemInternals } from "@/hooks/useSystemInternals";
+import {
+  Sidebar,
+  SidebarContent,
+  SidebarGroup,
+  SidebarGroupContent,
+  SidebarGroupLabel,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+  SidebarHeader,
+} from "@/components/ui/sidebar";
+import { Button } from "@/components/ui/button";
+
+type NavItem = { title: string; url: string; icon: any };
+type NavGroup = { title: string; items: NavItem[] };
+
+const coreNavigation: NavGroup[] = [
+  {
+    title: "Core",
+    items: [
+      { title: "Intent", url: "/intent", icon: Target },
+      { title: "Work", url: "/work-orders", icon: Briefcase },
+      { title: "Artifacts", url: "/artifacts", icon: Package },
+      { title: "Verification", url: "/verification", icon: BadgeCheck },
+      { title: "System", url: "/help", icon: Settings },
+    ],
+  },
+];
+
+const advancedNavigation: NavGroup[] = [
+  {
+    title: "System Internals (Advanced)",
+    items: [
+      { title: "Dashboard", url: "/", icon: Home },
+      { title: "Intake & Routing", url: "/intake", icon: Wrench },
+      { title: "Dream Team Chat", url: "/chat", icon: Wrench },
+      { title: "Agent Console", url: "/agent-console", icon: Wrench },
+      { title: "Pods", url: "/pods", icon: Wrench },
+      { title: "Roles", url: "/roles", icon: Wrench },
+      { title: "Roster Admin", url: "/roster-admin", icon: Wrench },
+      { title: "Ops Dashboard", url: "/ops-dashboard", icon: Wrench },
+    ],
+  },
+];
+
+export function AppSidebar() {
+  const [location] = useLocation();
+  const { showSystemInternals, setShowSystemInternals } = useSystemInternals();
+
+  const navigation = showSystemInternals
+    ? [...coreNavigation, ...advancedNavigation]
+    : coreNavigation;
+
+  return (
+    <Sidebar>
+      <SidebarHeader className="p-4">
+        <div className="flex items-center gap-2">
+          <div className="flex h-8 w-8 items-center justify-center rounded-md bg-primary">
+            <Sparkles className="h-5 w-5 text-primary-foreground" />
+          </div>
+          <div>
+            <div className="text-sm font-semibold">Dream Team Hub</div>
+            <div className="text-xs text-muted-foreground">Outcome-first orchestration</div>
+          </div>
+        </div>
+
+        <div className="mt-3">
+          <Button
+            variant={showSystemInternals ? "default" : "outline"}
+            size="sm"
+            className="w-full justify-start gap-2"
+            onClick={() => setShowSystemInternals(!showSystemInternals)}
+            data-testid="toggle-system-internals"
+          >
+            <Wrench className="h-4 w-4" />
+            {showSystemInternals ? "Advanced: ON" : "Advanced: OFF"}
+          </Button>
+        </div>
+      </SidebarHeader>
+      <SidebarContent>
+        {navigation.map((group) => (
+          <SidebarGroup key={group.title}>
+            <SidebarGroupLabel className="text-xs uppercase tracking-wide text-muted-foreground">
+              {group.title}
+            </SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                {group.items.map((item) => {
+                  const isActive = location === item.url;
+                  return (
+                    <SidebarMenuItem key={item.title}>
+                      <SidebarMenuButton
+                        asChild
+                        isActive={isActive}
+                        data-testid={`nav-${item.title.toLowerCase().replace(/\s+/g, "-")}`}
+                      >
+                        <Link href={item.url}>
+                          <item.icon className="h-4 w-4" />
+                          <span>{item.title}</span>
+                        </Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  );
+                })}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        ))}
+      </SidebarContent>
+    </Sidebar>
+  );
+}
+END_FILE
+
+FILE: client/src/lib/systemInternals.ts
+const STORAGE_KEY = "dth_show_system_internals";
+
+export function getShowSystemInternals(): boolean {
+  try {
+    return window.localStorage.getItem(STORAGE_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
+
+export function setShowSystemInternals(next: boolean): void {
+  try {
+    window.localStorage.setItem(STORAGE_KEY, next ? "1" : "0");
+    // Ensure all listening components update without wiring a global store.
+    window.dispatchEvent(new Event("storage"));
+  } catch {
+    // ignore
+  }
+}
+END_FILE
+
+FILE: client/src/hooks/useSystemInternals.ts
+import { useEffect, useState } from "react";
+import { getShowSystemInternals, setShowSystemInternals as persistShowSystemInternals } from "@/lib/systemInternals";
+
+/**
+ * Default UX: keep system internals hidden.
+ * Power users can toggle this on to reveal pods/personas/admin routes.
+ */
+export function useSystemInternals() {
+  const [showSystemInternals, setShow] = useState<boolean>(() => getShowSystemInternals());
+
+  useEffect(() => {
+    const onStorage = () => setShow(getShowSystemInternals());
+    window.addEventListener("storage", onStorage);
+    return () => window.removeEventListener("storage", onStorage);
+  }, []);
+
+  const setShowSystemInternals = (next: boolean) => {
+    setShow(next);
+    persistShowSystemInternals(next);
+  };
+
+  return { showSystemInternals, setShowSystemInternals };
+}
+END_FILE
+
+FILE: client/src/pages/intent-console.tsx
+import { useMemo, useState } from "react";
+import { useMutation } from "@tanstack/react-query";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useToast } from "@/hooks/use-toast";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import { useLocation } from "wouter";
+import { Target } from "lucide-react";
+
+type Autonomy = "guided" | "standard" | "autonomous";
+
+function buildTitle(intent: string): string {
+  const clean = intent.trim().replace(/\s+/g, " ");
+  if (!clean) return "New work item";
+  return clean.length <= 80 ? clean : `${clean.slice(0, 77)}...`;
+}
+
+export default function IntentConsolePage() {
+  const [intent, setIntent] = useState("");
+  const [autonomy, setAutonomy] = useState<Autonomy>("standard");
+  const { toast } = useToast();
+  const [, setLocation] = useLocation();
+
+  const title = useMemo(() => buildTitle(intent), [intent]);
+
+  const createMutation = useMutation({
+    mutationFn: async () => {
+      const payload = {
+        title,
+        description: intent
+          ? `Intent: ${intent.trim()}\n\nAutonomy: ${autonomy.toUpperCase()}`
+          : `Autonomy: ${autonomy.toUpperCase()}`,
+        status: "todo",
+        priority: "medium",
+      };
+      return apiRequest("POST", "/api/work-items", payload);
+    },
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["/api/work-items"] });
+      await queryClient.invalidateQueries({ queryKey: ["/api/control/dashboard"] });
+      toast({
+        title: "Queued",
+        description: "Your intent was converted into a governed work item.",
+      });
+      setIntent("");
+      setLocation("/work-orders");
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Could not create a work item from that intent.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-2xl font-semibold mb-2" data-testid="page-title">
+          Intent
+        </h1>
+        <p className="text-sm text-muted-foreground">
+          Tell the system what you want to accomplish. The hub routes it, applies governance, and produces verified artifacts.
+        </p>
+      </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Target className="h-5 w-5" />
+            What are you trying to accomplish?
+          </CardTitle>
+          <CardDescription>
+            You don’t need to pick a pod or a persona. If you want internals, toggle Advanced mode in the sidebar.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Intent</label>
+            <Textarea
+              value={intent}
+              onChange={(e) => setIntent(e.target.value)}
+              placeholder="e.g., Simplify the DreamTeamHub sidebar and hide pods/personas by default."
+              className="min-h-32"
+              data-testid="intent-textarea"
+            />
+          </div>
+
+          <div className="grid gap-4 md:grid-cols-2">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Autonomy</label>
+              <Select value={autonomy} onValueChange={(v) => setAutonomy(v as Autonomy)}>
+                <SelectTrigger data-testid="intent-autonomy">
+                  <SelectValue placeholder="Select" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="guided">Guided</SelectItem>
+                  <SelectItem value="standard">Standard</SelectItem>
+                  <SelectItem value="autonomous">Autonomous</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Work item title (auto)</label>
+              <div
+                className="h-10 px-3 flex items-center rounded-md border bg-muted/40 text-sm text-muted-foreground"
+                data-testid="intent-title-preview"
+              >
+                {title}
+              </div>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <Button
+              onClick={() => createMutation.mutate()}
+              disabled={!intent.trim() || createMutation.isPending}
+              data-testid="intent-submit"
+            >
+              Create Work Item
+            </Button>
+            <Button variant="outline" onClick={() => setLocation("/work-orders")} data-testid="intent-go-work">
+              Go to Work
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+END_FILE
+
+FILE: client/src/pages/artifacts.tsx
+import Projects from "@/pages/projects";
+
+/**
+ * Artifacts is an outcome lens.
+ * For now, we map it to Projects (the canonical artifact/initiative container).
+ */
+export default function ArtifactsPage() {
+  return <Projects />;
+}
+END_FILE
+
+FILE: client/src/pages/verification.tsx
+import CoveragePage from "@/pages/coverage";
+
+/**
+ * Verification is an outcome lens.
+ * For now, we map it to Coverage.
+ */
+export default function VerificationPage() {
+  return <CoveragePage />;
+}
+END_FILE
+
+Post-apply verification checklist (Option B)
+
+Run these in the DreamTeamHub Replit shell:
+	1.	Typecheck
+	•	npm run check
+	2.	Boot the app
+	•	npm run dev
+	3.	Manual UI checks
+	•	Login → confirm sidebar shows ONLY: Intent / Work / Artifacts / Verification / System
+	•	Go to /intent and submit an intent → confirms work item created → auto-navigates to /work-orders
+	•	Toggle Advanced: ON in the sidebar → confirm “System Internals (Advanced)” group appears
+	•	Toggle Advanced: OFF → internals disappear again (core stays)
+
+If anything fails, paste the error stack + the exact file/line and I’ll give you a surgical follow-up patch (still Option B, still DreamTeamHub repo).

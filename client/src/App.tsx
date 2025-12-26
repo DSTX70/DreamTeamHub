@@ -61,6 +61,9 @@ import LinterAugment from "@/pages/llm/Linter_Augment";
 import Checkout from "@/pages/checkout/Checkout";
 import ChatTest from "@/pages/chat-test";
 import FabCardCoHomePage from "@/pages/fcc-home";
+import IntentConsolePage from "@/pages/intent-console";
+import ArtifactsPage from "@/pages/artifacts";
+import VerificationPage from "@/pages/verification";
 import { Button } from "@/components/ui/button";
 import { LogOut, User as UserIcon, Search } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -75,7 +78,10 @@ import { useLocation } from "wouter";
 function AuthenticatedRoutes() {
   return (
     <Switch>
+      <Route path="/intent" component={IntentConsolePage} />
       <Route path="/" component={ControlTower} />
+      <Route path="/artifacts" component={ArtifactsPage} />
+      <Route path="/verification" component={VerificationPage} />
       <Route path="/roles" component={Roles} />
       <Route path="/agents" component={Roles} />
       <Route path="/agents/new" component={AgentCreate} />
@@ -147,7 +153,7 @@ function AppContent() {
   const { user, isAuthenticated, isLoading } = useAuth();
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [location] = useLocation();
-  
+
   const style = {
     "--sidebar-width": "16rem",
     "--sidebar-width-icon": "3rem",
@@ -184,16 +190,22 @@ function AppContent() {
               >
                 <Search className="h-4 w-4" />
                 <span className="hidden sm:inline">Search</span>
-                <kbd className="hidden sm:inline px-1.5 py-0.5 bg-muted rounded text-xs">⌘K</kbd>
+                <kbd className="hidden sm:inline px-1.5 py-0.5 bg-muted rounded text-xs">
+                  ⌘K
+                </kbd>
               </Button>
             </div>
             <div className="flex items-center gap-3">
               <HeaderOpsMenu />
               <div className="flex items-center gap-2">
                 <Avatar className="h-8 w-8">
-                  <AvatarImage src={user?.profileImageUrl || undefined} alt={user?.firstName || "User"} />
+                  <AvatarImage
+                    src={user?.profileImageUrl || undefined}
+                    alt={user?.firstName || "User"}
+                  />
                   <AvatarFallback>
-                    {user?.firstName?.[0] || user?.email?.[0] || <UserIcon className="h-4 w-4" />}
+                    {user?.firstName?.[0] ||
+                      user?.email?.[0] || <UserIcon className="h-4 w-4" />}
                   </AvatarFallback>
                 </Avatar>
                 <span className="text-sm text-muted-foreground">
@@ -203,7 +215,7 @@ function AppContent() {
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => window.location.href = "/api/logout"}
+                onClick={() => (window.location.href = "/api/logout")}
                 data-testid="button-logout"
               >
                 <LogOut className="h-4 w-4 mr-2" />
