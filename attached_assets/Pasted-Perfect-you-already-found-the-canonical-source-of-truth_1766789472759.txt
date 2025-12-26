@@ -1,3 +1,110 @@
+Perfect — you already found the **canonical source of truth**:
+
+✅ **`shared/schema.ts`**
+
+* `export const insertWorkItemSchema = ...` (input contract)
+* `export type InsertWorkItem = z.infer<typeof insertWorkItemSchema>` (what the client should send)
+* `export type WorkItem = typeof workItems.$inferSelect` (what the server returns)
+
+So you don’t need to “get the schema from Replit” anymore — you **already have it** in-repo.
+
+### Where to open it (exactly)
+
+In Replit, open:
+
+* `shared/schema.ts` around **~1040–1080**
+
+You’ll see the exact allowed fields for `createWorkItem()` because it’s built from the DB table via `createInsertSchema(workItems)` and then extended.
+
+---
+
+# Next: Ship the Repo/Context selector into `/intent` (using your schema safely)
+
+Because we haven’t added a dedicated `targetContext` column to `workItems` yet (and we don’t need to), the safest move is:
+
+✅ **Store Target Context in the Work Item `description`** inside the Cast Receipt block
+→ This requires **zero schema changes** and won’t break anything.
+
+Below is a **single Option B patch drop** for **DreamTeamHub** that:
+
+* Adds a **Target Context selector** to `/intent`
+* Persists it (localStorage)
+* Writes it into the Cast Receipt as `Target Context: ...`
+* Uses your full list of contexts
+
+---
+
+## ✅ Single Patch Drop (DreamTeamHub): Context Selector for Intent Console
+
+```tsx
+FILE: client/src/lib/contextPrefs.ts
+const KEY = "dth_target_context";
+
+export const DEFAULT_CONTEXT = "DreamTeamHub";
+
+export const CONTEXT_OPTIONS: string[] = [
+  "DreamTeamHub",
+  "VSuiteHQ",
+  "GigsterGarage",
+  "DriveSteward",
+  "Artistic Notations",
+  "WaySage",
+  "If When Always",
+  "Parallax Translate",
+  "i3 Broadcast Hub",
+  "Shared Retail Shell",
+  "The Fabulous Brand Company",
+  "Symbioso IP Studio",
+  "Verbixel Image and Copy Generator",
+  "iCadence",
+  "dreamshitter.com",
+  "Fab Card Co",
+  "fabulousAF",
+];
+
+export function getTargetContext(): string {
+  try {
+    const v = window.localStorage.getItem(KEY);
+    return v && v.trim() ? v : DEFAULT_CONTEXT;
+  } catch {
+    return DEFAULT_CONTEXT;
+  }
+}
+
+export function setTargetContext(next: string): void {
+  try {
+    window.localStorage.setItem(KEY, next);
+    window.dispatchEvent(new Event("storage"));
+  } catch {
+    // ignore
+  }
+}
+END_FILE
+
+FILE: client/src/hooks/useTargetContext.ts
+import { useEffect, useState } from "react";
+import { CONTEXT_OPTIONS, DEFAULT_CONTEXT, getTargetContext, setTargetContext as persist } from "@/lib/contextPrefs";
+
+export function useTargetContext() {
+  const [targetContext, setTargetContextState] = useState<string>(() => getTargetContext());
+
+  useEffect(() => {
+    const onStorage = () => setTargetContextState(getTargetContext());
+    window.addEventListener("storage", onStorage);
+    return () => window.removeEventListener("storage", onStorage);
+  }, []);
+
+  const setTargetContext = (next: string) => {
+    const safe = CONTEXT_OPTIONS.includes(next) ? next : DEFAULT_CONTEXT;
+    setTargetContextState(safe);
+    persist(safe);
+  };
+
+  return { targetContext, setTargetContext, contextOptions: CONTEXT_OPTIONS };
+}
+END_FILE
+
+FILE: client/src/pages/intent-console.tsx
 import { useMemo, useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -405,3 +512,28 @@ export default function IntentConsolePage() {
     </div>
   );
 }
+END_FILE
+```
+
+---
+
+## Post-apply verification
+
+1. `npm run check`
+2. `npm run dev`
+3. `/intent` → confirm Target Context dropdown appears and persists
+4. Create Work Item → open it → confirm Cast Receipt includes `Target Context: ...`
+
+---
+
+## One important note from your grep output
+
+You mentioned: `ops/AltTextImport.tsx` has a **local interface WorkItem (shadow)**.
+
+That can cause subtle bugs (type drift) and “why is this different?” issues.
+When you’re ready, I’ll ship a tiny cleanup patch to:
+
+* remove the local `interface WorkItem`
+* import `WorkItem` from `@shared/schema` instead
+
+Just say: **“Unshadow WorkItem in AltTextImport”**.
