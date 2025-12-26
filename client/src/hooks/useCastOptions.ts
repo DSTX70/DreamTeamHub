@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { canonAgentsAsOptions } from "@/lib/canonAgents";
 
 type AnyObj = Record<string, any>;
 export type CastOption = { slug: string; label: string };
@@ -26,7 +27,6 @@ function toOption(item: any): CastOption | null {
     const slug = item.trim();
     return { slug, label: slug };
   }
-
   if (item && typeof item === "object") {
     const obj = item as AnyObj;
     const slug =
@@ -44,13 +44,12 @@ function toOption(item: any): CastOption | null {
     if (!slug || !label) return null;
     return { slug, label };
   }
-
   return null;
 }
 
 function normalizeOptions(list: any[]): CastOption[] {
   const out: CastOption[] = [];
-  for (const it of list) {
+  for (const it of list || []) {
     const opt = toOption(it);
     if (opt) out.push(opt);
   }
@@ -61,7 +60,8 @@ function normalizeOptions(list: any[]): CastOption[] {
 
 /**
  * Best-effort discovery of pods/personas.
- * Accepts multiple API shapes; falls back to manual entry if unavailable.
+ * - Pods: tries /api/pods (no fallback list here)
+ * - Personas: tries /api/roles, falls back to canonAgents.ts if empty/unavailable
  */
 export function useCastOptions() {
   const podsQ = useQuery({
@@ -81,10 +81,20 @@ export function useCastOptions() {
     queryKey: ["/api/roles"],
     queryFn: async () => {
       const data = await safeFetchJSON("/api/roles");
-      if (!data) return { ok: false as const, options: [] as CastOption[] };
+      if (!data) {
+        const fallback = canonAgentsAsOptions();
+        return { ok: true as const, options: fallback };
+      }
+
       const list = pickList(data, ["roles", "agents", "data", "rows"]);
       const options = normalizeOptions(list);
-      return { ok: options.length > 0, options };
+
+      if (options.length === 0) {
+        const fallback = canonAgentsAsOptions();
+        return { ok: true as const, options: fallback };
+      }
+
+      return { ok: true as const, options };
     },
     staleTime: 60_000,
     retry: false,
