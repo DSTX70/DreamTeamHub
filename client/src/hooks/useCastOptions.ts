@@ -1,47 +1,77 @@
 import { useQuery } from "@tanstack/react-query";
 
-type Pod = { id?: string; name?: string; title?: string; slug?: string };
-type Role = { id?: string; name?: string; title?: string; handle?: string };
+type AnyObj = Record<string, any>;
+export type CastOption = { slug: string; label: string };
 
-async function safeFetchJSON<T>(url: string): Promise<T | null> {
+async function safeFetchJSON(url: string): Promise<any | null> {
   try {
     const res = await fetch(url, { credentials: "include" });
     if (!res.ok) return null;
-    return (await res.json()) as T;
+    return await res.json();
   } catch {
     return null;
   }
 }
 
-function normalizeNames(items: any[], keys: string[]): string[] {
-  const out: string[] = [];
-  for (const it of items || []) {
-    if (!it || typeof it !== "object") continue;
-    for (const k of keys) {
-      const v = (it as any)[k];
-      if (typeof v === "string" && v.trim()) {
-        out.push(v.trim());
-        break;
-      }
-    }
+function pickList(data: any, keys: string[]): any[] {
+  if (Array.isArray(data)) return data;
+  for (const k of keys) {
+    if (Array.isArray(data?.[k])) return data[k];
   }
-  // de-dupe
-  return Array.from(new Set(out)).sort((a, b) => a.localeCompare(b));
+  return [];
+}
+
+function toOption(item: any): CastOption | null {
+  if (typeof item === "string" && item.trim()) {
+    const slug = item.trim();
+    return { slug, label: slug };
+  }
+
+  if (item && typeof item === "object") {
+    const obj = item as AnyObj;
+    const slug =
+      (typeof obj.slug === "string" && obj.slug.trim()) ? obj.slug.trim() :
+      (typeof obj.handle === "string" && obj.handle.trim()) ? obj.handle.trim() :
+      (typeof obj.id === "string" && obj.id.trim()) ? obj.id.trim() :
+      null;
+
+    const label =
+      (typeof obj.name === "string" && obj.name.trim()) ? obj.name.trim() :
+      (typeof obj.title === "string" && obj.title.trim()) ? obj.title.trim() :
+      (typeof obj.label === "string" && obj.label.trim()) ? obj.label.trim() :
+      (typeof slug === "string" ? slug : null);
+
+    if (!slug || !label) return null;
+    return { slug, label };
+  }
+
+  return null;
+}
+
+function normalizeOptions(list: any[]): CastOption[] {
+  const out: CastOption[] = [];
+  for (const it of list) {
+    const opt = toOption(it);
+    if (opt) out.push(opt);
+  }
+  const map = new Map<string, CastOption>();
+  for (const o of out) map.set(o.slug, o);
+  return Array.from(map.values()).sort((a, b) => a.label.localeCompare(b.label));
 }
 
 /**
  * Best-effort discovery of pods/personas.
- * If endpoints do not exist, UI still works with manual entry.
+ * Accepts multiple API shapes; falls back to manual entry if unavailable.
  */
 export function useCastOptions() {
   const podsQ = useQuery({
     queryKey: ["/api/pods"],
     queryFn: async () => {
-      const data = await safeFetchJSON<any>("/api/pods");
-      if (!data) return { ok: false as const, names: [] as string[] };
-      // supports either array payloads or { pods: [] }
-      const list = Array.isArray(data) ? data : Array.isArray(data?.pods) ? data.pods : [];
-      return { ok: true as const, names: normalizeNames(list, ["name", "title", "slug", "id"]) };
+      const data = await safeFetchJSON("/api/pods");
+      if (!data) return { ok: false as const, options: [] as CastOption[] };
+      const list = pickList(data, ["pods", "data", "rows"]);
+      const options = normalizeOptions(list);
+      return { ok: options.length > 0, options };
     },
     staleTime: 60_000,
     retry: false,
@@ -50,21 +80,21 @@ export function useCastOptions() {
   const personasQ = useQuery({
     queryKey: ["/api/roles"],
     queryFn: async () => {
-      const data = await safeFetchJSON<any>("/api/roles");
-      if (!data) return { ok: false as const, names: [] as string[] };
-      // supports either array payloads or { roles: [] }
-      const list = Array.isArray(data) ? data : Array.isArray(data?.roles) ? data.roles : [];
-      return { ok: true as const, names: normalizeNames(list, ["name", "title", "handle", "id"]) };
+      const data = await safeFetchJSON("/api/roles");
+      if (!data) return { ok: false as const, options: [] as CastOption[] };
+      const list = pickList(data, ["roles", "agents", "data", "rows"]);
+      const options = normalizeOptions(list);
+      return { ok: options.length > 0, options };
     },
     staleTime: 60_000,
     retry: false,
   });
 
   return {
-    pods: podsQ.data?.names ?? [],
+    pods: podsQ.data?.options ?? [],
     podsOk: podsQ.data?.ok ?? false,
     podsLoading: podsQ.isLoading,
-    personas: personasQ.data?.names ?? [],
+    personas: personasQ.data?.options ?? [],
     personasOk: personasQ.data?.ok ?? false,
     personasLoading: personasQ.isLoading,
   };

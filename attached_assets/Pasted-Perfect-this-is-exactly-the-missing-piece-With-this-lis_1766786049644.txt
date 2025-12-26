@@ -1,3 +1,190 @@
+Perfect — this is exactly the missing piece. ✅
+With this list, we can make **Curated-Cast deterministic** (non-generic *and* machine-actionable) by using **stable slugs** instead of display names.
+
+Also: your list reveals **three duplicate identity pairs** that will absolutely cause drift unless we normalize them.
+
+---
+
+## 1) Immediate Audit Findings (from your list)
+
+### ✅ Core Dream Team (56)
+
+You have **duplicate slugs for the same persona** (canonicalization needed):
+
+* `agent_app_dev_guru` **and** `agent_app_development_guru`
+* `agent_izumi` **and** `agent_izumi_takahashi`
+* `agent_kaoru` **and** `agent_kaoru_arai`
+
+**Recommendation (low-risk):**
+
+* Pick ONE canonical slug for each pair (I recommend the more explicit one):
+
+  * `agent_app_development_guru`
+  * `agent_izumi_takahashi`
+  * `agent_kaoru_arai`
+* Keep the short versions as **aliases** (redirect mapping), not separate identities.
+
+This will prevent:
+
+* two “different” people appearing in Curated-Cast
+* split analytics / history
+* routing ambiguity
+
+---
+
+## 2) What we should do in the UI now
+
+Right now Curated-Cast stores human-readable selections in the Cast Receipt.
+
+We upgrade it to store BOTH:
+
+* **Display label** (nice for humans)
+* **Slug** (stable for routing)
+
+Example receipt:
+
+```
+Cast Receipt
+Mode: CURATED
+Pods:
+  - pod: Dream Team | slug: dream_team
+Personas:
+  - name: Izumi Takahashi | slug: agent_izumi_takahashi
+  - name: Kaoru Arai | slug: agent_kaoru_arai
+Autonomy: STANDARD
+```
+
+This is how we keep the “curated orchestra” behavior **without** exposing the entire system everywhere.
+
+---
+
+## 3) Patch: Upgrade Curated-Cast to use slugs (Option B)
+
+**Repo:** `DreamTeamHub`
+This patch is safe even if your `/api/roles` endpoint returns strings or objects — it normalizes either way.
+
+### What it changes
+
+* `useCastOptions()` now supports:
+
+  * arrays of strings
+  * arrays of objects
+  * object wrappers `{ roles: [...] }`, `{ pods: [...] }`, `{ data: [...] }`
+* Intent Console stores:
+
+  * curated slugs into Cast Receipt (and keeps display labels)
+
+> Paste this as a follow-up patch drop:
+
+```tsx
+FILE: client/src/hooks/useCastOptions.ts
+import { useQuery } from "@tanstack/react-query";
+
+type AnyObj = Record<string, any>;
+export type CastOption = { slug: string; label: string };
+
+async function safeFetchJSON(url: string): Promise<any | null> {
+  try {
+    const res = await fetch(url, { credentials: "include" });
+    if (!res.ok) return null;
+    return await res.json();
+  } catch {
+    return null;
+  }
+}
+
+function pickList(data: any, keys: string[]): any[] {
+  if (Array.isArray(data)) return data;
+  for (const k of keys) {
+    if (Array.isArray(data?.[k])) return data[k];
+  }
+  return [];
+}
+
+function toOption(item: any): CastOption | null {
+  // String list support (slug-only)
+  if (typeof item === "string" && item.trim()) {
+    const slug = item.trim();
+    return { slug, label: slug };
+  }
+
+  // Object support
+  if (item && typeof item === "object") {
+    const obj = item as AnyObj;
+    const slug =
+      (typeof obj.slug === "string" && obj.slug.trim()) ? obj.slug.trim() :
+      (typeof obj.handle === "string" && obj.handle.trim()) ? obj.handle.trim() :
+      (typeof obj.id === "string" && obj.id.trim()) ? obj.id.trim() :
+      null;
+
+    const label =
+      (typeof obj.name === "string" && obj.name.trim()) ? obj.name.trim() :
+      (typeof obj.title === "string" && obj.title.trim()) ? obj.title.trim() :
+      (typeof obj.label === "string" && obj.label.trim()) ? obj.label.trim() :
+      (typeof slug === "string" ? slug : null);
+
+    if (!slug || !label) return null;
+    return { slug, label };
+  }
+
+  return null;
+}
+
+function normalizeOptions(list: any[]): CastOption[] {
+  const out: CastOption[] = [];
+  for (const it of list) {
+    const opt = toOption(it);
+    if (opt) out.push(opt);
+  }
+  // de-dupe by slug
+  const map = new Map<string, CastOption>();
+  for (const o of out) map.set(o.slug, o);
+  return Array.from(map.values()).sort((a, b) => a.label.localeCompare(b.label));
+}
+
+/**
+ * Best-effort discovery of pods/personas.
+ * Accepts multiple API shapes; falls back to manual entry if unavailable.
+ */
+export function useCastOptions() {
+  const podsQ = useQuery({
+    queryKey: ["/api/pods"],
+    queryFn: async () => {
+      const data = await safeFetchJSON("/api/pods");
+      if (!data) return { ok: false as const, options: [] as CastOption[] };
+      const list = pickList(data, ["pods", "data", "rows"]);
+      const options = normalizeOptions(list);
+      return { ok: options.length > 0, options };
+    },
+    staleTime: 60_000,
+    retry: false,
+  });
+
+  const personasQ = useQuery({
+    queryKey: ["/api/roles"],
+    queryFn: async () => {
+      const data = await safeFetchJSON("/api/roles");
+      if (!data) return { ok: false as const, options: [] as CastOption[] };
+      const list = pickList(data, ["roles", "agents", "data", "rows"]);
+      const options = normalizeOptions(list);
+      return { ok: options.length > 0, options };
+    },
+    staleTime: 60_000,
+    retry: false,
+  });
+
+  return {
+    pods: podsQ.data?.options ?? [],
+    podsOk: podsQ.data?.ok ?? false,
+    podsLoading: podsQ.isLoading,
+    personas: personasQ.data?.options ?? [],
+    personasOk: personasQ.data?.ok ?? false,
+    personasLoading: personasQ.isLoading,
+  };
+}
+END_FILE
+
+FILE: client/src/pages/intent-console.tsx
 import { useMemo, useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -12,7 +199,6 @@ import { useLocation } from "wouter";
 import { Target, Users, Wand2, X, Search } from "lucide-react";
 import { useCastingPrefs } from "@/hooks/useCastingPrefs";
 import { useCastOptions, CastOption } from "@/hooks/useCastOptions";
-import { dedupeCanonSlugs, toCanonSlug } from "@/lib/canonSlugMap";
 
 type Autonomy = "guided" | "standard" | "autonomous";
 
@@ -30,9 +216,8 @@ function normalizeManualSlugs(raw: string): string[] {
 }
 
 function optionLabelBySlug(options: CastOption[], slug: string): string {
-  const canon = toCanonSlug(slug);
-  const hit = options.find((o) => o.slug === canon) || options.find((o) => o.slug === slug);
-  return hit?.label ?? canon ?? slug;
+  const hit = options.find((o) => o.slug === slug);
+  return hit?.label ?? slug;
 }
 
 function formatCastReceipt(params: {
@@ -55,8 +240,7 @@ function formatCastReceipt(params: {
     lines.push("  - AUTO");
   } else {
     for (const s of podSlugs) {
-      const canon = toCanonSlug(s);
-      lines.push(`  - name: ${optionLabelBySlug(podOptions, canon)} | slug: ${canon}`);
+      lines.push(`  - name: ${optionLabelBySlug(podOptions, s)} | slug: ${s}`);
     }
   }
 
@@ -65,18 +249,17 @@ function formatCastReceipt(params: {
     lines.push("  - AUTO");
   } else {
     for (const s of personaSlugs) {
-      const canon = toCanonSlug(s);
-      lines.push(`  - name: ${optionLabelBySlug(personaOptions, canon)} | slug: ${canon}`);
+      lines.push(`  - name: ${optionLabelBySlug(personaOptions, s)} | slug: ${s}`);
     }
   }
 
   return lines.join("\n");
 }
 
-function toggleInListCanon(list: string[], value: string): string[] {
-  const canon = toCanonSlug(value.trim());
-  if (!canon) return list;
-  return list.includes(canon) ? list.filter((x) => x !== canon) : [...list, canon];
+function toggleInList(list: string[], value: string): string[] {
+  const v = value.trim();
+  if (!v) return list;
+  return list.includes(v) ? list.filter((x) => x !== v) : [...list, v];
 }
 
 export default function IntentConsolePage() {
@@ -97,14 +280,14 @@ export default function IntentConsolePage() {
 
   const effectivePodSlugs = useMemo(() => {
     if (mode !== "curated") return [];
-    const raw = podsOk ? pods : normalizeManualSlugs(manualPods);
-    return dedupeCanonSlugs(raw);
+    if (podsOk) return pods; // stored slugs
+    return normalizeManualSlugs(manualPods);
   }, [mode, podsOk, pods, manualPods]);
 
   const effectivePersonaSlugs = useMemo(() => {
     if (mode !== "curated") return [];
-    const raw = personasOk ? personas : normalizeManualSlugs(manualPersonas);
-    return dedupeCanonSlugs(raw);
+    if (personasOk) return personas; // stored slugs
+    return normalizeManualSlugs(manualPersonas);
   }, [mode, personasOk, personas, manualPersonas]);
 
   const filteredPodOptions = useMemo(() => {
@@ -133,7 +316,9 @@ export default function IntentConsolePage() {
       const payload = {
         title,
         description:
-          (intent ? `Intent: ${intent.trim()}\n\n` : "") +
+          (intent
+            ? `Intent: ${intent.trim()}\n\n`
+            : "") +
           `Autonomy: ${autonomy.toUpperCase()}\n\n---\n${castReceipt}\n---\n`,
         status: "todo",
         priority: "medium",
@@ -148,7 +333,7 @@ export default function IntentConsolePage() {
         title: "Queued",
         description:
           mode === "curated"
-            ? "Your intent + curated cast (canonical slugs) were converted into a governed work item."
+            ? "Your intent + curated cast (slugs) were converted into a governed work item."
             : "Your intent was converted into a governed work item.",
       });
       setIntent("");
@@ -170,7 +355,7 @@ export default function IntentConsolePage() {
           Intent
         </h1>
         <p className="text-sm text-muted-foreground">
-          Auto-Cast chooses the cast. Curated-Cast stores canonical slugs to keep routing deterministic (aliases auto-normalized).
+          Auto-Cast chooses the cast. Curated-Cast lets you select pods/personas by stable slug for deterministic routing.
         </p>
       </div>
 
@@ -237,7 +422,7 @@ export default function IntentConsolePage() {
                 </Button>
               </div>
               <p className="text-xs text-muted-foreground">
-                Curated selections are canonicalized (aliases → canon) and written into the Cast Receipt.
+                Curated-Cast stores stable slugs in the Cast Receipt to keep routing deterministic.
               </p>
             </div>
           </div>
@@ -246,9 +431,9 @@ export default function IntentConsolePage() {
             <div className="rounded-lg border p-4 space-y-4" data-testid="curated-panel">
               <div className="flex items-start justify-between gap-4">
                 <div>
-                  <div className="font-medium">Curated Cast (canonical slugs)</div>
+                  <div className="font-medium">Curated Cast (by slug)</div>
                   <div className="text-xs text-muted-foreground">
-                    Selecting an alias will automatically store the canonical slug.
+                    Select from discovered options, or enter comma-separated slugs if endpoints are unavailable.
                   </div>
                 </div>
                 <Button
@@ -290,34 +475,31 @@ export default function IntentConsolePage() {
 
                     <div className="flex flex-wrap gap-2">
                       {filteredPodOptions.slice(0, 80).map((o) => {
-                        const canon = toCanonSlug(o.slug);
-                        const selected = effectivePodSlugs.includes(canon);
+                        const selected = effectivePodSlugs.includes(o.slug);
                         return (
                           <Badge
                             key={o.slug}
                             variant={selected ? "default" : "secondary"}
                             className="cursor-pointer select-none"
-                            onClick={() => setPods(toggleInListCanon(pods, o.slug))}
+                            onClick={() => setPods(toggleInList(pods, o.slug))}
+                            title={o.slug}
                             data-testid={`pod-${o.slug}`}
                           >
                             {o.label}
                           </Badge>
                         );
                       })}
-                      {!filteredPodOptions.length && (
-                        <div className="text-xs text-muted-foreground">No pods match that filter.</div>
-                      )}
                     </div>
                   </>
                 ) : (
                   <>
                     <p className="text-xs text-muted-foreground">
-                      Pod list endpoint not detected. Enter pods manually (comma-separated slugs).
+                      Pod endpoint not detected. Enter pod slugs manually.
                     </p>
                     <Input
                       value={manualPods}
                       onChange={(e) => setManualPods(e.target.value)}
-                      placeholder="e.g., prism_pod, storybloom_pod, sentinel_pod"
+                      placeholder="e.g., pod_marketing, pod_ip, pod_security"
                       data-testid="pods-manual"
                     />
                   </>
@@ -344,48 +526,36 @@ export default function IntentConsolePage() {
                     </div>
 
                     <div className="flex flex-wrap gap-2">
-                      {filteredPersonaOptions.slice(0, 80).map((o) => {
-                        const canon = toCanonSlug(o.slug);
-                        const selected = effectivePersonaSlugs.includes(canon);
+                      {filteredPersonaOptions.slice(0, 120).map((o) => {
+                        const selected = effectivePersonaSlugs.includes(o.slug);
                         return (
                           <Badge
                             key={o.slug}
                             variant={selected ? "default" : "secondary"}
                             className="cursor-pointer select-none"
-                            onClick={() => setPersonas(toggleInListCanon(personas, o.slug))}
+                            onClick={() => setPersonas(toggleInList(personas, o.slug))}
+                            title={o.slug}
                             data-testid={`persona-${o.slug}`}
                           >
                             {o.label}
                           </Badge>
                         );
                       })}
-                      {!filteredPersonaOptions.length && (
-                        <div className="text-xs text-muted-foreground">No personas match that filter.</div>
-                      )}
                     </div>
                   </>
                 ) : (
                   <>
                     <p className="text-xs text-muted-foreground">
-                      Persona list endpoint not detected. Enter personas manually (comma-separated slugs).
+                      Persona endpoint not detected. Enter persona slugs manually (you pasted the canonical list — use those).
                     </p>
                     <Input
                       value={manualPersonas}
                       onChange={(e) => setManualPersonas(e.target.value)}
-                      placeholder="e.g., agent_nova, agent_lume, agent_aegis"
+                      placeholder="e.g., agent_aegis, agent_sentinel, agent_prism"
                       data-testid="personas-manual"
                     />
                   </>
                 )}
-              </div>
-
-              {/* Preview */}
-              <div className="rounded-md bg-muted/40 p-3 text-sm" data-testid="cast-preview">
-                <div className="font-medium mb-1">Cast Preview (canonical slugs)</div>
-                <div className="text-xs text-muted-foreground space-y-1">
-                  <div>Pods: {effectivePodSlugs.length ? effectivePodSlugs.join(", ") : "—"}</div>
-                  <div>Personas: {effectivePersonaSlugs.length ? effectivePersonaSlugs.join(", ") : "—"}</div>
-                </div>
               </div>
             </div>
           )}
@@ -407,3 +577,39 @@ export default function IntentConsolePage() {
     </div>
   );
 }
+END_FILE
+```
+
+---
+
+## 4) One more thing: your canonical list should become the fallback options (no API dependency)
+
+Right now, if `/api/roles` isn’t returning those slugs, the UI will still work via manual entry.
+
+If you want the **chips** to show even without a roles API, we can add a zero-backend fallback:
+
+* Create `client/src/lib/canonAgents.ts` with your list
+* `useCastOptions()` uses it when endpoint missing
+
+If you say “**Add canon fallback chips**”, I’ll ship that patch next.
+
+---
+
+## Post-apply verification
+
+1. `npm run check`
+2. `npm run dev`
+3. `/intent` → Curated-Cast → select a few personas
+4. Create work item → confirm Cast Receipt includes `slug:` lines
+
+---
+
+### Quick question (only for the alias cleanup)
+
+For the 3 duplicate pairs, confirm which slugs you want as canonical:
+
+* App Dev Guru: `agent_app_development_guru` (recommended) or `agent_app_dev_guru`
+* Izumi: `agent_izumi_takahashi` (recommended) or `agent_izumi`
+* Kaoru: `agent_kaoru_arai` (recommended) or `agent_kaoru`
+
+If you don’t answer, I’ll proceed with the recommended canon and treat the shorter ones as aliases in the next patch.

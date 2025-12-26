@@ -1,3 +1,48 @@
+Locked ✅
+Canonical slugs confirmed:
+
+* **App Dev Guru** → `agent_app_development_guru` (alias: `agent_app_dev_guru`)
+* **Izumi** → `agent_izumi_takahashi` (alias: `agent_izumi`)
+* **Kaoru** → `agent_kaoru_arai` (alias: `agent_kaoru`)
+
+Below is the **Option B patch** for **DreamTeamHub** that makes Curated-Cast deterministic by **normalizing aliases → canonical**, and ensuring the **Cast Receipt always writes canonical slugs** (even if the user selects/enters an alias).
+
+---
+
+```tsx
+FILE: client/src/lib/canonSlugMap.ts
+/**
+ * Canonical slug map for known aliases.
+ * Ensures deterministic routing + de-duped casting.
+ */
+export const CANON_SLUG_MAP: Record<string, string> = {
+  // App Dev Guru
+  agent_app_dev_guru: "agent_app_development_guru",
+
+  // Izumi
+  agent_izumi: "agent_izumi_takahashi",
+
+  // Kaoru
+  agent_kaoru: "agent_kaoru_arai",
+};
+
+export function toCanonSlug(slug: string): string {
+  const s = (slug || "").trim();
+  if (!s) return s;
+  return CANON_SLUG_MAP[s] ?? s;
+}
+
+export function dedupeCanonSlugs(slugs: string[]): string[] {
+  const canon = slugs
+    .map(toCanonSlug)
+    .map((x) => x.trim())
+    .filter(Boolean);
+
+  return Array.from(new Set(canon)).sort((a, b) => a.localeCompare(b));
+}
+END_FILE
+
+FILE: client/src/pages/intent-console.tsx
 import { useMemo, useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -95,6 +140,7 @@ export default function IntentConsolePage() {
 
   const title = useMemo(() => buildTitle(intent), [intent]);
 
+  // Always canonicalize + dedupe before using/storing
   const effectivePodSlugs = useMemo(() => {
     if (mode !== "curated") return [];
     const raw = podsOk ? pods : normalizeManualSlugs(manualPods);
@@ -298,26 +344,24 @@ export default function IntentConsolePage() {
                             variant={selected ? "default" : "secondary"}
                             className="cursor-pointer select-none"
                             onClick={() => setPods(toggleInListCanon(pods, o.slug))}
+                            title={`slug: ${o.slug}${canon !== o.slug ? ` → canon: ${canon}` : ""}`}
                             data-testid={`pod-${o.slug}`}
                           >
                             {o.label}
                           </Badge>
                         );
                       })}
-                      {!filteredPodOptions.length && (
-                        <div className="text-xs text-muted-foreground">No pods match that filter.</div>
-                      )}
                     </div>
                   </>
                 ) : (
                   <>
                     <p className="text-xs text-muted-foreground">
-                      Pod list endpoint not detected. Enter pods manually (comma-separated slugs).
+                      Pod endpoint not detected. Enter pod slugs manually.
                     </p>
                     <Input
                       value={manualPods}
                       onChange={(e) => setManualPods(e.target.value)}
-                      placeholder="e.g., prism_pod, storybloom_pod, sentinel_pod"
+                      placeholder="e.g., pod_marketing, pod_ip, pod_security"
                       data-testid="pods-manual"
                     />
                   </>
@@ -344,7 +388,7 @@ export default function IntentConsolePage() {
                     </div>
 
                     <div className="flex flex-wrap gap-2">
-                      {filteredPersonaOptions.slice(0, 80).map((o) => {
+                      {filteredPersonaOptions.slice(0, 120).map((o) => {
                         const canon = toCanonSlug(o.slug);
                         const selected = effectivePersonaSlugs.includes(canon);
                         return (
@@ -353,39 +397,28 @@ export default function IntentConsolePage() {
                             variant={selected ? "default" : "secondary"}
                             className="cursor-pointer select-none"
                             onClick={() => setPersonas(toggleInListCanon(personas, o.slug))}
+                            title={`slug: ${o.slug}${canon !== o.slug ? ` → canon: ${canon}` : ""}`}
                             data-testid={`persona-${o.slug}`}
                           >
                             {o.label}
                           </Badge>
                         );
                       })}
-                      {!filteredPersonaOptions.length && (
-                        <div className="text-xs text-muted-foreground">No personas match that filter.</div>
-                      )}
                     </div>
                   </>
                 ) : (
                   <>
                     <p className="text-xs text-muted-foreground">
-                      Persona list endpoint not detected. Enter personas manually (comma-separated slugs).
+                      Persona endpoint not detected. Enter persona slugs manually.
                     </p>
                     <Input
                       value={manualPersonas}
                       onChange={(e) => setManualPersonas(e.target.value)}
-                      placeholder="e.g., agent_nova, agent_lume, agent_aegis"
+                      placeholder="e.g., agent_aegis, agent_sentinel, agent_prism"
                       data-testid="personas-manual"
                     />
                   </>
                 )}
-              </div>
-
-              {/* Preview */}
-              <div className="rounded-md bg-muted/40 p-3 text-sm" data-testid="cast-preview">
-                <div className="font-medium mb-1">Cast Preview (canonical slugs)</div>
-                <div className="text-xs text-muted-foreground space-y-1">
-                  <div>Pods: {effectivePodSlugs.length ? effectivePodSlugs.join(", ") : "—"}</div>
-                  <div>Personas: {effectivePersonaSlugs.length ? effectivePersonaSlugs.join(", ") : "—"}</div>
-                </div>
               </div>
             </div>
           )}
@@ -407,3 +440,21 @@ export default function IntentConsolePage() {
     </div>
   );
 }
+END_FILE
+```
+
+---
+
+## Post-apply verification (fast)
+
+1. `npm run check`
+2. `npm run dev`
+3. `/intent` → Curated-Cast
+4. Select **App Dev Guru** (if alias appears) → verify selection stored as **`agent_app_development_guru`** in Cast Receipt
+5. Create Work Item → confirm Cast Receipt lines use canonical slugs
+
+---
+
+## Next (optional, but recommended)
+
+If you want **chip options even without `/api/roles`** working perfectly: I’ll add a `canonAgents.ts` fallback seeded with the exact slugs you pasted, so Curated-Cast always has selectable chips.

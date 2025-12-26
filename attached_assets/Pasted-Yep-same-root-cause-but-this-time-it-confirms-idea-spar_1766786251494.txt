@@ -1,0 +1,89 @@
+Yep — same root cause, but this time it confirms: **`idea-spark.tsx` is still treating the React Query `data` as an array**, and in your environment it’s coming back as an **object shape** (likely `{ pods: [...] }` or `{ data: [...] }`). So even if we “fixed” it once, either:
+
+* the file didn’t get fully replaced, **or**
+* your `queryFn`/`apiRequest` returns an object envelope, **or**
+* there are multiple `IdeaSparkButton` implementations and the one running is still the old one.
+
+Either way, the most bulletproof fix is to **normalize right before rendering** and stop calling `.map` on unknown shapes.
+
+## Option B patch (DreamTeamHub repo)
+
+Paste this into: **`client/src/components/idea-spark.tsx`**
+This patch is minimal and will stop the crash immediately.
+
+```tsx
+FILE: client/src/components/idea-spark.tsx
+// ...keep your existing imports...
+
+// ADD this helper near the top of the file (after imports)
+function normalizeArray<T>(data: any, keys: string[] = []): T[] {
+  if (Array.isArray(data)) return data as T[];
+  for (const k of keys) {
+    if (Array.isArray(data?.[k])) return data[k] as T[];
+  }
+  return [];
+}
+
+// ...inside IdeaSparkButton component...
+
+// FIND your existing pods/projects queries.
+// DO NOT rely on `pods` or `projects` being arrays.
+// After the queries, ADD these two lines (or replace existing `pods/projects` vars):
+
+// If your file already has `const { data: pods } = useQuery(...)` keep it,
+// just add these normalized lists right after:
+const podList = normalizeArray<Pod>(pods, ["pods", "data", "rows"]);
+const projectList = normalizeArray<Project>(projects, ["projects", "data", "rows"]);
+
+// NOW FIND the render section that currently has:
+// {pods.map((p) => (
+// Replace that block with THIS:
+
+{podList.map((p) => (
+  <SelectItem key={p.id} value={p.name}>
+    {p.name}
+  </SelectItem>
+))}
+
+// AND FIND the projects render section that currently has:
+// {projects.map((p) => (
+// Replace with:
+
+{projectList.map((p) => (
+  <SelectItem key={p.id} value={p.id.toString()}>
+    {p.title}
+  </SelectItem>
+))}
+END_FILE
+```
+
+### Why this works
+
+Even if `pods` is:
+
+* `undefined`
+* `{ pods: [...] }`
+* `{ data: [...] }`
+* `{ rows: [...] }`
+* an array already
+
+…`podList` will always be a safe array, so `.map` will never crash.
+
+---
+
+## Post-apply verification
+
+1. `npm run dev`
+2. Open Idea Spark modal
+3. Pod dropdown opens without crashing
+
+---
+
+## If you want me to make this perfect (no guessing)
+
+Paste the output of these two endpoints from your browser console/network (just one sample each):
+
+* `/api/pods`
+* `/api/projects`
+
+Then I’ll tighten the queryFns to normalize at the source (instead of just at render), and we’ll eliminate this class of bug everywhere (including Curated-Cast lists).
