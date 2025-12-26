@@ -1,4 +1,4 @@
-import { Home, Settings, Target, Briefcase, Package, BadgeCheck, Wrench, Sparkles } from "lucide-react";
+import { Home, Settings, Target, Briefcase, Package, BadgeCheck, Wrench, Sparkles, Activity } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { useSystemInternals } from "@/hooks/useSystemInternals";
 import {
@@ -30,29 +30,38 @@ const coreNavigation: NavGroup[] = [
   },
 ];
 
-const advancedNavigation: NavGroup[] = [
-  {
-    title: "System Internals (Advanced)",
-    items: [
-      { title: "Dashboard", url: "/", icon: Home },
-      { title: "Intake & Routing", url: "/intake", icon: Wrench },
-      { title: "Dream Team Chat", url: "/chat", icon: Wrench },
-      { title: "Agent Console", url: "/agent-console", icon: Wrench },
-      { title: "Pods", url: "/pods", icon: Wrench },
-      { title: "Roles", url: "/roles", icon: Wrench },
-      { title: "Roster Admin", url: "/roster-admin", icon: Wrench },
-      { title: "Ops Dashboard", url: "/ops-dashboard", icon: Wrench },
-    ],
-  },
-];
+const advancedInternals: NavGroup = {
+  title: "System Internals (Pro)",
+  items: [
+    { title: "Dashboard", url: "/", icon: Home },
+    { title: "Intake & Routing", url: "/intake", icon: Wrench },
+    { title: "Dream Team Chat", url: "/chat", icon: Wrench },
+    { title: "Agent Console", url: "/agent-console", icon: Wrench },
+    { title: "Pods", url: "/pods", icon: Wrench },
+    { title: "Roles", url: "/roles", icon: Wrench },
+    { title: "Roster Admin", url: "/roster-admin", icon: Wrench },
+    { title: "Integrations", url: "/integrations", icon: Wrench },
+  ],
+};
+
+const advancedOps: NavGroup = {
+  title: "Ops (Orchestration)",
+  items: [
+    { title: "Ops Overview", url: "/ops/overview", icon: Activity },
+    { title: "Ops Dashboard", url: "/ops-dashboard", icon: Activity },
+    { title: "Logs", url: "/ops/logs", icon: Activity },
+    { title: "Audit Trail", url: "/ops/audit", icon: Activity },
+    { title: "Alerts", url: "/ops/alerts", icon: Activity },
+  ],
+};
+
+const advancedNavigation: NavGroup[] = [advancedInternals, advancedOps];
 
 export function AppSidebar() {
   const [location] = useLocation();
   const { showSystemInternals, setShowSystemInternals } = useSystemInternals();
 
-  const navigation = showSystemInternals
-    ? [...coreNavigation, ...advancedNavigation]
-    : coreNavigation;
+  const navigation = showSystemInternals ? [...coreNavigation, ...advancedNavigation] : coreNavigation;
 
   return (
     <Sidebar>
@@ -76,10 +85,11 @@ export function AppSidebar() {
             data-testid="toggle-system-internals"
           >
             <Wrench className="h-4 w-4" />
-            {showSystemInternals ? "Advanced: ON" : "Advanced: OFF"}
+            {showSystemInternals ? "Pro: ON" : "Pro: OFF"}
           </Button>
         </div>
       </SidebarHeader>
+
       <SidebarContent>
         {navigation.map((group) => (
           <SidebarGroup key={group.title}>

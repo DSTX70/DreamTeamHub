@@ -1,0 +1,284 @@
+**Repo:** `DreamTeamHub` (Replit)
+As requested, here are **three sequential single-drop patches** (Option B). Apply them in order.
+
+---
+
+# 1) Ship Ops nav trim (sidebar Pro nav only shows orchestration ops)
+
+This updates `advancedNavigation` to:
+
+* keep System Internals
+* add an “Ops (Orchestration)” group
+* remove legacy commerce ops from nav entirely
+
+```tsx
+FILE: client/src/components/app-sidebar.tsx
+import { Home, Settings, Target, Briefcase, Package, BadgeCheck, Wrench, Sparkles, Activity } from "lucide-react";
+import { Link, useLocation } from "wouter";
+import { useSystemInternals } from "@/hooks/useSystemInternals";
+import {
+  Sidebar,
+  SidebarContent,
+  SidebarGroup,
+  SidebarGroupContent,
+  SidebarGroupLabel,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+  SidebarHeader,
+} from "@/components/ui/sidebar";
+import { Button } from "@/components/ui/button";
+
+type NavItem = { title: string; url: string; icon: any };
+type NavGroup = { title: string; items: NavItem[] };
+
+const coreNavigation: NavGroup[] = [
+  {
+    title: "Core",
+    items: [
+      { title: "Intent", url: "/intent", icon: Target },
+      { title: "Work", url: "/work-orders", icon: Briefcase },
+      { title: "Artifacts", url: "/artifacts", icon: Package },
+      { title: "Verification", url: "/verification", icon: BadgeCheck },
+      { title: "System", url: "/help", icon: Settings },
+    ],
+  },
+];
+
+const advancedInternals: NavGroup = {
+  title: "System Internals (Pro)",
+  items: [
+    { title: "Dashboard", url: "/", icon: Home },
+    { title: "Intake & Routing", url: "/intake", icon: Wrench },
+    { title: "Dream Team Chat", url: "/chat", icon: Wrench },
+    { title: "Agent Console", url: "/agent-console", icon: Wrench },
+    { title: "Pods", url: "/pods", icon: Wrench },
+    { title: "Roles", url: "/roles", icon: Wrench },
+    { title: "Roster Admin", url: "/roster-admin", icon: Wrench },
+    { title: "Integrations", url: "/integrations", icon: Wrench },
+  ],
+};
+
+const advancedOps: NavGroup = {
+  title: "Ops (Orchestration)",
+  items: [
+    { title: "Ops Overview", url: "/ops/overview", icon: Activity },
+    { title: "Ops Dashboard", url: "/ops-dashboard", icon: Activity },
+    { title: "Logs", url: "/ops/logs", icon: Activity },
+    { title: "Audit Trail", url: "/ops/audit", icon: Activity },
+    { title: "Alerts", url: "/ops/alerts", icon: Activity },
+  ],
+};
+
+const advancedNavigation: NavGroup[] = [advancedInternals, advancedOps];
+
+export function AppSidebar() {
+  const [location] = useLocation();
+  const { showSystemInternals, setShowSystemInternals } = useSystemInternals();
+
+  const navigation = showSystemInternals ? [...coreNavigation, ...advancedNavigation] : coreNavigation;
+
+  return (
+    <Sidebar>
+      <SidebarHeader className="p-4">
+        <div className="flex items-center gap-2">
+          <div className="flex h-8 w-8 items-center justify-center rounded-md bg-primary">
+            <Sparkles className="h-5 w-5 text-primary-foreground" />
+          </div>
+          <div>
+            <div className="text-sm font-semibold">Dream Team Hub</div>
+            <div className="text-xs text-muted-foreground">Outcome-first orchestration</div>
+          </div>
+        </div>
+
+        <div className="mt-3">
+          <Button
+            variant={showSystemInternals ? "default" : "outline"}
+            size="sm"
+            className="w-full justify-start gap-2"
+            onClick={() => setShowSystemInternals(!showSystemInternals)}
+            data-testid="toggle-system-internals"
+          >
+            <Wrench className="h-4 w-4" />
+            {showSystemInternals ? "Pro: ON" : "Pro: OFF"}
+          </Button>
+        </div>
+      </SidebarHeader>
+
+      <SidebarContent>
+        {navigation.map((group) => (
+          <SidebarGroup key={group.title}>
+            <SidebarGroupLabel className="text-xs uppercase tracking-wide text-muted-foreground">
+              {group.title}
+            </SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                {group.items.map((item) => {
+                  const isActive = location === item.url;
+                  return (
+                    <SidebarMenuItem key={item.title}>
+                      <SidebarMenuButton
+                        asChild
+                        isActive={isActive}
+                        data-testid={`nav-${item.title.toLowerCase().replace(/\s+/g, "-")}`}
+                      >
+                        <Link href={item.url}>
+                          <item.icon className="h-4 w-4" />
+                          <span>{item.title}</span>
+                        </Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  );
+                })}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        ))}
+      </SidebarContent>
+    </Sidebar>
+  );
+}
+END_FILE
+```
+
+---
+
+# 2) Ship retire legacy commerce routes (block access w/ friendly “Retired” page)
+
+This keeps the routes alive but prevents random navigation into them.
+It’s Pro-only and clearly labeled “Legacy”.
+
+```tsx
+FILE: client/src/pages/retired.tsx
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { useLocation } from "wouter";
+import { Archive } from "lucide-react";
+
+export default function RetiredPage() {
+  const [, setLocation] = useLocation();
+
+  return (
+    <div className="max-w-2xl">
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Archive className="h-5 w-5" />
+            Legacy route retired
+          </CardTitle>
+          <CardDescription>
+            This page is part of legacy commerce/retail ops and is no longer in the DreamTeamHub default workflow.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <p className="text-sm text-muted-foreground">
+            If you believe you still need this, enable Pro mode and use the orchestration Ops tools. If this route must remain,
+            it should be migrated into the appropriate commerce shell.
+          </p>
+          <div className="flex gap-2">
+            <Button onClick={() => setLocation("/intent")}>Go to Intent</Button>
+            <Button variant="outline" onClick={() => setLocation("/help")}>Open Help</Button>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+END_FILE
+
+FILE: client/src/App.tsx
+// NOTE: This patch assumes you already applied the ProRoute patch earlier.
+// Add the import:
+import RetiredPage from "@/pages/retired";
+
+// Then update these routes ONLY (leave everything else unchanged):
+// Replace the following legacy routes to point at RetiredPage behind ProRoute:
+
+// /checkout
+// /bu/:slug
+// /ops/affiliates/*
+// /ops/inventory
+// /ops/images (optional, keep if you still use it for evidence/media ops)
+// /ops/fcc-sku-switcher
+
+// --- BEGIN REPLACEMENTS ---
+// Find these existing routes in AuthenticatedRoutes() and replace them with:
+
+<Route path="/checkout" component={() => <ProRoute component={RetiredPage} />} />
+<Route path="/bu/:slug" component={() => <ProRoute component={RetiredPage} />} />
+
+<Route path="/ops/affiliates" component={() => <ProRoute component={RetiredPage} />} />
+<Route path="/ops/affiliates/admin" component={() => <ProRoute component={RetiredPage} />} />
+<Route path="/ops/affiliates/payouts" component={() => <ProRoute component={RetiredPage} />} />
+
+<Route path="/ops/inventory" component={() => <ProRoute component={RetiredPage} />} />
+
+<Route path="/ops/fcc-sku-switcher" component={() => <ProRoute component={RetiredPage} />} />
+// --- END REPLACEMENTS ---
+END_FILE
+```
+
+**Note:** If you still need `/ops/images` for evidence/media ops, leave it as-is. If it’s retail-only, route it to `RetiredPage` too.
+
+---
+
+# 3) Ship default landing behavior (/intent for non-Pro)
+
+This makes the app feel instantly “what do I do now?” solved.
+
+* Non-Pro users visiting `/` get redirected to `/intent`
+* Pro users can still access the dashboard at `/`
+
+```tsx
+FILE: client/src/pages/control-tower-gated.tsx
+import { useEffect } from "react";
+import { useLocation } from "wouter";
+import { useSystemInternals } from "@/hooks/useSystemInternals";
+import ControlTower from "@/pages/control-tower";
+
+export default function ControlTowerGated() {
+  const { showSystemInternals } = useSystemInternals();
+  const [, setLocation] = useLocation();
+
+  useEffect(() => {
+    if (!showSystemInternals) {
+      setLocation("/intent");
+    }
+  }, [showSystemInternals, setLocation]);
+
+  if (!showSystemInternals) return null;
+  return <ControlTower />;
+}
+END_FILE
+
+FILE: client/src/App.tsx
+// Add import:
+import ControlTowerGated from "@/pages/control-tower-gated";
+
+// Then replace the / route definition in AuthenticatedRoutes():
+// FROM:
+// <Route path="/" component={() => <ProRoute component={ControlTower} />} />
+// TO:
+<Route path="/" component={ControlTowerGated} />
+END_FILE
+```
+
+---
+
+## Post-apply verification (for all 3)
+
+1. `npm run check`
+2. `npm run dev`
+3. Pro OFF:
+
+   * `/` → should land on `/intent`
+   * Sidebar shows only Core 5
+4. Pro ON:
+
+   * Sidebar shows System Internals + Ops (Orchestration)
+   * `/ops/overview` works
+5. Try `/checkout` (Pro ON):
+
+   * Shows “Legacy route retired”
+
+If anything doesn’t apply cleanly because your `App.tsx` differs from my assumed patched version, paste the current `AuthenticatedRoutes()` block and I’ll regenerate the drops precisely.

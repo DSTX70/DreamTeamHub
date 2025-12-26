@@ -9,6 +9,8 @@ import { useAuth } from "@/hooks/useAuth";
 import NotFound from "@/pages/not-found";
 import Landing from "@/pages/landing";
 import ControlTower from "@/pages/control-tower";
+import ControlTowerGated from "@/pages/control-tower-gated";
+import RetiredPage from "@/pages/retired";
 import Roles from "@/pages/roles";
 import Brainstorm from "@/pages/brainstorm";
 import Audits from "@/pages/audits";
@@ -79,7 +81,7 @@ function AuthenticatedRoutes() {
   return (
     <Switch>
       <Route path="/intent" component={IntentConsolePage} />
-      <Route path="/" component={ControlTower} />
+      <Route path="/" component={ControlTowerGated} />
       <Route path="/artifacts" component={ArtifactsPage} />
       <Route path="/verification" component={VerificationPage} />
       <Route path="/roles" component={Roles} />
@@ -116,23 +118,23 @@ function AuthenticatedRoutes() {
       <Route path="/onboarding/success" component={OnboardingSuccess} />
       <Route path="/ops/overview" component={OpsOverview} />
       <Route path="/ops/alerts" component={OpsAlertHooksDemo} />
-      <Route path="/ops/affiliates" component={AffiliatesReport} />
-      <Route path="/ops/affiliates/admin" component={AffiliatesAdmin} />
-      <Route path="/ops/affiliates/payouts" component={AffiliatePayouts} />
-      <Route path="/ops/inventory" component={InventoryLowStock} />
+      <Route path="/ops/affiliates" component={RetiredPage} />
+      <Route path="/ops/affiliates/admin" component={RetiredPage} />
+      <Route path="/ops/affiliates/payouts" component={RetiredPage} />
+      <Route path="/ops/inventory" component={RetiredPage} />
       <Route path="/ops/images" component={ImagesAdmin} />
       <Route path="/ops/logs" component={OpsLogs} />
       <Route path="/ops/logs-stream-plus" component={LogsStreamPlus} />
       <Route path="/ops/audit" component={AuditTrail} />
       <Route path="/ops/alt-text" component={AltTextImport} />
       <Route path="/ops/content-imports" component={ContentImports} />
-      <Route path="/ops/fcc-sku-switcher" component={FCCSkuSwitcher} />
+      <Route path="/ops/fcc-sku-switcher" component={RetiredPage} />
       <Route path="/ops/settings/:rest*" component={SettingsLayout} />
       <Route path="/llm/provider" component={LLMProviderSelect} />
       <Route path="/llm/provider/linter" component={ProviderPromptLinter} />
       <Route path="/llm/linter/augment" component={LinterAugment} />
-      <Route path="/bu/:slug" component={BUHomePage} />
-      <Route path="/checkout" component={Checkout} />
+      <Route path="/bu/:slug" component={RetiredPage} />
+      <Route path="/checkout" component={RetiredPage} />
       <Route path="/help" component={HelpPage} />
       <Route path="/demo" component={Demo} />
       <Route component={NotFound} />
