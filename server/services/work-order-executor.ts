@@ -1,5 +1,10 @@
 import { makeProvider } from "@shared/llm/providers";
 import type { WorkOrder } from "@shared/schema";
+import {
+  pushWorkOrderResultToVSuiteHQ,
+  tryParsePatchDropFromOutput,
+  type VSuiteHQIngestPayload
+} from "./vsuitehq-ingest-client";
 
 export interface WorkOrderExecutionResult {
   status: "success" | "failed" | "partial";
@@ -232,6 +237,49 @@ export class WorkOrderExecutor {
     
     // Default: return raw output with spec note
     return `[${outputSpec}]\n\n${rawOutput}`;
+  }
+
+  /**
+   * Execute work order and push result to VSuiteHQ
+   */
+  async executeWithIngest(
+    workOrder: WorkOrder,
+    agentName: string
+  ): Promise<WorkOrderExecutionResult> {
+    const result = await this.execute(workOrder, agentName);
+
+    // --- VSuiteHQ ingest (Approach A: DreamTeamHub pushes results; no clipboard) ---
+    try {
+      const parsedPatchDrop = tryParsePatchDropFromOutput(result.output);
+
+      const payload: VSuiteHQIngestPayload = {
+        kind: "work_order_result",
+        workOrderId: String((workOrder as any)?.id ?? (workOrder as any)?.workOrderId ?? "unknown"),
+        agentName,
+        status: result.status,
+        output: result.output,
+        ms: result.ms,
+        cost: result.cost,
+        error: result.error,
+        metadata: result.metadata ?? {},
+        parsedPatchDrop,
+      };
+
+      const ingest = await pushWorkOrderResultToVSuiteHQ({ payload });
+
+      result.metadata = {
+        ...(result.metadata ?? {}),
+        vsuitehqIngest: ingest,
+      };
+    } catch (e: any) {
+      result.metadata = {
+        ...(result.metadata ?? {}),
+        vsuitehqIngest: { ok: false, status: 0, message: e?.message ?? "VSuiteHQ ingest error" },
+      };
+    }
+    // --- end ingest ---
+
+    return result;
   }
 }
 
