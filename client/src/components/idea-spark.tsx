@@ -12,6 +12,14 @@ import { Lightbulb, Upload, X } from 'lucide-react';
 import { insertIdeaSparkSchema } from '@shared/schema';
 import type { Pod, Project } from '@shared/schema';
 
+function normalizeArray<T>(data: any, keys: string[] = []): T[] {
+  if (Array.isArray(data)) return data as T[];
+  for (const k of keys) {
+    if (Array.isArray(data?.[k])) return data[k] as T[];
+  }
+  return [];
+}
+
 export function IdeaSparkButton() {
   const [isOpen, setIsOpen] = useState(false);
   const [title, setTitle] = useState('');
@@ -22,14 +30,16 @@ export function IdeaSparkButton() {
   const { toast } = useToast();
 
   // Fetch pods for selection
-  const { data: pods = [] } = useQuery<Pod[]>({
+  const { data: podsRaw } = useQuery<any>({
     queryKey: ['/api/pods'],
   });
+  const podList = normalizeArray<Pod>(podsRaw, ['pods', 'data', 'rows']);
 
   // Fetch projects for selection
-  const { data: projects = [] } = useQuery<Project[]>({
+  const { data: projectsRaw } = useQuery<any>({
     queryKey: ['/api/projects'],
   });
+  const projectList = normalizeArray<Project>(projectsRaw, ['projects', 'data', 'rows']);
 
   const createSparkMutation = useMutation({
     mutationFn: async (data: any) => {
@@ -164,7 +174,7 @@ export function IdeaSparkButton() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="none">None</SelectItem>
-                  {pods.map((p) => (
+                  {podList.map((p) => (
                     <SelectItem key={p.id} value={p.name}>
                       {p.name}
                     </SelectItem>
@@ -181,7 +191,7 @@ export function IdeaSparkButton() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="none">None</SelectItem>
-                  {projects.map((p) => (
+                  {projectList.map((p) => (
                     <SelectItem key={p.id} value={p.id.toString()}>
                       {p.title}
                     </SelectItem>

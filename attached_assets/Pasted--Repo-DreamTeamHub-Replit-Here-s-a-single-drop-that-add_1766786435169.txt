@@ -1,0 +1,246 @@
+**Repo:** `DreamTeamHub` (Replit)
+Here’s a **single drop** that adds `canonAgents.ts` (seeded with the exact slugs you pasted) and wires it into `useCastOptions()` as a **fallback** so Curated-Cast **always** has selectable chips even if `/api/roles` is missing or returns an unexpected shape.
+
+```tsx
+FILE: client/src/lib/canonAgents.ts
+/**
+ * Canonical fallback list of persona slugs.
+ * Seeded from Dustin's pasted registry list.
+ *
+ * Used when /api/roles is unavailable or returns no usable options.
+ */
+
+export const CANON_AGENT_SLUGS: string[] = [
+  // Dream Team (56)
+  "agent_aegis",
+  "agent_amani",
+  "agent_app_dev_guru",
+  "agent_app_development_guru",
+  "agent_archivist",
+  "agent_atlas",
+  "agent_avery_marlowe",
+  "agent_beacon",
+  "agent_boost",
+  "agent_bridge",
+  "agent_chiesan",
+  "agent_coda",
+  "agent_codeblock",
+  "agent_compass",
+  "agent_conductor",
+  "agent_dr_rowan_vagus",
+  "agent_dr_somnus_hale",
+  "agent_echo",
+  "agent_editorial_approvals_lead",
+  "agent_english_lyricist",
+  "agent_english_poet",
+  "agent_evidence_curator",
+  "agent_forge",
+  "agent_foundry",
+  "agent_harbor",
+  "agent_helm",
+  "agent_ip_paralegal_docketing",
+  "agent_izumi",
+  "agent_izumi_takahashi",
+  "agent_kaoru",
+  "agent_kaoru_arai",
+  "agent_ledger",
+  "agent_lens",
+  "agent_lexicode",
+  "agent_lume",
+  "agent_muse",
+  "agent_navi",
+  "agent_nest",
+  "agent_nova",
+  "agent_os",
+  "agent_praetor",
+  "agent_prism",
+  "agent_pulse",
+  "agent_relief",
+  "agent_river",
+  "agent_scout",
+  "agent_sentinel",
+  "agent_shield",
+  "agent_sparkster",
+  "agent_storybloom",
+  "agent_stratega",
+  "agent_tally",
+  "agent_technical_claims_co_author",
+  "agent_uplift",
+  "agent_verifier",
+  "agent_walt",
+
+  // Pod Roles (42)
+  "agent_3pl_integration_owner",
+  "agent_accessibility_lead",
+  "agent_analyst",
+  "agent_author_platform_producer",
+  "agent_billing_engineer",
+  "agent_captioning_producer",
+  "agent_channel_integrations_lead",
+  "agent_cohort_ops_lead",
+  "agent_contracts_desk",
+  "agent_data_steward",
+  "agent_distro_ops",
+  "agent_education_programs_manager",
+  "agent_governance_designer",
+  "agent_ip_paralegal",
+  "agent_packaging_pre_press_lead",
+  "agent_partner_ops",
+  "agent_patent_illustrator",
+  "agent_patent_search_specialist",
+  "agent_policy_librarian",
+  "agent_returns_kitting_coordinator",
+  "agent_rights_admin",
+  "agent_security_reviewer",
+  "agent_tenant_billing_pm",
+  "agent_vendor_qa",
+  "agentic_ai_master",
+  "cost_controller",
+  "data_curator",
+  "evaluation_architect",
+  "experiment_designer",
+  "master_agentic_ai_advancement_officer",
+  "master_agentic_ai_strategist",
+  "memory_architect",
+  "prompt_policy_systems_engineer",
+  "reliability_sre_agentops",
+  "safety_red_team_lead",
+  "telemetry_tracing_lead",
+  "tooling_steward",
+
+  // Council (2)
+  "agent_advisory_council_liaison",
+  "agent_religious_scholar_council",
+
+  // System Capability (1)
+  "agent_agent_mode",
+];
+
+export function canonAgentsAsOptions() {
+  // label defaults to slug; UI can show friendlier labels later if desired
+  return CANON_AGENT_SLUGS.map((slug) => ({ slug, label: slug }));
+}
+END_FILE
+
+FILE: client/src/hooks/useCastOptions.ts
+import { useQuery } from "@tanstack/react-query";
+import { canonAgentsAsOptions } from "@/lib/canonAgents";
+
+type AnyObj = Record<string, any>;
+export type CastOption = { slug: string; label: string };
+
+async function safeFetchJSON(url: string): Promise<any | null> {
+  try {
+    const res = await fetch(url, { credentials: "include" });
+    if (!res.ok) return null;
+    return await res.json();
+  } catch {
+    return null;
+  }
+}
+
+function pickList(data: any, keys: string[]): any[] {
+  if (Array.isArray(data)) return data;
+  for (const k of keys) {
+    if (Array.isArray(data?.[k])) return data[k];
+  }
+  return [];
+}
+
+function toOption(item: any): CastOption | null {
+  if (typeof item === "string" && item.trim()) {
+    const slug = item.trim();
+    return { slug, label: slug };
+  }
+  if (item && typeof item === "object") {
+    const obj = item as AnyObj;
+    const slug =
+      (typeof obj.slug === "string" && obj.slug.trim()) ? obj.slug.trim() :
+      (typeof obj.handle === "string" && obj.handle.trim()) ? obj.handle.trim() :
+      (typeof obj.id === "string" && obj.id.trim()) ? obj.id.trim() :
+      null;
+
+    const label =
+      (typeof obj.name === "string" && obj.name.trim()) ? obj.name.trim() :
+      (typeof obj.title === "string" && obj.title.trim()) ? obj.title.trim() :
+      (typeof obj.label === "string" && obj.label.trim()) ? obj.label.trim() :
+      (typeof slug === "string" ? slug : null);
+
+    if (!slug || !label) return null;
+    return { slug, label };
+  }
+  return null;
+}
+
+function normalizeOptions(list: any[]): CastOption[] {
+  const out: CastOption[] = [];
+  for (const it of list || []) {
+    const opt = toOption(it);
+    if (opt) out.push(opt);
+  }
+  const map = new Map<string, CastOption>();
+  for (const o of out) map.set(o.slug, o);
+  return Array.from(map.values()).sort((a, b) => a.label.localeCompare(b.label));
+}
+
+/**
+ * Best-effort discovery of pods/personas.
+ * - Pods: tries /api/pods (no fallback list here)
+ * - Personas: tries /api/roles, falls back to canonAgents.ts if empty/unavailable
+ */
+export function useCastOptions() {
+  const podsQ = useQuery({
+    queryKey: ["/api/pods"],
+    queryFn: async () => {
+      const data = await safeFetchJSON("/api/pods");
+      if (!data) return { ok: false as const, options: [] as CastOption[] };
+      const list = pickList(data, ["pods", "data", "rows"]);
+      const options = normalizeOptions(list);
+      return { ok: options.length > 0, options };
+    },
+    staleTime: 60_000,
+    retry: false,
+  });
+
+  const personasQ = useQuery({
+    queryKey: ["/api/roles"],
+    queryFn: async () => {
+      const data = await safeFetchJSON("/api/roles");
+      if (!data) {
+        const fallback = canonAgentsAsOptions();
+        return { ok: true as const, options: fallback };
+      }
+
+      const list = pickList(data, ["roles", "agents", "data", "rows"]);
+      const options = normalizeOptions(list);
+
+      if (options.length === 0) {
+        const fallback = canonAgentsAsOptions();
+        return { ok: true as const, options: fallback };
+      }
+
+      return { ok: true as const, options };
+    },
+    staleTime: 60_000,
+    retry: false,
+  });
+
+  return {
+    pods: podsQ.data?.options ?? [],
+    podsOk: podsQ.data?.ok ?? false,
+    podsLoading: podsQ.isLoading,
+    personas: personasQ.data?.options ?? [],
+    personasOk: personasQ.data?.ok ?? false,
+    personasLoading: personasQ.isLoading,
+  };
+}
+END_FILE
+```
+
+## Post-apply verification
+
+1. `npm run check`
+2. `npm run dev`
+3. Go to `/intent` → Curated-Cast → Personas chips should always populate (even if `/api/roles` is down)
+
+If you want, next drop can add a similar `canonPods.ts` fallback **only for the pods you actually want selectable** (to avoid showing every internal pod concept).
