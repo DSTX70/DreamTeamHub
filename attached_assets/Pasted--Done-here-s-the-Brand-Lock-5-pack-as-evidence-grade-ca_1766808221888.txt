@@ -1,0 +1,445 @@
+✅ Done — here’s the **Brand Lock 5-pack** as **evidence-grade canon** for the **DreamTeamHub repo**. This adds **EVID-0009 → EVID-0013**, locks **5 new decisions** in the decision log, and adds **brand-lock skills** to `skills.json` so Context Packs can retrieve these rules later.
+
+## ✅ Paste into: **DreamTeamHub** repo / Replit
+
+```diff
+FILE: canon/heritage/evidence/EVID-0009.md
++Confidential and proprietary and copyright Dustin Sparks 2025
++
++# EVID-0009 — Brand Lock Governance System (No Unapproved Variants)
++
++## Problem
++Brand quality drifts when palettes/fonts/logos/voice “almost match” but aren’t canonical. Over time, variants multiply, trust erodes, and teams waste cycles debating aesthetics instead of shipping.
++
++## Constraints
++- Must preserve exact brand decisions across many brands/lines
++- Must be audit-friendly (what is “approved” is explicit)
++- Must prevent silent drift (“close enough” variants)
++- Must enable safe iteration (explicit change control, not ad hoc)
++
++## Approach
++**Brand Lock = Canon + Enforcement**
++1) **Canonical Assets**
++   - One official logo lockup per brand/line (plus explicitly allowed variants)
++   - Locked color palette(s) (hex codes)
++   - Locked typography system (fonts + roles)
++   - Locked tone/voice attributes + “do/don’t” copy rules
++2) **Change Control**
++   - Version + date stamped updates
++   - Change log entries for any modifications
++   - No retroactive edits without change log entry
++3) **Enforcement Rules**
++   - “No unapproved variants” is the default rule
++   - If an asset/spec isn’t in canon, it is treated as **not approved**
++   - Outputs must reference canon (explicitly or implicitly through the locked system)
++4) **Execution Discipline**
++   - Exports include correct specs/sizes where defined
++   - Templates are reused (avoid new “near matches”)
++   - If blocked (missing canonical asset), stop and list blockers (do not invent)
++
++## Why it worked
++It transformed “brand taste” into a deterministic system: fewer debates, higher consistency, faster shipping, and stronger trust in deliverables.
++
++## Outcome
++- Visual + voice consistency across brands and lines
++- Lower drift and fewer “mystery variants”
++- Faster production because rework is reduced
++
++## Where it landed
++Portfolio-wide brand governance: Fab Card Co + dreamshitter.com + fabulousAF + TFBC + FabulousGram
++
++## Related Skills
++- brand_lock_governance
++- brand_voice_tone_systems
++
++## Related Decisions
++- DTH-20251226-007
++
+END_FILE
+```
+
+```diff
+FILE: canon/heritage/evidence/EVID-0010.md
++Confidential and proprietary and copyright Dustin Sparks 2025
++
++# EVID-0010 — dreamshitter.com Brand Lock (Name Visibility + Character + Accent Colors)
++
++## Problem
++Satirical brands lose impact when the name is inconsistently applied, mascots drift off-model, and product/packaging visuals become incoherent across channels.
++
++## Constraints
++- The full brand name **dreamshitter.com** must remain visible as a brand anchor
++- Mascot illustration must stay on-model (approved reference poses/palette)
++- Accent colors must be used intentionally and sparingly
++- No unapproved variants or “close enough” redraws
++
++## Approach (Locked Rules)
++1) **Name Visibility Rule**
++   - The full brand name **dreamshitter.com** must be included across branding/product design/copy/packaging
++   - Products must include the full brand name on at least one visible side/location when used
++2) **Character Governance (Ronald a.k.a. Crumbles)**
++   - Use approved palettes + official reference poses
++   - Avoid unapproved facial styles and unapproved “flames” treatments
++3) **Accent Colors**
++   - Acid Yellow `#FFD437` and Gold Beige `#EEC95B` are approved accent colors
++   - Use sparingly and with intent (not as dominant fills unless explicitly designed)
++4) **Tone**
++   - Satirical, sharp, comedic — but brand-consistent (avoid random edginess that breaks voice)
++
++## Why it worked
++The brand stays instantly recognizable (name + mascot), and humor scales across products without visual chaos.
++
++## Outcome
++- Higher brand recall (name + mascot consistency)
++- Fewer off-model assets
++- Cleaner product line coherence across merch and packaging
++
++## Where it landed
++dreamshitter.com brand system and product/packaging rules
++
++## Related Skills
++- dreamshitter_brand_lock
++- brand_lock_governance
++
++## Related Decisions
++- DTH-20251226-008
++
+END_FILE
+```
+
+```diff
+FILE: canon/heritage/evidence/EVID-0011.md
++Confidential and proprietary and copyright Dustin Sparks 2025
++
++# EVID-0011 — Fab Card Co Brand System Lock (Parent Brand + Collections + Format Rules)
++
++## Problem
++Multi-line greeting card brands drift when each collection invents its own look/voice, breaking the parent identity and creating inconsistent product quality.
++
++## Constraints
++- Parent brand identity must remain stable
++- Each collection has a locked palette/typography/voice
++- Collection identity must not be “blended” unless explicitly approved
++- Format/template standards must be respected (avoid ad hoc layouts)
++
++## Approach (Locked System)
++**Parent Brand (Fab Card Co.)**
++- Tagline: *Artfully Said. Beautifully Delivered.*
++- Subline: *Because how you say it matters.*
++- Voice: Bold, Inclusive, Witty, Emotional, Modern
++- Enforce locked palettes/typography choices as defined in canon
++
++**Approved Collections (locked)**
++1) ColorCue (including the rule: always written as “ColorCue”)
++2) HeartScript
++3) Midnight Express
++4) The Remix Collection
++5) Out Loud
++
++**Collection governance**
++- Each line uses its approved style board (palette + typography + mood)
++- No “near match” fonts/colors
++- Use the approved mockup/templates (including 2-up standards where specified)
++
++**Format rules captured as canon**
++- Remix Collection: square format direction and layout standards
++- Midnight Express: upscale, tone-on-tone black with glitter/foil accents; holiday-focused direction
++- Out Loud: approved logo lockup and format rotation mix as defined in canon
++
++## Why it worked
++It allowed creativity inside safe boundaries: each line feels distinct, but the whole brand remains coherent and premium.
++
++## Outcome
++- Consistent quality across collections
++- Faster design decisions (rules are already chosen)
++- Reduced brand confusion between lines
++
++## Where it landed
++Fab Card Co. brand bible + collection style boards + mockup/template standards
++
++## Related Skills
++- fabcardco_collection_brand_systems
++- brand_lock_governance
++- brand_voice_tone_systems
++
++## Related Decisions
++- DTH-20251226-009
++
+END_FILE
+```
+
+```diff
+FILE: canon/heritage/evidence/EVID-0012.md
++Confidential and proprietary and copyright Dustin Sparks 2025
++
++# EVID-0012 — fabulousAF™ Brand Lock (Logo + Tagline Lockup)
++
++## Problem
++Signature brands lose recognition when logo styling and tagline presentation drift across merch, web, and campaign assets.
++
++## Constraints
++- Use the approved logo styling and tagline lockup only
++- Do not invent new lockups, colors, or placements without approval
++- Maintain consistent voice and punch
++
++## Approach (Locked Elements)
++- **Logo:** fabulousAF™ (fabulous lowercase, AF uppercase) with the approved color treatment
++- **Tagline:** “I am. You are. We are.” displayed on the approved red brushstroke background
++
++**Usage governance**
++- Treat the lockup as canonical across merchandise, web, and campaigns
++- If a size/layout variant is required, it must be an approved derivative (not an invented redesign)
++
++## Why it worked
++The lockup is the identity. By freezing it, the brand stays instantly recognizable while everything else can evolve around it.
++
++## Outcome
++- Higher recall and consistency across touchpoints
++- Less rework and fewer “almost right” versions
++
++## Where it landed
++fabulousAF™ brand identity system (logo + tagline lock)
++
++## Related Skills
++- fabulousaf_brand_lock
++- brand_lock_governance
++
++## Related Decisions
++- DTH-20251226-010
++
+END_FILE
+```
+
+```diff
+FILE: canon/heritage/evidence/EVID-0013.md
++Confidential and proprietary and copyright Dustin Sparks 2025
++
++# EVID-0013 — The Fabulous Brand Company + FabulousGram Brand Governance (Channel Layer Without Drift)
++
++## Problem
++When a “delivery channel brand” (like a digital card/distribution layer) is layered over multiple collections/brands, it can accidentally override or dilute the underlying brand locks.
++
++## Constraints
++- Channel layer must not rewrite collection identity
++- Voice/tone must remain consistent with the originating brand/collection
++- No unapproved variants introduced through “templates” or “distribution formats”
++
++## Approach
++**House brand governance (TFBC)**
++- Maintain portfolio-level governance rules (versioning, change logs, and locked playbooks where required)
++- Preserve system updates with explicit version/date increments where mandated (no silent edits)
++
++**FabulousGram as a channel layer**
++- FabulousGram behaves as a **distribution wrapper**, not a rebrand:
++  - It carries the originating line’s palette/typography/voice
++  - It may add metadata/format constraints, but does not alter identity
++- Any “template” used for FabulousGram must be derived from canonical brand templates (no new near-matches)
++
++## Why it worked
++It kept the ecosystem cohesive: distribution increased reach without accidentally producing off-brand assets.
++
++## Outcome
++- Stronger cross-brand consistency
++- Lower brand drift across digital channels
++- Cleaner governance and auditability
++
++## Where it landed
++The Fabulous Brand Company governance + FabulousGram channel strategy rules
++
++## Related Skills
++- brand_lock_governance
++- brand_voice_tone_systems
++
++## Related Decisions
++- DTH-20251226-011
++
+END_FILE
+```
+
+```diff
+FILE: canon/heritage/decision-log.md
+@@
+ **Decision ID:** DTH-20251226-006  
+ **Date:** 2025-12-26  
+ **Status:** Locked  
+ **Decision:** JP↔EN translation uses three-pass governance (Translator → Cultural Review → Dramaturg) with sign-off rules.  
+ **Rationale:** Protects nuance and stage readability; prevents late rework.  
+ **Scope:** Parallax Translate + dramaturgy outputs.  
+ **Impacts:** Publish readiness requires cultural review where required.  
+ **References:** EVID-0008
++
++---
++
++**Decision ID:** DTH-20251226-007  
++**Date:** 2025-12-26  
++**Status:** Locked  
++**Decision:** Enforce Brand Lock Governance (“no unapproved variants”) via canonical assets/specs + explicit change control.  
++**Rationale:** Prevents drift and preserves quality across brands and lines.  
++**Scope:** All brands/collections and public-facing outputs.  
++**Impacts:** If not in canon, it’s not approved; blockers must be listed (not invented).  
++**References:** EVID-0009
++
++**Decision ID:** DTH-20251226-008  
++**Date:** 2025-12-26  
++**Status:** Locked  
++**Decision:** dreamshitter.com must keep full-name visibility and on-model mascot governance; accent colors are controlled and sparse.  
++**Rationale:** Protects recognizability and prevents off-model drift.  
++**Scope:** dreamshitter.com branding, packaging, merch, copy.  
++**Impacts:** Mandatory dreamshitter.com visibility; approved Crumbles references only; accents sparing.  
++**References:** EVID-0010
++
++**Decision ID:** DTH-20251226-009  
++**Date:** 2025-12-26  
++**Status:** Locked  
++**Decision:** Fab Card Co is a parent brand system with locked collections; each collection follows its style board and template rules.  
++**Rationale:** Prevents cross-line blending and maintains premium consistency.  
++**Scope:** Fab Card Co + all collections.  
++**Impacts:** Collection identity cannot be improvised; templates are canonical.  
++**References:** EVID-0011
++
++**Decision ID:** DTH-20251226-010  
++**Date:** 2025-12-26  
++**Status:** Locked  
++**Decision:** fabulousAF™ uses the approved logo + tagline lockup system across all uses; no invented lockups.  
++**Rationale:** Maintains recognition and brand authority.  
++**Scope:** fabulousAF™ merch/web/campaign assets.  
++**Impacts:** Lockup is canonical; only approved derivatives allowed.  
++**References:** EVID-0012
++
++**Decision ID:** DTH-20251226-011  
++**Date:** 2025-12-26  
++**Status:** Locked  
++**Decision:** The Fabulous Brand Company governance rules apply portfolio-wide; FabulousGram is a channel wrapper that cannot override originating brand locks.  
++**Rationale:** Prevents channel templates from causing brand drift.  
++**Scope:** TFBC governance + FabulousGram distribution assets.  
++**Impacts:** Channel templates must derive from canon; preserve originating voice/palette/typography.  
++**References:** EVID-0013
+ 
+ END_FILE
+```
+
+```diff
+FILE: canon/heritage/skills.json
+@@
+   "skills": [
+@@
+     {
+       "skillKey": "translation_three_pass_workflow",
+       "name": "Three-pass Translation Governance (Translator → Cultural Review → Dramaturg)",
+@@
+       "evidenceLinks": [
+         { "evidenceId": "EVID-0008", "label": "Three-pass translation workflow (Izumi→ChieSan→Kaoru)", "location": "canon/heritage/evidence/EVID-0008.md" }
+       ]
+     },
++    {
++      "skillKey": "brand_lock_governance",
++      "name": "Brand Lock Governance (No Unapproved Variants)",
++      "description": "Preserve exact palettes/fonts/logos/voice through canonical assets + explicit change control; block drift.",
++      "levels": {
++        "L0": "Understands that brand consistency matters.",
++        "L1": "Can follow a locked palette/type/logo system with guidance.",
++        "L2": "Can produce assets and copy that remain on-brand without inventing variants.",
++        "L3": "Can maintain governance: versioning, change logs, and enforcement across many brands."
++      },
++      "guardrails": ["If it isn’t in canon, it isn’t approved.", "Do not invent new variants; list blockers instead."],
++      "patterns": {
++        "do": ["Reference canonical style boards", "Use approved templates", "Log changes with version/date"],
++        "dont": ["Create ‘close enough’ palettes/fonts", "Silent edits without change log"]
++      },
++      "evidenceLinks": [
++        { "evidenceId": "EVID-0009", "label": "Brand Lock governance system (no unapproved variants)", "location": "canon/heritage/evidence/EVID-0009.md" },
++        { "evidenceId": "EVID-0011", "label": "Fab Card Co parent + collections lock", "location": "canon/heritage/evidence/EVID-0011.md" }
++      ]
++    },
++    {
++      "skillKey": "brand_voice_tone_systems",
++      "name": "Brand Voice & Tone Systems (Portfolio Consistency)",
++      "description": "Maintain voice attributes and copy constraints per brand/collection while scaling outputs across channels.",
++      "levels": {
++        "L0": "Can describe brand tone.",
++        "L1": "Can write on-brand with examples and guidance.",
++        "L2": "Can maintain distinct voices across multiple lines without blending them.",
++        "L3": "Can codify voice into reusable playbooks and enforce consistency."
++      },
++      "guardrails": ["Do not blend collection voices unless explicitly approved."],
++      "patterns": {
++        "do": ["Use voice attributes and do/don’t lists", "Keep origin line identity intact"],
++        "dont": ["Default to generic copy", "Let channel templates override brand voice"]
++      },
++      "evidenceLinks": [
++        { "evidenceId": "EVID-0009", "label": "Brand Lock governance system", "location": "canon/heritage/evidence/EVID-0009.md" },
++        { "evidenceId": "EVID-0013", "label": "TFBC + FabulousGram governance (channel wrapper without drift)", "location": "canon/heritage/evidence/EVID-0013.md" }
++      ]
++    },
++    {
++      "skillKey": "dreamshitter_brand_lock",
++      "name": "dreamshitter.com Brand Lock (Name + Mascot + Accent Discipline)",
++      "description": "Enforce dreamshitter.com identity rules across branding/packaging/merch with on-model mascot governance.",
++      "levels": {
++        "L0": "Knows the brand name and mascot exist.",
++        "L1": "Can apply name visibility and basic mascot usage rules.",
++        "L2": "Can produce consistent assets/copy while honoring accent discipline.",
++        "L3": "Can audit a whole product line for on-model consistency and correct brand anchoring."
++      },
++      "guardrails": ["dreamshitter.com must remain visible per rules.", "Use approved Crumbles references only.", "Accent colors are sparing by default."],
++      "patterns": { "do": ["Use canonical mascot references", "Anchor with full brand name"], "dont": ["Off-model art", "Overuse accents"] },
++      "evidenceLinks": [
++        { "evidenceId": "EVID-0010", "label": "dreamshitter.com brand lock rules", "location": "canon/heritage/evidence/EVID-0010.md" }
++      ]
++    },
++    {
++      "skillKey": "fabcardco_collection_brand_systems",
++      "name": "Fab Card Co Collection Brand Systems",
++      "description": "Maintain parent brand coherence while enforcing distinct locked rules per collection (ColorCue/HeartScript/Midnight Express/Remix/Out Loud).",
++      "levels": {
++        "L0": "Recognizes collections are distinct.",
++        "L1": "Can follow a collection’s locked palette/type/voice.",
++        "L2": "Can produce assets across multiple collections without blending them.",
++        "L3": "Can enforce the entire system and block unapproved variants at review time."
++      },
++      "guardrails": ["Always use 'ColorCue' exactly.", "Do not place collection names where forbidden by rules.", "Respect template/format standards."],
++      "patterns": { "do": ["Reference collection style boards", "Use canonical templates"], "dont": ["Cross-line styling bleed"] },
++      "evidenceLinks": [
++        { "evidenceId": "EVID-0011", "label": "Fab Card Co parent + collections lock", "location": "canon/heritage/evidence/EVID-0011.md" }
++      ]
++    },
++    {
++      "skillKey": "fabulousaf_brand_lock",
++      "name": "fabulousAF™ Brand Lock (Logo + Tagline Lockup)",
++      "description": "Maintain the approved fabulousAF™ lockup and prevent drift across merch/web/campaigns.",
++      "levels": {
++        "L0": "Can identify the lockup exists.",
++        "L1": "Can apply the lockup consistently with guidance.",
++        "L2": "Can adapt layout safely without redesigning the lockup.",
++        "L3": "Can audit campaigns for drift and enforce corrections."
++      },
++      "guardrails": ["No invented lockups or color/type substitutions."],
++      "patterns": { "do": ["Use canonical lockup", "Request approval for derivatives"], "dont": ["Recreate from memory"] },
++      "evidenceLinks": [
++        { "evidenceId": "EVID-0012", "label": "fabulousAF™ brand lock (logo + tagline)", "location": "canon/heritage/evidence/EVID-0012.md" }
++      ]
++    }
+   ]
+ }
+ END_FILE
+```
+
+---
+
+## Post-apply verification (DreamTeamHub)
+
+1. Confirm new evidence files exist:
+
+* `canon/heritage/evidence/EVID-0009.md`
+* `canon/heritage/evidence/EVID-0010.md`
+* `canon/heritage/evidence/EVID-0011.md`
+* `canon/heritage/evidence/EVID-0012.md`
+* `canon/heritage/evidence/EVID-0013.md`
+
+2. Open `canon/heritage/decision-log.md` and confirm decisions `DTH-20251226-007` → `011`.
+
+3. Confirm `canon/heritage/skills.json` parses cleanly.
+
+---
+
+If you want the “brand lock canon” to be even more enforceable, next step is to add **brand-specific “do not change” checklists** (1 page each) under `canon/heritage/brandlocks/`—but the above 5-pack is already enough to preserve the *exact rules + tone constraints + no-variants posture* as evidence-grade canon.

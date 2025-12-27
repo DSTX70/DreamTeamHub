@@ -79,3 +79,58 @@ This log captures durable decisions that must carry forward across threads, rele
 **Scope:** Parallax Translate + dramaturgy outputs.  
 **Impacts:** Publish readiness requires cultural review where required.  
 **References:** EVID-0008
+
+---
+
+**Decision ID:** DTH-20251226-007  
+**Date:** 2025-12-26  
+**Status:** Locked  
+**Decision:** Enforce Brand Lock Governance ("no unapproved variants") via canonical assets/specs + explicit change control.  
+**Rationale:** Prevents drift and preserves quality across brands and lines.  
+**Scope:** All brands/collections and public-facing outputs.  
+**Impacts:** If not in canon, it's not approved; blockers must be listed (not invented).  
+**References:** EVID-0009
+
+---
+
+**Decision ID:** DTH-20251226-008  
+**Date:** 2025-12-26  
+**Status:** Locked  
+**Decision:** dreamshitter.com must keep full-name visibility and on-model mascot governance; accent colors are controlled and sparse.  
+**Rationale:** Protects recognizability and prevents off-model drift.  
+**Scope:** dreamshitter.com branding, packaging, merch, copy.  
+**Impacts:** Mandatory dreamshitter.com visibility; approved Crumbles references only; accents sparing.  
+**References:** EVID-0010
+
+---
+
+**Decision ID:** DTH-20251226-009  
+**Date:** 2025-12-26  
+**Status:** Locked  
+**Decision:** Fab Card Co is a parent brand system with locked collections; each collection follows its style board and template rules.  
+**Rationale:** Prevents cross-line blending and maintains premium consistency.  
+**Scope:** Fab Card Co + all collections.  
+**Impacts:** Collection identity cannot be improvised; templates are canonical.  
+**References:** EVID-0011
+
+---
+
+**Decision ID:** DTH-20251226-010  
+**Date:** 2025-12-26  
+**Status:** Locked  
+**Decision:** fabulousAF™ uses the approved logo + tagline lockup system across all uses; no invented lockups.  
+**Rationale:** Maintains recognition and brand authority.  
+**Scope:** fabulousAF™ merch/web/campaign assets.  
+**Impacts:** Lockup is canonical; only approved derivatives allowed.  
+**References:** EVID-0012
+
+---
+
+**Decision ID:** DTH-20251226-011  
+**Date:** 2025-12-26  
+**Status:** Locked  
+**Decision:** The Fabulous Brand Company governance rules apply portfolio-wide; FabulousGram is a channel wrapper that cannot override originating brand locks.  
+**Rationale:** Prevents channel templates from causing brand drift.  
+**Scope:** TFBC governance + FabulousGram distribution assets.  
+**Impacts:** Channel templates must derive from canon; preserve originating voice/palette/typography.  
+**References:** EVID-0013
