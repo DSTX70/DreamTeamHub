@@ -1,19 +1,20 @@
 import { useState, useEffect, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { useLocation } from "wouter";
+import { useLocation, Link } from "wouter";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Download, RefreshCw, Filter } from "lucide-react";
+import { Download, RefreshCw, Filter, X } from "lucide-react";
 import { PageBreadcrumb } from "@/components/PageBreadcrumb";
 import { formatDistanceToNow } from "date-fns";
-
-function getSearchParams(location: string) {
-  const idx = location.indexOf("?");
-  return new URLSearchParams(idx >= 0 ? location.slice(idx + 1) : "");
-}
+import {
+  readWorkItemContext,
+  hasWorkItemContext,
+  contextToSearch,
+  getSearchParamsFromLocation,
+} from "@/lib/workItemContext";
 
 interface OpsEvent {
   id: number;
@@ -64,7 +65,7 @@ function downloadCsv(filename: string, text: string) {
 }
 
 export default function OpsLogsPage() {
-  const [location] = useLocation();
+  const [location, setLocation] = useLocation();
   const [kindFilter, setKindFilter] = useState("");
   const [ownerTypeFilter, setOwnerTypeFilter] = useState("");
   const [ownerIdFilter, setOwnerIdFilter] = useState("");
@@ -72,7 +73,18 @@ export default function OpsLogsPage() {
   const [prefillNote, setPrefillNote] = useState<string | null>(null);
   const [prefillApplied, setPrefillApplied] = useState(false);
 
-  const urlParams = useMemo(() => getSearchParams(location), [location]);
+  const urlParams = useMemo(() => getSearchParamsFromLocation(location), [location]);
+  const workCtx = useMemo(() => readWorkItemContext(urlParams), [urlParams]);
+  const showCtx = hasWorkItemContext(workCtx);
+  const ctxSearch = contextToSearch(workCtx);
+
+  function handleClearContext() {
+    setOwnerIdFilter("");
+    setOwnerTypeFilter("");
+    setPrefillNote(null);
+    setPrefillApplied(false);
+    setLocation("/ops/logs");
+  }
 
   useEffect(() => {
     if (prefillApplied) return;
@@ -137,9 +149,51 @@ export default function OpsLogsPage() {
         </p>
       </div>
 
-      {prefillNote && (
-        <div className="text-xs text-muted-foreground" data-testid="ops-logs-prefill-note">
-          {prefillNote}
+      {showCtx && (
+        <div className="rounded-xl border p-3" data-testid="ops-logs-context-banner">
+          <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+            <div className="flex flex-col gap-2">
+              <div className="text-sm font-semibold">Work item context detected</div>
+              <div className="flex flex-wrap gap-2">
+                {workCtx.workItemId && (
+                  <Badge variant="outline" className="text-xs">
+                    WorkItemId: {workCtx.workItemId}
+                  </Badge>
+                )}
+                {workCtx.context && (
+                  <Badge variant="outline" className="text-xs">
+                    Context: {workCtx.context}
+                  </Badge>
+                )}
+              </div>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <Link href={`/ops/logs${ctxSearch}`}>
+                <Button size="sm" variant="default" data-testid="button-context-logs">
+                  Logs
+                </Button>
+              </Link>
+              <Link href={`/verification${ctxSearch}`}>
+                <Button size="sm" variant="outline" data-testid="button-context-verification">
+                  Verification
+                </Button>
+              </Link>
+              <Link href={`/artifacts${ctxSearch}`}>
+                <Button size="sm" variant="outline" data-testid="button-context-artifacts">
+                  Artifacts
+                </Button>
+              </Link>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={handleClearContext}
+                data-testid="button-context-clear"
+              >
+                <X className="h-4 w-4 mr-1" />
+                Clear
+              </Button>
+            </div>
+          </div>
         </div>
       )}
 

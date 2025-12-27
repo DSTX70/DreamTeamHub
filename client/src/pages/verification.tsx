@@ -1,54 +1,75 @@
 import { useMemo } from "react";
-import { useLocation } from "wouter";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { useLocation, Link } from "wouter";
 import { Button } from "@/components/ui/button";
-import { ExternalLink } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { X } from "lucide-react";
 import CoveragePage from "@/pages/coverage";
-
-function getSearchParams(location: string) {
-  const idx = location.indexOf("?");
-  return new URLSearchParams(idx >= 0 ? location.slice(idx + 1) : "");
-}
-
-function enc(v: string) {
-  return encodeURIComponent(v);
-}
+import {
+  readWorkItemContext,
+  hasWorkItemContext as checkHasContext,
+  contextToSearch,
+  getSearchParamsFromLocation,
+} from "@/lib/workItemContext";
 
 export default function VerificationPage() {
   const [location, setLocation] = useLocation();
-  const params = useMemo(() => getSearchParams(location), [location]);
+  const params = useMemo(() => getSearchParamsFromLocation(location), [location]);
+  const workCtx = useMemo(() => readWorkItemContext(params), [params]);
+  const showCtx = checkHasContext(workCtx);
+  const ctxSearch = contextToSearch(workCtx);
 
-  const workItemId = params.get("workItemId")?.trim() || "";
-  const context = params.get("context")?.trim() || "";
-  const q = params.get("q")?.trim() || "";
-
-  const hasWorkItemContext = Boolean(workItemId || context || q);
-
-  const logsHref = `/ops/logs?workItemId=${enc(workItemId)}&context=${enc(context)}&q=${enc(q)}`;
-  const artifactsHref = `/artifacts?q=${enc(q)}&context=${enc(context)}&workItemId=${enc(workItemId)}`;
+  function handleClearContext() {
+    setLocation("/verification");
+  }
 
   return (
     <div className="space-y-4">
-      {hasWorkItemContext && (
-        <Alert data-testid="verification-context-banner">
-          <AlertTitle className="flex items-center gap-2">
-            <ExternalLink className="h-4 w-4" />
-            Work-item context detected
-          </AlertTitle>
-          <AlertDescription className="space-y-3">
-            <div className="text-sm">
-              Verification currently focuses on role coverage (not work-item verification). Use these quick jumps instead:
+      {showCtx && (
+        <div className="rounded-xl border p-3 mx-6 mt-4" data-testid="verification-context-banner">
+          <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+            <div className="flex flex-col gap-2">
+              <div className="text-sm font-semibold">Work item context detected</div>
+              <div className="flex flex-wrap gap-2">
+                {workCtx.workItemId && (
+                  <Badge variant="outline" className="text-xs">
+                    WorkItemId: {workCtx.workItemId}
+                  </Badge>
+                )}
+                {workCtx.context && (
+                  <Badge variant="outline" className="text-xs">
+                    Context: {workCtx.context}
+                  </Badge>
+                )}
+              </div>
             </div>
             <div className="flex flex-wrap gap-2">
-              <Button size="sm" onClick={() => setLocation(logsHref)} data-testid="button-context-logs">
-                Open Logs
-              </Button>
-              <Button size="sm" variant="outline" onClick={() => setLocation(artifactsHref)} data-testid="button-context-artifacts">
-                Related Artifacts
+              <Link href={`/ops/logs${ctxSearch}`}>
+                <Button size="sm" variant="outline" data-testid="button-context-logs">
+                  Logs
+                </Button>
+              </Link>
+              <Link href={`/verification${ctxSearch}`}>
+                <Button size="sm" variant="default" data-testid="button-context-verification">
+                  Verification
+                </Button>
+              </Link>
+              <Link href={`/artifacts${ctxSearch}`}>
+                <Button size="sm" variant="outline" data-testid="button-context-artifacts">
+                  Artifacts
+                </Button>
+              </Link>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={handleClearContext}
+                data-testid="button-context-clear"
+              >
+                <X className="h-4 w-4 mr-1" />
+                Clear
               </Button>
             </div>
-          </AlertDescription>
-        </Alert>
+          </div>
+        </div>
       )}
 
       <CoveragePage />

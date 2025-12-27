@@ -1,26 +1,22 @@
 import { useState, useEffect, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useRoute, useLocation, Link } from "wouter";
-import { Plus, Filter, FolderKanban, Calendar, Users, CheckCircle2, AlertCircle, Clock, Sparkles, Lightbulb, Shield, Package, ClipboardList, ExternalLink } from "lucide-react";
+import { Plus, Filter, FolderKanban, Calendar, Users, CheckCircle2, AlertCircle, Clock, Sparkles, Lightbulb, Shield, Package, ClipboardList, X } from "lucide-react";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import type { Project, Brand } from "@shared/schema";
 import { IdeaSparksList } from "@/components/idea-sparks-list";
 import { BrandDetailsModal } from "@/components/brand-details-modal";
 import { PageBreadcrumb, buildBreadcrumbs } from "@/components/PageBreadcrumb";
 import { EmptyState } from "@/components/empty-state";
-
-function getSearchParams(location: string) {
-  const idx = location.indexOf("?");
-  return new URLSearchParams(idx >= 0 ? location.slice(idx + 1) : "");
-}
-
-function enc(v: string) {
-  return encodeURIComponent(v);
-}
+import {
+  readWorkItemContext,
+  hasWorkItemContext as checkHasContext,
+  contextToSearch,
+  getSearchParamsFromLocation,
+} from "@/lib/workItemContext";
 
 const PILLAR_ICONS = {
   Imagination: Sparkles,
@@ -65,14 +61,18 @@ export default function Projects() {
   const [selectedBrand, setSelectedBrand] = useState<Brand | null>(null);
   const [isBrandModalOpen, setIsBrandModalOpen] = useState(false);
 
-  const urlParams = useMemo(() => getSearchParams(location), [location]);
-  const workItemId = urlParams.get("workItemId")?.trim() || "";
-  const contextParam = urlParams.get("context")?.trim() || "";
-  const qParam = urlParams.get("q")?.trim() || "";
-  const hasWorkItemContext = Boolean(workItemId || contextParam || qParam);
+  const urlParams = useMemo(() => getSearchParamsFromLocation(location), [location]);
+  const workCtx = useMemo(() => readWorkItemContext(urlParams), [urlParams]);
+  const showCtx = checkHasContext(workCtx);
+  const ctxSearch = contextToSearch(workCtx);
 
-  const logsHref = `/ops/logs?workItemId=${enc(workItemId)}&context=${enc(contextParam)}&q=${enc(qParam)}`;
-  const verificationHref = `/verification?workItemId=${enc(workItemId)}&context=${enc(contextParam)}&q=${enc(qParam)}`;
+  function handleClearContext() {
+    if (selectedCategory === "all") {
+      setLocation("/projects");
+    } else {
+      setLocation(`/projects/${categoryToSlug(selectedCategory)}`);
+    }
+  }
 
   // Sync category with URL parameter
   useEffect(() => {
@@ -185,27 +185,52 @@ export default function Projects() {
         <PageBreadcrumb segments={breadcrumbs} />
 
         {/* Work-item context banner */}
-        {hasWorkItemContext && (
-          <Alert data-testid="projects-context-banner">
-            <AlertTitle className="flex items-center gap-2">
-              <ExternalLink className="h-4 w-4" />
-              Work-item context detected
-            </AlertTitle>
-            <AlertDescription className="space-y-3">
-              <div className="text-sm">
-                Use your normal Project filters/search. This link carried:
-                {workItemId ? ` workItemId=${workItemId}` : ""}{contextParam ? ` • context=${contextParam}` : ""}{qParam ? ` • q=${qParam}` : ""}
+        {showCtx && (
+          <div className="rounded-xl border p-3" data-testid="projects-context-banner">
+            <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+              <div className="flex flex-col gap-2">
+                <div className="text-sm font-semibold">Work item context detected</div>
+                <div className="flex flex-wrap gap-2">
+                  {workCtx.workItemId && (
+                    <Badge variant="outline" className="text-xs">
+                      WorkItemId: {workCtx.workItemId}
+                    </Badge>
+                  )}
+                  {workCtx.context && (
+                    <Badge variant="outline" className="text-xs">
+                      Context: {workCtx.context}
+                    </Badge>
+                  )}
+                </div>
               </div>
               <div className="flex flex-wrap gap-2">
-                <Button size="sm" variant="outline" onClick={() => setLocation(verificationHref)} data-testid="button-context-verification">
-                  Verification
-                </Button>
-                <Button size="sm" onClick={() => setLocation(logsHref)} data-testid="button-context-logs">
-                  Open Logs
+                <Link href={`/ops/logs${ctxSearch}`}>
+                  <Button size="sm" variant="outline" data-testid="button-context-logs">
+                    Logs
+                  </Button>
+                </Link>
+                <Link href={`/verification${ctxSearch}`}>
+                  <Button size="sm" variant="outline" data-testid="button-context-verification">
+                    Verification
+                  </Button>
+                </Link>
+                <Link href={`/artifacts${ctxSearch}`}>
+                  <Button size="sm" variant="default" data-testid="button-context-artifacts">
+                    Artifacts
+                  </Button>
+                </Link>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={handleClearContext}
+                  data-testid="button-context-clear"
+                >
+                  <X className="h-4 w-4 mr-1" />
+                  Clear
                 </Button>
               </div>
-            </AlertDescription>
-          </Alert>
+            </div>
+          </div>
         )}
         
         {/* Header */}
