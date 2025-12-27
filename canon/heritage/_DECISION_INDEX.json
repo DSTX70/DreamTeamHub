@@ -112,6 +112,116 @@
       "relatedPods": ["brand_pod"],
       "relatedSkills": ["brand_lock_governance", "brand_voice_tone_systems"],
       "relatedEvidence": ["EVID-0013"]
+    },
+    {
+      "id": "DTH-20251226-012",
+      "title": "LIAC Council Workflow + Activation Triggers",
+      "status": "Locked",
+      "date": "2025-12-26",
+      "file": "decisions/DTH-20251226-012.md",
+      "tags": ["liac", "governance", "review", "activation"],
+      "relatedPods": ["liac_pod"],
+      "relatedSkills": ["liac_governance"],
+      "relatedEvidence": ["EVID-0014"]
+    },
+    {
+      "id": "DTH-20251226-013",
+      "title": "LIAC Approval Gates + Sign-off Capture",
+      "status": "Locked",
+      "date": "2025-12-26",
+      "file": "decisions/DTH-20251226-013.md",
+      "tags": ["liac", "approval", "signoff", "audit"],
+      "relatedPods": ["liac_pod"],
+      "relatedSkills": ["liac_signoff_gating"],
+      "relatedEvidence": ["EVID-0015"]
+    },
+    {
+      "id": "DTH-20251226-014",
+      "title": "Bias/Balance Rubric + No-Paraphrase List",
+      "status": "Locked",
+      "date": "2025-12-26",
+      "file": "decisions/DTH-20251226-014.md",
+      "tags": ["liac", "bias", "rubric", "canonical-copy"],
+      "relatedPods": ["liac_pod"],
+      "relatedSkills": ["bias_balance_rubric"],
+      "relatedEvidence": ["EVID-0016"]
+    },
+    {
+      "id": "DTH-20251226-015",
+      "title": "Cultural Nuance + Safety Escalation Model",
+      "status": "Locked",
+      "date": "2025-12-26",
+      "file": "decisions/DTH-20251226-015.md",
+      "tags": ["liac", "cultural", "safety", "escalation"],
+      "relatedPods": ["liac_pod"],
+      "relatedSkills": ["cultural_safety_escalation"],
+      "relatedEvidence": ["EVID-0017"]
+    },
+    {
+      "id": "DTH-20251226-016",
+      "title": "Publish-Ready Checklist + DoD Gate (LIAC)",
+      "status": "Locked",
+      "date": "2025-12-26",
+      "file": "decisions/DTH-20251226-016.md",
+      "tags": ["liac", "publishing", "dod", "readiness"],
+      "relatedPods": ["liac_pod"],
+      "relatedSkills": ["liac_publish_ready_gate"],
+      "relatedEvidence": ["EVID-0018"]
+    },
+    {
+      "id": "DTH-20251226-017",
+      "title": "DriveSteward is the Shipping Artifact Spine",
+      "status": "Locked",
+      "date": "2025-12-26",
+      "file": "decisions/DTH-20251226-017.md",
+      "tags": ["shipping", "drivesteward", "publish-history", "artifacts"],
+      "relatedPods": ["engineering_pod"],
+      "relatedSkills": ["shipping_pipeline_i3"],
+      "relatedEvidence": ["EVID-0019"]
+    },
+    {
+      "id": "DTH-20251226-018",
+      "title": "VSuiteHQ Ingest Requires Receipts",
+      "status": "Locked",
+      "date": "2025-12-26",
+      "file": "decisions/DTH-20251226-018.md",
+      "tags": ["shipping", "vsuitehq", "ingest", "receipts"],
+      "relatedPods": ["engineering_pod"],
+      "relatedSkills": ["vsuitehq_ingest_integration"],
+      "relatedEvidence": ["EVID-0020"]
+    },
+    {
+      "id": "DTH-20251226-019",
+      "title": "Broadcast Release Events Are the Default Awareness Mechanism",
+      "status": "Locked",
+      "date": "2025-12-26",
+      "file": "decisions/DTH-20251226-019.md",
+      "tags": ["shipping", "broadcast", "release", "events"],
+      "relatedPods": ["engineering_pod"],
+      "relatedSkills": ["broadcast_release_events"],
+      "relatedEvidence": ["EVID-0021"]
+    },
+    {
+      "id": "DTH-20251226-020",
+      "title": "Deterministic Post-Ship Verification Is Required for Trust",
+      "status": "Locked",
+      "date": "2025-12-26",
+      "file": "decisions/DTH-20251226-020.md",
+      "tags": ["shipping", "verify", "runtime", "deterministic"],
+      "relatedPods": ["engineering_pod"],
+      "relatedSkills": ["deterministic_verification_and_badges"],
+      "relatedEvidence": ["EVID-0022"]
+    },
+    {
+      "id": "DTH-20251226-021",
+      "title": "Per-drop Badges Define Work Visibility",
+      "status": "Locked",
+      "date": "2025-12-26",
+      "file": "decisions/DTH-20251226-021.md",
+      "tags": ["shipping", "badges", "visibility", "drops"],
+      "relatedPods": ["engineering_pod"],
+      "relatedSkills": ["deterministic_verification_and_badges"],
+      "relatedEvidence": ["EVID-0023"]
     }
   ]
 }

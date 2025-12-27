@@ -101,6 +101,96 @@
       "relatedPods": ["brand_pod"],
       "relatedSkills": ["brand_lock_governance", "brand_voice_tone_systems"],
       "relatedDecisions": ["DTH-20251226-011"]
+    },
+    {
+      "id": "EVID-0014",
+      "title": "LIAC Council Workflow + Activation Triggers",
+      "file": "EVID-0014.md",
+      "tags": ["liac", "governance", "review", "activation"],
+      "relatedPods": ["liac_pod"],
+      "relatedSkills": ["liac_governance"],
+      "relatedDecisions": ["DTH-20251226-012"]
+    },
+    {
+      "id": "EVID-0015",
+      "title": "LIAC Approval Gates + Sign-off Capture Pattern",
+      "file": "EVID-0015.md",
+      "tags": ["liac", "approval", "signoff", "audit"],
+      "relatedPods": ["liac_pod"],
+      "relatedSkills": ["liac_signoff_gating"],
+      "relatedDecisions": ["DTH-20251226-013"]
+    },
+    {
+      "id": "EVID-0016",
+      "title": "Bias/Balance Rubric + No-Paraphrase List Discipline",
+      "file": "EVID-0016.md",
+      "tags": ["liac", "bias", "rubric", "canonical-copy"],
+      "relatedPods": ["liac_pod"],
+      "relatedSkills": ["bias_balance_rubric"],
+      "relatedDecisions": ["DTH-20251226-014"]
+    },
+    {
+      "id": "EVID-0017",
+      "title": "Cultural Nuance + Safety Review Pattern (Escalation Model)",
+      "file": "EVID-0017.md",
+      "tags": ["liac", "cultural", "safety", "escalation"],
+      "relatedPods": ["liac_pod"],
+      "relatedSkills": ["cultural_safety_escalation"],
+      "relatedDecisions": ["DTH-20251226-015"]
+    },
+    {
+      "id": "EVID-0018",
+      "title": "Publication Readiness Checklist + DoD Gate (LIAC)",
+      "file": "EVID-0018.md",
+      "tags": ["liac", "publishing", "dod", "readiness"],
+      "relatedPods": ["liac_pod"],
+      "relatedSkills": ["liac_publish_ready_gate"],
+      "relatedDecisions": ["DTH-20251226-016"]
+    },
+    {
+      "id": "EVID-0019",
+      "title": "DriveSteward as the Shipping Artifact Spine (Intake + Publish-History)",
+      "file": "EVID-0019.md",
+      "tags": ["shipping", "drivesteward", "publish-history", "artifacts"],
+      "relatedPods": ["engineering_pod"],
+      "relatedSkills": ["shipping_pipeline_i3"],
+      "relatedDecisions": ["DTH-20251226-017"]
+    },
+    {
+      "id": "EVID-0020",
+      "title": "VSuiteHQ Ingest Integration (Receipts + Result Classification)",
+      "file": "EVID-0020.md",
+      "tags": ["shipping", "vsuitehq", "ingest", "receipts"],
+      "relatedPods": ["engineering_pod"],
+      "relatedSkills": ["vsuitehq_ingest_integration"],
+      "relatedDecisions": ["DTH-20251226-018"]
+    },
+    {
+      "id": "EVID-0021",
+      "title": "Broadcast Release Events (Ecosystem Signal Without Manual Comms)",
+      "file": "EVID-0021.md",
+      "tags": ["shipping", "broadcast", "release", "events"],
+      "relatedPods": ["engineering_pod"],
+      "relatedSkills": ["broadcast_release_events"],
+      "relatedDecisions": ["DTH-20251226-019"]
+    },
+    {
+      "id": "EVID-0022",
+      "title": "Deterministic Verification After Ship (Runtime Truth)",
+      "file": "EVID-0022.md",
+      "tags": ["shipping", "verify", "runtime", "deterministic"],
+      "relatedPods": ["engineering_pod"],
+      "relatedSkills": ["deterministic_verification_and_badges"],
+      "relatedDecisions": ["DTH-20251226-020"]
+    },
+    {
+      "id": "EVID-0023",
+      "title": "Per-drop Status Badges (Validate / Apply / Ship / Verify) = Work Visibility",
+      "file": "EVID-0023.md",
+      "tags": ["shipping", "badges", "visibility", "drops"],
+      "relatedPods": ["engineering_pod"],
+      "relatedSkills": ["deterministic_verification_and_badges"],
+      "relatedDecisions": ["DTH-20251226-021"]
     }
   ]
 }

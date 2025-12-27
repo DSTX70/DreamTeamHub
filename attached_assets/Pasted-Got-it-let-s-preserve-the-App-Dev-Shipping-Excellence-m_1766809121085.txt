@@ -1,0 +1,462 @@
+Got it — let’s preserve the **App Dev Shipping Excellence** machine the same way: **evidence-grade canon**, **decisions**, and **indexes** (additive; no schema changes).
+
+Below is the **5-pack**:
+
+* **EVID-0019** — DriveSteward as the artifact spine (publish-history + intake governance)
+* **EVID-0020** — VSuiteHQ ingest receipts (drop vs recommendation + metadata)
+* **EVID-0021** — Broadcast release events (release narrative + ecosystem signal)
+* **EVID-0022** — Deterministic verification after ship (runtime truth, not “passes”)
+* **EVID-0023** — Per-drop status badges (Validate / Apply / Ship / Verify) as work visibility
+
+…and the matching decisions **DTH-20251226-017 → 021**, plus updates to the two index files.
+
+## ✅ Paste into: **DreamTeamHub** repo / Replit
+
+```diff
+FILE: canon/heritage/evidence/EVID-0019.md
++Confidential and proprietary and copyright Dustin Sparks 2025
++
++# EVID-0019 — DriveSteward as the Shipping Artifact Spine (Intake + Publish-History)
++
++## Problem
++Shipping pipelines lose trust when artifacts are scattered, outcomes aren’t traceable, and “what shipped?” can’t be answered deterministically.
++
++## Constraints
++- Must be a single source of truth for artifacts and history
++- Must be auditable (who/what/when/where)
++- Must not allow risky execution paths through intake (governance)
++- Must support “publish-history” queries for downstream systems
++
++## Approach
++DriveSteward functions as the artifact spine:
++1) **Intake governance**
++   - Intake paths are treated as storage/organization, not execution
++   - “No execution from intake paths” is enforced via policy/CI guardrails (where applicable)
++2) **Publish-history API**
++   - Shipping actions record structured receipts (validate/apply/ship/verify)
++   - History can be queried by projectKey/repoSlug/workItemId/dropId
++3) **Artifact indexing**
++   - Every ship produces a receipt and indexed artifacts (drops, manifests, verification)
++
++## Why it worked
++It made “shipping” evidence-grade: you can point to a receipt, find the exact artifact, and prove what happened without relying on memory.
++
++## Outcome
++- Higher confidence in the pipeline
++- Faster debugging and rollback
++- Clear lineage of changes and results
++
++## Where it landed
++i³ stack execution: DriveSteward intake + publish-history as a canonical record
++
++## Related Skills
++- shipping_pipeline_i3
++
++## Related Decisions
++- DTH-20251226-017
++
+END_FILE
+```
+
+```diff
+FILE: canon/heritage/evidence/EVID-0020.md
++Confidential and proprietary and copyright Dustin Sparks 2025
++
++# EVID-0020 — VSuiteHQ Ingest Integration (Receipts + Result Classification)
++
++## Problem
++Teams need proof that work outputs are stored and discoverable. Without ingest receipts, “it ran” doesn’t equal “it’s accessible.”
++
++## Constraints
++- Must preserve outcome metadata (ok/failed, ids, storage type)
++- Must support “drop” vs “recommendation” storage semantics
++- Must not disrupt baseline execution paths
++
++## Approach
++**Ingest as a first-class optional step**
++- Execution can run normally OR run with ingest enabled.
++- When ingest is enabled, results are pushed to VSuiteHQ and return structured metadata such as:
++  - ok: true/false
++  - dropId
++  - storedAs: "drop" | "recommendation"
++
++**Receipt discipline**
++- Store ingest status as a machine-readable receipt alongside other ship steps.
++- UI surfaces results without requiring manual copying.
++
++## Why it worked
++It replaced “trust me” with receipts. Outputs became searchable, reusable, and attributable.
++
++## Outcome
++- Clear confirmation that results landed in VSuiteHQ
++- Reduced manual copy/paste and lost work
++- Better lifecycle tracking across Work Items and Drops
++
++## Where it landed
++DreamTeamHub execution → VSuiteHQ ingest pipeline
++
++## Related Skills
++- vsuitehq_ingest_integration
++
++## Related Decisions
++- DTH-20251226-018
++
+END_FILE
+```
+
+```diff
+FILE: canon/heritage/evidence/EVID-0021.md
++Confidential and proprietary and copyright Dustin Sparks 2025
++
++# EVID-0021 — Broadcast Release Events (Ecosystem Signal Without Manual Comms)
++
++## Problem
++Shipping changes across an ecosystem needs coordinated visibility. Without a broadcast event, teams learn about changes late, or not at all.
++
++## Constraints
++- Must be optional and non-blocking
++- Must emit a consistent event payload (projectKey/repoSlug/version/notes)
++- Must not require manual announcement steps to be effective
++
++## Approach
++**Broadcast release event on ship (optional)**
++- When enabled, ship triggers a release event to Broadcast Hub
++- Event includes identifiers and a summary suitable for dashboards/feeds
++- Secrets/env are handled as configuration, not hardcoded behavior
++
++## Why it worked
++It “closes the loop” between shipping and awareness—making the ecosystem feel coordinated rather than fragmented.
++
++## Outcome
++- Faster awareness across teams
++- Reduced “what changed?” confusion
++- Cleaner release narratives tied to actual shipments
++
++## Where it landed
++i³ ship pipeline → Broadcast Hub release events
++
++## Related Skills
++- broadcast_release_events
++
++## Related Decisions
++- DTH-20251226-019
++
+END_FILE
+```
+
+```diff
+FILE: canon/heritage/evidence/EVID-0022.md
++Confidential and proprietary and copyright Dustin Sparks 2025
++
++# EVID-0022 — Deterministic Verification After Ship (Runtime Truth)
++
++## Problem
++Pipelines can report “pass” while the live URL hasn’t actually changed. Without runtime verification, teams lose confidence in automation.
++
++## Constraints
++- Must verify against runtime (HTTP, endpoint match, artifact presence)
++- Must produce machine-readable verify results
++- Must surface verify outcomes clearly in the UI (human trust)
++
++## Approach
++**Post-ship verify step**
++- Verification runs after ship and checks real runtime signals (e.g., HTTP match)
++- Stores a structured result (ok/kind/matched/metadata)
++
++**Work visibility**
++- The raw verify JSON is preserved for audit
++- A UI-level badge/banner summarizes the state for fast understanding
++
++## Why it worked
++It prevents “false confidence” by grounding success in runtime evidence.
++
++## Outcome
++- Higher trust in ship pipeline
++- Faster detection of “ship succeeded but deploy didn’t”
++- Clearer debugging paths (verify result points to what failed)
++
++## Where it landed
++i³ shipping pipeline: post-ship deterministic verification + UI surfacing
++
++## Related Skills
++- deterministic_verification_and_badges
++
++## Related Decisions
++- DTH-20251226-020
++
+END_FILE
+```
+
+```diff
+FILE: canon/heritage/evidence/EVID-0023.md
++Confidential and proprietary and copyright Dustin Sparks 2025
++
++# EVID-0023 — Per-drop Status Badges (Validate / Apply / Ship / Verify) = Work Visibility
++
++## Problem
++Users can’t tell what happened to a change without drilling into logs. “Work visibility” requires at-a-glance status across pipeline stages.
++
++## Constraints
++- Must persist status per drop (not only for selected item)
++- Must keep raw JSON receipts while showing simple badges
++- Must be consistent across UI surfaces (dropdown rows, detail pages)
++
++## Approach
++**Persist per-stage receipts**
++- For each drop, store summaries for:
++  - VALIDATED ✅/❌
++  - APPLIED ✅/❌
++  - SHIPPED ✅/❌
++  - VERIFY ✅/❌
++- Keep the full underlying JSON payload available for audit
++
++**Render per-row badges**
++- Show badges directly in drop lists (not only on a selected drop)
++- “Next actions” deep-link to the right filtered views when failures occur
++
++## Why it worked
++It reduced cognitive load: users can see pipeline state instantly and jump to the right next step without hunting.
++
++## Outcome
++- Faster triage and recovery
++- Less confusion about “did it actually ship?”
++- Higher trust and adoption of the workflow
++
++## Where it landed
++DreamTeamHub work visibility patterns (drop lists + receipts + next actions)
++
++## Related Skills
++- deterministic_verification_and_badges
++
++## Related Decisions
++- DTH-20251226-021
++
+END_FILE
+```
+
+```diff
+FILE: canon/heritage/decisions/DTH-20251226-017.md
++Confidential and proprietary and copyright Dustin Sparks 2025
++
++# Decision: DTH-20251226-017 — DriveSteward is the Shipping Artifact Spine
++**Date:** 2025-12-26  
++**Status:** Locked  
++
++## Decision
++DriveSteward is the canonical spine for shipping artifacts and publish-history receipts (validate/apply/ship/verify), with governance that prevents execution from intake paths.
++
++## Rationale
++Preserves traceability and trust in shipping outcomes.
++
++## References
++- canon/heritage/evidence/EVID-0019.md
++
+END_FILE
+```
+
+```diff
+FILE: canon/heritage/decisions/DTH-20251226-018.md
++Confidential and proprietary and copyright Dustin Sparks 2025
++
++# Decision: DTH-20251226-018 — VSuiteHQ Ingest Requires Receipts
++**Date:** 2025-12-26  
++**Status:** Locked  
++
++## Decision
++When ingest is enabled, execution must emit a structured receipt (dropId + storedAs + ok) to prove the result is accessible and stored.
++
++## Rationale
++Eliminates “it ran but where is it?” ambiguity.
++
++## References
++- canon/heritage/evidence/EVID-0020.md
++
+END_FILE
+```
+
+```diff
+FILE: canon/heritage/decisions/DTH-20251226-019.md
++Confidential and proprietary and copyright Dustin Sparks 2025
++
++# Decision: DTH-20251226-019 — Broadcast Release Events Are the Default Awareness Mechanism (Optional on Ship)
++**Date:** 2025-12-26  
++**Status:** Locked  
++
++## Decision
++Broadcast release events provide ecosystem visibility; they are enabled as an optional ship step and must be non-blocking.
++
++## Rationale
++Ensures awareness without introducing fragile dependencies.
++
++## References
++- canon/heritage/evidence/EVID-0021.md
++
+END_FILE
+```
+
+```diff
+FILE: canon/heritage/decisions/DTH-20251226-020.md
++Confidential and proprietary and copyright Dustin Sparks 2025
++
++# Decision: DTH-20251226-020 — Deterministic Post-Ship Verification Is Required for Trust
++**Date:** 2025-12-26  
++**Status:** Locked  
++
++## Decision
++Post-ship verification must check runtime truth and store machine-readable verify results; UI must summarize outcomes clearly.
++
++## Rationale
++Prevents false confidence when “pass” doesn’t match production reality.
++
++## References
++- canon/heritage/evidence/EVID-0022.md
++
+END_FILE
+```
+
+```diff
+FILE: canon/heritage/decisions/DTH-20251226-021.md
++Confidential and proprietary and copyright Dustin Sparks 2025
++
++# Decision: DTH-20251226-021 — Per-drop Badges Define Work Visibility
++**Date:** 2025-12-26  
++**Status:** Locked  
++
++## Decision
++Persist and display per-drop stage badges (validate/apply/ship/verify), while retaining raw JSON receipts for audit.
++
++## Rationale
++Users should instantly know what happened without drilling.
++
++## References
++- canon/heritage/evidence/EVID-0023.md
++
+END_FILE
+```
+
+```diff
+FILE: canon/heritage/evidence/_EVIDENCE_INDEX.json
+@@
+   "evidence": [
+@@
+     {
+       "evidenceId": "EVID-0018",
+       "title": "Publication Readiness Checklist + DoD Gate (LIAC)",
+       "path": "canon/heritage/evidence/EVID-0018.md",
+       "tags": ["liac", "publish-ready", "dod", "checklist"],
+       "relatedDecisions": ["DTH-20251226-016"]
+     },
++    {
++      "evidenceId": "EVID-0019",
++      "title": "DriveSteward as the Shipping Artifact Spine (Intake + Publish-History)",
++      "path": "canon/heritage/evidence/EVID-0019.md",
++      "tags": ["shipping", "drivesteward", "publish-history", "artifacts"],
++      "relatedDecisions": ["DTH-20251226-017"]
++    },
++    {
++      "evidenceId": "EVID-0020",
++      "title": "VSuiteHQ Ingest Integration (Receipts + Result Classification)",
++      "path": "canon/heritage/evidence/EVID-0020.md",
++      "tags": ["shipping", "vsuitehq", "ingest", "receipts"],
++      "relatedDecisions": ["DTH-20251226-018"]
++    },
++    {
++      "evidenceId": "EVID-0021",
++      "title": "Broadcast Release Events (Ecosystem Signal Without Manual Comms)",
++      "path": "canon/heritage/evidence/EVID-0021.md",
++      "tags": ["shipping", "broadcast", "release", "events"],
++      "relatedDecisions": ["DTH-20251226-019"]
++    },
++    {
++      "evidenceId": "EVID-0022",
++      "title": "Deterministic Verification After Ship (Runtime Truth)",
++      "path": "canon/heritage/evidence/EVID-0022.md",
++      "tags": ["shipping", "verify", "runtime", "deterministic"],
++      "relatedDecisions": ["DTH-20251226-020"]
++    },
++    {
++      "evidenceId": "EVID-0023",
++      "title": "Per-drop Status Badges (Validate / Apply / Ship / Verify) = Work Visibility",
++      "path": "canon/heritage/evidence/EVID-0023.md",
++      "tags": ["shipping", "badges", "visibility", "drops"],
++      "relatedDecisions": ["DTH-20251226-021"]
++    }
+   ]
+ }
+ 
+ END_FILE
+```
+
+```diff
+FILE: canon/heritage/decisions/_DECISION_INDEX.json
+@@
+   "decisions": [
+@@
+     {
+       "decisionId": "DTH-20251226-016",
+       "title": "Publish-Ready Checklist + DoD Gate (LIAC)",
+       "path": "canon/heritage/decisions/DTH-20251226-016.md",
+       "status": "Locked",
+       "tags": ["liac", "publish-ready", "dod"]
+     },
++    {
++      "decisionId": "DTH-20251226-017",
++      "title": "DriveSteward is the Shipping Artifact Spine",
++      "path": "canon/heritage/decisions/DTH-20251226-017.md",
++      "status": "Locked",
++      "tags": ["shipping", "drivesteward", "artifacts"]
++    },
++    {
++      "decisionId": "DTH-20251226-018",
++      "title": "VSuiteHQ Ingest Requires Receipts",
++      "path": "canon/heritage/decisions/DTH-20251226-018.md",
++      "status": "Locked",
++      "tags": ["shipping", "vsuitehq", "ingest"]
++    },
++    {
++      "decisionId": "DTH-20251226-019",
++      "title": "Broadcast Release Events Are the Default Awareness Mechanism (Optional on Ship)",
++      "path": "canon/heritage/decisions/DTH-20251226-019.md",
++      "status": "Locked",
++      "tags": ["shipping", "broadcast", "release"]
++    },
++    {
++      "decisionId": "DTH-20251226-020",
++      "title": "Deterministic Post-Ship Verification Is Required for Trust",
++      "path": "canon/heritage/decisions/DTH-20251226-020.md",
++      "status": "Locked",
++      "tags": ["shipping", "verify", "runtime"]
++    },
++    {
++      "decisionId": "DTH-20251226-021",
++      "title": "Per-drop Badges Define Work Visibility",
++      "path": "canon/heritage/decisions/DTH-20251226-021.md",
++      "status": "Locked",
++      "tags": ["shipping", "badges", "visibility"]
++    }
+   ]
+ }
+ 
+ END_FILE
+```
+
+---
+
+## Post-apply verification (DreamTeamHub)
+
+1. Confirm new evidence files exist:
+
+* `canon/heritage/evidence/EVID-0019.md` … `EVID-0023.md`
+
+2. Confirm new decision files exist:
+
+* `canon/heritage/decisions/DTH-20251226-017.md` … `DTH-20251226-021.md`
+
+3. Confirm indexes parse:
+
+* `canon/heritage/evidence/_EVIDENCE_INDEX.json`
+* `canon/heritage/decisions/_DECISION_INDEX.json`
+
+---
+
+If you want the “single scoreboard” summary updated too, next we can add a tiny `canon/heritage/STATUS.md` that auto-documents totals (evidence count + decision count + last updated date) so you never have to recount by hand.

@@ -1,0 +1,480 @@
+✅ Copy that. Here’s the **LIAC Governance 5-pack** as **evidence-grade canon** for the **DreamTeamHub repo** — **EVID-0014 → EVID-0018** plus **decision records** **DTH-20251226-012 → 016** (stored as separate canonical decision files to avoid any risk of overwriting your existing `decision-log.md`).
+
+## ✅ Paste into: **DreamTeamHub** repo / Replit
+
+```diff
+FILE: canon/heritage/evidence/EVID-0014.md
++Confidential and proprietary and copyright Dustin Sparks 2025
++
++# EVID-0014 — LIAC Council Workflow + Activation Triggers
++
++## Problem
++Inclusion/accessibility/representation quality drifts when review is informal or optional. Teams miss harms, tone mismatches, or accessibility gaps—especially under speed.
++
++## Constraints
++- Must be lightweight enough to run frequently
++- Must be explicit about when LIAC is required vs optional
++- Must produce clear, actionable feedback (not vague “feels off” notes)
++- Must preserve brand voice while preventing harm and drift
++
++## Approach (LIAC Workflow)
++**1) Trigger / Intake**
++- LIAC is activated when content is:
++  - public-facing and identity-adjacent, or
++  - includes representation/identity cues, or
++  - targets a broad or sensitive audience, or
++  - becomes a reusable template/playbook, or
++  - has any risk flags from team review
++
++**2) Scope definition (fast)**
++- Identify: audience, channel, intent, constraints, and “must not do” items.
++
++**3) Review pass**
++- Check for: stereotyping, exclusion, biased framing, accessibility gaps, tone drift, and “unintended implications.”
++
++**4) Output**
++- Provide: specific edits, a short rationale, and severity tagging:
++  - **Blocker** (must fix before publish)
++  - **Recommended** (improves quality)
++  - **Optional** (nice-to-have)
++
++**5) Sign-off + logging**
++- Approved outputs receive a recorded sign-off.
++- Blocking items are tracked until cleared.
++
++## Why it worked
++It made inclusivity/accessibility a **repeatable gate** with predictable triggers and concrete outputs—without slowing every task.
++
++## Outcome
++- Fewer public-facing tone/representation missteps
++- More consistent “voice with care”
++- Faster revision cycles (feedback is specific)
++
++## Where it landed
++Dream Team Hub governance for inclusive publishing and brand-safe comms
++
++## Related Skills
++- liac_governance
++
++## Related Decisions
++- DTH-20251226-012
++
+END_FILE
+```
+
+```diff
+FILE: canon/heritage/evidence/EVID-0015.md
++Confidential and proprietary and copyright Dustin Sparks 2025
++
++# EVID-0015 — LIAC Approval Gates + Sign-off Capture Pattern
++
++## Problem
++Teams “intend” to do inclusivity review but it gets skipped under pressure. Without a formal gate, the system can’t prove review happened.
++
++## Constraints
++- Must be auditable (who approved what and when)
++- Must be simple (no bureaucracy explosion)
++- Must clearly block publishing when required
++
++## Approach
++**Approval gate pattern**
++- Any content flagged as **LIAC-required** cannot be marked “Publish-Ready” until sign-off is captured.
++
++**Sign-off capture**
++- Record:
++  - reviewer identity (LIAC reviewer or council seat)
++  - timestamp (signed_at)
++  - scope of approval (what artifact/version)
++  - notes (if any) and unresolved follow-ups (should be none for final sign-off)
++
++**Blocking semantics**
++- If LIAC issues a **Blocker**, the artifact remains “Not Publish-Ready” until the blocker is resolved and sign-off is reissued.
++
++## Why it worked
++It converted “review intent” into a **hard gate**. This protects the brand and creates durable governance.
++
++## Outcome
++- Fewer skipped reviews
++- Clear accountability
++- Easier audits and retrospectives
++
++## Where it landed
++Dream Team Hub publishing readiness governance
++
++## Related Skills
++- liac_signoff_gating
++
++## Related Decisions
++- DTH-20251226-013
++
+END_FILE
+```
+
+```diff
+FILE: canon/heritage/evidence/EVID-0016.md
++Confidential and proprietary and copyright Dustin Sparks 2025
++
++# EVID-0016 — Bias/Balance Rubric + “No-Paraphrase” List Discipline
++
++## Problem
++Even well-meaning content can encode bias (framing, assumptions, stereotypes). Without a rubric, review becomes subjective and inconsistent. Without a “no-paraphrase” list, sensitive canonical language can drift.
++
++## Constraints
++- Must be usable quickly (rubric, not essays)
++- Must apply across brands and tones
++- Must preserve canonical language where required
++
++## Approach
++**Bias/Balance rubric (fast checks)**
++1) **Assumptions:** Does the content assume a default identity or experience?
++2) **Representation:** Are groups depicted with agency and dignity?
++3) **Stereotypes:** Any tropey shorthand, coded language, or caricature risk?
++4) **Power framing:** Does it blame/shame or flatten lived experience?
++5) **Accessibility:** Readability, clarity, and inclusive phrasing.
++6) **Audience fit:** Tone matches brand without punching down.
++
++**No-Paraphrase list**
++- Maintain a list of “must not rewrite” canonical lines (e.g., approved taglines, legal/scholar-vetted phrasing, safety disclaimers).
++- If a line is on the list:
++  - it can be quoted as-is, or
++  - replaced only via an approved change-control process.
++
++## Why it worked
++The rubric makes review repeatable and reduces drift. The no-paraphrase list protects high-stakes canonical language from accidental mutation.
++
++## Outcome
++- More consistent inclusivity outcomes
++- Less subjective debate
++- Stronger governance for canonical copy
++
++## Where it landed
++LIAC review process + governed publishing flows
++
++## Related Skills
++- bias_balance_rubric
++
++## Related Decisions
++- DTH-20251226-014
++
+END_FILE
+```
+
+```diff
+FILE: canon/heritage/evidence/EVID-0017.md
++Confidential and proprietary and copyright Dustin Sparks 2025
++
++# EVID-0017 — Cultural Nuance + Safety Review Pattern (Escalation Model)
++
++## Problem
++Some outputs require specialized nuance review (culture, religion, sensitive identity contexts). A single “general review” pass can miss context-specific harms.
++
++## Constraints
++- Must avoid overblocking routine work
++- Must escalate only when needed
++- Must produce clear sign-off ownership
++
++## Approach
++**Escalation model**
++- LIAC is the default lens for inclusivity/accessibility.
++- Escalate to specialist review when content includes:
++  - culturally specific references that could be misused or misrepresented
++  - religious/philosophical claims that require scholar governance
++  - vulnerable audiences or high-stakes tone requirements
++
++**How escalation works**
++1) LIAC flags “Specialist Review Required”
++2) Specialist reviews the flagged portions and returns:
++   - approved edits + rationale
++   - required disclaimers/constraints
++3) LIAC issues final approval after specialist feedback is integrated
++
++## Why it worked
++It keeps the system fast for most work, while ensuring deep review exists for content that truly needs it.
++
++## Outcome
++- Better cultural accuracy and tone safety
++- Clear sign-off responsibility
++- Lower risk of sensitive missteps
++
++## Where it landed
++Dream Team Hub governance for nuanced publishing and brand safety
++
++## Related Skills
++- cultural_safety_escalation
++
++## Related Decisions
++- DTH-20251226-015
++
+END_FILE
+```
+
+```diff
+FILE: canon/heritage/evidence/EVID-0018.md
++Confidential and proprietary and copyright Dustin Sparks 2025
++
++# EVID-0018 — Publication Readiness Checklist + DoD Gate (LIAC)
++
++## Problem
++Teams ship content that is “done” in intent but not in quality: unclear CTAs, accessibility gaps, tone drift, missing constraints, or unresolved review items.
++
++## Constraints
++- Must be easy to apply across brands
++- Must prevent shipping with open blockers
++- Must preserve brand voice while meeting inclusivity/accessibility needs
++
++## Approach (DoD Gate)
++Before an artifact can be marked Publish-Ready:
++1) **No LIAC Blockers remain**
++2) **Audience + channel are explicit**
++3) **Tone is aligned to brand voice** (no generic drift)
++4) **Accessibility checks** (readability, clarity, formatting)
++5) **Canonical copy protected** (no-paraphrase items preserved)
++6) **Sign-off captured when required**
++
++## Why it worked
++It standardizes “ready” across teams and prevents accidental shipping of half-reviewed work.
++
++## Outcome
++- Cleaner releases
++- Lower rework after publish
++- Stronger trust in “Publish-Ready” status
++
++## Where it landed
++Dream Team Hub publishing workflows and review gates
++
++## Related Skills
++- liac_publish_ready_gate
++
++## Related Decisions
++- DTH-20251226-016
++
+END_FILE
+```
+
+```diff
+FILE: canon/heritage/decisions/DTH-20251226-012.md
++Confidential and proprietary and copyright Dustin Sparks 2025
++
++# Decision: DTH-20251226-012 — LIAC Council Workflow + Activation Triggers
++**Date:** 2025-12-26  
++**Status:** Locked  
++
++## Decision
++Define a repeatable LIAC workflow with explicit activation triggers and severity-tagged outputs (Blocker/Recommended/Optional).
++
++## Rationale
++Prevents drift and missed harms while keeping review lightweight and actionable.
++
++## Scope
++All public-facing content and reusable templates that touch representation, inclusivity, accessibility, or sensitive audience contexts.
++
++## References
++- canon/heritage/evidence/EVID-0014.md
++
+END_FILE
+```
+
+```diff
+FILE: canon/heritage/decisions/DTH-20251226-013.md
++Confidential and proprietary and copyright Dustin Sparks 2025
++
++# Decision: DTH-20251226-013 — LIAC Approval Gates + Sign-off Capture
++**Date:** 2025-12-26  
++**Status:** Locked  
++
++## Decision
++LIAC-required artifacts cannot be marked Publish-Ready without recorded sign-off (reviewer + timestamp + scope).
++
++## Rationale
++Turns “we meant to review” into an enforceable, auditable gate.
++
++## Scope
++Any artifact flagged LIAC-required.
++
++## References
++- canon/heritage/evidence/EVID-0015.md
++
+END_FILE
+```
+
+```diff
+FILE: canon/heritage/decisions/DTH-20251226-014.md
++Confidential and proprietary and copyright Dustin Sparks 2025
++
++# Decision: DTH-20251226-014 — Bias/Balance Rubric + No-Paraphrase List
++**Date:** 2025-12-26  
++**Status:** Locked  
++
++## Decision
++Use a fast bias/balance rubric for LIAC review and maintain a no-paraphrase list for protected canonical language.
++
++## Rationale
++Makes review consistent and prevents accidental drift of high-stakes canonical copy.
++
++## Scope
++All LIAC-reviewed content; especially canonical taglines, safety text, and governed language.
++
++## References
++- canon/heritage/evidence/EVID-0016.md
++
+END_FILE
+```
+
+```diff
+FILE: canon/heritage/decisions/DTH-20251226-015.md
++Confidential and proprietary and copyright Dustin Sparks 2025
++
++# Decision: DTH-20251226-015 — Cultural Nuance + Safety Escalation Model
++**Date:** 2025-12-26  
++**Status:** Locked  
++
++## Decision
++LIAC is the default inclusivity lens; escalate to specialist review for culture/religion/high-sensitivity contexts, with LIAC issuing final approval after integration.
++
++## Rationale
++Keeps routine work fast while ensuring deep review exists when needed.
++
++## Scope
++Outputs with cultural/religious/sensitive-audience nuance requirements.
++
++## References
++- canon/heritage/evidence/EVID-0017.md
++
+END_FILE
+```
+
+```diff
+FILE: canon/heritage/decisions/DTH-20251226-016.md
++Confidential and proprietary and copyright Dustin Sparks 2025
++
++# Decision: DTH-20251226-016 — Publish-Ready Checklist + DoD Gate (LIAC)
++**Date:** 2025-12-26  
++**Status:** Locked  
++
++## Decision
++Publish-Ready status requires: no LIAC blockers, accessibility checks, canonical copy protection, and sign-off when required.
++
++## Rationale
++Prevents shipping half-reviewed work and standardizes “done.”
++
++## Scope
++All LIAC-scoped deliverables.
++
++## References
++- canon/heritage/evidence/EVID-0018.md
++
+END_FILE
+```
+
+```diff
+FILE: canon/heritage/evidence/_EVIDENCE_INDEX.json
++{
++  "schemaVersion": "v1",
++  "updated_at": "2025-12-26",
++  "note": "This index is additive. It may not list earlier evidence packs if they predate index creation.",
++  "evidence": [
++    {
++      "evidenceId": "EVID-0014",
++      "title": "LIAC Council Workflow + Activation Triggers",
++      "path": "canon/heritage/evidence/EVID-0014.md",
++      "tags": ["liac", "governance", "review", "activation"],
++      "relatedDecisions": ["DTH-20251226-012"]
++    },
++    {
++      "evidenceId": "EVID-0015",
++      "title": "LIAC Approval Gates + Sign-off Capture Pattern",
++      "path": "canon/heritage/evidence/EVID-0015.md",
++      "tags": ["liac", "approval", "signoff", "audit"],
++      "relatedDecisions": ["DTH-20251226-013"]
++    },
++    {
++      "evidenceId": "EVID-0016",
++      "title": "Bias/Balance Rubric + No-Paraphrase List Discipline",
++      "path": "canon/heritage/evidence/EVID-0016.md",
++      "tags": ["liac", "bias", "rubric", "canonical-copy"],
++      "relatedDecisions": ["DTH-20251226-014"]
++    },
++    {
++      "evidenceId": "EVID-0017",
++      "title": "Cultural Nuance + Safety Review Pattern (Escalation Model)",
++      "path": "canon/heritage/evidence/EVID-0017.md",
++      "tags": ["liac", "culture", "safety", "escalation"],
++      "relatedDecisions": ["DTH-20251226-015"]
++    },
++    {
++      "evidenceId": "EVID-0018",
++      "title": "Publication Readiness Checklist + DoD Gate (LIAC)",
++      "path": "canon/heritage/evidence/EVID-0018.md",
++      "tags": ["liac", "publish-ready", "dod", "checklist"],
++      "relatedDecisions": ["DTH-20251226-016"]
++    }
++  ]
++}
++
+END_FILE
+```
+
+```diff
+FILE: canon/heritage/decisions/_DECISION_INDEX.json
++{
++  "schemaVersion": "v1",
++  "updated_at": "2025-12-26",
++  "note": "This index is additive. It may not list earlier decisions if they predate index creation.",
++  "decisions": [
++    {
++      "decisionId": "DTH-20251226-012",
++      "title": "LIAC Council Workflow + Activation Triggers",
++      "path": "canon/heritage/decisions/DTH-20251226-012.md",
++      "status": "Locked",
++      "tags": ["liac", "governance"]
++    },
++    {
++      "decisionId": "DTH-20251226-013",
++      "title": "LIAC Approval Gates + Sign-off Capture",
++      "path": "canon/heritage/decisions/DTH-20251226-013.md",
++      "status": "Locked",
++      "tags": ["liac", "signoff", "audit"]
++    },
++    {
++      "decisionId": "DTH-20251226-014",
++      "title": "Bias/Balance Rubric + No-Paraphrase List",
++      "path": "canon/heritage/decisions/DTH-20251226-014.md",
++      "status": "Locked",
++      "tags": ["liac", "bias", "rubric"]
++    },
++    {
++      "decisionId": "DTH-20251226-015",
++      "title": "Cultural Nuance + Safety Escalation Model",
++      "path": "canon/heritage/decisions/DTH-20251226-015.md",
++      "status": "Locked",
++      "tags": ["liac", "culture", "safety"]
++    },
++    {
++      "decisionId": "DTH-20251226-016",
++      "title": "Publish-Ready Checklist + DoD Gate (LIAC)",
++      "path": "canon/heritage/decisions/DTH-20251226-016.md",
++      "status": "Locked",
++      "tags": ["liac", "publish-ready", "dod"]
++    }
++  ]
++}
++
+END_FILE
+```
+
+---
+
+## Post-apply verification (DreamTeamHub)
+
+1. Confirm files exist:
+
+* `canon/heritage/evidence/EVID-0014.md` … `EVID-0018.md`
+* `canon/heritage/decisions/DTH-20251226-012.md` … `DTH-20251226-016.md`
+* `canon/heritage/evidence/_EVIDENCE_INDEX.json`
+* `canon/heritage/decisions/_DECISION_INDEX.json`
+
+2. (Optional) If you want the old central `decision-log.md` to reflect these too, you can append a short “See also decisions/ index” note — but this drop intentionally avoids overwriting anything you already have.
+
+---
+
+When you’re ready, the next “don’t lose it” 5-pack I’d do is **App Dev Shipping Excellence** (DriveSteward + VSuiteHQ ingest + Broadcast + deterministic verification + badges) so that entire delivery machine is preserved the same way.
