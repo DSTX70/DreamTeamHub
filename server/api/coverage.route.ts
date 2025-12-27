@@ -20,7 +20,7 @@ export async function getRoleCoverage(req: Request, res: Response) {
 
   // Note: agents.id matches roleCards.handle for Dream Team agents
   // We count how many agents exist with IDs matching each role handle
-  const rows = await db.execute<{
+  const result = await db.execute<{
     role_handle: string;
     role_name: string;
     agent_count: string;
@@ -35,7 +35,9 @@ export async function getRoleCoverage(req: Request, res: Response) {
     ORDER BY r.title
   `);
 
-  const withNum = rows.map(d => ({
+  const rows = Array.isArray(result) ? result : (result as any).rows ?? [];
+
+  const withNum = rows.map((d: any) => ({
     ...d,
     agent_count: Number(d.agent_count)
   }));
