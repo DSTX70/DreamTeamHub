@@ -1,0 +1,191 @@
+✅ **Repo/Replit: DreamTeamHub**
+
+Totally agree: **Work Orders/Templates** is the page that *feels like “work”* and therefore gets confusing.
+
+Below is the clean **Default vs Pro** approach + a **paste-ready patch** that improves clarity **without needing schema changes** and **without requiring me to see your whole render section**. It adds:
+
+* A **top “Templates” header card** that explicitly says “these are runbooks, not active work”
+* Two big CTAs: **Go to Work → /work** and **New Work → /intent**
+* A **Pro-only style “Advanced” section** implemented as a **collapsed panel** (so Default stays calm). If you already have a global Pro state, you can wire it in; otherwise it still works as a manual expand.
+
+---
+
+# Default vs Pro UX (the simplest mental model)
+
+### Default user should experience this page as:
+
+**Templates Library (Work Orders)**
+
+* “These are runbooks you can run. Active work is in Work Items.”
+* Only show:
+
+  * search
+  * list of templates
+  * a single “Run” CTA per template
+  * minimal metadata
+
+### Pro mode adds:
+
+* “Advanced template details” (caps/KPIs/playbookHandle/stop)
+* “Runs” table and debug info
+* Anything “ops-y” stays behind the advanced panel
+
+The key: **Default doesn’t show ops-looking data** (runs/cost/ms) because that screams “active work”.
+
+---
+
+# Patch: Make Work Orders page clearly “Templates” + add calm Advanced section
+
+### ✅ 1) Apply this patch (safe; won’t break your queries)
+
+```diff
+FILE: client/src/pages/work-orders.tsx
+@@
+ import { useEffect, useState } from "react";
++import { Link } from "wouter";
+ import { useQuery } from "@tanstack/react-query";
+ import { queryClient } from "@/lib/queryClient";
+ import { Button } from "@/components/ui/button";
+ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+ import { Input } from "@/components/ui/input";
+ import { Textarea } from "@/components/ui/textarea";
+ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+ import { Badge } from "@/components/ui/badge";
+ import { useToast } from "@/hooks/use-toast";
+ import { Loader2, Play, ClipboardList } from "lucide-react";
+ import { PageBreadcrumb, buildBreadcrumbs } from "@/components/PageBreadcrumb";
+ import { EmptyState } from "@/components/empty-state";
+@@
+ export default function WorkOrdersPage() {
+   const { toast } = useToast();
++  const [showAdvanced, setShowAdvanced] = useState(false);
+@@
+   const { data: workOrders = [], isLoading } = useQuery<WO[]>({
+     queryKey: ["/api/work-orders"],
+     refetchInterval: 5000,
+   });
+   const { data: runs = [] } = useQuery<RunRow[]>({
+     queryKey: ["/api/work-orders/runs"],
+     refetchInterval: 8000,
+   });
+   // ... rest of component (playbook loading, form handling, list rendering)
++
++  const breadcrumbs = buildBreadcrumbs([
++    { label: "Templates", href: "/work-orders" },
++  ]);
++
++  function TemplatesIntro() {
++    return (
++      <Card>
++        <CardHeader>
++          <div className="flex items-start justify-between gap-3">
++            <div>
++              <CardTitle className="flex items-center gap-2">
++                <ClipboardList className="h-5 w-5" />
++                Templates
++              </CardTitle>
++              <CardDescription>
++                Work Orders are <span className="font-medium">templates/runbooks</span>. Active execution lives in{" "}
++                <span className="font-medium">Work Items</span>.
++              </CardDescription>
++            </div>
++            <Badge variant="secondary">Work Orders</Badge>
++          </div>
++        </CardHeader>
++        <CardContent className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
++          <div className="text-sm text-muted-foreground">
++            If you want to see what’s being worked on right now, go to <span className="font-medium">Work</span>.
++          </div>
++          <div className="flex flex-wrap gap-2">
++            <Link href="/work">
++              <Button variant="default">Go to Work</Button>
++            </Link>
++            <Link href="/intent">
++              <Button variant="outline">New Work</Button>
++            </Link>
++            <Button
++              variant="outline"
++              onClick={() => setShowAdvanced((v) => !v)}
++              title="Show advanced template details and runs"
++            >
++              {showAdvanced ? "Hide Advanced" : "Show Advanced"}
++            </Button>
++          </div>
++        </CardContent>
++      </Card>
++    );
++  }
+@@
+-  // ... rest of component (playbook loading, form handling, list rendering)
++  // NOTE:
++  // - Default mode: keep the page calm and template-focused.
++  // - Advanced panel: show runs/debug stats only when expanded.
++
++  return (
++    <div className="space-y-4 p-4">
++      <PageBreadcrumb items={breadcrumbs} />
++
++      <TemplatesIntro />
++
++      {/* Existing form + list UI stays below. */}
++      {/* Recommended: wrap your “Runs” section in {showAdvanced && (...)} */}
++
++      {/* --- BEGIN existing page content --- */}
++      {/* Paste/keep your existing render here. */}
++      {/* --- END existing page content --- */}
++    </div>
++  );
+ }
+ 
+ END_FILE
+```
+
+### What you need to do after applying the patch
+
+Because I don’t have your full render body, you’ll do **one quick move**:
+
+✅ **Move your existing JSX** (the current return body) into the `/* BEGIN existing page content */` area, **below** `<TemplatesIntro />`.
+
+Then, **wrap your runs UI** (anything using the `runs` query, ms/cost tables, etc.) in:
+
+```tsx
+{showAdvanced && (
+  <>
+    {/* existing runs UI */}
+  </>
+)}
+```
+
+That alone will remove 80% of the confusion for Default users.
+
+---
+
+# If you want this to follow the global Pro toggle automatically
+
+If you tell me what your global Pro state hook/store is (example: `useProMode()` or `useAppShellStore((s)=>s.pro)`), I’ll wire:
+
+* `showAdvanced` default = `isPro`
+* hide the “Show Advanced” button for Default
+* auto-show advanced section for Pro
+
+But the patch above already works immediately even without that wiring.
+
+---
+
+# One tiny rename that helps even more
+
+If your sidebar label is currently “Work Orders”, rename it to **Templates** (and keep route `/work-orders`).
+This removes the psychological collision with “Work”.
+
+If you paste the nav items snippet from `client/src/components/app-sidebar.tsx`, I’ll do that rename in a micro-diff.
+
+---
+
+## If you paste one more thing, I can fully apply it for you
+
+Paste the **current return JSX** of `WorkOrdersPage()` (from `return (` down to the end).
+Then I’ll return a **single exact patch** that:
+
+* inserts `<TemplatesIntro />` in the right place
+* wraps the runs section in `{showAdvanced && …}`
+* optionally tags each row with a “Template” badge and clearer “Run → creates Work Item” copy where appropriate

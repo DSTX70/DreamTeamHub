@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Link } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { queryClient } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
@@ -8,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Play, ClipboardList } from "lucide-react";
+import { Loader2, Play, ClipboardList, ChevronDown, ChevronUp } from "lucide-react";
 import { PageBreadcrumb, buildBreadcrumbs } from "@/components/PageBreadcrumb";
 import { EmptyState } from "@/components/empty-state";
 
@@ -69,6 +70,7 @@ const templates: Record<string, Partial<WO>> = {
 
 export default function WorkOrdersPage() {
   const { toast } = useToast();
+  const [showAdvanced, setShowAdvanced] = useState(false);
   const [form, setForm] = useState({
     title: "",
     owner: "",
@@ -96,7 +98,6 @@ export default function WorkOrdersPage() {
     refetchInterval: 8000,
   });
 
-  // Load playbooks for the select dropdown
   useEffect(() => {
     let mounted = true;
     (async () => {
@@ -160,7 +161,6 @@ export default function WorkOrdersPage() {
         stop: form.stop
       };
       
-      // Add playbookHandle if selected (skip if "none")
       if (form.playbookHandle && form.playbookHandle !== "none") {
         body.playbookHandle = form.playbookHandle;
       }
@@ -174,8 +174,8 @@ export default function WorkOrdersPage() {
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
 
       toast({
-        title: "Work Order Created",
-        description: "The work order has been created successfully.",
+        title: "Template Created",
+        description: "The work order template has been created successfully.",
       });
 
       queryClient.invalidateQueries({ queryKey: ["/api/work-orders"] });
@@ -197,7 +197,7 @@ export default function WorkOrdersPage() {
       toast({
         variant: "destructive",
         title: "Error",
-        description: error.message || "Failed to create work order",
+        description: error.message || "Failed to create template",
       });
     } finally {
       setIsSubmitting(false);
@@ -233,32 +233,75 @@ export default function WorkOrdersPage() {
     }
   };
 
-  const breadcrumbs = buildBreadcrumbs({ page: "Work Orders" });
+  const breadcrumbs = buildBreadcrumbs({ page: "Templates" });
 
   return (
     <div className="container max-w-6xl py-8 space-y-8">
       <PageBreadcrumb segments={breadcrumbs} />
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Work Orders</h1>
-        <p className="text-muted-foreground mt-2">
-          Define automated agent tasks with input/output specs, capacity limits, and success criteria
-        </p>
-      </div>
+
+      <Card data-testid="templates-intro-card">
+        <CardHeader>
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <ClipboardList className="h-5 w-5" />
+                Templates
+              </CardTitle>
+              <CardDescription>
+                Work Orders are <span className="font-medium">templates/runbooks</span>. Active execution lives in{" "}
+                <span className="font-medium">Work Items</span>.
+              </CardDescription>
+            </div>
+            <Badge variant="secondary">Work Orders</Badge>
+          </div>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+          <div className="text-sm text-muted-foreground">
+            If you want to see what's being worked on right now, go to <span className="font-medium">Work</span>.
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Link href="/work">
+              <Button variant="default" data-testid="button-go-to-work">Go to Work</Button>
+            </Link>
+            <Link href="/intent">
+              <Button variant="outline" data-testid="button-new-work">New Work</Button>
+            </Link>
+            <Button
+              variant="outline"
+              onClick={() => setShowAdvanced((v) => !v)}
+              title="Show advanced template details and runs"
+              data-testid="button-toggle-advanced"
+            >
+              {showAdvanced ? (
+                <>
+                  <ChevronUp className="mr-1 h-4 w-4" />
+                  Hide Advanced
+                </>
+              ) : (
+                <>
+                  <ChevronDown className="mr-1 h-4 w-4" />
+                  Show Advanced
+                </>
+              )}
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>
-          <CardTitle>Create Work Order</CardTitle>
+          <CardTitle>Create Template</CardTitle>
           <CardDescription>
-            Define a new work order using templates or custom configuration
+            Define a new work order template using presets or custom configuration
           </CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="flex flex-wrap items-center gap-3">
-              <label className="text-sm font-medium">Template:</label>
+              <label className="text-sm font-medium">Preset:</label>
               <Select onValueChange={applyTemplate}>
                 <SelectTrigger className="w-[280px]" data-testid="select-template">
-                  <SelectValue placeholder="— choose a template —" />
+                  <SelectValue placeholder="— choose a preset —" />
                 </SelectTrigger>
                 <SelectContent>
                   {Object.keys(templates).map((k) => (
@@ -316,72 +359,77 @@ export default function WorkOrdersPage() {
               />
             </div>
 
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <Input
-                type="number"
-                step="1"
-                placeholder="Runs/day"
-                value={form.capsRuns}
-                onChange={(e) => setForm({ ...form, capsRuns: e.target.value })}
-                required
-                data-testid="input-runs-per-day"
-              />
-              <Input
-                type="number"
-                step="0.01"
-                placeholder="$ per day"
-                value={form.capsUsd}
-                onChange={(e) => setForm({ ...form, capsUsd: e.target.value })}
-                required
-                data-testid="input-usd-per-day"
-              />
-              <Input
-                type="number"
-                step="1"
-                placeholder="Success ≥ %"
-                value={form.kpiSuccess}
-                onChange={(e) => setForm({ ...form, kpiSuccess: e.target.value })}
-                required
-                data-testid="input-success-min"
-              />
-              <Input
-                type="number"
-                step="0.1"
-                placeholder="p95 ≤ s"
-                value={form.kpiP95}
-                onChange={(e) => setForm({ ...form, kpiP95: e.target.value })}
-                required
-                data-testid="input-p95-max"
-              />
-            </div>
+            {showAdvanced && (
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <Input
+                  type="number"
+                  step="1"
+                  placeholder="Runs/day"
+                  value={form.capsRuns}
+                  onChange={(e) => setForm({ ...form, capsRuns: e.target.value })}
+                  required
+                  data-testid="input-runs-per-day"
+                />
+                <Input
+                  type="number"
+                  step="0.01"
+                  placeholder="$ per day"
+                  value={form.capsUsd}
+                  onChange={(e) => setForm({ ...form, capsUsd: e.target.value })}
+                  required
+                  data-testid="input-usd-per-day"
+                />
+                <Input
+                  type="number"
+                  step="1"
+                  placeholder="Success min %"
+                  value={form.kpiSuccess}
+                  onChange={(e) => setForm({ ...form, kpiSuccess: e.target.value })}
+                  required
+                  data-testid="input-success-min"
+                />
+                <Input
+                  type="number"
+                  step="0.1"
+                  placeholder="p95 max (seconds)"
+                  value={form.kpiP95}
+                  onChange={(e) => setForm({ ...form, kpiP95: e.target.value })}
+                  required
+                  data-testid="input-p95-max"
+                />
+              </div>
+            )}
 
-            <div className="space-y-2">
-              <label className="text-sm font-medium">
-                Playbook {!form.playbookHandle && <span className="text-muted-foreground">(optional)</span>}
-              </label>
-              <Select
-                value={form.playbookHandle}
-                onValueChange={(value) => setForm({ ...form, playbookHandle: value })}
-              >
-                <SelectTrigger data-testid="select-playbook">
-                  <SelectValue placeholder={loadingPlaybooks ? "Loading playbooks..." : "— Select a playbook (optional) —"} />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">— None —</SelectItem>
-                  {playbooks.map((pb) => (
-                    <SelectItem key={pb.id} value={pb.handle}>
-                      {pb.title} — {pb.handle}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <p className="text-xs text-muted-foreground">
-                Manage playbooks at{" "}
-                <a href="/playbooks" target="_blank" rel="noreferrer" className="underline hover:text-foreground">
-                  /playbooks
-                </a>
-              </p>
-            </div>
+            {showAdvanced && (
+              <div className="space-y-2">
+                <label className="text-sm font-medium">
+                  Playbook {!form.playbookHandle && <span className="text-muted-foreground">(optional)</span>}
+                </label>
+                <Select
+                  value={form.playbookHandle}
+                  onValueChange={(value) => setForm({ ...form, playbookHandle: value })}
+                >
+                  <SelectTrigger data-testid="select-playbook">
+                    <SelectValue placeholder={loadingPlaybooks ? "Loading playbooks..." : "— Select a playbook (optional) —"} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">— None —</SelectItem>
+                    {playbooks.map((pb) => (
+                      <SelectItem key={pb.id} value={pb.handle}>
+                        {pb.title} — {pb.handle}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  Manage playbooks at{" "}
+                  <a href="/playbooks" target="_blank" rel="noreferrer" className="underline hover:text-foreground">
+                    /playbooks
+                  </a>
+                </p>
+              </div>
+            )}
+
             <Textarea
               rows={2}
               placeholder="Stop conditions (when to halt execution)"
@@ -393,7 +441,7 @@ export default function WorkOrdersPage() {
 
             <Button type="submit" disabled={isSubmitting} data-testid="button-create">
               {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Create Work Order
+              Create Template
             </Button>
           </form>
         </CardContent>
@@ -401,9 +449,9 @@ export default function WorkOrdersPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Recent Work Orders</CardTitle>
+          <CardTitle>Available Templates</CardTitle>
           <CardDescription>
-            View and execute work orders sorted by creation date
+            Run a template to create a Work Item. Templates define the runbook; Work Items are the execution.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -414,8 +462,8 @@ export default function WorkOrdersPage() {
           ) : workOrders.length === 0 ? (
             <EmptyState
               icon={ClipboardList}
-              title="No work orders yet"
-              description="Work orders are AI-driven tasks with budget caps. Create one using the templates above to get started with automated workflows."
+              title="No templates yet"
+              description="Templates are AI-driven runbooks with budget caps. Create one using the form above to get started with automated workflows."
               action={{
                 label: "Scroll to Create Form",
                 onClick: () => window.scrollTo({ top: 0, behavior: "smooth" }),
@@ -430,6 +478,7 @@ export default function WorkOrdersPage() {
                   data-testid={`card-work-order-${order.id}`}
                 >
                   <div className="flex flex-wrap items-center gap-2">
+                    <Badge variant="outline" className="text-xs">Template</Badge>
                     <span className="font-semibold" data-testid={`text-title-${order.id}`}>
                       {order.title}
                     </span>
@@ -456,13 +505,15 @@ export default function WorkOrdersPage() {
                     <span className="text-muted-foreground">Output: </span>
                     <code className="text-xs bg-muted px-1 py-0.5 rounded">{order.output}</code>
                   </div>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs text-muted-foreground">
-                    <div>Runs/day: <strong>{order.caps.runsPerDay}</strong></div>
-                    <div>$/day: <strong>${order.caps.usdPerDay}</strong></div>
-                    <div>Success ≥ <strong>{order.kpis.successMin}%</strong></div>
-                    <div>P95 ≤ <strong>{order.kpis.p95Max}s</strong></div>
-                  </div>
-                  {order.playbookHandle && (
+                  {showAdvanced && (
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs text-muted-foreground">
+                      <div>Runs/day: <strong>{order.caps.runsPerDay}</strong></div>
+                      <div>$/day: <strong>${order.caps.usdPerDay}</strong></div>
+                      <div>Success {">="} <strong>{order.kpis.successMin}%</strong></div>
+                      <div>P95 {"<="} <strong>{order.kpis.p95Max}s</strong></div>
+                    </div>
+                  )}
+                  {showAdvanced && order.playbookHandle && (
                     <div className="text-sm">
                       <span className="text-muted-foreground">Playbook: </span>
                       <Badge variant="outline" className="text-xs">
@@ -486,7 +537,7 @@ export default function WorkOrdersPage() {
                       data-testid={`button-start-${order.id}`}
                     >
                       <Play className="mr-2 h-3 w-3" />
-                      Start Run
+                      Run Template
                     </Button>
                   </div>
                 </div>
@@ -496,60 +547,62 @@ export default function WorkOrdersPage() {
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Recent Runs (last 50)</CardTitle>
-          <CardDescription>
-            Execution history showing simulated work order runs
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="overflow-auto" role="region" aria-live="polite" aria-label="Work order runs table">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b">
-                  <th className="text-left p-2 font-medium">Agent</th>
-                  <th className="text-left p-2 font-medium">WO ID</th>
-                  <th className="text-left p-2 font-medium">Status</th>
-                  <th className="text-right p-2 font-medium">ms</th>
-                  <th className="text-right p-2 font-medium">Cost ($)</th>
-                  <th className="text-left p-2 font-medium">Started</th>
-                  <th className="text-left p-2 font-medium">Finished</th>
-                  <th className="text-left p-2 font-medium">Mirror</th>
-                </tr>
-              </thead>
-              <tbody>
-                {runs.map((r, i) => (
-                  <tr key={i} className="border-b">
-                    <td className="p-2">{r.agent}</td>
-                    <td className="p-2">
-                      <code className="text-xs bg-muted px-1 py-0.5 rounded">{r.wo_id}</code>
-                    </td>
-                    <td className="p-2">
-                      <Badge variant="outline" className="text-xs">
-                        <span className="sr-only">Status: </span>
-                        {r.status}
-                      </Badge>
-                    </td>
-                    <td className="p-2 text-right">{r.ms}</td>
-                    <td className="p-2 text-right">{r.cost.toFixed(3)}</td>
-                    <td className="p-2 text-xs">{new Date(r.started_at).toLocaleTimeString()}</td>
-                    <td className="p-2 text-xs">{new Date(r.finished_at).toLocaleTimeString()}</td>
-                    <td className="p-2 text-xs text-muted-foreground">{r.mirror || ""}</td>
+      {showAdvanced && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Recent Runs (last 50)</CardTitle>
+            <CardDescription>
+              Execution history showing work order runs
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="overflow-auto" role="region" aria-live="polite" aria-label="Work order runs table">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b">
+                    <th className="text-left p-2 font-medium">Agent</th>
+                    <th className="text-left p-2 font-medium">WO ID</th>
+                    <th className="text-left p-2 font-medium">Status</th>
+                    <th className="text-right p-2 font-medium">ms</th>
+                    <th className="text-right p-2 font-medium">Cost ($)</th>
+                    <th className="text-left p-2 font-medium">Started</th>
+                    <th className="text-left p-2 font-medium">Finished</th>
+                    <th className="text-left p-2 font-medium">Mirror</th>
                   </tr>
-                ))}
-                {runs.length === 0 && (
-                  <tr>
-                    <td className="p-4 text-center text-muted-foreground" colSpan={8}>
-                      No runs yet. Click "Start Run" on a work order to begin.
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-        </CardContent>
-      </Card>
+                </thead>
+                <tbody>
+                  {runs.map((r, i) => (
+                    <tr key={i} className="border-b">
+                      <td className="p-2">{r.agent}</td>
+                      <td className="p-2">
+                        <code className="text-xs bg-muted px-1 py-0.5 rounded">{r.wo_id}</code>
+                      </td>
+                      <td className="p-2">
+                        <Badge variant="outline" className="text-xs">
+                          <span className="sr-only">Status: </span>
+                          {r.status}
+                        </Badge>
+                      </td>
+                      <td className="p-2 text-right">{r.ms}</td>
+                      <td className="p-2 text-right">{r.cost.toFixed(3)}</td>
+                      <td className="p-2 text-xs">{new Date(r.started_at).toLocaleTimeString()}</td>
+                      <td className="p-2 text-xs">{new Date(r.finished_at).toLocaleTimeString()}</td>
+                      <td className="p-2 text-xs text-muted-foreground">{r.mirror || ""}</td>
+                    </tr>
+                  ))}
+                  {runs.length === 0 && (
+                    <tr>
+                      <td className="p-4 text-center text-muted-foreground" colSpan={8}>
+                        No runs yet. Click "Run Template" on a template to begin.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }
