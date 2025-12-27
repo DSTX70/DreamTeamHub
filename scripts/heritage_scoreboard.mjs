@@ -1,0 +1,89 @@
+import fs from "node:fs";
+import path from "node:path";
+import url from "node:url";
+
+function exists(p) {
+  try {
+    fs.accessSync(p);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function listFiles(dir) {
+  try {
+    return fs.readdirSync(dir, { withFileTypes: true });
+  } catch {
+    return [];
+  }
+}
+
+function sortIdsNumeric(ids) {
+  return [...ids].sort((a, b) => {
+    const na = parseInt(a.replace(/\D/g, ""), 10);
+    const nb = parseInt(b.replace(/\D/g, ""), 10);
+    return na - nb;
+  });
+}
+
+function main() {
+  const scriptDir = path.dirname(url.fileURLToPath(import.meta.url));
+  const candidateRoots = [
+    process.cwd(),
+    path.resolve(scriptDir, ".."),
+    path.resolve(scriptDir, "..", ".."),
+  ];
+
+  let repoRoot = null;
+  for (const root of candidateRoots) {
+    if (exists(path.join(root, "canon", "heritage"))) {
+      repoRoot = root;
+      break;
+    }
+  }
+  if (!repoRoot) {
+    console.error("Could not find repo root containing canon/heritage. Run from repo root.");
+    process.exit(1);
+  }
+
+  const evidenceDir = path.join(repoRoot, "canon", "heritage", "evidence");
+  const decisionsDir = path.join(repoRoot, "canon", "heritage", "decisions");
+
+  const evidFiles = listFiles(evidenceDir)
+    .filter((d) => d.isFile())
+    .map((d) => d.name)
+    .filter((n) => /^EVID-\d{4}\.md$/.test(n));
+
+  const decisionFiles = listFiles(decisionsDir)
+    .filter((d) => d.isFile())
+    .map((d) => d.name)
+    .filter((n) => /^DTH-\d{8}-\d{3}\.md$/.test(n));
+
+  const evidIds = sortIdsNumeric(evidFiles.map((n) => n.replace(".md", "")));
+  const dthIds = sortIdsNumeric(decisionFiles.map((n) => n.replace(".md", "")));
+
+  const evidMin = evidIds[0] ?? "(none)";
+  const evidMax = evidIds[evidIds.length - 1] ?? "(none)";
+  const dthMin = dthIds[0] ?? "(none)";
+  const dthMax = dthIds[dthIds.length - 1] ?? "(none)";
+
+  console.log("=== DreamTeamHub Heritage Scoreboard ===");
+  console.log(`Repo: ${repoRoot}`);
+  console.log("");
+  console.log(`Evidence Packs: ${evidIds.length}`);
+  console.log(`  Range: ${evidMin} → ${evidMax}`);
+  console.log(`  Folder: ${path.relative(repoRoot, evidenceDir)}`);
+  console.log("");
+  console.log(`Decision Files: ${dthIds.length}`);
+  console.log(`  Range: ${dthMin} → ${dthMax}`);
+  console.log(`  Folder: ${path.relative(repoRoot, decisionsDir)}`);
+  console.log("");
+
+  const statusPath = path.join(repoRoot, "canon", "heritage", "STATUS.md");
+  console.log("Next:");
+  console.log(`- Update: ${path.relative(repoRoot, statusPath)}`);
+  console.log(`- Indexes: canon/heritage/evidence/_EVIDENCE_INDEX.json and canon/heritage/_DECISION_INDEX.json`);
+}
+
+main();
