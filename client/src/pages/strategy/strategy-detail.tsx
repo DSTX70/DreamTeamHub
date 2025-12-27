@@ -11,6 +11,7 @@ import { useToast } from "@/hooks/use-toast";
 import { ArrowLeft, ArrowRight, Lock, Save, Trash2, Users, Check, X } from "lucide-react";
 import { Link } from "wouter";
 import { CAST_PRESETS, inferPresetFromRepoHint, uniqSorted, type CastPresetKey } from "@/lib/castPresets";
+import { PodPresetBadge } from "@/components/pod-preset-badge";
 
 type StrategySession = {
   id: string;
@@ -193,6 +194,7 @@ export default function StrategyDetailPage() {
             <div className="flex flex-wrap gap-2">
               <Badge variant={data.status === "OPEN" ? "default" : "secondary"} data-testid="badge-status">{data.status}</Badge>
               <Badge variant="outline">Strategy</Badge>
+              <PodPresetBadge source={data} />
             </div>
           </div>
         </CardHeader>

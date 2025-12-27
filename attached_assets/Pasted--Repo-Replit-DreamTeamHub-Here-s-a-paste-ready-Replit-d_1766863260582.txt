@@ -1,0 +1,228 @@
+✅ **Repo/Replit:** **DreamTeamHub**
+Here’s a **paste-ready Replit drop** that adds **Cast Preset badges** on:
+
+* **Strategy sessions** (list + detail) — based on `repo_hint` + title (keywords)
+* **Work Items** (detail) — based on `targetContext` + `playbook` + title/output keywords
+
+Badges shown (one of two):
+
+* **GigsterGarage Pod**
+* **Tenant & Billing Pod** (takes priority if tenant/billing keywords are present)
+
+No backend changes.
+
+---
+
+```diff
+FILE: client/src/components/pod-preset-badge.tsx
++import { Badge } from "@/components/ui/badge";
++
++type PodPresetKey = "gigsterGarage" | "tenantBilling";
++
++function safeJsonParse(s: string): any {
++  try {
++    return JSON.parse(s);
++  } catch {
++    return null;
++  }
++}
++
++function inferFromText(text: string): PodPresetKey | null {
++  const t = (text || "").toLowerCase();
++
++  // Tenant/Billing gets priority if it appears
++  const tenantBillingHits = [
++    "tenant",
++    "multi-tenant",
++    "multitenant",
++    "billing",
++    "stripe",
++    "subscription",
++    "invoice",
++    "proration",
++    "trial",
++    "checkout",
++    "entitlement",
++    "plan",
++    "metering",
++    "webhook",
++  ].some((k) => t.includes(k));
++  if (tenantBillingHits) return "tenantBilling";
++
++  const gigsterHits = ["gigster", "gigstergarage", "gigster garage"].some((k) => t.includes(k));
++  if (gigsterHits) return "gigsterGarage";
++
++  return null;
++}
++
++function labelFor(key: PodPresetKey): string {
++  return key === "gigsterGarage" ? "GigsterGarage Pod" : "Tenant & Billing Pod";
++}
++
++function extractRepoHintFromAny(source: any): string {
++  if (!source) return "";
++  if (typeof source === "string") return source;
++
++  // Strategy Session: repo_hint
++  if (typeof source.repo_hint === "string") return source.repo_hint;
++
++  // Work Item: targetContext/target_context/context variants
++  const ctxRaw = source.targetContext ?? source.target_context ?? source.context ?? null;
++  const ctx = typeof ctxRaw === "string" ? (safeJsonParse(ctxRaw) ?? null) : ctxRaw;
++  if (ctx && typeof ctx === "object") {
++    const v =
++      ctx.repoHint ||
++      ctx.repo_hint ||
++      ctx.targetRepo ||
++      ctx.target_repo ||
++      ctx.repoSlug ||
++      ctx.repo ||
++      "";
++    return typeof v === "string" ? v : "";
++  }
++
++  return "";
++}
++
++function buildSignalText(source: any): string {
++  const repoHint = extractRepoHintFromAny(source);
++
++  const title = typeof source?.title === "string" ? source.title : "";
++  const output = typeof source?.output === "string" ? source.output : "";
++  const playbook = typeof source?.playbook === "string" ? source.playbook : "";
++
++  return [repoHint, title, output, playbook].filter(Boolean).join(" ");
++}
++
++export function PodPresetBadge({
++  source,
++  className,
++}: {
++  source: any; // StrategySession or WorkItem
++  className?: string;
++}) {
++  const signal = buildSignalText(source);
++  const key = inferFromText(signal);
++  if (!key) return null;
++
++  return (
++    <Badge
++      variant="secondary"
++      className={className}
++      data-testid={`badge-pod-${key}`}
++      title="Curated pod selection inferred from repo hint / keywords"
++    >
++      {labelFor(key)}
++    </Badge>
++  );
++}
++
+END_FILE
+```
+
+---
+
+```diff
+FILE: client/src/pages/strategy/strategy-list.tsx
+@@
+ import { useMemo } from "react";
+ import { Link, useLocation } from "wouter";
+ import { useMutation, useQuery } from "@tanstack/react-query";
+ import { Button } from "@/components/ui/button";
+ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+ import { Badge } from "@/components/ui/badge";
+ import { Plus } from "lucide-react";
+ import { queryClient } from "@/lib/queryClient";
++import { PodPresetBadge } from "@/components/pod-preset-badge";
+@@
+ type StrategySession = {
+   id: string;
+   title: string;
+   status: "OPEN" | "LOCKED" | "ARCHIVED";
+   mode: string;
+   author: string;
+   approval_required_for_execution: boolean;
+   participants?: string[];
++  repo_hint?: string;
+   created_at: string;
+   updated_at: string;
+   locked_at?: string;
+ };
+@@
+                 <div className="flex flex-wrap items-center gap-2">
+                   <Badge variant={s.status === "OPEN" ? "default" : "secondary"}>{s.status}</Badge>
+                   <Badge variant="outline">NON-EXECUTING</Badge>
++                  <PodPresetBadge source={s} />
+                   <Badge variant="secondary">
+                     Cast: {s.participants?.length ?? 0}
+                   </Badge>
+                 </div>
+               </div>
+@@
+ END_FILE
+```
+
+---
+
+```diff
+FILE: client/src/pages/strategy/strategy-detail.tsx
+@@
+ import { useMemo, useState } from "react";
+ import { useLocation, useRoute } from "wouter";
+ import { useMutation, useQuery } from "@tanstack/react-query";
+ import { queryClient } from "@/lib/queryClient";
+ import { Button } from "@/components/ui/button";
+ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+ import { Input } from "@/components/ui/input";
+ import { Textarea } from "@/components/ui/textarea";
+ import { Badge } from "@/components/ui/badge";
+ import { useToast } from "@/hooks/use-toast";
+ import { Lock, Save, Trash2, Users, Check, X } from "lucide-react";
++import { PodPresetBadge } from "@/components/pod-preset-badge";
+@@
+             <div className="flex flex-wrap gap-2">
+               <Badge variant={data.status === "OPEN" ? "default" : "secondary"}>{data.status}</Badge>
+               <Badge variant="outline">Strategy</Badge>
++              <PodPresetBadge source={data} />
+             </div>
+           </div>
+         </CardHeader>
+@@
+ END_FILE
+```
+
+---
+
+```diff
+FILE: client/src/pages/work-item-detail.tsx
+@@
+ import { useMemo } from "react";
+ import { Link } from "wouter";
+@@
+ import { Badge } from "@/components/ui/badge";
++import { PodPresetBadge } from "@/components/pod-preset-badge";
+@@
+       {/* wherever your header badges live */}
++      <PodPresetBadge source={workItem} />
+@@
+ END_FILE
+```
+
+> If your Work Item variable isn’t named `workItem` (e.g., `data`), change that one line to:
+> `source={data}`.
+
+---
+
+## Quick verification
+
+1. Open a Strategy Session with `repo_hint` containing `GigsterGarage`
+
+   * You should see **GigsterGarage Pod** badge on list + detail
+2. Create a Strategy Session about billing/tenant
+
+   * If repo_hint/title includes “tenant/billing/stripe/subscription”, badge should show **Tenant & Billing Pod**
+3. Open a Work Item created from Strategy conversion
+
+   * Badge should appear on Work Item detail based on its playbook/context keywords
+
+If you want the badge to reflect *explicit selection* (not inference), we can add a stored field like `podPresetKey` on Strategy Sessions and carry it into Work Items—still without schema changes (file-backed like stages).

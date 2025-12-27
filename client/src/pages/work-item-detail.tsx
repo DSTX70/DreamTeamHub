@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
 import { StatusBadge } from "@/components/status-badge";
+import { PodPresetBadge } from "@/components/pod-preset-badge";
 import { FilesPanel } from "@/components/FilesPanel";
 import { WorkItemActionsPanel } from "@/components/workItems/WorkItemActionsPanel";
 import { WorkItemPacksPanel } from "@/components/workItems/WorkItemPacksPanel";
@@ -269,6 +270,7 @@ export default function WorkItemDetail() {
               <div className="flex items-center gap-2 flex-wrap">
                 <StatusBadge status={workItem.status} />
                 {workItem.priority && <StatusBadge status={workItem.priority} />}
+                <PodPresetBadge source={workItem} />
                 {strategySessionId && (
                   <Link href={`/strategy/${strategySessionId}`}>
                     <Badge variant="outline" className="cursor-pointer gap-1" data-testid="badge-strategy-provenance">

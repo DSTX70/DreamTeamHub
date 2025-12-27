@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Plus } from "lucide-react";
 import { queryClient } from "@/lib/queryClient";
+import { PodPresetBadge } from "@/components/pod-preset-badge";
 
 type StrategySession = {
   id: string;
@@ -15,6 +16,7 @@ type StrategySession = {
   author: string;
   approval_required_for_execution: boolean;
   participants?: string[];
+  repo_hint?: string;
   created_at: string;
   updated_at: string;
   locked_at?: string;
@@ -104,6 +106,7 @@ export default function StrategyListPage() {
                 <div className="flex flex-wrap items-center gap-2">
                   <Badge variant={s.status === "OPEN" ? "default" : "secondary"} data-testid={`badge-status-${s.id}`}>{s.status}</Badge>
                   <Badge variant="outline">NON-EXECUTING</Badge>
+                  <PodPresetBadge source={s} />
                   <Badge variant="secondary" data-testid={`badge-cast-${s.id}`}>
                     Cast: {s.participants?.length ?? 0}
                   </Badge>
