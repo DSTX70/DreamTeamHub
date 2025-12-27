@@ -533,6 +533,24 @@
       "relatedPods": ["engineering_pod", "heritage_pod"],
       "relatedSkills": ["strategy_to_execution_pipeline", "patch_drop_discipline"],
       "relatedDecisions": ["DTH-20251227-059"]
+    },
+    {
+      "id": "EVID-0062",
+      "title": "GigsterGarage Pilot Pod (Curated Cast + Approval-First Delivery)",
+      "file": "EVID-0062.md",
+      "tags": ["gigsterGarage", "pilot", "pod", "approval-first"],
+      "relatedPods": ["gigster_garage_pilot"],
+      "relatedSkills": ["strategy_to_execution_pipeline", "patch_drop_discipline", "pilot_factory_ops"],
+      "relatedDecisions": ["DTH-20251227-060"]
+    },
+    {
+      "id": "EVID-0063",
+      "title": "Tenant & Billing Pod (Revenue Systems) (Security + Financial Boundary)",
+      "file": "EVID-0063.md",
+      "tags": ["tenant", "billing", "revenue-systems", "security"],
+      "relatedPods": ["tenant_billing_revenue_systems"],
+      "relatedSkills": ["security_risk_review", "patch_drop_discipline"],
+      "relatedDecisions": ["DTH-20251227-061"]
     }
   ]
 }

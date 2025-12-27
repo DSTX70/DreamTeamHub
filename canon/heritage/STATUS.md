@@ -11,8 +11,8 @@ Confidential and proprietary and copyright Dustin Sparks 2025
 Single-page summary of the "zero-loss" canon (pods/agents/skills/decisions/evidence).
 
 ## Totals (expected if all drops in this thread were applied)
-- **Evidence Packs:** 59  _(EVID-0001 → EVID-0061, with gaps at 0002, 0003)_
-- **Locked Decisions:** 59  _(DTH-20251226-001 → DTH-20251227-059)_
+- **Evidence Packs:** 61  _(EVID-0001 → EVID-0063, with gaps at 0002, 0003)_
+- **Locked Decisions:** 61  _(DTH-20251226-001 → DTH-20251227-061)_
 - **Heritage Pack:** 1  _(HeritagePack.v1.0)_
 - **Exports:** Pod roster + member profiles (MD + JSON starter)
 
@@ -64,6 +64,8 @@ Single-page summary of the "zero-loss" canon (pods/agents/skills/decisions/evide
 - UX/Product Pod (IA navigation, Default vs Pro gating, layout patterns, no-schema-change gate, context surfaces, Templates page UX)
 - Strategy Sessions Pipeline (Lock→Convert→Work execution flow with approval-first governance)
 - Work Item Execution Pipeline (Recommendation→Approval→Drop stages with file-backed storage)
+- GigsterGarage Pilot Pod (curated cast with SMEs, approval-first delivery, evidence traceability)
+- Tenant & Billing Pod (Revenue Systems) (security + financial boundary with staging-first, idempotency, audit)
 
 ---
 

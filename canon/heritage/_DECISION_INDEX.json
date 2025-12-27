@@ -640,6 +640,28 @@
       "relatedPods": ["engineering_pod", "heritage_pod"],
       "relatedSkills": ["strategy_to_execution_pipeline", "patch_drop_discipline"],
       "relatedEvidence": ["EVID-0061"]
+    },
+    {
+      "id": "DTH-20251227-060",
+      "title": "Lock GigsterGarage Pilot Pod (Curated Cast)",
+      "status": "Locked",
+      "date": "2025-12-27",
+      "file": "decisions/DTH-20251227-060.md",
+      "tags": ["gigsterGarage", "pilot", "pod"],
+      "relatedPods": ["gigster_garage_pilot"],
+      "relatedSkills": ["strategy_to_execution_pipeline", "patch_drop_discipline", "pilot_factory_ops"],
+      "relatedEvidence": ["EVID-0062"]
+    },
+    {
+      "id": "DTH-20251227-061",
+      "title": "Lock Tenant & Billing Pod (Revenue Systems)",
+      "status": "Locked",
+      "date": "2025-12-27",
+      "file": "decisions/DTH-20251227-061.md",
+      "tags": ["tenant", "billing", "revenue-systems"],
+      "relatedPods": ["tenant_billing_revenue_systems"],
+      "relatedSkills": ["security_risk_review", "patch_drop_discipline"],
+      "relatedEvidence": ["EVID-0063"]
     }
   ]
 }
