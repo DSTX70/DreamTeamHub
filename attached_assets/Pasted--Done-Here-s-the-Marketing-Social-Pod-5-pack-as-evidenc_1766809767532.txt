@@ -1,0 +1,546 @@
+✅ Done. Here’s the **Marketing & Social Pod 5-pack** as evidence-grade canon for the **DreamTeamHub repo**, with **EVID-0029 → EVID-0033** and decisions **DTH-20251226-027 → 031**, plus index + skills updates.
+
+## ✅ Paste into: **DreamTeamHub** repo / Replit
+
+```diff
+FILE: canon/heritage/evidence/EVID-0029.md
++Confidential and proprietary and copyright Dustin Sparks 2025
++
++# EVID-0029 — GTM System (Positioning → Channels → Offer → Measurement Loop)
++
++## Problem
++Marketing execution fails when “posting” and “ads” happen without positioning clarity, offer discipline, or a measurement loop.
++
++## Constraints
++- Must be usable for both early-stage brands and multi-line portfolios
++- Must keep claims verifiable (no hype without proof)
++- Must map channels to explicit targets and outcomes
++
++## Approach (GTM System)
++1) **Positioning**
++   - Who it’s for, what problem it solves, why it’s different
++2) **Offer**
++   - The CTA and conversion event (what action matters)
++3) **Channel plan**
++   - Select primary channels (1–3) with audience rationale
++4) **Creative system**
++   - Repeatable content pillars + hooks; not one-off posts
++5) **Measurement loop**
++   - Define KPIs + cadence (weekly review) + next experiment
++
++## Why it worked
++It made marketing a system, not a vibe—every action ties to a target and a measurable outcome.
++
++## Outcome
++- Clearer execution priorities
++- Faster iteration and learning
++- Less wasted spend/content
++
++## Where it landed
++Marketing & Social Pod operating model (Prism-led strategy + Echo-led execution)
++
++## Related Skills
++- marketing_gtm_systems
++
++## Related Decisions
++- DTH-20251226-027
++
+END_FILE
+```
+
+```diff
+FILE: canon/heritage/evidence/EVID-0030.md
++Confidential and proprietary and copyright Dustin Sparks 2025
++
++# EVID-0030 — Content Calendar System (Pillars + Formats + Cadence + Reuse)
++
++## Problem
++Teams burn out when content is created from scratch daily. Without pillars and reuse, consistency drops and quality degrades.
++
++## Constraints
++- Must be platform-native but reusable across channels
++- Must scale across multiple brands/collections without voice drift
++- Must be shippable (calendar you can actually follow)
++
++## Approach
++**Content pillars**
++- 3–6 pillars that map to brand + offer (e.g., behind-the-scenes, product, story, proof, community)
++
++**Format library**
++- Reels/shorts, carousels, static, stories, lives, email snippets
++
++**Cadence**
++- Weekly schedule that is realistic
++
++**Reuse rules**
++- One “hero” piece → split into 3–7 derivatives
++- Keep a backlog of evergreen posts
++
++## Why it worked
++It created sustainable consistency and lowered creative load while improving quality.
++
++## Outcome
++- Higher posting consistency
++- Faster production cycles
++- Better alignment with brand voice and offers
++
++## Where it landed
++Echo-owned content operations with Prism guidance on pillars and goals
++
++## Related Skills
++- content_calendar_operations
++
++## Related Decisions
++- DTH-20251226-028
++
+END_FILE
+```
+
+```diff
+FILE: canon/heritage/evidence/EVID-0031.md
++Confidential and proprietary and copyright Dustin Sparks 2025
++
++# EVID-0031 — Influencer/Creator Workflow (Fit → Outreach → Brief → Tracking → Reuse)
++
++## Problem
++Influencer efforts fail when creators are chosen randomly, briefs are vague, and outcomes aren’t tracked.
++
++## Constraints
++- Must protect brand voice and safety
++- Must be measurable (not just “likes”)
++- Must be repeatable and scalable
++
++## Approach
++1) **Fit selection**
++   - Audience match, tone match, content quality, platform relevance
++2) **Outreach**
++   - Personalized pitch + clear value exchange
++3) **Brief**
++   - Brand guardrails, key message, CTA, do/don’t list, deadlines
++4) **Tracking**
++   - Links/codes, post URLs, deliverables, outcome metrics
++5) **Reuse**
++   - Convert creator content into owned assets (with permissions)
++
++## Why it worked
++It turned creators into a reliable channel rather than a gamble.
++
++## Outcome
++- Better creator fit and fewer off-brand posts
++- Cleaner ROI measurement
++- More reusable assets
++
++## Where it landed
++Marketing & Social Pod creator system (Echo + Prism)
++
++## Related Skills
++- influencer_creator_ops
++
++## Related Decisions
++- DTH-20251226-029
++
+END_FILE
+```
+
+```diff
+FILE: canon/heritage/evidence/EVID-0032.md
++Confidential and proprietary and copyright Dustin Sparks 2025
++
++# EVID-0032 — Paid Prospecting Discipline (Budget Caps + Targets + Creative Testing)
++
++## Problem
++Paid ads waste money when budgets are unrealistic, targeting is unclear, and creative isn’t tested systematically.
++
++## Constraints
++- Must fit startup budgets and scale safely
++- Must define daily/monthly caps by channel
++- Must define measurement and iteration cadence
++
++## Approach
++**Budget discipline**
++- Define monthly cap → allocate by channel → enforce daily caps
++
++**Targeting discipline**
++- Clear audiences, exclusions, and hypothesis per campaign
++
++**Creative testing**
++- Test hooks and creatives in controlled batches
++- Promote winners; pause losers
++
++**Measurement**
++- CPA/CAC, CTR, conversion rate, ROAS (as applicable), with weekly decisions
++
++## Why it worked
++It prevented “set and forget” spend and forced learning and iteration under clear constraints.
++
++## Outcome
++- More efficient spend
++- Faster learning cycles
++- Clear decisions on what to scale
++
++## Where it landed
++Prism-led paid discipline within Marketing & Social Pod
++
++## Related Skills
++- paid_ads_discipline
++
++## Related Decisions
++- DTH-20251226-030
++
+END_FILE
+```
+
+```diff
+FILE: canon/heritage/evidence/EVID-0033.md
++Confidential and proprietary and copyright Dustin Sparks 2025
++
++# EVID-0033 — Compliance & Claims Guardrails (Kid-safe, No Unverifiable Claims)
++
++## Problem
++Brand trust is lost when marketing makes unverifiable claims, uses unsafe content patterns, or ignores kid-safe constraints where relevant.
++
++## Constraints
++- Claims must be substantiated or framed as opinion/aspiration
++- Kid-safe compliance awareness where applicable (children’s content/communities)
++- Avoid platform policy violations and sensitive targeting misuse
++
++## Approach
++**Claims discipline**
++- If it can’t be proven, don’t state it as fact
++- Use evidence packs/metrics where available
++
++**Kid-safe guardrails**
++- Avoid collecting personal info from children
++- Use appropriate language and imagery for child-focused audiences
++- Keep community engagement safe and moderated
++
++**Review gate**
++- High-stakes posts/campaigns get an explicit review pass (LIAC/Sentinel as needed)
++
++## Why it worked
++It made growth sustainable: credibility stays intact and platform risk is reduced.
++
++## Outcome
++- Fewer retractions and corrections
++- Lower risk of policy issues
++- Stronger long-term trust
++
++## Where it landed
++Marketing & Social Pod governance with LIAC/Security escalation where needed
++
++## Related Skills
++- marketing_compliance_guardrails
++
++## Related Decisions
++- DTH-20251226-031
++
+END_FILE
+```
+
+```diff
+FILE: canon/heritage/decisions/DTH-20251226-027.md
++Confidential and proprietary and copyright Dustin Sparks 2025
++
++# Decision: DTH-20251226-027 — GTM Must Be a System (Not Ad Hoc Posting)
++**Date:** 2025-12-26  
++**Status:** Locked  
++
++## Decision
++Marketing execution follows a GTM system: Positioning → Offer → Channels → Creative pillars → Measurement loop.
++
++## Rationale
++Prevents wasted content/spend and accelerates learning.
++
++## References
++- canon/heritage/evidence/EVID-0029.md
++
+END_FILE
+```
+
+```diff
+FILE: canon/heritage/decisions/DTH-20251226-028.md
++Confidential and proprietary and copyright Dustin Sparks 2025
++
++# Decision: DTH-20251226-028 — Content Calendar Must Be Pillar-Based and Reusable
++**Date:** 2025-12-26  
++**Status:** Locked  
++
++## Decision
++Content production uses pillars + format library + realistic cadence + reuse rules.
++
++## Rationale
++Creates sustainable consistency and quality.
++
++## References
++- canon/heritage/evidence/EVID-0030.md
++
+END_FILE
+```
+
+```diff
+FILE: canon/heritage/decisions/DTH-20251226-029.md
++Confidential and proprietary and copyright Dustin Sparks 2025
++
++# Decision: DTH-20251226-029 — Influencer/Creator Work Requires Fit + Brief + Tracking
++**Date:** 2025-12-26  
++**Status:** Locked  
++
++## Decision
++Creators are selected by fit, onboarded with clear briefs, tracked with links/codes, and reused with permissions.
++
++## Rationale
++Turns creators into a reliable, measurable channel.
++
++## References
++- canon/heritage/evidence/EVID-0031.md
++
+END_FILE
+```
+
+```diff
+FILE: canon/heritage/decisions/DTH-20251226-030.md
++Confidential and proprietary and copyright Dustin Sparks 2025
++
++# Decision: DTH-20251226-030 — Paid Prospecting Requires Caps + Targets + Creative Testing
++**Date:** 2025-12-26  
++**Status:** Locked  
++
++## Decision
++Paid ads must use budget caps, explicit targeting hypotheses, creative testing, and weekly measurement decisions.
++
++## Rationale
++Protects budget and forces learning.
++
++## References
++- canon/heritage/evidence/EVID-0032.md
++
+END_FILE
+```
+
+```diff
+FILE: canon/heritage/decisions/DTH-20251226-031.md
++Confidential and proprietary and copyright Dustin Sparks 2025
++
++# Decision: DTH-20251226-031 — Claims & Compliance Guardrails Are Mandatory
++**Date:** 2025-12-26  
++**Status:** Locked  
++
++## Decision
++Marketing claims must be verifiable or framed appropriately; kid-safe constraints and platform policy guardrails apply where relevant; escalate for review when high-stakes.
++
++## Rationale
++Preserves trust and reduces platform risk.
++
++## References
++- canon/heritage/evidence/EVID-0033.md
++
+END_FILE
+```
+
+```diff
+FILE: canon/heritage/evidence/_EVIDENCE_INDEX.json
+@@
+     {
+       "evidenceId": "EVID-0028",
+       "title": "Analyst Narrative Discipline (Beacon) + Evidence-Grade Messaging",
+       "path": "canon/heritage/evidence/EVID-0028.md",
+       "tags": ["program-ops", "analyst-relations", "pr", "evidence-grade"],
+       "relatedDecisions": ["DTH-20251226-026"]
+     },
++    {
++      "evidenceId": "EVID-0029",
++      "title": "GTM System (Positioning → Channels → Offer → Measurement Loop)",
++      "path": "canon/heritage/evidence/EVID-0029.md",
++      "tags": ["marketing", "gtm", "strategy", "measurement"],
++      "relatedDecisions": ["DTH-20251226-027"]
++    },
++    {
++      "evidenceId": "EVID-0030",
++      "title": "Content Calendar System (Pillars + Formats + Cadence + Reuse)",
++      "path": "canon/heritage/evidence/EVID-0030.md",
++      "tags": ["marketing", "social", "content-calendar", "operations"],
++      "relatedDecisions": ["DTH-20251226-028"]
++    },
++    {
++      "evidenceId": "EVID-0031",
++      "title": "Influencer/Creator Workflow (Fit → Outreach → Brief → Tracking → Reuse)",
++      "path": "canon/heritage/evidence/EVID-0031.md",
++      "tags": ["marketing", "creators", "influencers", "ops"],
++      "relatedDecisions": ["DTH-20251226-029"]
++    },
++    {
++      "evidenceId": "EVID-0032",
++      "title": "Paid Prospecting Discipline (Budget Caps + Targets + Creative Testing)",
++      "path": "canon/heritage/evidence/EVID-0032.md",
++      "tags": ["marketing", "paid", "budget", "testing"],
++      "relatedDecisions": ["DTH-20251226-030"]
++    },
++    {
++      "evidenceId": "EVID-0033",
++      "title": "Compliance & Claims Guardrails (Kid-safe, No Unverifiable Claims)",
++      "path": "canon/heritage/evidence/EVID-0033.md",
++      "tags": ["marketing", "compliance", "claims", "kid-safe"],
++      "relatedDecisions": ["DTH-20251226-031"]
++    }
+   ]
+ }
+ 
+ END_FILE
+```
+
+```diff
+FILE: canon/heritage/decisions/_DECISION_INDEX.json
+@@
+     {
+       "decisionId": "DTH-20251226-026",
+       "title": "Evidence-Grade Analyst Narrative Discipline",
+       "path": "canon/heritage/decisions/DTH-20251226-026.md",
+       "status": "Locked",
+       "tags": ["program-ops", "analyst-relations", "pr"]
+     },
++    {
++      "decisionId": "DTH-20251226-027",
++      "title": "GTM Must Be a System (Not Ad Hoc Posting)",
++      "path": "canon/heritage/decisions/DTH-20251226-027.md",
++      "status": "Locked",
++      "tags": ["marketing", "gtm", "strategy"]
++    },
++    {
++      "decisionId": "DTH-20251226-028",
++      "title": "Content Calendar Must Be Pillar-Based and Reusable",
++      "path": "canon/heritage/decisions/DTH-20251226-028.md",
++      "status": "Locked",
++      "tags": ["marketing", "social", "content"]
++    },
++    {
++      "decisionId": "DTH-20251226-029",
++      "title": "Influencer/Creator Work Requires Fit + Brief + Tracking",
++      "path": "canon/heritage/decisions/DTH-20251226-029.md",
++      "status": "Locked",
++      "tags": ["marketing", "creators", "influencers"]
++    },
++    {
++      "decisionId": "DTH-20251226-030",
++      "title": "Paid Prospecting Requires Caps + Targets + Creative Testing",
++      "path": "canon/heritage/decisions/DTH-20251226-030.md",
++      "status": "Locked",
++      "tags": ["marketing", "paid", "budget"]
++    },
++    {
++      "decisionId": "DTH-20251226-031",
++      "title": "Claims & Compliance Guardrails Are Mandatory",
++      "path": "canon/heritage/decisions/DTH-20251226-031.md",
++      "status": "Locked",
++      "tags": ["marketing", "compliance", "claims"]
++    }
+   ]
+ }
+ 
+ END_FILE
+```
+
+```diff
+FILE: canon/heritage/skills.json
+@@
+   "skills": [
+@@
++    {
++      "skillKey": "marketing_gtm_systems",
++      "name": "GTM Systems (Positioning → Offer → Channels → Measurement)",
++      "description": "Build GTM as a repeatable system linking positioning, offers, channels, creative pillars, and measurement cadence.",
++      "levels": {
++        "L0": "Can describe a GTM plan.",
++        "L1": "Can map offers and channels with guidance.",
++        "L2": "Can run measurement loops and iterate based on results.",
++        "L3": "Can standardize GTM playbooks across a portfolio."
++      },
++      "guardrails": ["No unverifiable claims."],
++      "patterns": { "do": ["Define conversion event", "Run weekly learning loop"], "dont": ["Random posting"] },
++      "evidenceLinks": [
++        { "evidenceId": "EVID-0029", "label": "GTM system", "location": "canon/heritage/evidence/EVID-0029.md" }
++      ]
++    },
++    {
++      "skillKey": "content_calendar_operations",
++      "name": "Content Calendar Operations (Pillars + Reuse)",
++      "description": "Sustain consistent content output using pillars, format libraries, and reuse rules.",
++      "levels": {
++        "L0": "Can draft a calendar.",
++        "L1": "Can define pillars with guidance.",
++        "L2": "Can run weekly production cycles and repurpose efficiently.",
++        "L3": "Can scale content ops across multiple brands without voice drift."
++      },
++      "guardrails": ["Follow brand lock and voice constraints."],
++      "patterns": { "do": ["Hero→derivatives", "Evergreen backlog"], "dont": ["Daily from-scratch"] },
++      "evidenceLinks": [
++        { "evidenceId": "EVID-0030", "label": "Content calendar system", "location": "canon/heritage/evidence/EVID-0030.md" }
++      ]
++    },
++    {
++      "skillKey": "influencer_creator_ops",
++      "name": "Influencer/Creator Operations",
++      "description": "Select creators by fit, brief them with guardrails, track outcomes, and reuse content with permissions.",
++      "levels": {
++        "L0": "Can list creators.",
++        "L1": "Can send outreach with guidance.",
++        "L2": "Can run briefs + tracking with measurable outcomes.",
++        "L3": "Can build a repeatable creator pipeline with ROI discipline."
++      },
++      "guardrails": ["No off-brand creator content; require do/don’t briefs."],
++      "patterns": { "do": ["Fit rubric", "Tracking links/codes"], "dont": ["Untracked freebies"] },
++      "evidenceLinks": [
++        { "evidenceId": "EVID-0031", "label": "Creator workflow", "location": "canon/heritage/evidence/EVID-0031.md" }
++      ]
++    },
++    {
++      "skillKey": "paid_ads_discipline",
++      "name": "Paid Ads Discipline (Caps + Testing + Weekly Decisions)",
++      "description": "Run paid with startup-safe caps, explicit targeting hypotheses, creative tests, and weekly scale/pause decisions.",
++      "levels": {
++        "L0": "Can run ads.",
++        "L1": "Can set caps with guidance.",
++        "L2": "Can test creatives and optimize based on KPIs.",
++        "L3": "Can build a portfolio-level paid testing engine."
++      },
++      "guardrails": ["Define caps; don’t overspend; track conversions."],
++      "patterns": { "do": ["Test hooks", "Promote winners"], "dont": ["Set-and-forget"] },
++      "evidenceLinks": [
++        { "evidenceId": "EVID-0032", "label": "Paid prospecting discipline", "location": "canon/heritage/evidence/EVID-0032.md" }
++      ]
++    },
++    {
++      "skillKey": "marketing_compliance_guardrails",
++      "name": "Marketing Compliance & Claims Guardrails",
++      "description": "Keep marketing claims verifiable and enforce kid-safe/platform-safe constraints with escalation gates.",
++      "levels": {
++        "L0": "Understands compliance matters.",
++        "L1": "Can avoid obvious policy violations.",
++        "L2": "Can implement claims discipline and review gates.",
++        "L3": "Can standardize compliance playbooks across brands."
++      },
++      "guardrails": ["No unverifiable claims; kid-safe where applicable."],
++      "patterns": { "do": ["Evidence-backed claims", "Escalate high-stakes"], "dont": ["Overclaim"] },
++      "evidenceLinks": [
++        { "evidenceId": "EVID-0033", "label": "Compliance & claims guardrails", "location": "canon/heritage/evidence/EVID-0033.md" }
++      ]
++    }
+   ]
+ }
+ END_FILE
+```
+
+---
+
+## Post-apply verification
+
+Run:
+
+```bash
+npm run heritage:scoreboard
+```
+
+Then update `canon/heritage/STATUS.md` totals (it should now reflect **EVID up through 0033** and decisions up through **031**, if everything has been applied).
+
+---
+
+Next in the list: **Medical Pod 5-pack** (unless you want **Scholar Council** next).

@@ -222,6 +222,116 @@
       "relatedPods": ["engineering_pod"],
       "relatedSkills": ["deterministic_verification_and_badges"],
       "relatedEvidence": ["EVID-0023"]
+    },
+    {
+      "id": "DTH-20251226-022",
+      "title": "Pilot Factory Operating System",
+      "status": "Locked",
+      "date": "2025-12-26",
+      "file": "decisions/DTH-20251226-022.md",
+      "tags": ["program-ops", "pilot-factory"],
+      "relatedPods": ["program_ops_pod"],
+      "relatedSkills": ["pilot_factory_ops"],
+      "relatedEvidence": ["EVID-0024"]
+    },
+    {
+      "id": "DTH-20251226-023",
+      "title": "SOW + KPI Template Discipline",
+      "status": "Locked",
+      "date": "2025-12-26",
+      "file": "decisions/DTH-20251226-023.md",
+      "tags": ["program-ops", "sow", "kpis"],
+      "relatedPods": ["program_ops_pod"],
+      "relatedSkills": ["sow_kpi_templates"],
+      "relatedEvidence": ["EVID-0025"]
+    },
+    {
+      "id": "DTH-20251226-024",
+      "title": "Evidence Pack → Case Study Pipeline",
+      "status": "Locked",
+      "date": "2025-12-26",
+      "file": "decisions/DTH-20251226-024.md",
+      "tags": ["program-ops", "case-study", "evidence"],
+      "relatedPods": ["program_ops_pod"],
+      "relatedSkills": ["evidence_to_case_study"],
+      "relatedEvidence": ["EVID-0026"]
+    },
+    {
+      "id": "DTH-20251226-025",
+      "title": "Partnership ROI Rubric",
+      "status": "Locked",
+      "date": "2025-12-26",
+      "file": "decisions/DTH-20251226-025.md",
+      "tags": ["program-ops", "partnerships", "roi"],
+      "relatedPods": ["program_ops_pod"],
+      "relatedSkills": ["partnership_roi_rubric"],
+      "relatedEvidence": ["EVID-0027"]
+    },
+    {
+      "id": "DTH-20251226-026",
+      "title": "Evidence-Grade Analyst Narrative Discipline",
+      "status": "Locked",
+      "date": "2025-12-26",
+      "file": "decisions/DTH-20251226-026.md",
+      "tags": ["program-ops", "analyst-relations", "pr"],
+      "relatedPods": ["program_ops_pod"],
+      "relatedSkills": ["analyst_narrative_evidence_grade"],
+      "relatedEvidence": ["EVID-0028"]
+    },
+    {
+      "id": "DTH-20251226-027",
+      "title": "GTM Must Be a System (Not Ad Hoc Posting)",
+      "status": "Locked",
+      "date": "2025-12-26",
+      "file": "decisions/DTH-20251226-027.md",
+      "tags": ["marketing", "gtm", "strategy"],
+      "relatedPods": ["marketing_social_pod"],
+      "relatedSkills": ["marketing_gtm_systems"],
+      "relatedEvidence": ["EVID-0029"]
+    },
+    {
+      "id": "DTH-20251226-028",
+      "title": "Content Calendar Must Be Pillar-Based and Reusable",
+      "status": "Locked",
+      "date": "2025-12-26",
+      "file": "decisions/DTH-20251226-028.md",
+      "tags": ["marketing", "social", "content"],
+      "relatedPods": ["marketing_social_pod"],
+      "relatedSkills": ["content_calendar_operations"],
+      "relatedEvidence": ["EVID-0030"]
+    },
+    {
+      "id": "DTH-20251226-029",
+      "title": "Influencer/Creator Work Requires Fit + Brief + Tracking",
+      "status": "Locked",
+      "date": "2025-12-26",
+      "file": "decisions/DTH-20251226-029.md",
+      "tags": ["marketing", "creators", "influencers"],
+      "relatedPods": ["marketing_social_pod"],
+      "relatedSkills": ["influencer_creator_ops"],
+      "relatedEvidence": ["EVID-0031"]
+    },
+    {
+      "id": "DTH-20251226-030",
+      "title": "Paid Prospecting Requires Caps + Targets + Creative Testing",
+      "status": "Locked",
+      "date": "2025-12-26",
+      "file": "decisions/DTH-20251226-030.md",
+      "tags": ["marketing", "paid", "budget"],
+      "relatedPods": ["marketing_social_pod"],
+      "relatedSkills": ["paid_ads_discipline"],
+      "relatedEvidence": ["EVID-0032"]
+    },
+    {
+      "id": "DTH-20251226-031",
+      "title": "Claims & Compliance Guardrails Are Mandatory",
+      "status": "Locked",
+      "date": "2025-12-26",
+      "file": "decisions/DTH-20251226-031.md",
+      "tags": ["marketing", "compliance", "claims"],
+      "relatedPods": ["marketing_social_pod"],
+      "relatedSkills": ["marketing_compliance_guardrails"],
+      "relatedEvidence": ["EVID-0033"]
     }
   ]
 }

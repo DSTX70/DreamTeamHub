@@ -191,6 +191,96 @@
       "relatedPods": ["engineering_pod"],
       "relatedSkills": ["deterministic_verification_and_badges"],
       "relatedDecisions": ["DTH-20251226-021"]
+    },
+    {
+      "id": "EVID-0024",
+      "title": "Pilot Factory Operating System (Intake → SOW → KPIs → Evidence → Case Study)",
+      "file": "EVID-0024.md",
+      "tags": ["program-ops", "pilot-factory", "kpis", "evidence"],
+      "relatedPods": ["program_ops_pod"],
+      "relatedSkills": ["pilot_factory_ops"],
+      "relatedDecisions": ["DTH-20251226-022"]
+    },
+    {
+      "id": "EVID-0025",
+      "title": "SOW + KPI Template Discipline (Decision-Grade Pilots)",
+      "file": "EVID-0025.md",
+      "tags": ["program-ops", "sow", "kpis", "templates"],
+      "relatedPods": ["program_ops_pod"],
+      "relatedSkills": ["sow_kpi_templates"],
+      "relatedDecisions": ["DTH-20251226-023"]
+    },
+    {
+      "id": "EVID-0026",
+      "title": "Evidence Pack → Case Study Pipeline (Truthful Narratives)",
+      "file": "EVID-0026.md",
+      "tags": ["program-ops", "case-study", "evidence", "narrative"],
+      "relatedPods": ["program_ops_pod"],
+      "relatedSkills": ["evidence_to_case_study"],
+      "relatedDecisions": ["DTH-20251226-024"]
+    },
+    {
+      "id": "EVID-0027",
+      "title": "Partnership ROI Rubric (Amani Lens) + Ecosystem Fit",
+      "file": "EVID-0027.md",
+      "tags": ["program-ops", "partnerships", "roi", "ecosystem"],
+      "relatedPods": ["program_ops_pod"],
+      "relatedSkills": ["partnership_roi_rubric"],
+      "relatedDecisions": ["DTH-20251226-025"]
+    },
+    {
+      "id": "EVID-0028",
+      "title": "Analyst Narrative Discipline (Beacon) + Evidence-Grade Messaging",
+      "file": "EVID-0028.md",
+      "tags": ["program-ops", "analyst-relations", "pr", "evidence-grade"],
+      "relatedPods": ["program_ops_pod"],
+      "relatedSkills": ["analyst_narrative_evidence_grade"],
+      "relatedDecisions": ["DTH-20251226-026"]
+    },
+    {
+      "id": "EVID-0029",
+      "title": "GTM System (Positioning → Channels → Offer → Measurement Loop)",
+      "file": "EVID-0029.md",
+      "tags": ["marketing", "gtm", "strategy", "measurement"],
+      "relatedPods": ["marketing_social_pod"],
+      "relatedSkills": ["marketing_gtm_systems"],
+      "relatedDecisions": ["DTH-20251226-027"]
+    },
+    {
+      "id": "EVID-0030",
+      "title": "Content Calendar System (Pillars + Formats + Cadence + Reuse)",
+      "file": "EVID-0030.md",
+      "tags": ["marketing", "social", "content-calendar", "operations"],
+      "relatedPods": ["marketing_social_pod"],
+      "relatedSkills": ["content_calendar_operations"],
+      "relatedDecisions": ["DTH-20251226-028"]
+    },
+    {
+      "id": "EVID-0031",
+      "title": "Influencer/Creator Workflow (Fit → Outreach → Brief → Tracking → Reuse)",
+      "file": "EVID-0031.md",
+      "tags": ["marketing", "creators", "influencers", "ops"],
+      "relatedPods": ["marketing_social_pod"],
+      "relatedSkills": ["influencer_creator_ops"],
+      "relatedDecisions": ["DTH-20251226-029"]
+    },
+    {
+      "id": "EVID-0032",
+      "title": "Paid Prospecting Discipline (Budget Caps + Targets + Creative Testing)",
+      "file": "EVID-0032.md",
+      "tags": ["marketing", "paid", "budget", "testing"],
+      "relatedPods": ["marketing_social_pod"],
+      "relatedSkills": ["paid_ads_discipline"],
+      "relatedDecisions": ["DTH-20251226-030"]
+    },
+    {
+      "id": "EVID-0033",
+      "title": "Compliance & Claims Guardrails (Kid-safe, No Unverifiable Claims)",
+      "file": "EVID-0033.md",
+      "tags": ["marketing", "compliance", "claims", "kid-safe"],
+      "relatedPods": ["marketing_social_pod"],
+      "relatedSkills": ["marketing_compliance_guardrails"],
+      "relatedDecisions": ["DTH-20251226-031"]
     }
   ]
 }
