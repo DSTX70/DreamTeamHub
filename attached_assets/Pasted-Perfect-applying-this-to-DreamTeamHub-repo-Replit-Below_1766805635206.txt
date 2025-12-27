@@ -1,0 +1,387 @@
+Perfect — applying this to **DreamTeamHub repo / Replit**.
+
+Below is a **single paste-ready patch drop** that adds the **Heritage Pack v1.0 scaffold** (versioned canon files + evidence folder) and a **Context Pack loader stub** (additive-only, not wired into runtime yet, so it won’t break anything).
+
+---
+
+## ✅ Paste into: **DreamTeamHub** repo
+
+```diff
+FILE: canon/heritage/HeritagePack.v1.0.md
++---
++title: "DreamTeamHub Heritage Pack"
++version: "v1.0"
++status: "CANON — Snapshot"
++created_at: "2025-12-26"
++---
++
++Confidential and proprietary and copyright Dustin Sparks 2025
++
++# Purpose
++This Heritage Pack preserves the **rich history** of Pods, Agents, successful patterns, and locked decisions created in ChatGPT so DreamTeamHub can retain the same operational strength without loss of nuance.
++
++This is a **snapshot**, not a refactor.
++
++# What This Pack Contains
++1) Pods & Members (roles, responsibilities, DoD gates)
++2) Agents (capabilities, boundaries, autonomy expectations)
++3) Skills (depth definitions L0–L3, guardrails, patterns)
++4) Locked Decisions (portable, durable decisions we keep carrying forward)
++5) Evidence Packs (gold outputs with why they worked)
++
++# Operating Rule
++Agents do not “remember” history by default. DreamTeamHub must:
++- Store canon + evidence
++- Index it
++- Assemble a Work Item–specific Context Pack per run
++
++# Locked Decisions Carried Forward (Seed)
++- /intent is the primary default entry point
++- Pro toggle is global (header + sidebar)
++- Ops remains in DTH, trimmed to orchestration ops only
++- Commerce / retail routes are retired (legacy)
++- Work Orders ≠ Work Items
++  - Work Orders = templates / runbooks
++  - Work Items = active work with Cast + Target Context
++- Routing & Cast panel is first-class on Work Item Detail
++
++# Definition of Done (Heritage Zero-Loss)
++This migration is “zero-loss” only when:
++- Pods/Agents in DreamTeamHub match the roster and responsibilities used successfully in ChatGPT
++- Locked Decisions are persisted in a searchable log and referenced by Work Items
++- At least 10 “gold outputs” are ingested as Evidence Packs with outcomes and rationale
++- A Work Item Context Pack can retrieve the right heritage slices (pods/skills/decisions/evidence)
++
+END_FILE
+```
+
+```diff
+FILE: canon/heritage/pods.json
++{
++  "schemaVersion": "v1",
++  "packVersion": "v1.0",
++  "updated_at": "2025-12-26",
++  "pods": [
++    {
++      "podKey": "example_pod",
++      "name": "Example Pod",
++      "purpose": "What this pod is responsible for.",
++      "scope": ["What it does", "What it does not do"],
++      "members": [
++        {
++          "handle": "ExampleMember",
++          "role": "Role title",
++          "tone": "Tone/voice guidance",
++          "coreFunctions": ["Function 1", "Function 2"],
++          "definitionOfDone": ["DoD item 1", "DoD item 2"]
++        }
++      ],
++      "activationRules": ["When to activate this pod"],
++      "guardrails": ["What this pod must never do"]
++    }
++  ]
++}
++
+END_FILE
+```
+
+```diff
+FILE: canon/heritage/agents.json
++{
++  "schemaVersion": "v1",
++  "packVersion": "v1.0",
++  "updated_at": "2025-12-26",
++  "agents": [
++    {
++      "agentKey": "example_agent",
++      "name": "Example Agent",
++      "type": "persona | tool-runner | reviewer",
++      "autonomy": "L0",
++      "capabilities": ["What it can do well"],
++      "boundaries": ["What it must not do"],
++      "preferredInputs": ["What it needs to succeed"],
++      "expectedOutputs": ["What it produces"],
++      "qualityBar": ["How we judge success"]
++    }
++  ]
++}
++
+END_FILE
+```
+
+```diff
+FILE: canon/heritage/skills.json
++{
++  "schemaVersion": "v1",
++  "packVersion": "v1.0",
++  "updated_at": "2025-12-26",
++  "skills": [
++    {
++      "skillKey": "example_skill",
++      "name": "Example Skill",
++      "description": "What this skill covers in DreamTeamHub execution.",
++      "levels": {
++        "L0": "Basic awareness; requires tight instruction.",
++        "L1": "Can execute with guardrails and review.",
++        "L2": "Can implement end-to-end within defined scope.",
++        "L3": "Can design, simplify, and establish patterns; anticipates edge cases."
++      },
++      "guardrails": ["Do not introduce schema changes unless explicitly approved."],
++      "patterns": {
++        "do": ["Preferred approach 1", "Preferred approach 2"],
++        "dont": ["Anti-pattern 1", "Anti-pattern 2"]
++      },
++      "evidenceLinks": [
++        {
++          "evidenceId": "EVID-0001",
++          "label": "Example winning output",
++          "location": "canon/heritage/evidence/EVID-0001.md"
++        }
++      ]
++    }
++  ]
++}
++
+END_FILE
+```
+
+```diff
+FILE: canon/heritage/decision-log.md
++Confidential and proprietary and copyright Dustin Sparks 2025
++
++# Decision Log (Heritage)
++This log captures durable decisions that must carry forward across threads, releases, and UI iterations.
++
++## Format
++**Decision ID:** DTH-YYYYMMDD-###  
++**Date:** YYYY-MM-DD  
++**Status:** Proposed | Locked | Deprecated  
++**Decision:** (one sentence)  
++**Rationale:** (why)  
++**Scope:** (where it applies)  
++**Impacts:** (what it changes)  
++**References:** (Work Items, PRs, links)
++
++---
++
++## Seed Entries
++**Decision ID:** DTH-20251226-001  
++**Date:** 2025-12-26  
++**Status:** Locked  
++**Decision:** Work Orders are templates/runbooks; Work Items are active execution with Cast + Target Context.  
++**Rationale:** Prevents template pages from being mistaken as “active work.”  
++**Scope:** IA, routing, UI labels, deep links.  
++**Impacts:** “Work” surfaces Work Items; Work Orders live under Templates.  
++**References:** HeritagePack.v1.0.md
++
+END_FILE
+```
+
+```diff
+FILE: canon/heritage/evidence/README.md
++Confidential and proprietary and copyright Dustin Sparks 2025
++
++# Evidence Packs (Gold Outputs)
++Evidence Packs are “wins” we can reuse: patches, patterns, UX decisions, releases, or tactics that worked.
++
++## Evidence Pack Template
++Create a new file named `EVID-####.md` with:
++- **Problem:** what we solved
++- **Constraints:** scope/guardrails
++- **Approach:** what we did
++- **Why it worked:** the insight
++- **Outcome:** measurable / verifiable result
++- **Where it landed:** repo/path/page
++- **Related Skills:** skillKeys
++- **Related Decisions:** decision IDs
++
+END_FILE
+```
+
+```diff
+FILE: canon/heritage/evidence/EVID-0001.md
++Confidential and proprietary and copyright Dustin Sparks 2025
++
++# EVID-0001 — Standardized Work Item Context Banners + Clear Context
++
++## Problem
++Users arriving via “Next Actions” links were landing in filtered/partial views and could get stuck or confused about why pages were filtered.
++
++## Constraints
++- No schema changes
++- Preserve existing pages (/ops/logs, /verification, /artifacts)
++- Must work via URL query params reliably (refresh-safe)
++
++## Approach
++- Standardized query params: `workItemId`, `context`, `q`
++- Added consistent banner: “Work item context detected”
++- Included chips: WorkItemId + Context
++- Included actions: Logs / Verification / Artifacts / Clear
++- Added “Clear” that removes params (and clears prefilled filters on logs where applicable)
++
++## Why it worked
++It made state and causality explicit (“why am I seeing this?”) and gave an immediate escape hatch (“Clear”).
++
++## Outcome
++- Context followed users across pages
++- Reduced navigation friction and re-filtering
++- Clean HMR + no LSP errors confirmed
++
++## Where it landed
++DreamTeamHub UI: Ops Logs + Verification + Artifacts pages
++
++## Related Skills
++- example_skill
++
++## Related Decisions
++- DTH-20251226-001
++
+END_FILE
+```
+
+```diff
+FILE: server/lib/contextPack/heritageLoader.ts
++import { readFile } from "node:fs/promises";
++import path from "node:path";
++
++export type HeritagePod = {
++  podKey: string;
++  name: string;
++  purpose?: string;
++  scope?: string[];
++  members?: Array<{
++    handle: string;
++    role?: string;
++    tone?: string;
++    coreFunctions?: string[];
++    definitionOfDone?: string[];
++  }>;
++  activationRules?: string[];
++  guardrails?: string[];
++};
++
++export type HeritageAgent = {
++  agentKey: string;
++  name: string;
++  type?: string;
++  autonomy?: "L0" | "L1" | "L2" | "L3";
++  capabilities?: string[];
++  boundaries?: string[];
++  preferredInputs?: string[];
++  expectedOutputs?: string[];
++  qualityBar?: string[];
++};
++
++export type HeritageSkill = {
++  skillKey: string;
++  name: string;
++  description?: string;
++  levels?: Record<string, string>;
++  guardrails?: string[];
++  patterns?: { do?: string[]; dont?: string[] };
++  evidenceLinks?: Array<{ evidenceId: string; label: string; location: string }>;
++};
++
++export type HeritagePack = {
++  pods: HeritagePod[];
++  agents: HeritageAgent[];
++  skills: HeritageSkill[];
++  decisionLogText: string;
++  heritagePackText: string;
++};
++
++export type HeritageContextQuery = {
++  podKeys?: string[];
++  agentKeys?: string[];
++  skillKeys?: string[];
++  maxChars?: number; // prompt budget safety
++};
++
++const DEFAULT_MAX_CHARS = 12_000;
++
++async function safeJson<T>(filePath: string): Promise<T> {
++  const raw = await readFile(filePath, "utf-8");
++  return JSON.parse(raw) as T;
++}
++
++export async function loadHeritagePack(repoRoot = process.cwd()): Promise<HeritagePack> {
++  const base = path.join(repoRoot, "canon", "heritage");
++
++  const podsJson = await safeJson<{ pods: HeritagePod[] }>(path.join(base, "pods.json"));
++  const agentsJson = await safeJson<{ agents: HeritageAgent[] }>(path.join(base, "agents.json"));
++  const skillsJson = await safeJson<{ skills: HeritageSkill[] }>(path.join(base, "skills.json"));
++
++  const decisionLogText = await readFile(path.join(base, "decision-log.md"), "utf-8");
++  const heritagePackText = await readFile(path.join(base, "HeritagePack.v1.0.md"), "utf-8");
++
++  return {
++    pods: podsJson.pods ?? [],
++    agents: agentsJson.agents ?? [],
++    skills: skillsJson.skills ?? [],
++    decisionLogText,
++    heritagePackText,
++  };
++}
++
++export function buildHeritageContextSnippet(pack: HeritagePack, q: HeritageContextQuery = {}): string {
++  const maxChars = q.maxChars ?? DEFAULT_MAX_CHARS;
++
++  const pods =
++    q.podKeys?.length
++      ? pack.pods.filter((p) => q.podKeys!.includes(p.podKey))
++      : pack.pods;
++  const agents =
++    q.agentKeys?.length
++      ? pack.agents.filter((a) => q.agentKeys!.includes(a.agentKey))
++      : pack.agents;
++  const skills =
++    q.skillKeys?.length
++      ? pack.skills.filter((s) => q.skillKeys!.includes(s.skillKey))
++      : pack.skills;
++
++  const snippet =
++    `Confidential and proprietary and copyright Dustin Sparks 2025\n\n` +
++    `# Heritage Context\n\n` +
++    `## Pods\n` +
++    `${pods.map((p) => `- ${p.name} (${p.podKey})`).join("\n")}\n\n` +
++    `## Agents\n` +
++    `${agents.map((a) => `- ${a.name} (${a.agentKey})`).join("\n")}\n\n` +
++    `## Skills\n` +
++    `${skills.map((s) => `- ${s.name} (${s.skillKey})`).join("\n")}\n\n` +
++    `## Locked Decisions (excerpt)\n` +
++    `${pack.decisionLogText}\n`;
++
++  // Budget cap
++  if (snippet.length <= maxChars) return snippet;
++  return snippet.slice(0, maxChars) + "\n\n[TRUNCATED: prompt budget cap]\n";
++}
++
+END_FILE
+```
+
+---
+
+## Post-apply checklist (DreamTeamHub)
+
+1. Confirm new files exist:
+
+* `canon/heritage/*`
+* `canon/heritage/evidence/*`
+* `server/lib/contextPack/heritageLoader.ts`
+
+2. Run typecheck/build as you normally do:
+
+* `npm run check` (or your equivalent)
+* `npm run build` (optional)
+
+No existing imports were changed, so this should be zero-risk.
+
+---
+
+## What this guarantees (your concern)
+
+* Your Pods/Agents/History are now **owned by DreamTeamHub**, not trapped in chat.
+* Everything is **versioned, auditable, and retrievable**.
+* We have a real place to accumulate “wins” as Evidence Packs so nothing gets lost.
+
+Next, we’ll do the “zero-loss” part: start filling `pods.json / agents.json / skills.json` with your *actual* roster and add your first batch of gold outputs (we can do that incrementally, without breaking product work).

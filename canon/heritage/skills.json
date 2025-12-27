@@ -1,0 +1,87 @@
+{
+  "schemaVersion": "v1",
+  "packVersion": "v1.0",
+  "updated_at": "2025-12-26",
+  "skills": [
+    {
+      "skillKey": "ux_product_strategy",
+      "name": "UX & Product Strategy",
+      "description": "Designing clear information architecture, reducing cognitive load, and making workflows feel obvious.",
+      "levels": {
+        "L0": "Basic awareness of UX principles; requires tight instruction.",
+        "L1": "Can execute UI changes with guardrails and review.",
+        "L2": "Can implement end-to-end flows within defined scope.",
+        "L3": "Can design, simplify, and establish patterns; anticipates edge cases."
+      },
+      "guardrails": ["No schema changes unless explicitly approved", "Prefer additive UI changes over refactors"],
+      "patterns": {
+        "do": ["Outcome-first workflows", "Progressive disclosure", "Explicit state banners", "Clear escape hatches"],
+        "dont": ["Hidden state", "Implicit assumptions", "Overloaded screens", "Breaking existing flows"]
+      },
+      "evidenceLinks": [
+        {
+          "evidenceId": "EVID-0001",
+          "label": "Standardized Work Item Context Banners",
+          "location": "canon/heritage/evidence/EVID-0001.md"
+        }
+      ]
+    },
+    {
+      "skillKey": "frontend_patterns",
+      "name": "Frontend Development Patterns",
+      "description": "React/TypeScript patterns, component architecture, state management, and UI consistency.",
+      "levels": {
+        "L0": "Can make simple component changes with guidance.",
+        "L1": "Can implement features with established patterns.",
+        "L2": "Can design and implement new patterns for reuse.",
+        "L3": "Can architect frontend systems and establish conventions."
+      },
+      "guardrails": ["Use existing component library", "Follow design system", "No breaking changes to shared components"],
+      "patterns": {
+        "do": ["Shared utility libraries", "Consistent naming", "Type-safe props", "Data-testid attributes"],
+        "dont": ["Inline styles over Tailwind", "Prop drilling beyond 2 levels", "Duplicate logic across pages"]
+      },
+      "evidenceLinks": [
+        {
+          "evidenceId": "EVID-0001",
+          "label": "Shared workItemContext library",
+          "location": "canon/heritage/evidence/EVID-0001.md"
+        }
+      ]
+    },
+    {
+      "skillKey": "backend_architecture",
+      "name": "Backend Architecture",
+      "description": "Express/Node patterns, API design, database operations, and system reliability.",
+      "levels": {
+        "L0": "Can modify existing endpoints with guidance.",
+        "L1": "Can implement new endpoints following established patterns.",
+        "L2": "Can design API contracts and database schemas.",
+        "L3": "Can architect backend systems with reliability/scalability in mind."
+      },
+      "guardrails": ["No raw SQL mutations without review", "Use storage interface patterns", "Validate all inputs with Zod"],
+      "patterns": {
+        "do": ["Thin routes", "Storage abstraction", "Proper error handling", "Audit logging"],
+        "dont": ["Business logic in routes", "Unvalidated inputs", "Silent failures"]
+      },
+      "evidenceLinks": []
+    },
+    {
+      "skillKey": "patch_kit_generation",
+      "name": "Patch Kit Generation",
+      "description": "Creating self-contained, paste-ready code patches with clear targets and verification steps.",
+      "levels": {
+        "L0": "Can follow patch templates with guidance.",
+        "L1": "Can create simple patches with clear targets.",
+        "L2": "Can generate complex multi-file patches.",
+        "L3": "Can design patch systems and establish conventions."
+      },
+      "guardrails": ["Always specify file paths", "Include verification steps", "No implicit dependencies"],
+      "patterns": {
+        "do": ["FILE: markers", "Clear diff format", "Post-apply checklists", "Rollback guidance"],
+        "dont": ["Ambiguous targets", "Missing context", "Untested patches"]
+      },
+      "evidenceLinks": []
+    }
+  ]
+}

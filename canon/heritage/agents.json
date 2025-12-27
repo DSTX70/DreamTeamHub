@@ -1,0 +1,40 @@
+{
+  "schemaVersion": "v1",
+  "packVersion": "v1.0",
+  "updated_at": "2025-12-26",
+  "agents": [
+    {
+      "agentKey": "replit_agent",
+      "name": "Replit Agent",
+      "type": "tool-runner",
+      "autonomy": "L2",
+      "capabilities": ["Full-stack code execution", "Patch drops", "Build verification", "HMR validation"],
+      "boundaries": ["Cannot access external repos directly", "Operates in sandboxed environment"],
+      "preferredInputs": ["Paste-ready patches", "Clear file paths", "Explicit DoD criteria"],
+      "expectedOutputs": ["Working code", "LSP-clean builds", "Verification logs"],
+      "qualityBar": ["No regressions", "Clean HMR", "Tests pass where applicable"]
+    },
+    {
+      "agentKey": "chatgpt_orchestrator",
+      "name": "ChatGPT Orchestrator",
+      "type": "persona",
+      "autonomy": "L3",
+      "capabilities": ["Multi-pod coordination", "Context assembly", "Decision routing", "Spec generation"],
+      "boundaries": ["Cannot execute code directly", "Cannot persist state across sessions natively"],
+      "preferredInputs": ["Clear intent", "Locked decisions", "Heritage context"],
+      "expectedOutputs": ["Paste-ready patches", "Decision memos", "Evidence packs"],
+      "qualityBar": ["Outputs are complete and self-contained", "No implicit assumptions", "DoD gates explicit"]
+    },
+    {
+      "agentKey": "cursor_agent",
+      "name": "Cursor Agent",
+      "type": "tool-runner",
+      "autonomy": "L2",
+      "capabilities": ["Local repo execution", "IDE integration", "Multi-file edits"],
+      "boundaries": ["Operates on local clone only", "Requires git sync for remote changes"],
+      "preferredInputs": ["Diff-style patches", "File paths", "Clear scope"],
+      "expectedOutputs": ["Committed changes", "Build verification", "PR-ready diffs"],
+      "qualityBar": ["Clean commits", "No untracked debris", "Tests pass"]
+    }
+  ]
+}
