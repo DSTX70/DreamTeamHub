@@ -1,0 +1,148 @@
+✅ Awesome — that closes the loop on the *actual* confusing page.
+
+Here’s what I recommend doing **right now** to “lock” this improvement so it doesn’t drift, and so the Audit implementation can be considered fully completed.
+
+---
+
+## 1) Add an Evidence Pack + Decision (so this UX win is preserved)
+
+This belongs in **DreamTeamHub repo** under heritage canon.
+
+### Patch: EVID + Decision + index updates
+
+```diff
+FILE: canon/heritage/evidence/EVID-0059.md
++Confidential and proprietary and copyright Dustin Sparks 2025
++
++# EVID-0059 — Templates Page UX Clarification (Default Calm, Pro Power)
++
++## Problem
++Users confused Work Orders (templates/runbooks) with active work, because the page visually resembled execution (runs/cost/stats) and used “work” language.
++
++## Constraints
++- No schema changes
++- Keep Pro power available
++- Default users must immediately understand the mental model without explanation
++
++## Approach
++**Default mode (calm templates library)**
++- Intro card: “Work Orders are templates/runbooks. Active execution lives in Work Items.”
++- Prominent CTAs: “Go to Work” (/work) and “New Work” (/intent)
++- Rename labels to template language:
++  - “Create Template”
++  - “Available Templates”
++  - “Run Template”
++- Per-row “Template” badge to reinforce meaning
++
++**Pro/Advanced (additive)**
++- Show/Hide Advanced toggle reveals:
++  - caps, KPIs, playbook, and runs table
++- Keeps power without confusing default users
++
++## Why it worked
++It separated “library” from “execution” visually and linguistically, while preserving advanced capabilities behind an explicit toggle.
++
++## Outcome
++- Default users no longer mistake templates for active work
++- Pro users retain full visibility into template internals and run history
++- Reduced workflow friction and onboarding confusion
++
++## Where it landed
++DreamTeamHub: `client/src/pages/work-orders.tsx` Templates UI
++
++## Related Skills
++- ia_navigation_conventions
++- pro_gating_conventions
++- page_layout_patterns
++
++## Related Decisions
++- DTH-20251226-057
++
+END_FILE
+```
+
+```diff
+FILE: canon/heritage/decisions/DTH-20251226-057.md
++Confidential and proprietary and copyright Dustin Sparks 2025
++
++# Decision: DTH-20251226-057 — Templates Page Must Be Calm by Default; Advanced Details Are Optional
++**Date:** 2025-12-26
++**Status:** Locked
++
++## Decision
++Work Orders are presented as Templates/runbooks with a calm default view; advanced details (caps/KPIs/runs/debug) are hidden unless explicitly expanded (or Pro).
++
++## Rationale
++Prevents templates being mistaken for active work while preserving power.
++
++## References
++- canon/heritage/evidence/EVID-0059.md
++
+END_FILE
+```
+
+```diff
+FILE: canon/heritage/evidence/_EVIDENCE_INDEX.json
+@@
+   "evidence": [
++    {
++      "evidenceId": "EVID-0059",
++      "title": "Templates Page UX Clarification (Default Calm, Pro Power)",
++      "path": "canon/heritage/evidence/EVID-0059.md",
++      "tags": ["ux", "templates", "pro", "work-orders"],
++      "relatedDecisions": ["DTH-20251226-057"]
++    }
+   ]
+ }
+ 
+ END_FILE
+```
+
+```diff
+FILE: canon/heritage/decisions/_DECISION_INDEX.json
+@@
+   "decisions": [
++    {
++      "decisionId": "DTH-20251226-057",
++      "title": "Templates Page Must Be Calm by Default; Advanced Details Are Optional",
++      "path": "canon/heritage/decisions/DTH-20251226-057.md",
++      "status": "Locked",
++      "tags": ["ux", "templates", "pro"]
++    }
+   ]
+ }
+ 
+ END_FILE
+```
+
+---
+
+## 2) Refresh the scoreboard in one command
+
+Now that you’ve made more canon updates, run:
+
+```bash
+npm run heritage:status
+```
+
+and then optionally:
+
+```bash
+npm run heritage:index:sync
+```
+
+(That ensures indexes remain deterministic.)
+
+---
+
+## 3) Final Audit “Definition of Done” check (we can stamp it)
+
+If these are true, the Audit implementation is complete for this thread:
+
+* ✅ `/work` shows active work (Work Items) with context + cast
+* ✅ Templates page clearly says “templates” and points to Work + Intent
+* ✅ Pro adds power without changing meaning
+* ✅ Target Context is visible at-a-glance on Work page
+* ✅ No schema changes required
+
+If you want, I’ll provide a one-paragraph **Audit Closeout Stamp** you can paste into your project log (and/or add as a Heritage decision note).

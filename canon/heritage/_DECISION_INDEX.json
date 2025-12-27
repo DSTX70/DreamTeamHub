@@ -552,6 +552,72 @@
       "relatedPods": ["creative_design_pod"],
       "relatedSkills": ["creative_review_gates"],
       "relatedEvidence": ["EVID-0053"]
+    },
+    {
+      "id": "DTH-20251226-052",
+      "title": "IA Rule: \"Work\" Means Active Execution",
+      "status": "Locked",
+      "date": "2025-12-26",
+      "file": "decisions/DTH-20251226-052.md",
+      "tags": ["ux", "ia", "navigation"],
+      "relatedPods": ["ux_product_pod"],
+      "relatedSkills": ["ia_navigation_conventions"],
+      "relatedEvidence": ["EVID-0054"]
+    },
+    {
+      "id": "DTH-20251226-053",
+      "title": "Default vs Pro Is Additive, Not Concept-Changing",
+      "status": "Locked",
+      "date": "2025-12-26",
+      "file": "decisions/DTH-20251226-053.md",
+      "tags": ["ux", "pro", "gating"],
+      "relatedPods": ["ux_product_pod"],
+      "relatedSkills": ["pro_gating_conventions"],
+      "relatedEvidence": ["EVID-0055"]
+    },
+    {
+      "id": "DTH-20251226-054",
+      "title": "Tower→Detail→Supporting Layout Pattern Is Standard",
+      "status": "Locked",
+      "date": "2025-12-26",
+      "file": "decisions/DTH-20251226-054.md",
+      "tags": ["ux", "layout", "patterns"],
+      "relatedPods": ["ux_product_pod"],
+      "relatedSkills": ["page_layout_patterns"],
+      "relatedEvidence": ["EVID-0056"]
+    },
+    {
+      "id": "DTH-20251226-055",
+      "title": "No Schema Changes Unless Explicitly Approved",
+      "status": "Locked",
+      "date": "2025-12-26",
+      "file": "decisions/DTH-20251226-055.md",
+      "tags": ["ux", "governance", "schema"],
+      "relatedPods": ["ux_product_pod"],
+      "relatedSkills": ["no_schema_change_gate"],
+      "relatedEvidence": ["EVID-0057"]
+    },
+    {
+      "id": "DTH-20251226-056",
+      "title": "Context Surfaces (Chips/Banners/Clear) Are a UX Standard",
+      "status": "Locked",
+      "date": "2025-12-26",
+      "file": "decisions/DTH-20251226-056.md",
+      "tags": ["ux", "context", "visibility"],
+      "relatedPods": ["ux_product_pod"],
+      "relatedSkills": ["ux_context_surface_patterns"],
+      "relatedEvidence": ["EVID-0058"]
+    },
+    {
+      "id": "DTH-20251226-057",
+      "title": "Templates Page Must Be Calm by Default; Advanced Details Are Optional",
+      "status": "Locked",
+      "date": "2025-12-26",
+      "file": "decisions/DTH-20251226-057.md",
+      "tags": ["ux", "templates", "pro"],
+      "relatedPods": ["ux_product_pod"],
+      "relatedSkills": ["ia_navigation_conventions", "pro_gating_conventions"],
+      "relatedEvidence": ["EVID-0059"]
     }
   ]
 }

@@ -461,6 +461,60 @@
       "relatedPods": ["creative_design_pod"],
       "relatedSkills": ["creative_review_gates"],
       "relatedDecisions": ["DTH-20251226-051"]
+    },
+    {
+      "id": "EVID-0054",
+      "title": "IA Rules: Default First, Obvious Paths, No Hidden \"Work\"",
+      "file": "EVID-0054.md",
+      "tags": ["ux", "ia", "navigation"],
+      "relatedPods": ["ux_product_pod"],
+      "relatedSkills": ["ia_navigation_conventions"],
+      "relatedDecisions": ["DTH-20251226-052"]
+    },
+    {
+      "id": "EVID-0055",
+      "title": "Default vs Pro Gating Convention (Global Toggle, Same Mental Model)",
+      "file": "EVID-0055.md",
+      "tags": ["ux", "pro", "gating"],
+      "relatedPods": ["ux_product_pod"],
+      "relatedSkills": ["pro_gating_conventions"],
+      "relatedDecisions": ["DTH-20251226-053"]
+    },
+    {
+      "id": "EVID-0056",
+      "title": "Page Layout Patterns (Tower → Detail → Deep Links)",
+      "file": "EVID-0056.md",
+      "tags": ["ux", "layout", "patterns"],
+      "relatedPods": ["ux_product_pod"],
+      "relatedSkills": ["page_layout_patterns"],
+      "relatedDecisions": ["DTH-20251226-054"]
+    },
+    {
+      "id": "EVID-0057",
+      "title": "\"No Schema Changes Unless Approved\" Operational Gate",
+      "file": "EVID-0057.md",
+      "tags": ["ux", "governance", "schema"],
+      "relatedPods": ["ux_product_pod"],
+      "relatedSkills": ["no_schema_change_gate"],
+      "relatedDecisions": ["DTH-20251226-055"]
+    },
+    {
+      "id": "EVID-0058",
+      "title": "Context Surface Patterns (Chips, Banners, Clear) as a UX Standard",
+      "file": "EVID-0058.md",
+      "tags": ["ux", "context", "visibility"],
+      "relatedPods": ["ux_product_pod"],
+      "relatedSkills": ["ux_context_surface_patterns"],
+      "relatedDecisions": ["DTH-20251226-056"]
+    },
+    {
+      "id": "EVID-0059",
+      "title": "Templates Page UX Clarification (Default Calm, Pro Power)",
+      "file": "EVID-0059.md",
+      "tags": ["ux", "templates", "pro", "work-orders"],
+      "relatedPods": ["ux_product_pod"],
+      "relatedSkills": ["ia_navigation_conventions", "pro_gating_conventions", "page_layout_patterns"],
+      "relatedDecisions": ["DTH-20251226-057"]
     }
   ]
 }
