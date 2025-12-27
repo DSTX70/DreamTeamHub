@@ -1,0 +1,161 @@
+✅ **Repo/Replit to paste into:** **DreamTeamHub**
+
+## 1) Enable legacy inference fallback (explicit-first, inference only if missing)
+
+Here’s the patch to update **`client/src/components/pod-preset-badge.tsx`** so it:
+
+* **Prefers explicit** `podPresetKey` (Strategy Session field OR Work Item targetContext OR playbook)
+* **Falls back to legacy inference** (repo_hint/title/output/playbook/targetContext text) only when explicit is absent
+
+```diff
+FILE: client/src/components/pod-preset-badge.tsx
+@@
+ import { Badge } from "@/components/ui/badge";
+ 
+ type PodPresetKey = "default" | "gigsterGarage" | "tenantBilling";
+ 
+ function safeJsonParse(s: string): any {
+   try { return JSON.parse(s); } catch { return null; }
+ }
+ 
+ function normalize(k: any): PodPresetKey | null {
+   const s = String(k || "").trim();
+   if (!s) return null;
+   if (s === "default") return "default";
+   if (s === "gigsterGarage") return "gigsterGarage";
+   if (s === "tenantBilling") return "tenantBilling";
+   return null;
+ }
+ 
+ function labelFor(k: PodPresetKey): string {
+   if (k === "gigsterGarage") return "GigsterGarage Pod";
+   if (k === "tenantBilling") return "Tenant & Billing Pod";
+   return "Default";
+ }
+ 
+-function getExplicitKey(source: any): PodPresetKey | null {
++function getExplicitKey(source: any): PodPresetKey | null {
+   if (!source) return null;
+   const direct = normalize(source.podPresetKey || source.pod_preset_key);
+   if (direct) return direct;
+ 
+   const ctxRaw = source.targetContext ?? source.target_context ?? source.context ?? null;
+   const ctx = typeof ctxRaw === "string" ? (safeJsonParse(ctxRaw) ?? null) : ctxRaw;
+   const fromCtx = ctx && typeof ctx === "object" ? normalize(ctx.podPresetKey || ctx.pod_preset_key) : null;
+   if (fromCtx) return fromCtx;
+ 
+   const playbook = String(source.playbook || "");
+   if (playbook) {
+     const m = playbook.match(/\*\*Pod Preset:\*\*\s*([a-zA-Z0-9_-]+)/i);
+     const m2 = playbook.match(/podPresetKey\s*[:=]\s*([a-zA-Z0-9_-]+)/i);
+     const k = normalize(m?.[1] || m2?.[1]);
+     if (k) return k;
+   }
+   return null;
+ }
+ 
++// Legacy inference (only used if explicit key is missing)
++function inferLegacyKeyFromText(text: string): PodPresetKey | null {
++  const t = (text || "").toLowerCase();
++
++  // Tenant/Billing gets priority if it appears
++  const tenantBillingHits = [
++    "tenant",
++    "multi-tenant",
++    "multitenant",
++    "billing",
++    "stripe",
++    "subscription",
++    "invoice",
++    "proration",
++    "trial",
++    "checkout",
++    "entitlement",
++    "plan",
++    "metering",
++    "webhook",
++  ].some((k) => t.includes(k));
++  if (tenantBillingHits) return "tenantBilling";
++
++  const gigsterHits = ["gigster", "gigstergarage", "gigster garage"].some((k) => t.includes(k));
++  if (gigsterHits) return "gigsterGarage";
++
++  return null;
++}
++
++function buildLegacySignalText(source: any): string {
++  if (!source) return "";
++  const parts: string[] = [];
++
++  // Strategy Sessions
++  if (typeof source.repo_hint === "string") parts.push(source.repo_hint);
++
++  // Work Items
++  const ctxRaw = source.targetContext ?? source.target_context ?? source.context ?? null;
++  if (typeof ctxRaw === "string") parts.push(ctxRaw);
++  else if (ctxRaw && typeof ctxRaw === "object") parts.push(JSON.stringify(ctxRaw));
++
++  if (typeof source.title === "string") parts.push(source.title);
++  if (typeof source.output === "string") parts.push(source.output);
++  if (typeof source.playbook === "string") parts.push(source.playbook);
++
++  return parts.join(" ");
++}
++
+ export function PodPresetBadge({ source, className }: { source: any; className?: string }) {
+-  const key = getExplicitKey(source);
+-  if (!key || key === "default") return null; // don’t badge Default
++  let key = getExplicitKey(source);
++
++  // Legacy inference fallback only if explicit key missing
++  if (!key) {
++    key = inferLegacyKeyFromText(buildLegacySignalText(source));
++  }
++
++  if (!key || key === "default") return null; // don’t badge Default
+   return (
+     <Badge variant="secondary" className={className} data-testid={`badge-pod-${key}`} title="Explicit pod preset">
+       {labelFor(key)}
+     </Badge>
+   );
+ }
+ 
+ END_FILE
+```
+
+**Result:** new items show the badge from explicit selection; older items still show via inference.
+
+---
+
+## 2) Are we ready to move to the next phase/item?
+
+✅ Yes — you’re ready for **Phase 2: real GigsterGarage pilot runs**.
+You now have the full governance chain:
+
+**Strategy (non-executing) → Lock → Convert → Recommendation → Approve → Drop (manual apply)**
+
+### Next phase plan (the right order)
+
+1. **Run 2–3 real tasks through DTH** targeting GigsterGarage
+
+   * pick small, low-risk changes first
+   * generate recommendation → approve → generate drop
+   * apply manually in **GigsterGarage** repo
+   * verify behavior + capture receipts/evidence pack
+
+2. **Add drop-integrity validation (if not already present)**
+
+   * block drops without `FILE:` + `END_FILE` pairs before copy/export
+     (this is the last safety hardening before scaling)
+
+3. **Then** wire optional **VSuiteHQ handoff** (feature-flagged)
+
+   * only after drop is generated + approved + integrity-passed
+   * still no auto-apply
+
+### Do we need to wire DTH into GigsterGarage right now?
+
+Not for execution — because you’re generating **paste-ready drops**.
+The “wiring” is simply: **you apply the drop in the GigsterGarage repo** for the pilot.
+
+If you want, tell me what the **first GigsterGarage task** should be (one small feature/bugfix), and I’ll help craft the ideal Strategy Session prompt template for it so the pipeline produces clean recommendations and minimal diffs.

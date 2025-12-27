@@ -21,6 +21,7 @@ type StrategySession = {
   author: string;
   approval_required_for_execution: boolean;
   repo_hint?: string;
+  podPresetKey?: PodPresetKey;
   goal?: string;
   participants?: string[];
   questions?: string[];
@@ -90,6 +91,7 @@ export default function StrategyDetailPage() {
           title: localTitle,
           bodyMd: localBody,
           participants: uniqSorted(localParticipants),
+          podPresetKey: presetKey,
         }),
       });
       if (!res.ok) throw new Error(`Save failed (${res.status})`);
@@ -131,7 +133,13 @@ export default function StrategyDetailPage() {
         inputs: data.bodyMd || "Strategy session content",
         output: `Execute the locked strategy: ${data.goal || data.title}`,
         autonomy: "L1",
-        playbook: `## Strategy Provenance\n\n**Source:** Strategy Session ${data.id}\n**Locked at:** ${data.locked_at || "N/A"}\n**Repo Hint:** ${data.repo_hint || "Gigster Garage (pilot candidate)"}\n\n---\n\n${data.bodyMd}`,
+        targetContext: JSON.stringify({
+          kind: "strategy",
+          strategySessionId: data.id,
+          repoHint: data.repo_hint || "GigsterGarage",
+          podPresetKey: presetKey,
+        }),
+        playbook: `## Strategy Provenance\n\n**Source:** Strategy Session ${data.id}\n**Locked at:** ${data.locked_at || "N/A"}\n**Repo Hint:** ${data.repo_hint || "Gigster Garage (pilot candidate)"}\n**Pod Preset:** ${presetKey}\n\n---\n\n${data.bodyMd}`,
       };
 
       const res = await fetch("/api/work-items", {

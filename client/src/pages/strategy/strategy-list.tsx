@@ -17,6 +17,7 @@ type StrategySession = {
   approval_required_for_execution: boolean;
   participants?: string[];
   repo_hint?: string;
+  podPresetKey?: "default" | "gigsterGarage" | "tenantBilling";
   created_at: string;
   updated_at: string;
   locked_at?: string;

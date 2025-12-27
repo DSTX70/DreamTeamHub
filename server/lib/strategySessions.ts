@@ -4,6 +4,8 @@ import crypto from "node:crypto";
 
 export type StrategySessionStatus = "OPEN" | "LOCKED" | "ARCHIVED";
 
+export type PodPresetKey = "default" | "gigsterGarage" | "tenantBilling";
+
 export type StrategySession = {
   id: string;
   title: string;
@@ -12,6 +14,7 @@ export type StrategySession = {
   author: string;
   approval_required_for_execution: boolean;
   repo_hint?: string;
+  podPresetKey?: PodPresetKey;
   goal?: string;
   participants?: string[];
   questions?: string[];
@@ -158,6 +161,10 @@ export async function createStrategySession(input: Partial<StrategySession>): Pr
   const id = input.id || crypto.randomBytes(8).toString("hex");
   const created_at = nowISO();
   const updated_at = created_at;
+  const inferredPreset: PodPresetKey =
+    input.podPresetKey ||
+    ((input.repo_hint || "").toLowerCase().includes("gigster") ? "gigsterGarage" : "default");
+
   const session: StrategySession = {
     id,
     title: input.title || "Dream Team Hub — Strategy Session (Pre-Execution)",
@@ -166,6 +173,7 @@ export async function createStrategySession(input: Partial<StrategySession>): Pr
     author: input.author || "Dustin Sparks",
     approval_required_for_execution: input.approval_required_for_execution ?? true,
     repo_hint: input.repo_hint,
+    podPresetKey: inferredPreset,
     goal: input.goal,
     participants: input.participants || [
       "OS",

@@ -1,0 +1,372 @@
+✅ **Repo/Replit: DreamTeamHub**
+You’re *very* close — the only mismatch is: your current `PodPresetBadge` is still doing **keyword inference**, but you want it to reflect **explicit selection** (stored on the Strategy Session and carried into the Work Item).
+
+Here’s a **paste-ready Replit drop** that makes the badge **explicit-first** (and still keeps inference only as a legacy fallback if you want it).
+
+---
+
+# ✅ REPLIT DROP — Explicit `podPresetKey` + carry to Work Items + explicit badge
+
+## 1) Persist `podPresetKey` in Strategy Sessions (file-backed JSON)
+
+No DB changes; Strategy Sessions are already file-backed.
+
+```diff
+FILE: server/lib/strategySessions.ts
+@@
+ export type StrategySession = {
+   id: string;
+   title: string;
+   status: StrategySessionStatus;
+   mode: "STRATEGY / BRAINSTORM (NON-EXECUTING)";
+   author: string;
+   approval_required_for_execution: boolean;
+   repo_hint?: string;
++  // Explicit pod selection (stored in JSON; no schema migration needed)
++  podPresetKey?: "default" | "gigsterGarage" | "tenantBilling";
+   goal?: string;
+   participants?: string[];
+   questions?: string[];
+   bodyMd: string;
+   created_at: string;
+   updated_at: string;
+   locked_at?: string;
+ };
+@@
+ export async function createStrategySession(input: Partial<StrategySession>): Promise<StrategySession> {
+@@
+   const session: StrategySession = {
+@@
+     approval_required_for_execution: input.approval_required_for_execution ?? true,
+     repo_hint: input.repo_hint,
++    podPresetKey:
++      input.podPresetKey ||
++      ((input.repo_hint || "").toLowerCase().includes("gigster") ? "gigsterGarage" : "default"),
+     goal: input.goal,
+@@
+   };
+@@
+ }
+ 
+ END_FILE
+```
+
+---
+
+## 2) Strategy Detail: add explicit Pod Preset selector + save it
+
+This keeps your existing Default/Curate cast UX, but adds **explicit pod selection** and an optional button to apply the preset’s recommended cast.
+
+```diff
+FILE: client/src/pages/strategy/strategy-detail.tsx
+@@
+ import { Lock, Save, Trash2, Users, Check, X } from "lucide-react";
+ import { PodPresetBadge } from "@/components/pod-preset-badge";
+@@
+ type StrategySession = {
+@@
+   repo_hint?: string;
++  podPresetKey?: "default" | "gigsterGarage" | "tenantBilling";
+   participants?: string[];
+@@
+ };
++
++const POD_PRESETS = {
++  default: {
++    label: "Default",
++    recommendedCast: ["OS", "Forge", "LexiCode", "Lume", "Sentinel", "Aegis", "Sparkster"],
++  },
++  gigsterGarage: {
++    label: "GigsterGarage Pod",
++    recommendedCast: [
++      "OS","Lume","Forge","LexiCode","CodeBlock","Verifier","Pulse","Sentinel","Praetor","Aegis","Archivist","Conductor","Scout",
++      "Ledger","Navi","Amani","ChieSan",
++    ],
++  },
++  tenantBilling: {
++    label: "Tenant & Billing Pod",
++    recommendedCast: [
++      "OS","Forge","LexiCode","Bridge","Verifier","Pulse","Sentinel","Praetor","Aegis","Archivist","Ledger","Navi",
++    ],
++  },
++} as const;
++
++type PodPresetKey = keyof typeof POD_PRESETS;
++
++function uniqSorted(list: string[]) {
++  return Array.from(new Set(list.map((s) => s.trim()).filter(Boolean))).sort((a, b) => a.localeCompare(b));
++}
+@@
+ export default function StrategyDetailPage() {
+@@
+   const [localTitle, setLocalTitle] = useState("");
+   const [localBody, setLocalBody] = useState("");
+   const [localParticipants, setLocalParticipants] = useState<string[]>([]);
++  const [podPresetKey, setPodPresetKey] = useState<PodPresetKey>("default");
+@@
+   useMemo(() => {
+     if (!data) return;
+     setLocalTitle(data.title);
+     setLocalBody(data.bodyMd);
++    const initialPreset =
++      (data.podPresetKey as PodPresetKey) ||
++      ((data.repo_hint || "").toLowerCase().includes("gigster") ? "gigsterGarage" : "default");
++    setPodPresetKey(initialPreset);
+     // Keep existing participants if already set, otherwise use default recommended cast
+-    setLocalParticipants(uniqSorted(data.participants?.length ? data.participants : DEFAULT_CAST));
++    setLocalParticipants(
++      uniqSorted(data.participants?.length ? data.participants : POD_PRESETS[initialPreset].recommendedCast)
++    );
+     // eslint-disable-next-line react-hooks/exhaustive-deps
+   }, [data?.id]);
+@@
+   const saveMutation = useMutation({
+@@
+         body: JSON.stringify({
+           title: localTitle,
+           bodyMd: localBody,
+           participants: uniqSorted(localParticipants),
++          podPresetKey,
+         }),
+       });
+@@
+   });
++
++  function applyRecommendedCast() {
++    setLocalParticipants(uniqSorted(POD_PRESETS[podPresetKey].recommendedCast));
++    toast({ title: "Cast updated", description: `Applied recommended cast for ${POD_PRESETS[podPresetKey].label}.` });
++  }
+@@
+       <Card>
+         <CardHeader>
+@@
+             <div className="flex flex-wrap gap-2">
+               <Badge variant={data.status === "OPEN" ? "default" : "secondary"}>{data.status}</Badge>
+               <Badge variant="outline">Strategy</Badge>
+               <PodPresetBadge source={data} />
+             </div>
+           </div>
+         </CardHeader>
+@@
+       {/* Cast controls */}
+       <Card>
+         <CardHeader>
+@@
+         </CardHeader>
+         <CardContent className="space-y-3">
++          <div className="flex flex-wrap items-center gap-2">
++            <span className="text-sm text-muted-foreground">Pod preset:</span>
++            <Button
++              variant={podPresetKey === "default" ? "default" : "outline"}
++              onClick={() => setPodPresetKey("default")}
++            >
++              Default
++            </Button>
++            <Button
++              variant={podPresetKey === "gigsterGarage" ? "default" : "outline"}
++              onClick={() => setPodPresetKey("gigsterGarage")}
++            >
++              GigsterGarage Pod
++            </Button>
++            <Button
++              variant={podPresetKey === "tenantBilling" ? "default" : "outline"}
++              onClick={() => setPodPresetKey("tenantBilling")}
++            >
++              Tenant & Billing Pod
++            </Button>
++            <Button variant="outline" onClick={applyRecommendedCast} title="Overwrite participants with recommended cast">
++              Apply Recommended Cast
++            </Button>
++            <Badge variant="secondary">Selected: {localParticipants.length}</Badge>
++          </div>
+@@
+           <div className="text-xs text-muted-foreground">
+             Tip: hit <span className="font-medium">Save</span> to persist cast changes.
+           </div>
+         </CardContent>
+       </Card>
+@@
+ }
+ 
+ END_FILE
+```
+
+---
+
+## 3) Carry `podPresetKey` into Work Items on Convert
+
+Add to `targetContext` and to `playbook` for redundancy.
+
+```diff
+FILE: client/src/pages/strategy/strategy-detail.tsx
+@@
+   const convertMutation = useMutation({
+     mutationFn: async () => {
+@@
+       const payload: any = {
+         title: data.title.replace(/Strategy Session/i, "Work Item").trim(),
+         owner: data.author,
+         inputs: data.bodyMd,
+         output: `Execute the locked strategy: ${data.goal || "see strategy body"}`,
+         targetContext: {
+           kind: "strategy",
+           strategySessionId: data.id,
+           repoHint: data.repo_hint || "GigsterGarage",
++          podPresetKey,
+         },
+         playbook:
+           `**Source:** Strategy Session ${data.id}\n` +
+           `**Locked At:** ${data.locked_at || "(unknown)"}\n` +
+           `**Repo Hint:** ${data.repo_hint || "GigsterGarage"}\n` +
++          `**Pod Preset:** ${podPresetKey}\n\n` +
+           `${data.bodyMd}`,
+       };
+@@
+     },
+   });
+ 
+ END_FILE
+```
+
+---
+
+## 4) Update PodPresetBadge to show **explicit only** (no inference)
+
+If you still want inference for legacy items, I can make it “fallback only,” but below is strict explicit.
+
+```diff
+FILE: client/src/components/pod-preset-badge.tsx
+@@
+-import { Badge } from "@/components/ui/badge";
+-
+-type PodPresetKey = "gigsterGarage" | "tenantBilling";
+-
+-function safeJsonParse(s: string): any {
+-  try {
+-    return JSON.parse(s);
+-  } catch {
+-    return null;
+-  }
+-}
+-
+-function inferFromText(text: string): PodPresetKey | null {
+-  const t = (text || "").toLowerCase();
+-  const tenantBillingHits = [
+-    "tenant","multi-tenant","multitenant","billing","stripe","subscription","invoice","proration","trial","checkout","entitlement","plan","metering","webhook",
+-  ].some((k) => t.includes(k));
+-  if (tenantBillingHits) return "tenantBilling";
+-  const gigsterHits = ["gigster", "gigstergarage", "gigster garage"].some((k) => t.includes(k));
+-  if (gigsterHits) return "gigsterGarage";
+-  return null;
+-}
+-
+-function labelFor(key: PodPresetKey): string {
+-  return key === "gigsterGarage" ? "GigsterGarage Pod" : "Tenant & Billing Pod";
+-}
+-
+-function extractRepoHintFromAny(source: any): string {
+-  if (!source) return "";
+-  if (typeof source === "string") return source;
+-  if (typeof source.repo_hint === "string") return source.repo_hint;
+-  const ctxRaw = source.targetContext ?? source.target_context ?? source.context ?? null;
+-  const ctx = typeof ctxRaw === "string" ? (safeJsonParse(ctxRaw) ?? null) : ctxRaw;
+-  if (ctx && typeof ctx === "object") {
+-    const v = ctx.repoHint || ctx.repo_hint || ctx.targetRepo || ctx.target_repo || ctx.repoSlug || ctx.repo || "";
+-    return typeof v === "string" ? v : "";
+-  }
+-  return "";
+-}
+-
+-function buildSignalText(source: any): string {
+-  const repoHint = extractRepoHintFromAny(source);
+-  const title = typeof source?.title === "string" ? source.title : "";
+-  const output = typeof source?.output === "string" ? source.output : "";
+-  const playbook = typeof source?.playbook === "string" ? source.playbook : "";
+-  return [repoHint, title, output, playbook].filter(Boolean).join(" ");
+-}
+-
+-export function PodPresetBadge({ source, className }: { source: any; className?: string; }) {
+-  const signal = buildSignalText(source);
+-  const key = inferFromText(signal);
+-  if (!key) return null;
+-  return (
+-    <Badge variant="secondary" className={className} data-testid={`badge-pod-${key}`} title="Curated pod selection inferred from repo hint / keywords">
+-      {labelFor(key)}
+-    </Badge>
+-  );
+-}
++import { Badge } from "@/components/ui/badge";
++
++type PodPresetKey = "default" | "gigsterGarage" | "tenantBilling";
++
++function safeJsonParse(s: string): any {
++  try { return JSON.parse(s); } catch { return null; }
++}
++
++function normalize(k: any): PodPresetKey | null {
++  const s = String(k || "").trim();
++  if (!s) return null;
++  if (s === "default") return "default";
++  if (s === "gigsterGarage") return "gigsterGarage";
++  if (s === "tenantBilling") return "tenantBilling";
++  return null;
++}
++
++function labelFor(k: PodPresetKey): string {
++  if (k === "gigsterGarage") return "GigsterGarage Pod";
++  if (k === "tenantBilling") return "Tenant & Billing Pod";
++  return "Default";
++}
++
++function getExplicitKey(source: any): PodPresetKey | null {
++  if (!source) return null;
++  const direct = normalize(source.podPresetKey || source.pod_preset_key);
++  if (direct) return direct;
++
++  const ctxRaw = source.targetContext ?? source.target_context ?? source.context ?? null;
++  const ctx = typeof ctxRaw === "string" ? (safeJsonParse(ctxRaw) ?? null) : ctxRaw;
++  const fromCtx = ctx && typeof ctx === "object" ? normalize(ctx.podPresetKey || ctx.pod_preset_key) : null;
++  if (fromCtx) return fromCtx;
++
++  const playbook = String(source.playbook || "");
++  if (playbook) {
++    const m = playbook.match(/\*\*Pod Preset:\*\*\s*([a-zA-Z0-9_-]+)/i);
++    const m2 = playbook.match(/podPresetKey\s*[:=]\s*([a-zA-Z0-9_-]+)/i);
++    const k = normalize(m?.[1] || m2?.[1]);
++    if (k) return k;
++  }
++  return null;
++}
++
++export function PodPresetBadge({ source, className }: { source: any; className?: string }) {
++  const key = getExplicitKey(source);
++  if (!key || key === "default") return null; // don’t badge Default
++  return (
++    <Badge variant="secondary" className={className} data-testid={`badge-pod-${key}`} title="Explicit pod preset">
++      {labelFor(key)}
++    </Badge>
++  );
++}
+ 
+ END_FILE
+```
+
+---
+
+# Quick verification
+
+1. Open `/strategy/:id`, choose **GigsterGarage Pod**, click **Save**
+2. Badge shows (explicit)
+3. Convert → Work Item
+4. Work Item detail badge shows even if no keywords exist
+
+---
+
+## Optional (recommended): Keep inference ONLY for legacy items
+
+If you want old sessions/items to still show a badge, I can modify the badge to:
+
+* try explicit key first
+* **if missing**, fall back to inference
+
+Just say: **“Enable legacy inference fallback.”**
