@@ -326,6 +326,51 @@
       "relatedPods": ["medical_pod"],
       "relatedSkills": ["clinician_question_sets"],
       "relatedDecisions": ["DTH-20251226-036"]
+    },
+    {
+      "id": "EVID-0039",
+      "title": "Religious Scholar Council + Writer Pool Operating System (Governed Publishing)",
+      "file": "EVID-0039.md",
+      "tags": ["scholar-council", "governance", "publishing"],
+      "relatedPods": ["scholar_council_pod"],
+      "relatedSkills": ["scholar_council_governance"],
+      "relatedDecisions": ["DTH-20251226-037"]
+    },
+    {
+      "id": "EVID-0040",
+      "title": "Scholar Signed Gate (scholar_signed_at) + Editorial Approval Enforcement",
+      "file": "EVID-0040.md",
+      "tags": ["scholar-council", "signoff", "audit"],
+      "relatedPods": ["scholar_council_pod"],
+      "relatedSkills": ["scholar_signoff_gate"],
+      "relatedDecisions": ["DTH-20251226-038"]
+    },
+    {
+      "id": "EVID-0041",
+      "title": "Quarterly Audit Rubric + Change Log Discipline (Scholar Governance)",
+      "file": "EVID-0041.md",
+      "tags": ["scholar-council", "audit", "changelog"],
+      "relatedPods": ["scholar_council_pod"],
+      "relatedSkills": ["scholar_audit_and_changelog"],
+      "relatedDecisions": ["DTH-20251226-039"]
+    },
+    {
+      "id": "EVID-0042",
+      "title": "Context-Card Standards + No-Paraphrase List Operations",
+      "file": "EVID-0042.md",
+      "tags": ["scholar-council", "context-card", "no-paraphrase"],
+      "relatedPods": ["scholar_council_pod"],
+      "relatedSkills": ["context_card_standards", "no_paraphrase_ops"],
+      "relatedDecisions": ["DTH-20251226-040"]
+    },
+    {
+      "id": "EVID-0043",
+      "title": "Governed Publication Readiness Checklist (Scholar Council)",
+      "file": "EVID-0043.md",
+      "tags": ["scholar-council", "publish-ready", "gates"],
+      "relatedPods": ["scholar_council_pod"],
+      "relatedSkills": ["governed_publication_readiness"],
+      "relatedDecisions": ["DTH-20251226-041"]
     }
   ]
 }

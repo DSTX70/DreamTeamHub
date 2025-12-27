@@ -387,6 +387,61 @@
       "relatedPods": ["medical_pod"],
       "relatedSkills": ["clinician_question_sets"],
       "relatedEvidence": ["EVID-0038"]
+    },
+    {
+      "id": "DTH-20251226-037",
+      "title": "Scholar Council + Writer Pool Operating System Is Required for Governed Publishing",
+      "status": "Locked",
+      "date": "2025-12-26",
+      "file": "decisions/DTH-20251226-037.md",
+      "tags": ["scholar-council", "governance"],
+      "relatedPods": ["scholar_council_pod"],
+      "relatedSkills": ["scholar_council_governance"],
+      "relatedEvidence": ["EVID-0039"]
+    },
+    {
+      "id": "DTH-20251226-038",
+      "title": "Publication Is Gated on scholar_signed_at + Editorial Approval",
+      "status": "Locked",
+      "date": "2025-12-26",
+      "file": "decisions/DTH-20251226-038.md",
+      "tags": ["scholar-council", "signoff", "audit"],
+      "relatedPods": ["scholar_council_pod"],
+      "relatedSkills": ["scholar_signoff_gate"],
+      "relatedEvidence": ["EVID-0040"]
+    },
+    {
+      "id": "DTH-20251226-039",
+      "title": "Quarterly Audits + Versioned Change Logs Are Mandatory",
+      "status": "Locked",
+      "date": "2025-12-26",
+      "file": "decisions/DTH-20251226-039.md",
+      "tags": ["scholar-council", "audit", "changelog"],
+      "relatedPods": ["scholar_council_pod"],
+      "relatedSkills": ["scholar_audit_and_changelog"],
+      "relatedEvidence": ["EVID-0041"]
+    },
+    {
+      "id": "DTH-20251226-040",
+      "title": "Context Cards and No-Paraphrase Lists Are Canon Standards",
+      "status": "Locked",
+      "date": "2025-12-26",
+      "file": "decisions/DTH-20251226-040.md",
+      "tags": ["scholar-council", "context-card", "no-paraphrase"],
+      "relatedPods": ["scholar_council_pod"],
+      "relatedSkills": ["context_card_standards", "no_paraphrase_ops"],
+      "relatedEvidence": ["EVID-0042"]
+    },
+    {
+      "id": "DTH-20251226-041",
+      "title": "Governed Publish-Ready Checklist Is Required",
+      "status": "Locked",
+      "date": "2025-12-26",
+      "file": "decisions/DTH-20251226-041.md",
+      "tags": ["scholar-council", "publish-ready", "gates"],
+      "relatedPods": ["scholar_council_pod"],
+      "relatedSkills": ["governed_publication_readiness"],
+      "relatedEvidence": ["EVID-0043"]
     }
   ]
 }

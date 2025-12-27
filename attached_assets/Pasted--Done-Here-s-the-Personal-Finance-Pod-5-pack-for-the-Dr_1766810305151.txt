@@ -1,0 +1,550 @@
+✅ Done. Here’s the **Personal Finance Pod 5-pack** for the **DreamTeamHub repo / Replit** — **EVID-0044 → EVID-0048** + decisions **DTH-20251226-042 → 046**, plus index + skills updates. (Educational support only; no CPA/financial-advice relationship.)
+
+## ✅ Paste into: **DreamTeamHub** repo / Replit
+
+---
+
+### Evidence Packs (EVID-0044 → EVID-0048)
+
+```diff
+FILE: canon/heritage/evidence/EVID-0044.md
++Confidential and proprietary and copyright Dustin Sparks 2025
++
++# EVID-0044 — Budgeting & Cash Flow OS (Harbor) — Plan → Cadence → Variance Review
++
++## Problem
++Money stress persists when budgeting is treated as a one-time spreadsheet instead of an operating system with cadence and variance learning.
++
++## Constraints
++- Educational only; no individualized financial advice relationship
++- Must be simple enough to maintain monthly
++- Must align with real spending patterns (not “perfect behavior” fantasies)
++
++## Approach (Cash Flow OS)
++1) **Baseline**
++   - income streams, fixed costs, variable categories, debt minimums
++2) **Budget plan**
++   - realistic category targets + planned transfers (savings/debt)
++3) **Cadence**
++   - weekly quick check (spend drift)
++   - monthly close (actuals vs plan)
++4) **Variance review**
++   - identify leaks, one-offs, trend changes
++   - adjust plan (not guilt)
++5) **Automation**
++   - pay yourself first via scheduled transfers where possible
++
++## Why it worked
++It converts budgeting into a feedback loop: reality informs the plan, and the plan becomes easier to follow.
++
++## Outcome
++- Better control of monthly cash flow
++- Reduced “mystery spending”
++- Faster progress on goals through automation
++
++## Where it landed
++Personal Finance Pod: Harbor-owned budgeting and monthly health checks
++
++## Related Skills
++- budgeting_cashflow_os
++
++## Related Decisions
++- DTH-20251226-042
++
+END_FILE
+```
+
+```diff
+FILE: canon/heritage/evidence/EVID-0045.md
++Confidential and proprietary and copyright Dustin Sparks 2025
++
++# EVID-0045 — Debt Strategy OS (Relief) — Inventory → Method → Timeline → Tradeoffs
++
++## Problem
++Debt payoff stalls when users don’t have a clear inventory, payoff method, or timeline—and when tradeoffs aren’t explicit.
++
++## Constraints
++- Educational only; no legal/collection negotiation authority
++- Must be understandable and motivating
++- Must remain compatible with maintaining minimums and essentials
++
++## Approach (Debt OS)
++1) **Inventory**
++   - balances, APRs, minimums, due dates
++2) **Choose method**
++   - Snowball (momentum) vs Avalanche (interest efficiency)
++3) **Timeline model**
++   - payoff date estimates under different extra-payment levels
++4) **Tradeoffs**
++   - compare speed vs flexibility vs risk (emergency fund considerations)
++5) **Execution plan**
++   - auto-pay minimums + route extra payment to the target debt
++
++## Why it worked
++It turns vague anxiety into a concrete plan with options and clear tradeoffs.
++
++## Outcome
++- Clear payoff path and milestones
++- Reduced missed payments via automation
++- Faster debt reduction through focused extra payments
++
++## Where it landed
++Personal Finance Pod: Relief-owned debt payoff modeling and strategy
++
++## Related Skills
++- debt_strategy_modeling
++
++## Related Decisions
++- DTH-20251226-043
++
+END_FILE
+```
+
+```diff
+FILE: canon/heritage/evidence/EVID-0046.md
++Confidential and proprietary and copyright Dustin Sparks 2025
++
++# EVID-0046 — Savings Automation + Sinking Funds System (Nest) — Goals → Buckets → Auto-Transfers
++
++## Problem
++Savings goals fail when they rely on willpower instead of automation and bucketed intent (e.g., irregular expenses).
++
++## Constraints
++- Must work with irregular income as well as steady income
++- Must be low-maintenance once set
++- Must prevent “oops we forgot annual bills”
++
++## Approach (Savings OS)
++1) **Goal mapping**
++   - emergency fund, taxes set-aside, travel, annual bills, replacements
++2) **Sinking funds**
++   - define a bucket per predictable irregular expense
++3) **Automation**
++   - scheduled transfers on payday (or weekly) into buckets
++4) **Rules**
++   - withdrawals are allowed only for the bucket’s purpose
++5) **Review**
++   - quarterly recalibration (actual costs vs planned)
++
++## Why it worked
++It makes savings inevitable and prevents irregular expenses from becoming emergencies.
++
++## Outcome
++- More consistent savings progress
++- Fewer surprise expenses
++- Better stability during variable months
++
++## Where it landed
++Personal Finance Pod: Nest-owned savings automation and sinking fund discipline
++
++## Related Skills
++- savings_automation_sinking_funds
++
++## Related Decisions
++- DTH-20251226-044
++
+END_FILE
+```
+
+```diff
+FILE: canon/heritage/evidence/EVID-0047.md
++Confidential and proprietary and copyright Dustin Sparks 2025
++
++# EVID-0047 — Insurance & Risk Review (Shield) — Coverage Map → Gaps/Overlaps → Cost Control
++
++## Problem
++People either overpay for redundant coverage or remain exposed because they don’t know what risks they actually have.
++
++## Constraints
++- Educational only; not a broker/agent
++- Must stay practical and cost-aware
++- Must identify both gaps and waste
++
++## Approach (Insurance Review)
++1) **Coverage map**
++   - health, auto, home/renters, disability, life (as relevant)
++2) **Risk inventory**
++   - what outcomes would be financially catastrophic?
++3) **Gap/overlap analysis**
++   - missing coverages vs redundant coverages
++4) **Cost control**
++   - deductible strategy, bundling, shopping cadence, policy limits sanity check
++5) **Action plan**
++   - “keep / change / shop” list with priority order
++
++## Why it worked
++It creates clarity: protect what matters, avoid over-insuring what doesn’t.
++
++## Outcome
++- Lower risk exposure
++- Potential cost savings
++- Better confidence in coverage decisions
++
++## Where it landed
++Personal Finance Pod: Shield-owned coverage and risk gap review
++
++## Related Skills
++- insurance_gap_overlap_review
++
++## Related Decisions
++- DTH-20251226-045
++
+END_FILE
+```
+
+```diff
+FILE: canon/heritage/evidence/EVID-0048.md
++Confidential and proprietary and copyright Dustin Sparks 2025
++
++# EVID-0048 — Tax + Credit Guardrails (Tally + Boost) — Education, Compliance, and Safety
++
++## Problem
++Tax and credit mistakes can create high-cost consequences. People need guardrails that prevent obvious errors and encourage compliant planning.
++
++## Constraints
++- Educational only; not a CPA/attorney
++- Must avoid giving filing/legal instructions as a substitute for a professional
++- Must keep recommendations safe, compliant, and conservative
++
++## Approach (Guardrails)
++**Tax (Tally)**
++- Encourage recordkeeping and categorization discipline
++- Flag “tests-to-consider” for tax planning conversations:
++  - estimated payments, deductions, withholding adjustments (as applicable)
++- Stress compliance posture and documentation
++
++**Credit (Boost)**
++- Utilization awareness and payment hygiene
++- Dispute/cleanup steps framed at a high level (education)
++- Avoid tactics that could be interpreted as fraud or evasion
++
++**Safety language**
++- “Verify with a licensed professional”
++- “Do not rely on this as filing advice”
++
++## Why it worked
++It keeps users out of trouble: better hygiene, fewer avoidable penalties, and safer decision-making.
++
++## Outcome
++- More stable tax planning habits
++- Improved credit hygiene and awareness
++- Lower risk of harmful or non-compliant tactics
++
++## Where it landed
++Personal Finance Pod: Tally + Boost guardrails for safe guidance
++
++## Related Skills
++- tax_credit_guardrails
++
++## Related Decisions
++- DTH-20251226-046
++
+END_FILE
+```
+
+---
+
+### Decisions (DTH-20251226-042 → 046)
+
+```diff
+FILE: canon/heritage/decisions/DTH-20251226-042.md
++Confidential and proprietary and copyright Dustin Sparks 2025
++
++# Decision: DTH-20251226-042 — Budgeting Must Run as a Cash Flow Operating System
++**Date:** 2025-12-26  
++**Status:** Locked  
++
++## Decision
++Budgeting is treated as a cash flow OS (baseline → plan → cadence → variance review → automation), not a one-time spreadsheet.
++
++## References
++- canon/heritage/evidence/EVID-0044.md
++
+END_FILE
+```
+
+```diff
+FILE: canon/heritage/decisions/DTH-20251226-043.md
++Confidential and proprietary and copyright Dustin Sparks 2025
++
++# Decision: DTH-20251226-043 — Debt Payoff Requires Inventory + Method + Timeline Modeling
++**Date:** 2025-12-26  
++**Status:** Locked  
++
++## Decision
++Debt work requires a full inventory, a chosen payoff method (snowball/avalanche), timeline modeling, and explicit tradeoffs.
++
++## References
++- canon/heritage/evidence/EVID-0045.md
++
+END_FILE
+```
+
+```diff
+FILE: canon/heritage/decisions/DTH-20251226-044.md
++Confidential and proprietary and copyright Dustin Sparks 2025
++
++# Decision: DTH-20251226-044 — Savings Uses Automation + Sinking Funds by Default
++**Date:** 2025-12-26  
++**Status:** Locked  
++
++## Decision
++Savings is automation-first with sinking funds to cover predictable irregular expenses.
++
++## References
++- canon/heritage/evidence/EVID-0046.md
++
+END_FILE
+```
+
+```diff
+FILE: canon/heritage/decisions/DTH-20251226-045.md
++Confidential and proprietary and copyright Dustin Sparks 2025
++
++# Decision: DTH-20251226-045 — Insurance Review Requires Gap/Overlap Analysis and Cost Discipline
++**Date:** 2025-12-26  
++**Status:** Locked  
++
++## Decision
++Insurance review maps coverage, identifies gaps/overlaps, and recommends cost-aware actions (keep/change/shop) in priority order.
++
++## References
++- canon/heritage/evidence/EVID-0047.md
++
+END_FILE
+```
+
+```diff
+FILE: canon/heritage/decisions/DTH-20251226-046.md
++Confidential and proprietary and copyright Dustin Sparks 2025
++
++# Decision: DTH-20251226-046 — Tax and Credit Guidance Must Use Conservative Guardrails (Education Only)
++**Date:** 2025-12-26  
++**Status:** Locked  
++
++## Decision
++Tax and credit guidance is education-only with conservative compliance guardrails; no filing/legal substitution and no risky tactics.
++
++## References
++- canon/heritage/evidence/EVID-0048.md
++
+END_FILE
+```
+
+---
+
+### Index updates
+
+```diff
+FILE: canon/heritage/evidence/_EVIDENCE_INDEX.json
+@@
+     {
+       "evidenceId": "EVID-0043",
+       "title": "Governed Publication Readiness Checklist (Scholar Council)",
+       "path": "canon/heritage/evidence/EVID-0043.md",
+       "tags": ["scholar-council", "publish-ready", "gates"],
+       "relatedDecisions": ["DTH-20251226-041"]
+     },
++    {
++      "evidenceId": "EVID-0044",
++      "title": "Budgeting & Cash Flow OS (Harbor) — Plan → Cadence → Variance Review",
++      "path": "canon/heritage/evidence/EVID-0044.md",
++      "tags": ["finance", "budget", "cashflow", "ops"],
++      "relatedDecisions": ["DTH-20251226-042"]
++    },
++    {
++      "evidenceId": "EVID-0045",
++      "title": "Debt Strategy OS (Relief) — Inventory → Method → Timeline → Tradeoffs",
++      "path": "canon/heritage/evidence/EVID-0045.md",
++      "tags": ["finance", "debt", "modeling", "strategy"],
++      "relatedDecisions": ["DTH-20251226-043"]
++    },
++    {
++      "evidenceId": "EVID-0046",
++      "title": "Savings Automation + Sinking Funds System (Nest) — Goals → Buckets → Auto-Transfers",
++      "path": "canon/heritage/evidence/EVID-0046.md",
++      "tags": ["finance", "savings", "automation", "sinking-funds"],
++      "relatedDecisions": ["DTH-20251226-044"]
++    },
++    {
++      "evidenceId": "EVID-0047",
++      "title": "Insurance & Risk Review (Shield) — Coverage Map → Gaps/Overlaps → Cost Control",
++      "path": "canon/heritage/evidence/EVID-0047.md",
++      "tags": ["finance", "insurance", "risk", "gaps"],
++      "relatedDecisions": ["DTH-20251226-045"]
++    },
++    {
++      "evidenceId": "EVID-0048",
++      "title": "Tax + Credit Guardrails (Tally + Boost) — Education, Compliance, and Safety",
++      "path": "canon/heritage/evidence/EVID-0048.md",
++      "tags": ["finance", "tax", "credit", "guardrails"],
++      "relatedDecisions": ["DTH-20251226-046"]
++    }
+   ]
+ }
+ 
+ END_FILE
+```
+
+```diff
+FILE: canon/heritage/decisions/_DECISION_INDEX.json
+@@
+     {
+       "decisionId": "DTH-20251226-041",
+       "title": "Governed Publish-Ready Checklist Is Required",
+       "path": "canon/heritage/decisions/DTH-20251226-041.md",
+       "status": "Locked",
+       "tags": ["scholar-council", "publish-ready", "gates"]
+     },
++    {
++      "decisionId": "DTH-20251226-042",
++      "title": "Budgeting Must Run as a Cash Flow Operating System",
++      "path": "canon/heritage/decisions/DTH-20251226-042.md",
++      "status": "Locked",
++      "tags": ["finance", "budget", "cashflow"]
++    },
++    {
++      "decisionId": "DTH-20251226-043",
++      "title": "Debt Payoff Requires Inventory + Method + Timeline Modeling",
++      "path": "canon/heritage/decisions/DTH-20251226-043.md",
++      "status": "Locked",
++      "tags": ["finance", "debt", "strategy"]
++    },
++    {
++      "decisionId": "DTH-20251226-044",
++      "title": "Savings Uses Automation + Sinking Funds by Default",
++      "path": "canon/heritage/decisions/DTH-20251226-044.md",
++      "status": "Locked",
++      "tags": ["finance", "savings", "automation"]
++    },
++    {
++      "decisionId": "DTH-20251226-045",
++      "title": "Insurance Review Requires Gap/Overlap Analysis and Cost Discipline",
++      "path": "canon/heritage/decisions/DTH-20251226-045.md",
++      "status": "Locked",
++      "tags": ["finance", "insurance", "risk"]
++    },
++    {
++      "decisionId": "DTH-20251226-046",
++      "title": "Tax and Credit Guidance Must Use Conservative Guardrails (Education Only)",
++      "path": "canon/heritage/decisions/DTH-20251226-046.md",
++      "status": "Locked",
++      "tags": ["finance", "tax", "credit", "guardrails"]
++    }
+   ]
+ }
+ 
+ END_FILE
+```
+
+---
+
+### Skills update
+
+```diff
+FILE: canon/heritage/skills.json
+@@
+   "skills": [
+@@
++    {
++      "skillKey": "budgeting_cashflow_os",
++      "name": "Budgeting & Cash Flow Operating System",
++      "description": "Build and maintain a realistic budget with cadence and variance review (weekly check + monthly close) and automation-first transfers.",
++      "levels": {
++        "L0": "Can list categories.",
++        "L1": "Can draft a basic monthly budget with guidance.",
++        "L2": "Can run variance review and adjust targets based on reality.",
++        "L3": "Can design a full cash flow OS with automation and multiple income streams."
++      },
++      "guardrails": ["Education only; avoid individualized financial advice claims."],
++      "patterns": { "do": ["Weekly check + monthly close", "Plan then learn from variance"], "dont": ["One-and-done budget"] },
++      "evidenceLinks": [
++        { "evidenceId": "EVID-0044", "label": "Budgeting & cash flow OS", "location": "canon/heritage/evidence/EVID-0044.md" }
++      ]
++    },
++    {
++      "skillKey": "debt_strategy_modeling",
++      "name": "Debt Strategy Modeling (Snowball/Avalanche + Timelines)",
++      "description": "Inventory debts, choose payoff method, model timelines, and implement focused extra-payment execution with automation.",
++      "levels": {
++        "L0": "Can list debts.",
++        "L1": "Can explain snowball vs avalanche.",
++        "L2": "Can model payoff timelines under different payment levels.",
++        "L3": "Can design a full debt plan including tradeoffs and risk controls."
++      },
++      "guardrails": ["Education only; do not present negotiation steps as legal advice."],
++      "patterns": { "do": ["Auto-pay minimums", "Route extra to target debt"], "dont": ["Diffuse extra payments"] },
++      "evidenceLinks": [
++        { "evidenceId": "EVID-0045", "label": "Debt strategy OS", "location": "canon/heritage/evidence/EVID-0045.md" }
++      ]
++    },
++    {
++      "skillKey": "savings_automation_sinking_funds",
++      "name": "Savings Automation + Sinking Funds",
++      "description": "Use bucketed sinking funds and scheduled transfers to make savings consistent and protect against irregular expenses.",
++      "levels": {
++        "L0": "Understands saving goals.",
++        "L1": "Can create basic buckets with guidance.",
++        "L2": "Can set automation cadence and recalibrate quarterly.",
++        "L3": "Can design a savings OS for irregular income and multiple goals."
++      },
++      "guardrails": ["Avoid unrealistic targets; prioritize emergency stability."],
++      "patterns": { "do": ["Sinking fund buckets", "Payday automation"], "dont": ["Rely on willpower"] },
++      "evidenceLinks": [
++        { "evidenceId": "EVID-0046", "label": "Savings automation + sinking funds", "location": "canon/heritage/evidence/EVID-0046.md" }
++      ]
++    },
++    {
++      "skillKey": "insurance_gap_overlap_review",
++      "name": "Insurance Gap/Overlap Review (Education)",
++      "description": "Map coverage, identify gaps/overlaps, and propose cost-aware keep/change/shop actions.",
++      "levels": {
++        "L0": "Can list policies.",
++        "L1": "Can identify obvious gaps with guidance.",
++        "L2": "Can produce a prioritized action list (keep/change/shop).",
++        "L3": "Can audit a full coverage posture for risk and cost efficiency."
++      },
++      "guardrails": ["Education only; not a broker/agent."],
++      "patterns": { "do": ["Coverage map + risk inventory", "Prioritized action plan"], "dont": ["Over-insure low-impact risks"] },
++      "evidenceLinks": [
++        { "evidenceId": "EVID-0047", "label": "Insurance & risk review", "location": "canon/heritage/evidence/EVID-0047.md" }
++      ]
++    },
++    {
++      "skillKey": "tax_credit_guardrails",
++      "name": "Tax + Credit Guardrails (Education, Compliance, Safety)",
++      "description": "Provide conservative educational guidance on tax planning hygiene and credit basics without crossing into filing/legal advice or risky tactics.",
++      "levels": {
++        "L0": "Can state basic rules.",
++        "L1": "Can suggest safe hygiene steps with disclaimers.",
++        "L2": "Can frame planning questions for a CPA and credit hygiene plans.",
++        "L3": "Can institutionalize guardrails to prevent harmful recommendations."
++      },
++      "guardrails": ["Not a CPA/attorney; no filing advice; no fraud/evasion tactics."],
++      "patterns": { "do": ["Recordkeeping discipline", "Utilization awareness"], "dont": ["Overconfident filing instructions"] },
++      "evidenceLinks": [
++        { "evidenceId": "EVID-0048", "label": "Tax + credit guardrails", "location": "canon/heritage/evidence/EVID-0048.md" }
++      ]
++    }
+   ]
+ }
+ END_FILE
+```
+
+---
+
+## Post-apply verification
+
+Run:
+
+```bash
+npm run heritage:scoreboard
+```
+
+If you want the **one-page scoreboard** accurate without counting, update `canon/heritage/STATUS.md` totals after the script output.
+
+---
+
+### Next in our “work down the list”
+
+At this point, all major pods/councils you named are covered with dedicated Evidence Packs. If you want to keep going, the next logical “5-pack” is a **Creative Pod execution pack** (visual asset pipeline + template governance + export specs + tone/voice enforcement + review gates), but you can also call it complete for “coverage.”
