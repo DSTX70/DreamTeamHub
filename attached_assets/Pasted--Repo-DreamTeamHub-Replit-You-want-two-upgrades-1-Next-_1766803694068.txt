@@ -1,0 +1,245 @@
+**Repo:** `DreamTeamHub` (Replit)
+
+You want two upgrades:
+
+1. **“Next Actions” micro-panel** on **Work Item Detail** (deep links to Logs / Verification / Artifacts)
+2. **Auto-detect Target Context badge** in **Work Orders list** (so you can see the target repo at a glance)
+
+To keep this safe with your existing complex page layouts, I’m shipping this as:
+
+* **new reusable helper** to parse Target Context from the Cast Receipt
+* **new reusable component** for Next Actions
+* **small, surgical edits** to `work-item-detail.tsx` and `work-orders.tsx`
+
+---
+
+## ✅ Single Drop: Shared Cast Receipt parser + Next Actions panel + Work Orders badge
+
+```tsx
+FILE: client/src/lib/castReceipt.ts
+export type ParsedCastReceipt = {
+  targetContext?: string;
+  mode?: string;
+  autonomy?: string;
+};
+
+/**
+ * Finds a --- delimited block containing "Cast Receipt" and returns it.
+ */
+export function extractCastReceiptBlock(description?: string | null): string | null {
+  if (!description) return null;
+
+  const re = /---\s*\n([\s\S]*?)\n---/g;
+  let m: RegExpExecArray | null;
+
+  while ((m = re.exec(description)) !== null) {
+    const block = m[1]?.trim();
+    if (block && /(^|\n)Cast Receipt(\n|$)/i.test(block)) return block;
+  }
+
+  return null;
+}
+
+function parseKeyLine(block: string, key: string): string | undefined {
+  const re = new RegExp(`^${key}\\s*:\\s*(.+)$`, "im");
+  const m = block.match(re);
+  const v = m?.[1]?.trim();
+  return v || undefined;
+}
+
+/**
+ * Lightweight parse for the fields we need in UI surfaces.
+ */
+export function parseCastReceipt(description?: string | null): ParsedCastReceipt | null {
+  const block = extractCastReceiptBlock(description);
+  if (!block) return null;
+
+  return {
+    targetContext: parseKeyLine(block, "Target Context"),
+    mode: parseKeyLine(block, "Mode"),
+    autonomy: parseKeyLine(block, "Autonomy"),
+  };
+}
+
+export function getTargetContext(description?: string | null): string | null {
+  return parseCastReceipt(description)?.targetContext ?? null;
+}
+END_FILE
+
+FILE: client/src/components/workItems/NextActionsPanel.tsx
+import type { WorkItem } from "@shared/schema";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { ExternalLink, ShieldCheck, FolderKanban, ScrollText } from "lucide-react";
+import { useLocation } from "wouter";
+
+function isFailureStatus(status?: string | null) {
+  if (!status) return false;
+  const s = status.toLowerCase();
+  return s.includes("fail") || s.includes("error") || s.includes("blocked");
+}
+
+function enc(v: string) {
+  return encodeURIComponent(v);
+}
+
+/**
+ * “Next Actions” micro-panel
+ * - Logs: shows when status indicates failure (best-effort link)
+ * - Verification: always available
+ * - Artifacts: link to /artifacts with query to help find related projects/files
+ */
+export default function NextActionsPanel(props: { workItem: WorkItem; targetContext?: string | null }) {
+  const { workItem, targetContext } = props;
+  const [, setLocation] = useLocation();
+
+  const failure = isFailureStatus(workItem.status);
+  const ctx = targetContext?.trim() ? targetContext!.trim() : "—";
+
+  // Best-effort query params; the destination pages may ignore these today.
+  const logsHref = `/ops/logs?workItemId=${workItem.id}&context=${enc(ctx)}&q=${enc(workItem.title ?? "")}`;
+  const verifyHref = `/verification?workItemId=${workItem.id}&context=${enc(ctx)}`;
+  const artifactsHref = `/artifacts?q=${enc(workItem.title ?? "")}&context=${enc(ctx)}&workItemId=${workItem.id}`;
+
+  return (
+    <Card data-testid="next-actions-panel">
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <ExternalLink className="h-5 w-5" />
+          Next Actions
+        </CardTitle>
+        <CardDescription>
+          Quick jumps based on this work item’s context & status. (Target: {ctx})
+        </CardDescription>
+      </CardHeader>
+
+      <CardContent className="flex flex-wrap gap-2">
+        {failure && (
+          <Button
+            variant="destructive"
+            className="gap-2"
+            onClick={() => setLocation(logsHref)}
+            data-testid="next-action-logs"
+            title="Open orchestration logs (best effort filter)"
+          >
+            <ScrollText className="h-4 w-4" />
+            Open Logs
+          </Button>
+        )}
+
+        <Button
+          variant="default"
+          className="gap-2"
+          onClick={() => setLocation(verifyHref)}
+          data-testid="next-action-verify"
+          title="Open Verification lens"
+        >
+          <ShieldCheck className="h-4 w-4" />
+          Verification
+        </Button>
+
+        <Button
+          variant="outline"
+          className="gap-2"
+          onClick={() => setLocation(artifactsHref)}
+          data-testid="next-action-artifacts"
+          title="Open Artifacts lens (best effort search)"
+        >
+          <FolderKanban className="h-4 w-4" />
+          Related Artifacts
+        </Button>
+      </CardContent>
+    </Card>
+  );
+}
+END_FILE
+
+FILE: client/src/pages/work-orders.tsx
+/**
+ * Add a Target Context badge in the Work Orders list.
+ *
+ * NOTE: This patch assumes you already render a list of WorkItem rows.
+ * Integrate the highlighted snippet where you render each work item title.
+ */
+import { getTargetContext } from "@/lib/castReceipt";
+END_FILE
+```
+
+### ✅ Now apply these two **surgical insertions** (copy/paste snippets)
+
+Because I don’t have your full `work-orders.tsx` file content, I’m not going to guess and overwrite it. Do these two tiny merges:
+
+#### A) In `client/src/pages/work-orders.tsx`
+
+1. Add the import (already provided in the drop):
+
+```ts
+import { getTargetContext } from "@/lib/castReceipt";
+```
+
+2. In the WorkItem row rendering (near the title), compute and render:
+
+```tsx
+const ctx = getTargetContext(item.description) || "DreamTeamHub";
+```
+
+Then next to the title:
+
+```tsx
+<Badge variant="secondary" title="Target Context">
+  {ctx}
+</Badge>
+```
+
+(If you don’t currently import `Badge`, import from `@/components/ui/badge`.)
+
+#### B) In `client/src/pages/work-item-detail.tsx`
+
+1. Import the component and helper:
+
+```ts
+import NextActionsPanel from "@/components/workItems/NextActionsPanel";
+import { getTargetContext } from "@/lib/castReceipt";
+```
+
+2. Right after your **Routing & Cast panel** (and before Description), render:
+
+```tsx
+<NextActionsPanel
+  workItem={workItem}
+  targetContext={getTargetContext(workItem.description) || cast?.targetContext || "DreamTeamHub"}
+/>
+```
+
+This will show:
+
+* Logs button only if status looks like failure
+* Verification + Related Artifacts always
+
+---
+
+## Post-apply verification
+
+1. `npm run check`
+2. Open `/work-orders` → each row shows a **Target Context badge**
+3. Open a work item:
+
+   * Next Actions panel appears
+   * Set status to “failed” / “error” / “blocked” → Logs button appears
+4. Clicking:
+
+   * Verification goes to `/verification?...`
+   * Artifacts goes to `/artifacts?...`
+   * Logs goes to `/ops/logs?...`
+
+---
+
+## If you want the links to actually “filter” (next step)
+
+Right now the query params are “best effort.”
+If you want **/ops/logs**, **/verification**, and **/artifacts** to respect those params, tell me which pages back those routes, and I’ll ship small patches that:
+
+* read query params
+* apply search/filter state automatically
+
+If you paste the top of `work-orders.tsx` where the list row is rendered, I can give you an exact single-file drop for that page too.

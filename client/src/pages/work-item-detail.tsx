@@ -11,6 +11,8 @@ import { FilesPanel } from "@/components/FilesPanel";
 import { WorkItemActionsPanel } from "@/components/workItems/WorkItemActionsPanel";
 import { WorkItemPacksPanel } from "@/components/workItems/WorkItemPacksPanel";
 import { LifestyleHeroPreview } from "@/components/workItems/LifestyleHeroPreview";
+import NextActionsPanel from "@/components/workItems/NextActionsPanel";
+import { getTargetContext } from "@/lib/castReceipt";
 import { ArrowLeft, Calendar, User, Target, Route, Compass, Users } from "lucide-react";
 import { format } from "date-fns";
 import type { WorkItem } from "@shared/schema";
@@ -227,6 +229,12 @@ export default function WorkItemDetail() {
         </Card>
       )}
 
+      {/* Next Actions Panel */}
+      <NextActionsPanel
+        workItem={workItem}
+        targetContext={getTargetContext(workItem.description) || cast?.targetContext || "DreamTeamHub"}
+      />
+
       {/* Main Content Grid */}
       <div className="grid gap-6 lg:grid-cols-3">
         {/* Left Column - Details */}
@@ -265,19 +273,14 @@ export default function WorkItemDetail() {
           <LifestyleHeroPreview workItemId={workItem.id} />
 
           {/* Files */}
-          {workItem.workOrderId && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Files</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <FilesPanel
-                  workItemId={workItem.id}
-                  workOrderId={workItem.workOrderId}
-                />
-              </CardContent>
-            </Card>
-          )}
+          <Card>
+            <CardHeader>
+              <CardTitle>Files</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <FilesPanel workItemId={workItem.id} />
+            </CardContent>
+          </Card>
         </div>
 
         {/* Right Column - Metadata */}
