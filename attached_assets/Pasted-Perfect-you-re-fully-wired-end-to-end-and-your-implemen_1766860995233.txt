@@ -1,0 +1,104 @@
+Perfect — you’re fully wired end-to-end, and your implementation choices are solid.
+
+Two small “make it bulletproof” tweaks I’d recommend (no behavior change, just resilience):
+
+## 1) Expand provenance extraction to also read `targetContext.strategySessionId`
+
+Right now you’re parsing only from `playbook` using the `**Source:** Strategy Session <id>` pattern. That’s fine, but you already send structured provenance in `targetContext` during conversion — using it makes the badge survive future playbook formatting changes.
+
+**Suggested extraction priority**
+
+1. `workItem.targetContext.strategySessionId` (or `target_context/context` variants)
+2. fallback to your current regex parse of `playbook`
+
+## 2) Loosen the regex slightly
+
+Your current regex requires Markdown formatting: `**Source:** Strategy Session`. If someone changes the playbook string formatting, it breaks.
+
+A slightly more tolerant regex can match:
+
+* `Source: Strategy Session abc123`
+* `Strategy Session abc123`
+* `strategySessionId: abc123`
+
+---
+
+### Paste-ready patch for your work-item-detail.tsx
+
+(Replace your helper + memo with this; keep your badge render as-is.)
+
+```diff
+FILE: client/src/pages/work-item-detail.tsx
+@@
+-function extractStrategyProvenance(playbook?: string | null): string | null {
+-  if (!playbook) return null;
+-  const match = playbook.match(/\*\*Source:\*\*\s*Strategy Session\s+([a-zA-Z0-9]+)/i);
+-  return match?.[1] ?? null;
+-}
++function safeJsonParse(s: string): any {
++  try { return JSON.parse(s); } catch { return null; }
++}
++
++function extractStrategyProvenance(workItem: any): string | null {
++  if (!workItem) return null;
++
++  // 1) Prefer structured provenance if present
++  const ctxRaw = workItem.targetContext ?? workItem.target_context ?? workItem.context ?? null;
++  const ctx = typeof ctxRaw === "string" ? (safeJsonParse(ctxRaw) ?? null) : ctxRaw;
++  const fromCtx =
++    ctx && typeof ctx === "object"
++      ? (ctx.strategySessionId || ctx.strategy_session_id || null)
++      : null;
++  if (fromCtx && typeof fromCtx === "string") return fromCtx;
++
++  // 2) Fallback to playbook parsing (tolerant)
++  const playbook = String(workItem.playbook || "");
++  if (!playbook) return null;
++
++  // Matches a few common shapes:
++  // **Source:** Strategy Session abc123
++  // Source: Strategy Session abc123
++  // strategySessionId: abc123
++  const patterns = [
++    /\*\*Source:\*\*\s*Strategy Session\s+([a-z0-9]+)/i,
++    /Source:\s*Strategy Session\s+([a-z0-9]+)/i,
++    /strategySessionId\s*[:=]\s*([a-z0-9]+)/i,
++  ];
++  for (const p of patterns) {
++    const m = playbook.match(p);
++    if (m?.[1]) return m[1];
++  }
++  return null;
++}
+@@
+-const strategySessionId = useMemo(() => extractStrategyProvenance(workItem?.playbook ?? null), [workItem?.playbook]);
++const strategySessionId = useMemo(() => extractStrategyProvenance(workItem), [workItem]);
+ 
+ END_FILE
+```
+
+---
+
+## Badge styling/placement: you’re already in the right spot
+
+Header is correct. One micro polish I like:
+
+* keep the full ID in a tooltip (title attribute), show the short slice in the badge (you already do the slice)
+
+You also already added a `data-testid` — perfect for regression tests.
+
+---
+
+## Next “make it real” step (recommended)
+
+Now that the pipeline is operational, the next step is:
+
+**Add a “Recommendation” mode between Strategy and Execution**
+So after Convert → Work Item, the first stage is “Generate Recommendation” (non-executing), then only after approval does it generate a patch drop.
+
+If you want to proceed, tell me which repo we’re targeting for the pilot drops:
+
+* **GigsterGarage** (recommended)
+* or stay in **DreamTeamHub** for one more dry-run
+
+And I’ll drop the patch to add **Work Item stages**: `RECOMMENDATION → APPROVED → DROP_READY`.

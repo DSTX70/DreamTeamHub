@@ -81,10 +81,40 @@ function parseCastReceipt(description?: string | null) {
   };
 }
 
-function extractStrategyProvenance(playbook?: string | null): string | null {
+function safeJsonParse(s: string): any {
+  try { return JSON.parse(s); } catch { return null; }
+}
+
+function extractStrategyProvenance(workItem: any): string | null {
+  if (!workItem) return null;
+
+  // 1) Prefer structured provenance if present
+  const ctxRaw = workItem.targetContext ?? workItem.target_context ?? workItem.context ?? null;
+  const ctx = typeof ctxRaw === "string" ? (safeJsonParse(ctxRaw) ?? null) : ctxRaw;
+  const fromCtx =
+    ctx && typeof ctx === "object"
+      ? (ctx.strategySessionId || ctx.strategy_session_id || null)
+      : null;
+  if (fromCtx && typeof fromCtx === "string") return fromCtx;
+
+  // 2) Fallback to playbook parsing (tolerant)
+  const playbook = String(workItem.playbook || "");
   if (!playbook) return null;
-  const match = playbook.match(/\*\*Source:\*\*\s*Strategy Session\s+([a-zA-Z0-9]+)/i);
-  return match?.[1] ?? null;
+
+  // Matches a few common shapes:
+  // **Source:** Strategy Session abc123
+  // Source: Strategy Session abc123
+  // strategySessionId: abc123
+  const patterns = [
+    /\*\*Source:\*\*\s*Strategy Session\s+([a-z0-9]+)/i,
+    /Source:\s*Strategy Session\s+([a-z0-9]+)/i,
+    /strategySessionId\s*[:=]\s*([a-z0-9]+)/i,
+  ];
+  for (const p of patterns) {
+    const m = playbook.match(p);
+    if (m?.[1]) return m[1];
+  }
+  return null;
 }
 
 export default function WorkItemDetail() {
@@ -98,7 +128,7 @@ export default function WorkItemDetail() {
   });
 
   const cast = useMemo(() => parseCastReceipt(workItem?.description ?? null), [workItem?.description]);
-  const strategySessionId = useMemo(() => extractStrategyProvenance(workItem?.playbook ?? null), [workItem?.playbook]);
+  const strategySessionId = useMemo(() => extractStrategyProvenance(workItem), [workItem]);
 
   if (isLoading) {
     return (
