@@ -442,6 +442,61 @@
       "relatedPods": ["scholar_council_pod"],
       "relatedSkills": ["governed_publication_readiness"],
       "relatedEvidence": ["EVID-0043"]
+    },
+    {
+      "id": "DTH-20251226-042",
+      "title": "Budgeting Must Run as a Cash Flow Operating System",
+      "status": "Locked",
+      "date": "2025-12-26",
+      "file": "decisions/DTH-20251226-042.md",
+      "tags": ["finance", "budget", "cashflow"],
+      "relatedPods": ["personal_finance_pod"],
+      "relatedSkills": ["budgeting_cashflow_os"],
+      "relatedEvidence": ["EVID-0044"]
+    },
+    {
+      "id": "DTH-20251226-043",
+      "title": "Debt Payoff Requires Inventory + Method + Timeline Modeling",
+      "status": "Locked",
+      "date": "2025-12-26",
+      "file": "decisions/DTH-20251226-043.md",
+      "tags": ["finance", "debt", "modeling"],
+      "relatedPods": ["personal_finance_pod"],
+      "relatedSkills": ["debt_strategy_modeling"],
+      "relatedEvidence": ["EVID-0045"]
+    },
+    {
+      "id": "DTH-20251226-044",
+      "title": "Savings Uses Automation + Sinking Funds by Default",
+      "status": "Locked",
+      "date": "2025-12-26",
+      "file": "decisions/DTH-20251226-044.md",
+      "tags": ["finance", "savings", "automation"],
+      "relatedPods": ["personal_finance_pod"],
+      "relatedSkills": ["savings_automation_sinking_funds"],
+      "relatedEvidence": ["EVID-0046"]
+    },
+    {
+      "id": "DTH-20251226-045",
+      "title": "Insurance Review Requires Gap/Overlap Analysis and Cost Discipline",
+      "status": "Locked",
+      "date": "2025-12-26",
+      "file": "decisions/DTH-20251226-045.md",
+      "tags": ["finance", "insurance", "risk"],
+      "relatedPods": ["personal_finance_pod"],
+      "relatedSkills": ["insurance_gap_overlap_review"],
+      "relatedEvidence": ["EVID-0047"]
+    },
+    {
+      "id": "DTH-20251226-046",
+      "title": "Tax and Credit Guidance Must Use Conservative Guardrails (Education Only)",
+      "status": "Locked",
+      "date": "2025-12-26",
+      "file": "decisions/DTH-20251226-046.md",
+      "tags": ["finance", "tax", "credit", "guardrails"],
+      "relatedPods": ["personal_finance_pod"],
+      "relatedSkills": ["tax_credit_guardrails"],
+      "relatedEvidence": ["EVID-0048"]
     }
   ]
 }

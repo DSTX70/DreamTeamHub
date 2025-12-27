@@ -371,6 +371,51 @@
       "relatedPods": ["scholar_council_pod"],
       "relatedSkills": ["governed_publication_readiness"],
       "relatedDecisions": ["DTH-20251226-041"]
+    },
+    {
+      "id": "EVID-0044",
+      "title": "Budgeting & Cash Flow OS (Harbor) — Plan → Cadence → Variance Review",
+      "file": "EVID-0044.md",
+      "tags": ["finance", "budget", "cashflow", "ops"],
+      "relatedPods": ["personal_finance_pod"],
+      "relatedSkills": ["budgeting_cashflow_os"],
+      "relatedDecisions": ["DTH-20251226-042"]
+    },
+    {
+      "id": "EVID-0045",
+      "title": "Debt Strategy OS (Relief) — Inventory → Method → Timeline → Tradeoffs",
+      "file": "EVID-0045.md",
+      "tags": ["finance", "debt", "modeling", "strategy"],
+      "relatedPods": ["personal_finance_pod"],
+      "relatedSkills": ["debt_strategy_modeling"],
+      "relatedDecisions": ["DTH-20251226-043"]
+    },
+    {
+      "id": "EVID-0046",
+      "title": "Savings Automation + Sinking Funds System (Nest) — Goals → Buckets → Auto-Transfers",
+      "file": "EVID-0046.md",
+      "tags": ["finance", "savings", "automation", "sinking-funds"],
+      "relatedPods": ["personal_finance_pod"],
+      "relatedSkills": ["savings_automation_sinking_funds"],
+      "relatedDecisions": ["DTH-20251226-044"]
+    },
+    {
+      "id": "EVID-0047",
+      "title": "Insurance & Risk Review (Shield) — Coverage Map → Gaps/Overlaps → Cost Control",
+      "file": "EVID-0047.md",
+      "tags": ["finance", "insurance", "risk", "gaps"],
+      "relatedPods": ["personal_finance_pod"],
+      "relatedSkills": ["insurance_gap_overlap_review"],
+      "relatedDecisions": ["DTH-20251226-045"]
+    },
+    {
+      "id": "EVID-0048",
+      "title": "Tax + Credit Guardrails (Tally + Boost) — Education, Compliance, and Safety",
+      "file": "EVID-0048.md",
+      "tags": ["finance", "tax", "credit", "guardrails"],
+      "relatedPods": ["personal_finance_pod"],
+      "relatedSkills": ["tax_credit_guardrails"],
+      "relatedDecisions": ["DTH-20251226-046"]
     }
   ]
 }

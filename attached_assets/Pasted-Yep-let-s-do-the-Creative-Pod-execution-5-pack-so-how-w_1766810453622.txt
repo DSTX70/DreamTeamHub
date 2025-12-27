@@ -1,0 +1,555 @@
+Yep — let’s do the **Creative Pod execution 5-pack** so “how we produce visuals + copy” is preserved as evidence-grade canon (not just brand locks).
+
+This applies to **DreamTeamHub repo / Replit** and adds:
+
+* **Evidence Packs:** `EVID-0049 → EVID-0053`
+* **Decisions:** `DTH-20251226-047 → 051`
+* Index updates: `_EVIDENCE_INDEX.json` + `_DECISION_INDEX.json`
+* Skills updates: creative execution skills added to `skills.json`
+
+---
+
+## ✅ Paste into: **DreamTeamHub** repo / Replit
+
+### Evidence Packs (EVID-0049 → EVID-0053)
+
+```diff
+FILE: canon/heritage/evidence/EVID-0049.md
++Confidential and proprietary and copyright Dustin Sparks 2025
++
++# EVID-0049 — Visual Asset Pipeline OS (Brief → Build → QA → Export → Manifest)
++
++## Problem
++Visual output quality drifts when assets are produced ad hoc: wrong sizes, inconsistent brand usage, missing source references, and unclear “final” states.
++
++## Constraints
++- Must enforce brand locks and canonical assets
++- Must produce spec-compliant exports (web, social, print/KDP, merch)
++- Must be audit-friendly and repeatable
++- Must not invent missing assets; blockers must be listed
++
++## Approach (Pipeline)
++1) **Brief**
++   - target brand/collection, purpose (hero/mockup/cover), required specs, usage context
++2) **Build**
++   - Nova/Walt produces on-model, brand-locked design
++3) **QA**
++   - check brand lock (palette/fonts/logo), layout rules, readability, safe areas
++4) **Export**
++   - export exact sizes/formats per spec (no guesswork)
++5) **Manifest**
++   - produce canonical filenames + mini manifest for batches
++
++## Why it worked
++It turns “design” into a predictable production system: fewer mistakes, fewer revisions, consistent brand execution.
++
++## Outcome
++- Higher asset consistency and quality
++- Faster production cycles
++- Reduced rework due to spec errors
++
++## Where it landed
++Creative & Design Pod operational delivery discipline (Nova-led execution)
++
++## Related Skills
++- visual_asset_pipeline
++
++## Related Decisions
++- DTH-20251226-047
++
+END_FILE
+```
+
+```diff
+FILE: canon/heritage/evidence/EVID-0050.md
++Confidential and proprietary and copyright Dustin Sparks 2025
++
++# EVID-0050 — Template Governance (2-up, Square/Portrait/Landscape, Hero Crops) + “No Near-Match Templates”
++
++## Problem
++Templates multiply and drift: “almost the same” layouts cause inconsistency and confuse production, especially across collections (Fab Card Co lines, OUAS, etc.).
++
++## Constraints
++- Must use approved templates where locked
++- Must not create “near match” templates without approval
++- Must support multiple formats (square, 5x7 portrait, 7x5 landscape, web hero)
++
++## Approach
++**Template governance rules**
++- Use canonical templates (e.g., official 2-up mockup templates) when provided
++- If a new template is needed:
++  - treat it as a controlled addition (versioned + change-logged)
++  - document intended use + constraints
++- Never fork templates silently
++
++**Format discipline examples (from canon rules)**
++- Remix Collection: square format direction (album-cover feel) and canonical 2-up layout
++- Out Loud: rotate among square/portrait/landscape formats per rule
++- Web hero: define exact dimensions and safe areas for headlines/CTA overlays
++
++## Why it worked
++It prevented template sprawl and guaranteed that production assets look cohesive across time.
++
++## Outcome
++- Cleaner brand consistency
++- Faster design execution (less “which template?” debate)
++- Fewer layout regressions
++
++## Where it landed
++Creative production governance across brand/collection pipelines
++
++## Related Skills
++- template_governance
++
++## Related Decisions
++- DTH-20251226-048
++
+END_FILE
+```
+
+```diff
+FILE: canon/heritage/evidence/EVID-0051.md
++Confidential and proprietary and copyright Dustin Sparks 2025
++
++# EVID-0051 — Export Specs Discipline (Web + Social + Print/KDP) + Safe Area Guides
++
++## Problem
++Great designs fail in the real world when export specs are wrong: crops cut off text, print bleeds are incorrect, and sizes don’t match platform requirements.
++
++## Constraints
++- Must export using exact specs, not approximations
++- Must include safe-area guidance when needed (especially hero/social)
++- Must preserve brand lock
++
++## Approach
++**Export spec discipline**
++- Every asset ships with:
++  - exact pixel dimensions and orientation
++  - file format and naming
++  - safe-area guidance (if overlay text may exist)
++
++**Known canonical requirement examples**
++- Book assets: 6" x 9" with bleed — 1875 x 2775 px @ 300 DPI (KDP spec)
++- Web hero assets: exported to exact requested size with optional “headline space preserved” variant when needed
++- Social variants: platform-friendly crops when required (e.g., 1080×1350, 1080×1920)
++
++## Why it worked
++It reduced avoidable rework and ensured assets look correct wherever they’re used.
++
++## Outcome
++- Higher publishing success rate
++- Fewer “please resize” loops
++- More reliable templates and campaigns
++
++## Where it landed
++Creative export QA system (Nova-led) with spec-first delivery
++
++## Related Skills
++- export_specs_and_safe_areas
++
++## Related Decisions
++- DTH-20251226-049
++
+END_FILE
+```
+
+```diff
+FILE: canon/heritage/evidence/EVID-0052.md
++Confidential and proprietary and copyright Dustin Sparks 2025
++
++# EVID-0052 — Tone/Voice Enforcement for Creative Deliverables (Sparkster + Storybloom)
++
++## Problem
++Copy and creative direction drift when tone/voice is treated as optional. “Almost right” voice produces brand inconsistency across products and channels.
++
++## Constraints
++- Must respect brand lock voice attributes per brand/collection
++- Must avoid generic, default corporate tone
++- Must keep claims verifiable and safe
++
++## Approach
++**Voice enforcement rules**
++- Every public-facing deliverable must align to:
++  - brand voice attributes
++  - “do/don’t” rules
++  - canonical taglines/no-paraphrase items (where applicable)
++
++**Roles**
++- Sparkster: primary voice authority and tone gate
++- Storybloom: narrative cohesion and PR framing (audience-fit)
++
++**Execution discipline**
++- Provide 2–3 options only when useful, always with rationale
++- Prefer clarity over cleverness when stakes are high
++
++## Why it worked
++It prevents the “who wrote this?” effect. Voice stays consistent across time and across hands.
++
++## Outcome
++- Higher brand consistency and trust
++- Better conversion and audience resonance
++- Faster approvals because rules are explicit
++
++## Where it landed
++Creative & Design Pod copy governance across brands and launches
++
++## Related Skills
++- brand_voice_enforcement
++
++## Related Decisions
++- DTH-20251226-050
++
+END_FILE
+```
+
+```diff
+FILE: canon/heritage/evidence/EVID-0053.md
++Confidential and proprietary and copyright Dustin Sparks 2025
++
++# EVID-0053 — Creative Review Gates (Brand Lock + LIAC + Safety Escalation)
++
++## Problem
++Creative mistakes become public mistakes when review gates are unclear: off-brand variants, accidental harm, or unsafe framing slips through.
++
++## Constraints
++- Must keep review lightweight but real
++- Must clearly define when LIAC or Security escalation is required
++- Must capture approvals for high-stakes outputs
++
++## Approach (Review Gates)
++**Gate 1 — Brand Lock QA (always for public-facing)**
++- Verify palette/fonts/logos/templates match canon
++- Block “near match” variants
++
++**Gate 2 — Tone/Voice QA (public-facing copy)**
++- Sparkster voice gate (and Storybloom for narrative context)
++
++**Gate 3 — LIAC review (triggered)**
++- Activate when representation, identity, accessibility, or sensitive audiences are in play
++- Use blocker/recommended/optional outputs and sign-off rules
++
++**Gate 4 — Security/Privacy escalation (as needed)**
++- When claims touch security/compliance or sensitive system behavior
++
++## Why it worked
++It prevented high-cost public errors while keeping the creative engine fast and consistent.
++
++## Outcome
++- Less rework after publishing
++- Higher trust in “ready”
++- Safer, more inclusive creative outputs
++
++## Where it landed
++Portfolio creative QA and publishing readiness discipline
++
++## Related Skills
++- creative_review_gates
++
++## Related Decisions
++- DTH-20251226-051
++
+END_FILE
+```
+
+---
+
+### Decisions (DTH-20251226-047 → 051)
+
+```diff
+FILE: canon/heritage/decisions/DTH-20251226-047.md
++Confidential and proprietary and copyright Dustin Sparks 2025
++
++# Decision: DTH-20251226-047 — Creative Output Uses the Visual Asset Pipeline OS
++**Date:** 2025-12-26
++**Status:** Locked
++
++## Decision
++Creative output follows a pipeline: Brief → Build → QA → Export → Manifest, enforcing brand lock and spec discipline.
++
++## References
++- canon/heritage/evidence/EVID-0049.md
++
+END_FILE
+```
+
+```diff
+FILE: canon/heritage/decisions/DTH-20251226-048.md
++Confidential and proprietary and copyright Dustin Sparks 2025
++
++# Decision: DTH-20251226-048 — Template Governance Prevents Near-Match Drift
++**Date:** 2025-12-26
++**Status:** Locked
++
++## Decision
++Use canonical templates; do not create near-match templates without explicit versioned change control.
++
++## References
++- canon/heritage/evidence/EVID-0050.md
++
+END_FILE
+```
+
+```diff
+FILE: canon/heritage/decisions/DTH-20251226-049.md
++Confidential and proprietary and copyright Dustin Sparks 2025
++
++# Decision: DTH-20251226-049 — Export Specs Are Deterministic and Safe-Area Aware
++**Date:** 2025-12-26
++**Status:** Locked
++
++## Decision
++Exports must follow exact specs per use case (web/social/print) with safe-area guidance when needed; no approximations.
++
++## References
++- canon/heritage/evidence/EVID-0051.md
++
+END_FILE
+```
+
+```diff
+FILE: canon/heritage/decisions/DTH-20251226-050.md
++Confidential and proprietary and copyright Dustin Sparks 2025
++
++# Decision: DTH-20251226-050 — Tone/Voice Is Enforced as a Gate for Public-Facing Copy
++**Date:** 2025-12-26
++**Status:** Locked
++
++## Decision
++Public-facing copy must follow brand voice constraints and be gated by Sparkster (with Storybloom for narrative context as needed).
++
++## References
++- canon/heritage/evidence/EVID-0052.md
++
+END_FILE
+```
+
+```diff
+FILE: canon/heritage/decisions/DTH-20251226-051.md
++Confidential and proprietary and copyright Dustin Sparks 2025
++
++# Decision: DTH-20251226-051 — Creative Review Gates Are Required (Brand Lock + LIAC + Safety Escalation)
++**Date:** 2025-12-26
++**Status:** Locked
++
++## Decision
++Creative outputs use defined review gates: Brand Lock QA, Voice QA, LIAC triggers, and Security/Privacy escalation when needed.
++
++## References
++- canon/heritage/evidence/EVID-0053.md
++
+END_FILE
+```
+
+---
+
+### Index updates
+
+```diff
+FILE: canon/heritage/evidence/_EVIDENCE_INDEX.json
+@@
+     {
+       "evidenceId": "EVID-0048",
+       "title": "Tax + Credit Guardrails (Tally + Boost) — Education, Compliance, and Safety",
+       "path": "canon/heritage/evidence/EVID-0048.md",
+       "tags": ["finance", "tax", "credit", "guardrails"],
+       "relatedDecisions": ["DTH-20251226-046"]
+     },
++    {
++      "evidenceId": "EVID-0049",
++      "title": "Visual Asset Pipeline OS (Brief → Build → QA → Export → Manifest)",
++      "path": "canon/heritage/evidence/EVID-0049.md",
++      "tags": ["creative", "design", "pipeline", "qa"],
++      "relatedDecisions": ["DTH-20251226-047"]
++    },
++    {
++      "evidenceId": "EVID-0050",
++      "title": "Template Governance (2-up, Square/Portrait/Landscape, Hero Crops) + No Near-Match Templates",
++      "path": "canon/heritage/evidence/EVID-0050.md",
++      "tags": ["creative", "templates", "governance", "formats"],
++      "relatedDecisions": ["DTH-20251226-048"]
++    },
++    {
++      "evidenceId": "EVID-0051",
++      "title": "Export Specs Discipline (Web + Social + Print/KDP) + Safe Area Guides",
++      "path": "canon/heritage/evidence/EVID-0051.md",
++      "tags": ["creative", "exports", "specs", "safe-area"],
++      "relatedDecisions": ["DTH-20251226-049"]
++    },
++    {
++      "evidenceId": "EVID-0052",
++      "title": "Tone/Voice Enforcement for Creative Deliverables (Sparkster + Storybloom)",
++      "path": "canon/heritage/evidence/EVID-0052.md",
++      "tags": ["creative", "voice", "copy", "governance"],
++      "relatedDecisions": ["DTH-20251226-050"]
++    },
++    {
++      "evidenceId": "EVID-0053",
++      "title": "Creative Review Gates (Brand Lock + LIAC + Safety Escalation)",
++      "path": "canon/heritage/evidence/EVID-0053.md",
++      "tags": ["creative", "review", "liac", "safety"],
++      "relatedDecisions": ["DTH-20251226-051"]
++    }
+   ]
+ }
+ 
+ END_FILE
+```
+
+```diff
+FILE: canon/heritage/decisions/_DECISION_INDEX.json
+@@
+     {
+       "decisionId": "DTH-20251226-046",
+       "title": "Tax and Credit Guidance Must Use Conservative Guardrails (Education Only)",
+       "path": "canon/heritage/decisions/DTH-20251226-046.md",
+       "status": "Locked",
+       "tags": ["finance", "tax", "credit", "guardrails"]
+     },
++    {
++      "decisionId": "DTH-20251226-047",
++      "title": "Creative Output Uses the Visual Asset Pipeline OS",
++      "path": "canon/heritage/decisions/DTH-20251226-047.md",
++      "status": "Locked",
++      "tags": ["creative", "pipeline", "qa"]
++    },
++    {
++      "decisionId": "DTH-20251226-048",
++      "title": "Template Governance Prevents Near-Match Drift",
++      "path": "canon/heritage/decisions/DTH-20251226-048.md",
++      "status": "Locked",
++      "tags": ["creative", "templates", "governance"]
++    },
++    {
++      "decisionId": "DTH-20251226-049",
++      "title": "Export Specs Are Deterministic and Safe-Area Aware",
++      "path": "canon/heritage/decisions/DTH-20251226-049.md",
++      "status": "Locked",
++      "tags": ["creative", "exports", "specs"]
++    },
++    {
++      "decisionId": "DTH-20251226-050",
++      "title": "Tone/Voice Is Enforced as a Gate for Public-Facing Copy",
++      "path": "canon/heritage/decisions/DTH-20251226-050.md",
++      "status": "Locked",
++      "tags": ["creative", "voice", "copy"]
++    },
++    {
++      "decisionId": "DTH-20251226-051",
++      "title": "Creative Review Gates Are Required (Brand Lock + LIAC + Safety Escalation)",
++      "path": "canon/heritage/decisions/DTH-20251226-051.md",
++      "status": "Locked",
++      "tags": ["creative", "review", "liac", "safety"]
++    }
+   ]
+ }
+ 
+ END_FILE
+```
+
+---
+
+### Skills update
+
+```diff
+FILE: canon/heritage/skills.json
+@@
+   "skills": [
+@@
++    {
++      "skillKey": "visual_asset_pipeline",
++      "name": "Visual Asset Pipeline (Brief → QA → Export → Manifest)",
++      "description": "Deliver spec-correct, brand-locked visuals with QA and batch manifests.",
++      "levels": {
++        "L0": "Can produce a design.",
++        "L1": "Can follow a brief and export with guidance.",
++        "L2": "Can run QA and produce correct batch exports + manifests.",
++        "L3": "Can standardize a portfolio-wide production pipeline."
++      },
++      "guardrails": ["No unapproved variants; list blockers instead."],
++      "patterns": { "do": ["Spec-first exports", "Manifest every batch"], "dont": ["Ad hoc resizing"] },
++      "evidenceLinks": [
++        { "evidenceId": "EVID-0049", "label": "Visual asset pipeline OS", "location": "canon/heritage/evidence/EVID-0049.md" }
++      ]
++    },
++    {
++      "skillKey": "template_governance",
++      "name": "Template Governance (No Near-Match Templates)",
++      "description": "Use canonical templates; add new templates only via controlled, versioned change.",
++      "levels": {
++        "L0": "Can use a template.",
++        "L1": "Can adapt content inside a template with guidance.",
++        "L2": "Can manage multiple format templates without drift.",
++        "L3": "Can maintain template libraries with change control."
++      },
++      "guardrails": ["No silent template forks."],
++      "patterns": { "do": ["Version templates", "Document intended use"], "dont": ["Near-match duplication"] },
++      "evidenceLinks": [
++        { "evidenceId": "EVID-0050", "label": "Template governance", "location": "canon/heritage/evidence/EVID-0050.md" }
++      ]
++    },
++    {
++      "skillKey": "export_specs_and_safe_areas",
++      "name": "Export Specs + Safe Area Guidance",
++      "description": "Export deterministic sizes for web/social/print with safe-area variants when needed.",
++      "levels": {
++        "L0": "Can export images.",
++        "L1": "Can match provided sizes with guidance.",
++        "L2": "Can manage multi-platform variants and safe areas reliably.",
++        "L3": "Can standardize export specs across a portfolio."
++      },
++      "guardrails": ["No approximations; use exact specs."],
++      "patterns": { "do": ["Include safe-area guidance", "Publish exact dimensions"], "dont": ["Guess platform requirements"] },
++      "evidenceLinks": [
++        { "evidenceId": "EVID-0051", "label": "Export specs discipline", "location": "canon/heritage/evidence/EVID-0051.md" }
++      ]
++    },
++    {
++      "skillKey": "brand_voice_enforcement",
++      "name": "Brand Voice Enforcement (Creative Deliverables)",
++      "description": "Maintain voice constraints per brand/collection and gate public-facing copy through voice authority.",
++      "levels": {
++        "L0": "Can write copy.",
++        "L1": "Can write on-brand with examples.",
++        "L2": "Can maintain distinct voices across lines reliably.",
++        "L3": "Can codify and enforce voice systems across a portfolio."
++      },
++      "guardrails": ["Respect no-paraphrase items where applicable."],
++      "patterns": { "do": ["Voice attributes + do/don’t lists", "Rationale with options"], "dont": ["Generic corporate tone"] },
++      "evidenceLinks": [
++        { "evidenceId": "EVID-0052", "label": "Tone/voice enforcement", "location": "canon/heritage/evidence/EVID-0052.md" }
++      ]
++    },
++    {
++      "skillKey": "creative_review_gates",
++      "name": "Creative Review Gates (Brand Lock + LIAC + Safety Escalation)",
++      "description": "Apply review gates to prevent off-brand drift and high-stakes publishing errors.",
++      "levels": {
++        "L0": "Knows reviews exist.",
++        "L1": "Can apply brand lock QA with guidance.",
++        "L2": "Can run LIAC triggers and publish-ready checks.",
++        "L3": "Can maintain a portfolio-wide review gate system."
++      },
++      "guardrails": ["Public-facing outputs must clear gates."],
++      "patterns": { "do": ["Brand lock QA", "Escalate high-stakes"], "dont": ["Ship without review"] },
++      "evidenceLinks": [
++        { "evidenceId": "EVID-0053", "label": "Creative review gates", "location": "canon/heritage/evidence/EVID-0053.md" }
++      ]
++    }
+   ]
+ }
+ END_FILE
+```
+
+---
+
+## Post-apply verification
+
+Run:
+
+```bash
+npm run heritage:scoreboard
+```
+
+Then update `canon/heritage/STATUS.md` totals (now that we’re up through **EVID-0053** and decisions through **051**).
+
+If you want, I can also update `STATUS.md` totals for you once you paste the latest `npm run heritage:scoreboard` output (just the counts/ranges).
