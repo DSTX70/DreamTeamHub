@@ -332,6 +332,61 @@
       "relatedPods": ["marketing_social_pod"],
       "relatedSkills": ["marketing_compliance_guardrails"],
       "relatedEvidence": ["EVID-0033"]
+    },
+    {
+      "id": "DTH-20251226-032",
+      "title": "Medical Pod OS Uses Timeline + Evidence Map + Specialist Memos + Clinician Pack",
+      "status": "Locked",
+      "date": "2025-12-26",
+      "file": "decisions/DTH-20251226-032.md",
+      "tags": ["medical", "governance", "timeline"],
+      "relatedPods": ["medical_pod"],
+      "relatedSkills": ["medical_case_timeline", "medical_evidence_synthesis", "clinician_question_sets"],
+      "relatedEvidence": ["EVID-0034"]
+    },
+    {
+      "id": "DTH-20251226-033",
+      "title": "Medical History Must Be Ingested via Canon Protocol (Zero-Loss)",
+      "status": "Locked",
+      "date": "2025-12-26",
+      "file": "decisions/DTH-20251226-033.md",
+      "tags": ["medical", "ingestion", "provenance"],
+      "relatedPods": ["medical_pod"],
+      "relatedSkills": ["medical_record_ingestion"],
+      "relatedEvidence": ["EVID-0035"]
+    },
+    {
+      "id": "DTH-20251226-034",
+      "title": "Use Standard Test Result Synthesis Pattern",
+      "status": "Locked",
+      "date": "2025-12-26",
+      "file": "decisions/DTH-20251226-034.md",
+      "tags": ["medical", "synthesis"],
+      "relatedPods": ["medical_pod"],
+      "relatedSkills": ["medical_evidence_synthesis"],
+      "relatedEvidence": ["EVID-0036"]
+    },
+    {
+      "id": "DTH-20251226-035",
+      "title": "Specialist Memos Use Templates with Safety Boundaries",
+      "status": "Locked",
+      "date": "2025-12-26",
+      "file": "decisions/DTH-20251226-035.md",
+      "tags": ["medical", "ans", "sleep"],
+      "relatedPods": ["medical_pod"],
+      "relatedSkills": ["autonomic_hypothesis_memo", "sleep_hypothesis_memo"],
+      "relatedEvidence": ["EVID-0037"]
+    },
+    {
+      "id": "DTH-20251226-036",
+      "title": "Appointment Prep Pack Is Standard Output",
+      "status": "Locked",
+      "date": "2025-12-26",
+      "file": "decisions/DTH-20251226-036.md",
+      "tags": ["medical", "clinician-pack", "questions"],
+      "relatedPods": ["medical_pod"],
+      "relatedSkills": ["clinician_question_sets"],
+      "relatedEvidence": ["EVID-0038"]
     }
   ]
 }

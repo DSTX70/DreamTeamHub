@@ -281,6 +281,51 @@
       "relatedPods": ["marketing_social_pod"],
       "relatedSkills": ["marketing_compliance_guardrails"],
       "relatedDecisions": ["DTH-20251226-031"]
+    },
+    {
+      "id": "EVID-0034",
+      "title": "Medical Pod Operating System (Timeline → Evidence Map → Specialist Memos → Clinician Pack)",
+      "file": "EVID-0034.md",
+      "tags": ["medical", "evidence", "timeline", "clinician-pack"],
+      "relatedPods": ["medical_pod"],
+      "relatedSkills": ["medical_case_timeline", "medical_evidence_synthesis", "clinician_question_sets"],
+      "relatedDecisions": ["DTH-20251226-032"]
+    },
+    {
+      "id": "EVID-0035",
+      "title": "Medical Record Ingestion Protocol (Zero-Loss History Carryover)",
+      "file": "EVID-0035.md",
+      "tags": ["medical", "ingestion", "provenance", "records"],
+      "relatedPods": ["medical_pod"],
+      "relatedSkills": ["medical_record_ingestion"],
+      "relatedDecisions": ["DTH-20251226-033"]
+    },
+    {
+      "id": "EVID-0036",
+      "title": "Test Result Synthesis Pattern (Normal/Abnormal, Trends, What It Rules In/Out)",
+      "file": "EVID-0036.md",
+      "tags": ["medical", "labs", "imaging", "synthesis"],
+      "relatedPods": ["medical_pod"],
+      "relatedSkills": ["medical_evidence_synthesis"],
+      "relatedDecisions": ["DTH-20251226-034"]
+    },
+    {
+      "id": "EVID-0037",
+      "title": "Specialist Memo Templates (ANS + Sleep) with Boundaries",
+      "file": "EVID-0037.md",
+      "tags": ["medical", "ans", "sleep", "templates"],
+      "relatedPods": ["medical_pod"],
+      "relatedSkills": ["autonomic_hypothesis_memo", "sleep_hypothesis_memo"],
+      "relatedDecisions": ["DTH-20251226-035"]
+    },
+    {
+      "id": "EVID-0038",
+      "title": "Appointment Prep Pack (1-page Brief + Question List + Document Checklist)",
+      "file": "EVID-0038.md",
+      "tags": ["medical", "appointment", "brief", "questions"],
+      "relatedPods": ["medical_pod"],
+      "relatedSkills": ["clinician_question_sets"],
+      "relatedDecisions": ["DTH-20251226-036"]
     }
   ]
 }

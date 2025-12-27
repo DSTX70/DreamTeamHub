@@ -1,0 +1,745 @@
+✅ Done — here’s the **Medical Pod 5-pack** for the **DreamTeamHub repo / Replit**, designed to **preserve and carry forward** *all history, test results, imaging, symptom logs, and prior syntheses* **without inventing anything**.
+
+Important: since I can’t automatically pull your prior medical records from other ChatGPT threads, this pack includes an **explicit ingestion protocol + templates** so nothing gets lost. Once you paste/import the records (or export summaries) into the folders defined here, DreamTeamHub can treat them as canonical history and retrieve them into Context Packs.
+
+---
+
+## ✅ Paste into: **DreamTeamHub** repo / Replit
+
+### Evidence Packs (EVID-0034 → EVID-0038)
+
+```diff
+FILE: canon/heritage/evidence/EVID-0034.md
++Confidential and proprietary and copyright Dustin Sparks 2025
++
++# EVID-0034 — Medical Pod Operating System (Timeline → Evidence Map → Specialist Memos → Clinician Pack)
++
++## Problem
++Medical history becomes unusable when it’s scattered across chats, PDFs, labs, and notes. Without a structured system, patterns are missed and clinician time is wasted.
++
++## Constraints
++- Educational support only (not diagnosis/treatment)
++- Must preserve source fidelity (no “memory-only” summaries)
++- Must be clinician-friendly (fast to review, structured)
++- Must support ongoing updates without losing earlier context
++
++## Approach (Operating System)
++1) **Intake & source capture**
++   - Labs, imaging, visit notes, symptom logs, medication changes, timelines
++2) **Timeline**
++   - Chronological event stream with dates + source pointers
++3) **Evidence Map**
++   - Key findings grouped by system (ANS, neuro, cardio, endocrine, sleep, etc.)
++   - What supports vs what argues against hypotheses (educational framing)
++4) **Specialist memos**
++   - ANS hypothesis memo (Rowan) + tests-to-consider (educational)
++   - Sleep hypothesis memo (Somnus) + screening pathway (educational)
++   - Evidence synthesis summary (Avery)
++5) **Clinician Pack**
++   - 1-page executive brief
++   - Questions list
++   - Document checklist
++
++## Why it worked
++It makes a complex case reviewable: clinicians get chronology + signals + focused questions, and the system stays update-safe over time.
++
++## Outcome
++- Lower confusion, higher signal
++- Faster appointment prep
++- Reduced risk of losing key history across tools/threads
++
++## Where it landed
++Dream Team Hub Medical Pod governance + templates for durable record-keeping
++
++## Related Skills
++- medical_case_timeline
++- medical_evidence_synthesis
++- clinician_question_sets
++
++## Related Decisions
++- DTH-20251226-032
++
+END_FILE
+```
+
+```diff
+FILE: canon/heritage/evidence/EVID-0035.md
++Confidential and proprietary and copyright Dustin Sparks 2025
++
++# EVID-0035 — Medical Record Ingestion Protocol (Zero-Loss History Carryover)
++
++## Problem
++History gets lost when “the system” relies on prior chat memory instead of a canonical repository of records and summaries.
++
++## Constraints
++- Must preserve original sources (lab PDFs, imaging reports, notes)
++- Must support partial additions over time
++- Must keep provenance: every summary points back to the source artifact
++
++## Approach (Ingestion Protocol)
++**Canonical storage layout**
++- `/canon/heritage/medical/records/` holds source references and extracted text summaries
++- `/canon/heritage/medical/timeline/` holds timeline entries
++- `/canon/heritage/medical/briefs/` holds clinician-ready outputs
++
++**Every ingested item must include**
++- date (YYYY-MM-DD)
++- type: lab | imaging | visit_note | symptom_log | medication_change | other
++- summary (short)
++- source pointer (file name, link, or “chat transcript reference”)
++
++**No-loss rule**
++- Do not overwrite older summaries; append a new entry and link it.
++- If a prior summary changes, create a new version and note why.
++
++## Why it worked
++It converts “chat history” into durable canon: searchable, versionable, and retrievable into future work without drift.
++
++## Outcome
++- Durable medical case history inside DreamTeamHub repo
++- Better traceability for clinicians
++
++## Where it landed
++DreamTeamHub Medical Pod record-keeping + future Context Packs
++
++## Related Skills
++- medical_record_ingestion
++
++## Related Decisions
++- DTH-20251226-033
++
+END_FILE
+```
+
+```diff
+FILE: canon/heritage/evidence/EVID-0036.md
++Confidential and proprietary and copyright Dustin Sparks 2025
++
++# EVID-0036 — Test Result Synthesis Pattern (Normal/Abnormal, Trends, What It Rules In/Out)
++
++## Problem
++Raw lab/imaging data is hard to interpret and easy to misread without a repeatable synthesis method.
++
++## Constraints
++- Educational only; not diagnosis/treatment
++- Must avoid overclaiming causality
++- Must include “what this does NOT show” (to reduce anxiety and confusion)
++
++## Approach (Synthesis Pattern)
++For each test set:
++1) **What was tested** (panel/name + date)
++2) **Key findings**
++   - normal / borderline / abnormal (with reference range if available)
++3) **Trend** (if repeated over time)
++4) **Interpretation (educational)**
++   - plausible implications
++   - what it tends to rule out or make less likely
++   - what it suggests could be discussed with a clinician
++5) **Next questions**
++   - “If X, ask about Y”
++   - tests-to-consider (educational; clinician decides)
++6) **Provenance**
++   - link to source artifact + page/section if applicable
++
++## Why it worked
++It keeps analysis grounded and reduces misinterpretation by pairing findings with uncertainty, alternatives, and next-step questions.
++
++## Outcome
++- Clearer understanding of complex results
++- Better appointment questions
++- Reduced “chasing noise”
++
++## Where it landed
++Medical Pod evidence synthesis workflow (Avery-led) with specialist memo inputs
++
++## Related Skills
++- medical_evidence_synthesis
++
++## Related Decisions
++- DTH-20251226-034
++
+END_FILE
+```
+
+```diff
+FILE: canon/heritage/evidence/EVID-0037.md
++Confidential and proprietary and copyright Dustin Sparks 2025
++
++# EVID-0037 — Specialist Memo Templates (ANS + Sleep) with Boundaries
++
++## Problem
++Specialist guidance becomes inconsistent without standard memo templates and boundary language. Medical content must be careful: educational, precise, and clinician-facing.
++
++## Constraints
++- Educational only; not diagnosis, treatment, prescriptions
++- Must include boundary statement in each memo
++- Must convert logs into structured hypotheses and tests-to-consider
++
++## Approach
++**ANS Memo (Rowan)**
++- symptoms pattern summary (orthostatic intolerance, anhidrosis, etc.)
++- hypotheses list (educational)
++- tests-to-consider (educational)
++- “questions to ask clinician”
++- boundary statement
++
++**Sleep Memo (Somnus)**
++- sleep-wake pattern summary
++- hypotheses list (educational)
++- screening pathways
++- clinician questions
++- boundary statement
++
++## Why it worked
++It turns “medical chat” into something a clinician can actually use while keeping safety boundaries explicit.
++
++## Outcome
++- Better quality clinician conversations
++- Less drift and less risky phrasing
++
++## Where it landed
++Medical Pod standard outputs for Rowan + Somnus
++
++## Related Skills
++- autonomic_hypothesis_memo
++- sleep_hypothesis_memo
++
++## Related Decisions
++- DTH-20251226-035
++
+END_FILE
+```
+
+```diff
+FILE: canon/heritage/evidence/EVID-0038.md
++Confidential and proprietary and copyright Dustin Sparks 2025
++
++# EVID-0038 — Appointment Prep Pack (1-page Brief + Question List + Document Checklist)
++
++## Problem
++Appointments are short. Without a structured prep pack, key details get missed and clinicians can’t triage effectively.
++
++## Constraints
++- Must be short (1-page brief)
++- Must be evidence-backed (not vibes)
++- Must include a prioritized question list
++
++## Approach (Prep Pack)
++1) **1-page Executive Brief**
++   - top symptoms + onset timeline
++   - major findings (labs/imaging)
++   - what has been ruled out (where appropriate)
++   - current meds/supplements
++2) **Clinician Question List**
++   - top 8–12 questions, ordered by impact
++3) **Document Checklist**
++   - what to bring / what to request (educational)
++
++## Why it worked
++It improves signal-to-noise and ensures the clinician sees the whole case quickly.
++
++## Outcome
++- Better use of appointment time
++- Reduced rework and repeated testing
++
++## Where it landed
++Medical Pod clinician-facing deliverable system
++
++## Related Skills
++- clinician_question_sets
++
++## Related Decisions
++- DTH-20251226-036
++
+END_FILE
+```
+
+---
+
+### Decisions (DTH-20251226-032 → 036)
+
+```diff
+FILE: canon/heritage/decisions/DTH-20251226-032.md
++Confidential and proprietary and copyright Dustin Sparks 2025
++
++# Decision: DTH-20251226-032 — Medical Pod OS Uses Timeline + Evidence Map + Specialist Memos + Clinician Pack
++**Date:** 2025-12-26
++**Status:** Locked
++
++## Decision
++Medical Pod work is structured as: Timeline → Evidence Map → Specialist Memos → Clinician Pack.
++
++## Rationale
++Preserves history and improves clinician usability while staying educational and safe.
++
++## References
++- canon/heritage/evidence/EVID-0034.md
++
+END_FILE
+```
+
+```diff
+FILE: canon/heritage/decisions/DTH-20251226-033.md
++Confidential and proprietary and copyright Dustin Sparks 2025
++
++# Decision: DTH-20251226-033 — Medical History Must Be Ingested via Canon Protocol (Zero-Loss)
++**Date:** 2025-12-26
++**Status:** Locked
++
++## Decision
++Medical history/test results must be preserved via canonical ingestion files with provenance pointers; no relying on chat memory as the primary store.
++
++## References
++- canon/heritage/evidence/EVID-0035.md
++
+END_FILE
+```
+
+```diff
+FILE: canon/heritage/decisions/DTH-20251226-034.md
++Confidential and proprietary and copyright Dustin Sparks 2025
++
++# Decision: DTH-20251226-034 — Use Standard Test Result Synthesis Pattern
++**Date:** 2025-12-26
++**Status:** Locked
++
++## Decision
++Medical labs/imaging are synthesized using a standard pattern (findings, trends, educational interpretation, next questions, provenance).
++
++## References
++- canon/heritage/evidence/EVID-0036.md
++
+END_FILE
+```
+
+```diff
+FILE: canon/heritage/decisions/DTH-20251226-035.md
++Confidential and proprietary and copyright Dustin Sparks 2025
++
++# Decision: DTH-20251226-035 — Specialist Memos Use Templates with Safety Boundaries
++**Date:** 2025-12-26
++**Status:** Locked
++
++## Decision
++ANS and Sleep specialist outputs use standardized memo templates and include explicit educational boundaries.
++
++## References
++- canon/heritage/evidence/EVID-0037.md
++
+END_FILE
+```
+
+```diff
+FILE: canon/heritage/decisions/DTH-20251226-036.md
++Confidential and proprietary and copyright Dustin Sparks 2025
++
++# Decision: DTH-20251226-036 — Appointment Prep Pack Is Standard Output
++**Date:** 2025-12-26
++**Status:** Locked
++
++## Decision
++Medical Pod produces an appointment prep pack (1-page brief + question list + checklist) as the standard “ready” deliverable.
++
++## References
++- canon/heritage/evidence/EVID-0038.md
++
+END_FILE
+```
+
+---
+
+### Medical Canon Folder + Templates (this is the “carry-over” mechanism)
+
+```diff
+FILE: canon/heritage/medical/README.md
++Confidential and proprietary and copyright Dustin Sparks 2025
++
++# Medical Case Canon (Zero-Loss)
++This folder is the durable, versionable home for medical history carried over from chats, labs, imaging, and notes.
++
++## Folder structure
++- `records/`  Source summaries and pointers (labs, imaging, notes)
++- `timeline/` Timeline entries (chronological)
++- `briefs/`   Clinician-ready outputs (exec brief, memos, question lists)
++
++## How to ingest history from prior threads
++1) For each lab/imaging/note/log, create a file in `records/` using the template.
++2) Add a timeline entry in `timeline/`.
++3) When enough records exist, generate/update:
++   - `briefs/ExecutiveBrief.md`
++   - `briefs/Questions.md`
++   - `briefs/ANS_Memo_Rowen.md`
++   - `briefs/Sleep_Memo_Somnus.md`
++
++## Safety boundary
++This system is educational support only. It organizes evidence and questions for licensed clinicians.
++
+END_FILE
+```
+
+```diff
+FILE: canon/heritage/medical/records/RECORD_TEMPLATE.md
++Confidential and proprietary and copyright Dustin Sparks 2025
++
++# Record
++**Date:** YYYY-MM-DD  
++**Type:** lab | imaging | visit_note | symptom_log | medication_change | other  
++**Source:** (file name / URL / “Chat transcript excerpt” / provider portal note)  
++
++## Summary (short)
++- (1–5 bullets)
++
++## Key data (optional)
++- (values, ranges, impressions, etc.)
++
++## Notes / Questions
++- (questions to ask clinician)
++
+END_FILE
+```
+
+```diff
+FILE: canon/heritage/medical/timeline/TIMELINE_TEMPLATE.md
++Confidential and proprietary and copyright Dustin Sparks 2025
++
++# Timeline Entry
++**Date:** YYYY-MM-DD  
++**Category:** symptom | test | imaging | visit | medication | milestone  
++**Summary:** (one sentence)  
++**Linked records:** (paths in /medical/records/)
++
+END_FILE
+```
+
+```diff
+FILE: canon/heritage/medical/briefs/ExecutiveBrief_TEMPLATE.md
++Confidential and proprietary and copyright Dustin Sparks 2025
++
++# Executive Brief (1 page)
++**Patient:** (name/initials)  
++**Last updated:** YYYY-MM-DD  
++
++## Top concerns
++- …
++
++## Timeline highlights
++- …
++
++## Key findings
++- …
++
++## What appears ruled out / less likely (educational)
++- …
++
++## Current meds/supplements (if relevant)
++- …
++
++## Clinician questions (top 8–12)
++- …
++
++## Boundary
++Educational synthesis only; not diagnosis/treatment.
++
+END_FILE
+```
+
+```diff
+FILE: canon/heritage/medical/briefs/ANS_Memo_TEMPLATE.md
++Confidential and proprietary and copyright Dustin Sparks 2025
++
++# ANS Hypothesis Memo (Educational) — Rowan
++**Last updated:** YYYY-MM-DD
++
++## Symptom pattern summary
++- …
++
++## Relevant tests + results (high level)
++- …
++
++## Educational hypotheses to discuss
++- …
++
++## Tests-to-consider (educational)
++- …
++
++## Questions for clinician
++- …
++
++## Boundary
++Educational only; not diagnosis or treatment.
++
+END_FILE
+```
+
+```diff
+FILE: canon/heritage/medical/briefs/Sleep_Memo_TEMPLATE.md
++Confidential and proprietary and copyright Dustin Sparks 2025
++
++# Sleep Hypothesis Memo (Educational) — Somnus
++**Last updated:** YYYY-MM-DD
++
++## Sleep-wake pattern summary
++- …
++
++## Educational hypotheses to discuss
++- …
++
++## Screening / pathways (educational)
++- …
++
++## Questions for clinician
++- …
++
++## Boundary
++Educational only; not diagnosis or treatment.
++
+END_FILE
+```
+
+---
+
+### Index updates
+
+```diff
+FILE: canon/heritage/evidence/_EVIDENCE_INDEX.json
+@@
+     {
+       "evidenceId": "EVID-0033",
+       "title": "Compliance & Claims Guardrails (Kid-safe, No Unverifiable Claims)",
+       "path": "canon/heritage/evidence/EVID-0033.md",
+       "tags": ["marketing", "compliance", "claims", "kid-safe"],
+       "relatedDecisions": ["DTH-20251226-031"]
+     },
++    {
++      "evidenceId": "EVID-0034",
++      "title": "Medical Pod Operating System (Timeline → Evidence Map → Specialist Memos → Clinician Pack)",
++      "path": "canon/heritage/evidence/EVID-0034.md",
++      "tags": ["medical", "evidence", "timeline", "clinician-pack"],
++      "relatedDecisions": ["DTH-20251226-032"]
++    },
++    {
++      "evidenceId": "EVID-0035",
++      "title": "Medical Record Ingestion Protocol (Zero-Loss History Carryover)",
++      "path": "canon/heritage/evidence/EVID-0035.md",
++      "tags": ["medical", "ingestion", "provenance", "records"],
++      "relatedDecisions": ["DTH-20251226-033"]
++    },
++    {
++      "evidenceId": "EVID-0036",
++      "title": "Test Result Synthesis Pattern (Normal/Abnormal, Trends, What It Rules In/Out)",
++      "path": "canon/heritage/evidence/EVID-0036.md",
++      "tags": ["medical", "labs", "imaging", "synthesis"],
++      "relatedDecisions": ["DTH-20251226-034"]
++    },
++    {
++      "evidenceId": "EVID-0037",
++      "title": "Specialist Memo Templates (ANS + Sleep) with Boundaries",
++      "path": "canon/heritage/evidence/EVID-0037.md",
++      "tags": ["medical", "ans", "sleep", "templates"],
++      "relatedDecisions": ["DTH-20251226-035"]
++    },
++    {
++      "evidenceId": "EVID-0038",
++      "title": "Appointment Prep Pack (1-page Brief + Question List + Document Checklist)",
++      "path": "canon/heritage/evidence/EVID-0038.md",
++      "tags": ["medical", "appointment", "brief", "questions"],
++      "relatedDecisions": ["DTH-20251226-036"]
++    }
+   ]
+ }
+ 
+ END_FILE
+```
+
+```diff
+FILE: canon/heritage/decisions/_DECISION_INDEX.json
+@@
+     {
+       "decisionId": "DTH-20251226-031",
+       "title": "Claims & Compliance Guardrails Are Mandatory",
+       "path": "canon/heritage/decisions/DTH-20251226-031.md",
+       "status": "Locked",
+       "tags": ["marketing", "compliance", "claims"]
+     },
++    {
++      "decisionId": "DTH-20251226-032",
++      "title": "Medical Pod OS Uses Timeline + Evidence Map + Specialist Memos + Clinician Pack",
++      "path": "canon/heritage/decisions/DTH-20251226-032.md",
++      "status": "Locked",
++      "tags": ["medical", "governance", "timeline"]
++    },
++    {
++      "decisionId": "DTH-20251226-033",
++      "title": "Medical History Must Be Ingested via Canon Protocol (Zero-Loss)",
++      "path": "canon/heritage/decisions/DTH-20251226-033.md",
++      "status": "Locked",
++      "tags": ["medical", "ingestion", "provenance"]
++    },
++    {
++      "decisionId": "DTH-20251226-034",
++      "title": "Use Standard Test Result Synthesis Pattern",
++      "path": "canon/heritage/decisions/DTH-20251226-034.md",
++      "status": "Locked",
++      "tags": ["medical", "synthesis"]
++    },
++    {
++      "decisionId": "DTH-20251226-035",
++      "title": "Specialist Memos Use Templates with Safety Boundaries",
++      "path": "canon/heritage/decisions/DTH-20251226-035.md",
++      "status": "Locked",
++      "tags": ["medical", "ans", "sleep"]
++    },
++    {
++      "decisionId": "DTH-20251226-036",
++      "title": "Appointment Prep Pack Is Standard Output",
++      "path": "canon/heritage/decisions/DTH-20251226-036.md",
++      "status": "Locked",
++      "tags": ["medical", "clinician-pack", "questions"]
++    }
+   ]
+ }
+ 
+ END_FILE
+```
+
+---
+
+### Skills update (so Medical Pod can be retrieved like the others)
+
+```diff
+FILE: canon/heritage/skills.json
+@@
+   "skills": [
+@@
++    {
++      "skillKey": "medical_record_ingestion",
++      "name": "Medical Record Ingestion & Provenance",
++      "description": "Capture labs/imaging/notes/logs into durable canon with traceable source pointers and version-safe updates.",
++      "levels": {
++        "L0": "Can store notes.",
++        "L1": "Can write structured record summaries with dates and sources.",
++        "L2": "Can maintain a growing record library without overwriting history.",
++        "L3": "Can design ingestion protocols that preserve fidelity across tools."
++      },
++      "guardrails": ["Do not invent missing values; list blockers.", "Always include a source pointer."],
++      "patterns": { "do": ["Append new versions", "Link to sources"], "dont": ["Rely on chat memory alone"] },
++      "evidenceLinks": [
++        { "evidenceId": "EVID-0035", "label": "Medical ingestion protocol (zero-loss)", "location": "canon/heritage/evidence/EVID-0035.md" }
++      ]
++    },
++    {
++      "skillKey": "medical_case_timeline",
++      "name": "Medical Case Timeline Building",
++      "description": "Maintain a chronological medical timeline with linked records and milestones for clinician review.",
++      "levels": {
++        "L0": "Can list events.",
++        "L1": "Can structure entries with dates and categories.",
++        "L2": "Can keep timeline updated with linked record pointers.",
++        "L3": "Can synthesize timeline patterns into clinician-ready highlights."
++      },
++      "guardrails": ["Dates required; unknown dates must be labeled as such."],
++      "patterns": { "do": ["Chronological clarity", "Link records"], "dont": ["Unanchored summaries"] },
++      "evidenceLinks": [
++        { "evidenceId": "EVID-0034", "label": "Medical Pod OS", "location": "canon/heritage/evidence/EVID-0034.md" }
++      ]
++    },
++    {
++      "skillKey": "medical_evidence_synthesis",
++      "name": "Medical Evidence Synthesis (Educational)",
++      "description": "Summarize labs/imaging with trends, uncertainty, and clinician question prompts—without diagnosing.",
++      "levels": {
++        "L0": "Can restate results.",
++        "L1": "Can identify normals/abnormals with guidance.",
++        "L2": "Can synthesize trends and implications (educational) with caveats.",
++        "L3": "Can produce decision-grade clinician briefs with provenance."
++      },
++      "guardrails": ["Educational only; do not diagnose/treat."],
++      "patterns": { "do": ["Include what it rules out", "Ask next questions"], "dont": ["Overclaim causality"] },
++      "evidenceLinks": [
++        { "evidenceId": "EVID-0036", "label": "Test result synthesis pattern", "location": "canon/heritage/evidence/EVID-0036.md" }
++      ]
++    },
++    {
++      "skillKey": "autonomic_hypothesis_memo",
++      "name": "ANS Hypothesis Memo (Educational) — Rowan Template",
++      "description": "Produce an ANS-focused hypothesis memo with tests-to-consider and clinician questions.",
++      "levels": {
++        "L0": "Can list ANS symptoms.",
++        "L1": "Can draft a memo with guidance.",
++        "L2": "Can map symptom patterns to educational test pathways.",
++        "L3": "Can maintain consistent clinician-grade memos across iterations."
++      },
++      "guardrails": ["Educational only; no diagnosis or prescriptions."],
++      "patterns": { "do": ["Pattern→hypotheses→tests→questions"], "dont": ["Certainty language"] },
++      "evidenceLinks": [
++        { "evidenceId": "EVID-0037", "label": "ANS + Sleep memo templates", "location": "canon/heritage/evidence/EVID-0037.md" }
++      ]
++    },
++    {
++      "skillKey": "sleep_hypothesis_memo",
++      "name": "Sleep Hypothesis Memo (Educational) — Somnus Template",
++      "description": "Produce sleep-focused hypothesis memo with screening pathways and clinician questions.",
++      "levels": {
++        "L0": "Can describe sleep issues.",
++        "L1": "Can draft a memo with guidance.",
++        "L2": "Can map patterns to educational screening pathways.",
++        "L3": "Can maintain consistent memos across time and new logs."
++      },
++      "guardrails": ["Educational only; no diagnosis or prescriptions."],
++      "patterns": { "do": ["Pattern→hypotheses→screening→questions"], "dont": ["Overclaim"] },
++      "evidenceLinks": [
++        { "evidenceId": "EVID-0037", "label": "ANS + Sleep memo templates", "location": "canon/heritage/evidence/EVID-0037.md" }
++      ]
++    },
++    {
++      "skillKey": "clinician_question_sets",
++      "name": "Clinician Question Sets + Appointment Prep Packs",
++      "description": "Convert complex history into prioritized questions and a 1-page brief for clinician efficiency.",
++      "levels": {
++        "L0": "Can list questions.",
++        "L1": "Can prioritize questions with guidance.",
++        "L2": "Can produce clinician-ready brief packs with provenance.",
++        "L3": "Can standardize prep packs across specialties and visits."
++      },
++      "guardrails": ["Keep brief concise; tie claims to evidence."],
++      "patterns": { "do": ["Prioritize top questions", "Link supporting records"], "dont": ["Long unstructured notes"] },
++      "evidenceLinks": [
++        { "evidenceId": "EVID-0038", "label": "Appointment prep pack standard", "location": "canon/heritage/evidence/EVID-0038.md" }
++      ]
++    }
+   ]
+ }
+ END_FILE
+```
+
+---
+
+## ✅ What “carry over all history/test results” looks like now
+
+This pack gives you a **safe, durable home** in DreamTeamHub for everything you’ve already captured in other chats:
+
+* Labs → `canon/heritage/medical/records/`
+* Imaging reports → `canon/heritage/medical/records/`
+* Symptom logs → `canon/heritage/medical/records/`
+* Timeline events → `canon/heritage/medical/timeline/`
+* Clinician-ready syntheses → `canon/heritage/medical/briefs/`
+
+### The only missing step (you control it)
+
+Copy/paste or export your existing medical thread summaries/test results into these templates (no rewriting required—just structured storage with source pointers).
+
+---
+
+## Post-apply verification
+
+Run:
+
+```bash
+npm run heritage:scoreboard
+```
+
+Then update `canon/heritage/STATUS.md` totals (you should now be at least **EVID-0038** and decisions through **036** if everything so far is applied).
+
+---
+
+Next in the list after Medical Pod: **Religious Scholar Council + Writer Pool 5-pack** (governed publishing gates).

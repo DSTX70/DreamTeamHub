@@ -1,0 +1,607 @@
+✅ Next up: **Religious Scholar Council + Writer Pool 5-pack (Governed Publishing Gates)** for the **DreamTeamHub repo / Replit**.
+
+This drop adds:
+
+* **Evidence Packs:** `EVID-0039` → `EVID-0043`
+* **Decisions:** `DTH-20251226-037` → `DTH-20251226-041`
+* **Index updates:** `_EVIDENCE_INDEX.json` + `_DECISION_INDEX.json`
+* **Skills:** adds scholar-governed publishing skills to `skills.json`
+
+---
+
+## ✅ Paste into: **DreamTeamHub** repo / Replit
+
+```diff
+FILE: canon/heritage/evidence/EVID-0039.md
++Confidential and proprietary and copyright Dustin Sparks 2025
++
++# EVID-0039 — Religious Scholar Council + Writer Pool Operating System (Governed Publishing)
++
++## Problem
++Religious/philosophical content can be high-impact and easy to misrepresent. Without a governed workflow, outputs can drift, reflect bias, or accidentally rewrite sensitive canonical language.
++
++## Constraints
++- Must not publish without scholar approval where required
++- Must preserve nuance and avoid oversimplification
++- Must keep an auditable trail (who approved what, when)
++- Must maintain balance across traditions when the scope requires it
++
++## Approach (Operating System)
++**Roles**
++- Religious Scholar Council (seats per tradition)
++- Philosophical/Religious Writer Pool (2+)
++- Advisory Council Liaison (coordination + NDAs + scheduling)
++- Editorial Approvals Lead (gates publication on scholar_signed_at)
++- Scholar Ops Coordinator (queue, SLAs, tracking)
++
++**Workflow**
++1) **Intake**
++   - define audience, intent, tradition scope (single tradition vs comparative), and risk level
++2) **Scholar input**
++   - relevant scholar seat(s) provide notes, constraints, and “do not paraphrase” flags
++3) **Writer draft**
++   - writers produce warm modern renderings strictly within scholar constraints
++4) **Scholar review**
++   - scholars approve or return edits (explicitly noting blockers)
++5) **Editorial gate**
++   - Editorial Approvals Lead confirms scholar_signed_at and closes blockers
++6) **Publish readiness**
++   - context cards, citations/attribution, and “no-paraphrase” compliance verified
++
++## Why it worked
++It separates “writing skill” from “authority and nuance”: writers craft accessible language, scholars ensure accuracy and balance, and publication is gated by recorded approval.
++
++## Outcome
++- Reduced misrepresentation risk
++- Higher quality, more trustworthy outputs
++- Auditable governance trail
++
++## Where it landed
++Governed publishing system for religious/philosophical content across the portfolio
++
++## Related Skills
++- scholar_council_governance
++
++## Related Decisions
++- DTH-20251226-037
++
+END_FILE
+```
+
+```diff
+FILE: canon/heritage/evidence/EVID-0040.md
++Confidential and proprietary and copyright Dustin Sparks 2025
++
++# EVID-0040 — Scholar Signed Gate (scholar_signed_at) + Editorial Approval Enforcement
++
++## Problem
++Even strong drafts are unsafe to publish if scholar review was skipped. Without a hard gate, “we meant to review” becomes “we forgot.”
++
++## Constraints
++- Must be auditable and deterministic
++- Must block publishing when required
++- Must capture scope of approval (artifact + version)
++
++## Approach
++**Gate definition**
++- Any governed religious/philosophical output is **Not Publish-Ready** until:
++  - scholar review is completed, and
++  - scholar_signed_at is recorded, and
++  - no blockers remain
++
++**Approval record includes**
++- scholar seat(s) approving
++- artifact/version reference
++- signed_at timestamp
++- notes (optional), blockers (must be empty for final sign-off)
++
++**Editorial Approvals Lead responsibilities**
++- verify scholar_signed_at exists
++- confirm “no-paraphrase” compliance
++- confirm context-card standards are met
++- approve final publication state
++
++## Why it worked
++It replaces informal review with enforceable governance and preserves accountability.
++
++## Outcome
++- Fewer skipped reviews
++- Stronger trust posture
++- Clear audit trail for sensitive content
++
++## Where it landed
++Governed publishing gates for Scholar Council outputs
++
++## Related Skills
++- scholar_signoff_gate
++
++## Related Decisions
++- DTH-20251226-038
++
+END_FILE
+```
+
+```diff
+FILE: canon/heritage/evidence/EVID-0041.md
++Confidential and proprietary and copyright Dustin Sparks 2025
++
++# EVID-0041 — Quarterly Audit Rubric + Change Log Discipline (Scholar Governance)
++
++## Problem
++Even good systems drift over time. Without audits and change logs, standards degrade, bias re-enters, and canonical constraints get lost.
++
++## Constraints
++- Must be lightweight but real (repeatable quarterly)
++- Must track changes to rubrics, no-paraphrase lists, and standards
++- Must include bias/balance checks
++
++## Approach
++**Quarterly audit**
++- sample a set of published artifacts
++- verify scholar_signed_at is present where required
++- verify no-paraphrase compliance
++- verify context cards exist and match standards
++- verify balance/bias rubric adherence (where comparative scope applies)
++
++**Change log discipline**
++- Any update to the governance system:
++  - increments version/date
++  - logs what changed and why
++  - references the approving scholar seat(s) (if applicable)
++
++## Why it worked
++It makes governance durable: standards remain stable, and updates are explicit and reviewable.
++
++## Outcome
++- Reduced long-term drift
++- Higher confidence in published content quality
++- Repeatable governance evolution
++
++## Where it landed
++Scholar governance maintenance and accountability
++
++## Related Skills
++- scholar_audit_and_changelog
++
++## Related Decisions
++- DTH-20251226-039
++
+END_FILE
+```
+
+```diff
+FILE: canon/heritage/evidence/EVID-0042.md
++Confidential and proprietary and copyright Dustin Sparks 2025
++
++# EVID-0042 — Context-Card Standards + No-Paraphrase List Operations
++
++## Problem
++Sensitive phrases and canonical statements drift when paraphrased. Readers also misunderstand content when context (tradition, interpretation, scope) is missing.
++
++## Constraints
++- Must preserve protected canonical language exactly
++- Must provide context so readers understand scope and interpretation boundaries
++- Must be simple enough to attach consistently
++
++## Approach
++**No-paraphrase list**
++- Maintain a list of protected phrases (approved taglines, scholar-vetted lines, safety disclaimers).
++- Rules:
++  - If it’s on the list, it must be used verbatim (or replaced only via change control).
++  - Writers may not “improve” protected lines.
++
++**Context-card standards**
++Each governed artifact includes a context card:
++- tradition scope (single tradition vs comparative)
++- source posture (scholar notes vs interpretation vs commentary)
++- audience level (intro, intermediate, advanced)
++- “what this is / what this isn’t”
++- required disclaimers (where applicable)
++
++## Why it worked
++It prevents accidental doctrinal drift and gives readers the interpretive frame needed to avoid misunderstandings.
++
++## Outcome
++- Higher consistency and safety
++- Clearer reader expectations
++- Reduced “tone drift” and semantic mutation over time
++
++## Where it landed
++Scholar-governed publishing standards and templates
++
++## Related Skills
++- context_card_standards
++- no_paraphrase_ops
++
++## Related Decisions
++- DTH-20251226-040
++
+END_FILE
+```
+
+```diff
+FILE: canon/heritage/evidence/EVID-0043.md
++Confidential and proprietary and copyright Dustin Sparks 2025
++
++# EVID-0043 — Governed Publication Readiness Checklist (Scholar Council)
++
++## Problem
++Publishing “almost ready” content creates risk: missing attribution, unclear scope, unreviewed claims, and subtle bias.
++
++## Constraints
++- Must block publication if any gate fails
++- Must be auditable and repeatable
++- Must respect tradition scope and scholar constraints
++
++## Approach (Publish-Ready Checklist)
++Before publishing:
++1) **Scope declared**
++   - tradition scope + audience level clearly stated
++2) **Context card attached**
++   - matches standards; includes what-it-is/what-it-isn’t
++3) **No-paraphrase compliance**
++   - protected lines are verbatim
++4) **Scholar approvals recorded**
++   - scholar_signed_at present where required; blockers cleared
++5) **Bias/balance rubric checks**
++   - where comparative scope applies; avoid straw-manning
++6) **Editorial Approvals Lead gate**
++   - final approval recorded and versioned
++
++## Why it worked
++It standardizes “ready” and prevents accidental publication of unreviewed or contextless content.
++
++## Outcome
++- Lower risk
++- Higher trustworthiness
++- Cleaner audits and faster reviews
++
++## Where it landed
++Scholar-governed publishing readiness gate across projects
++
++## Related Skills
++- governed_publication_readiness
++
++## Related Decisions
++- DTH-20251226-041
++
+END_FILE
+```
+
+---
+
+### Decisions (DTH-20251226-037 → 041)
+
+```diff
+FILE: canon/heritage/decisions/DTH-20251226-037.md
++Confidential and proprietary and copyright Dustin Sparks 2025
++
++# Decision: DTH-20251226-037 — Scholar Council + Writer Pool Operating System Is Required for Governed Publishing
++**Date:** 2025-12-26  
++**Status:** Locked  
++
++## Decision
++Religious/philosophical governed content must follow the Scholar Council OS: intake → scholar notes → writer drafts → scholar review → editorial gate → publish readiness.
++
++## Rationale
++Prevents misrepresentation and preserves nuance with auditable approvals.
++
++## References
++- canon/heritage/evidence/EVID-0039.md
++
+END_FILE
+```
+
+```diff
+FILE: canon/heritage/decisions/DTH-20251226-038.md
++Confidential and proprietary and copyright Dustin Sparks 2025
++
++# Decision: DTH-20251226-038 — Publication Is Gated on scholar_signed_at + Editorial Approval
++**Date:** 2025-12-26  
++**Status:** Locked  
++
++## Decision
++Governed outputs cannot be marked Publish-Ready without scholar_signed_at and Editorial Approvals Lead verification.
++
++## Rationale
++Turns review into a deterministic gate and preserves accountability.
++
++## References
++- canon/heritage/evidence/EVID-0040.md
++
+END_FILE
+```
+
+```diff
+FILE: canon/heritage/decisions/DTH-20251226-039.md
++Confidential and proprietary and copyright Dustin Sparks 2025
++
++# Decision: DTH-20251226-039 — Quarterly Audits + Versioned Change Logs Are Mandatory
++**Date:** 2025-12-26  
++**Status:** Locked  
++
++## Decision
++Scholar governance requires quarterly audits and explicit version/date change logs for any rubric/standard updates.
++
++## Rationale
++Prevents drift and maintains long-term trustworthiness.
++
++## References
++- canon/heritage/evidence/EVID-0041.md
++
+END_FILE
+```
+
+```diff
+FILE: canon/heritage/decisions/DTH-20251226-040.md
++Confidential and proprietary and copyright Dustin Sparks 2025
++
++# Decision: DTH-20251226-040 — Context Cards and No-Paraphrase Lists Are Canon Standards
++**Date:** 2025-12-26  
++**Status:** Locked  
++
++## Decision
++Governed content must include context cards, and protected canonical lines must follow no-paraphrase list rules.
++
++## Rationale
++Reduces misunderstanding and prevents semantic drift of sensitive language.
++
++## References
++- canon/heritage/evidence/EVID-0042.md
++
+END_FILE
+```
+
+```diff
+FILE: canon/heritage/decisions/DTH-20251226-041.md
++Confidential and proprietary and copyright Dustin Sparks 2025
++
++# Decision: DTH-20251226-041 — Governed Publish-Ready Checklist Is Required
++**Date:** 2025-12-26  
++**Status:** Locked  
++
++## Decision
++Governed religious/philosophical content must pass the publish-ready checklist (scope, context card, no-paraphrase, scholar approvals, rubric checks, editorial gate).
++
++## Rationale
++Standardizes “ready” and blocks risky publication.
++
++## References
++- canon/heritage/evidence/EVID-0043.md
++
+END_FILE
+```
+
+---
+
+### Index updates
+
+```diff
+FILE: canon/heritage/evidence/_EVIDENCE_INDEX.json
+@@
+     {
+       "evidenceId": "EVID-0038",
+       "title": "Appointment Prep Pack (1-page Brief + Question List + Document Checklist)",
+       "path": "canon/heritage/evidence/EVID-0038.md",
+       "tags": ["medical", "appointment", "brief", "questions"],
+       "relatedDecisions": ["DTH-20251226-036"]
+     },
++    {
++      "evidenceId": "EVID-0039",
++      "title": "Religious Scholar Council + Writer Pool Operating System (Governed Publishing)",
++      "path": "canon/heritage/evidence/EVID-0039.md",
++      "tags": ["scholar-council", "governance", "publishing"],
++      "relatedDecisions": ["DTH-20251226-037"]
++    },
++    {
++      "evidenceId": "EVID-0040",
++      "title": "Scholar Signed Gate (scholar_signed_at) + Editorial Approval Enforcement",
++      "path": "canon/heritage/evidence/EVID-0040.md",
++      "tags": ["scholar-council", "signoff", "audit"],
++      "relatedDecisions": ["DTH-20251226-038"]
++    },
++    {
++      "evidenceId": "EVID-0041",
++      "title": "Quarterly Audit Rubric + Change Log Discipline (Scholar Governance)",
++      "path": "canon/heritage/evidence/EVID-0041.md",
++      "tags": ["scholar-council", "audit", "changelog"],
++      "relatedDecisions": ["DTH-20251226-039"]
++    },
++    {
++      "evidenceId": "EVID-0042",
++      "title": "Context-Card Standards + No-Paraphrase List Operations",
++      "path": "canon/heritage/evidence/EVID-0042.md",
++      "tags": ["scholar-council", "context-card", "no-paraphrase"],
++      "relatedDecisions": ["DTH-20251226-040"]
++    },
++    {
++      "evidenceId": "EVID-0043",
++      "title": "Governed Publication Readiness Checklist (Scholar Council)",
++      "path": "canon/heritage/evidence/EVID-0043.md",
++      "tags": ["scholar-council", "publish-ready", "gates"],
++      "relatedDecisions": ["DTH-20251226-041"]
++    }
+   ]
+ }
+ 
+ END_FILE
+```
+
+```diff
+FILE: canon/heritage/decisions/_DECISION_INDEX.json
+@@
+     {
+       "decisionId": "DTH-20251226-036",
+       "title": "Appointment Prep Pack Is Standard Output",
+       "path": "canon/heritage/decisions/DTH-20251226-036.md",
+       "status": "Locked",
+       "tags": ["medical", "clinician-pack", "questions"]
+     },
++    {
++      "decisionId": "DTH-20251226-037",
++      "title": "Scholar Council + Writer Pool Operating System Is Required for Governed Publishing",
++      "path": "canon/heritage/decisions/DTH-20251226-037.md",
++      "status": "Locked",
++      "tags": ["scholar-council", "governance"]
++    },
++    {
++      "decisionId": "DTH-20251226-038",
++      "title": "Publication Is Gated on scholar_signed_at + Editorial Approval",
++      "path": "canon/heritage/decisions/DTH-20251226-038.md",
++      "status": "Locked",
++      "tags": ["scholar-council", "signoff", "audit"]
++    },
++    {
++      "decisionId": "DTH-20251226-039",
++      "title": "Quarterly Audits + Versioned Change Logs Are Mandatory",
++      "path": "canon/heritage/decisions/DTH-20251226-039.md",
++      "status": "Locked",
++      "tags": ["scholar-council", "audit", "changelog"]
++    },
++    {
++      "decisionId": "DTH-20251226-040",
++      "title": "Context Cards and No-Paraphrase Lists Are Canon Standards",
++      "path": "canon/heritage/decisions/DTH-20251226-040.md",
++      "status": "Locked",
++      "tags": ["scholar-council", "context-card", "no-paraphrase"]
++    },
++    {
++      "decisionId": "DTH-20251226-041",
++      "title": "Governed Publish-Ready Checklist Is Required",
++      "path": "canon/heritage/decisions/DTH-20251226-041.md",
++      "status": "Locked",
++      "tags": ["scholar-council", "publish-ready", "gates"]
++    }
+   ]
+ }
+ 
+ END_FILE
+```
+
+---
+
+### Skills update (scholar governance retrieval)
+
+```diff
+FILE: canon/heritage/skills.json
+@@
+   "skills": [
+@@
++    {
++      "skillKey": "scholar_council_governance",
++      "name": "Religious Scholar Council Governance (Operating System)",
++      "description": "Run governed religious/philosophical publishing via scholar authority + writer pool execution + editorial gates.",
++      "levels": {
++        "L0": "Understands governance exists.",
++        "L1": "Can follow intake + draft steps with guidance.",
++        "L2": "Can run the full workflow with approvals and audit trails.",
++        "L3": "Can institutionalize governance across multiple publications and maintain standards over time."
++      },
++      "guardrails": ["Do not publish without required scholar approval."],
++      "patterns": { "do": ["Scholar notes first", "Writers draft within constraints"], "dont": ["Skip review"] },
++      "evidenceLinks": [
++        { "evidenceId": "EVID-0039", "label": "Scholar Council OS", "location": "canon/heritage/evidence/EVID-0039.md" }
++      ]
++    },
++    {
++      "skillKey": "scholar_signoff_gate",
++      "name": "Scholar Sign-off Gate (scholar_signed_at) + Editorial Approval",
++      "description": "Enforce deterministic publish gates using scholar_signed_at and editorial verification.",
++      "levels": {
++        "L0": "Knows sign-off is needed.",
++        "L1": "Can record approvals with guidance.",
++        "L2": "Can block and unblock publication based on gate status.",
++        "L3": "Can audit and standardize sign-off across teams."
++      },
++      "guardrails": ["No Publish-Ready without scholar_signed_at where required."],
++      "patterns": { "do": ["Record scope + timestamp", "Clear blockers before sign-off"], "dont": ["Implicit approval"] },
++      "evidenceLinks": [
++        { "evidenceId": "EVID-0040", "label": "Scholar signed gate", "location": "canon/heritage/evidence/EVID-0040.md" }
++      ]
++    },
++    {
++      "skillKey": "scholar_audit_and_changelog",
++      "name": "Scholar Governance Audits + Change Logs",
++      "description": "Maintain quarterly audit discipline and explicit versioned change logs to prevent drift.",
++      "levels": {
++        "L0": "Understands audits exist.",
++        "L1": "Can perform a sample audit with guidance.",
++        "L2": "Can run quarterly audits and track findings.",
++        "L3": "Can evolve standards safely with versioned change control."
++      },
++      "guardrails": ["No silent governance changes."],
++      "patterns": { "do": ["Quarterly sample checks", "Version/date increments"], "dont": ["Unlogged rubric edits"] },
++      "evidenceLinks": [
++        { "evidenceId": "EVID-0041", "label": "Quarterly audits + changelog discipline", "location": "canon/heritage/evidence/EVID-0041.md" }
++      ]
++    },
++    {
++      "skillKey": "context_card_standards",
++      "name": "Context-Card Standards (Governed Publishing)",
++      "description": "Attach context cards that declare scope, posture, audience, and boundaries for governed content.",
++      "levels": {
++        "L0": "Can add a basic note.",
++        "L1": "Can follow a context-card template with guidance.",
++        "L2": "Can enforce consistent context cards across publications.",
++        "L3": "Can standardize and audit context cards at scale."
++      },
++      "guardrails": ["Context cards required for governed outputs."],
++      "patterns": { "do": ["Declare scope and posture", "Include what-it-is/what-it-isn’t"], "dont": ["Assume reader context"] },
++      "evidenceLinks": [
++        { "evidenceId": "EVID-0042", "label": "Context-card standards", "location": "canon/heritage/evidence/EVID-0042.md" }
++      ]
++    },
++    {
++      "skillKey": "no_paraphrase_ops",
++      "name": "No-Paraphrase List Operations (Protected Canonical Language)",
++      "description": "Prevent semantic drift by protecting canonical lines and enforcing change control for replacements.",
++      "levels": {
++        "L0": "Knows protected lines exist.",
++        "L1": "Can apply verbatim usage with guidance.",
++        "L2": "Can maintain and enforce the list in workflows.",
++        "L3": "Can implement portfolio-wide compliance and audits."
++      },
++      "guardrails": ["Protected lines must be verbatim unless change-controlled."],
++      "patterns": { "do": ["Use verbatim", "Record change approvals"], "dont": ["Rewrite protected phrases"] },
++      "evidenceLinks": [
++        { "evidenceId": "EVID-0042", "label": "No-paraphrase ops", "location": "canon/heritage/evidence/EVID-0042.md" }
++      ]
++    },
++    {
++      "skillKey": "governed_publication_readiness",
++      "name": "Governed Publication Readiness (Scholar Council)",
++      "description": "Apply the publish-ready checklist for governed religious/philosophical content (scope, context, approvals, rubric checks).",
++      "levels": {
++        "L0": "Understands readiness exists.",
++        "L1": "Can check basic requirements with guidance.",
++        "L2": "Can enforce gates and ensure all requirements are met.",
++        "L3": "Can standardize readiness across a portfolio and improve the checklist over time."
++      },
++      "guardrails": ["No publish without gates passing."],
++      "patterns": { "do": ["Checklist-driven readiness", "Record approvals"], "dont": ["Ship without context"] },
++      "evidenceLinks": [
++        { "evidenceId": "EVID-0043", "label": "Governed publish-ready checklist", "location": "canon/heritage/evidence/EVID-0043.md" }
++      ]
++    }
+   ]
+ }
+ END_FILE
+```
+
+---
+
+## Post-apply verification
+
+Run:
+
+```bash
+npm run heritage:scoreboard
+```
+
+Then update `canon/heritage/STATUS.md` totals if you want it perfectly current.
+
+---
+
+### Next in our “work down the list”
+
+We’ve now covered the remaining big governance gap. Next is **Personal Finance Pod 5-pack** (budgeting, debt, savings automation, insurance review, tax/credit guardrails) unless you want something else next.
