@@ -524,6 +524,15 @@
       "relatedPods": ["engineering_pod", "ux_product_pod"],
       "relatedSkills": ["strategy_to_execution_pipeline", "ia_navigation_conventions", "no_schema_change_gate"],
       "relatedDecisions": ["DTH-20251226-058"]
+    },
+    {
+      "id": "EVID-0061",
+      "title": "Work Item Execution Pipeline (Recommendation→Approval→Drop Stages)",
+      "file": "EVID-0061.md",
+      "tags": ["work-items", "execution", "approval", "drops", "governance"],
+      "relatedPods": ["engineering_pod", "heritage_pod"],
+      "relatedSkills": ["strategy_to_execution_pipeline", "patch_drop_discipline"],
+      "relatedDecisions": ["DTH-20251227-059"]
     }
   ]
 }

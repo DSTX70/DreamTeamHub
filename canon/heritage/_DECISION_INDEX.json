@@ -629,6 +629,17 @@
       "relatedPods": ["engineering_pod", "ux_product_pod"],
       "relatedSkills": ["strategy_to_execution_pipeline"],
       "relatedEvidence": ["EVID-0060"]
+    },
+    {
+      "id": "DTH-20251227-059",
+      "title": "Work Item Execution Pipeline with Approval Gates",
+      "status": "Locked",
+      "date": "2025-12-27",
+      "file": "decisions/DTH-20251227-059.md",
+      "tags": ["work-items", "execution", "drops", "approval", "governance"],
+      "relatedPods": ["engineering_pod", "heritage_pod"],
+      "relatedSkills": ["strategy_to_execution_pipeline", "patch_drop_discipline"],
+      "relatedEvidence": ["EVID-0061"]
     }
   ]
 }

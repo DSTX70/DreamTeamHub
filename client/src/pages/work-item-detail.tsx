@@ -1,11 +1,13 @@
 import { useMemo } from "react";
 import { useParams, useLocation } from "wouter";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { queryClient } from "@/lib/queryClient";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { Textarea } from "@/components/ui/textarea";
 import { StatusBadge } from "@/components/status-badge";
 import { FilesPanel } from "@/components/FilesPanel";
 import { WorkItemActionsPanel } from "@/components/workItems/WorkItemActionsPanel";
@@ -13,7 +15,8 @@ import { WorkItemPacksPanel } from "@/components/workItems/WorkItemPacksPanel";
 import { LifestyleHeroPreview } from "@/components/workItems/LifestyleHeroPreview";
 import NextActionsPanel from "@/components/workItems/NextActionsPanel";
 import { getTargetContext } from "@/lib/castReceipt";
-import { ArrowLeft, Calendar, User, Target, Route, Compass, Users, Lightbulb } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { ArrowLeft, Calendar, User, Target, Route, Compass, Users, Lightbulb, Wand2, Check, FileText, Copy } from "lucide-react";
 import { Link } from "wouter";
 import { format } from "date-fns";
 import type { WorkItem } from "@shared/schema";
@@ -117,9 +120,18 @@ function extractStrategyProvenance(workItem: any): string | null {
   return null;
 }
 
+type WorkItemStageRecord = {
+  workItemId: string;
+  stage: "NONE" | "RECOMMENDATION_DRAFT" | "RECOMMENDATION_APPROVED" | "DROP_READY";
+  recommendation?: { text: string; created_at: string };
+  approval?: { approved_by: string; approved_at: string };
+  drop?: { targetRepo: string; text: string; created_at: string };
+};
+
 export default function WorkItemDetail() {
   const { id } = useParams();
   const [, setLocation] = useLocation();
+  const { toast } = useToast();
   const workItemId = parseInt(id || "0", 10);
 
   const { data: workItem, isLoading, error } = useQuery<WorkItem>({
@@ -127,8 +139,82 @@ export default function WorkItemDetail() {
     enabled: workItemId > 0,
   });
 
+  const { data: stage } = useQuery<WorkItemStageRecord>({
+    queryKey: ['/api/work-items', workItemId, 'stage'],
+    enabled: workItemId > 0,
+  });
+
   const cast = useMemo(() => parseCastReceipt(workItem?.description ?? null), [workItem?.description]);
   const strategySessionId = useMemo(() => extractStrategyProvenance(workItem), [workItem]);
+
+  const genRec = useMutation({
+    mutationFn: async () => {
+      const res = await fetch(`/api/work-items/${workItemId}/stage/recommendation`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: workItem?.title,
+          inputs: workItem?.description ?? "",
+          repoHint: "GigsterGarage",
+          strategySessionId: strategySessionId,
+        }),
+      });
+      if (!res.ok) throw new Error(`Failed (${res.status})`);
+      return res.json();
+    },
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['/api/work-items', workItemId, 'stage'] });
+      toast({ title: "Recommendation generated", description: "Draft created (non-executing)." });
+    },
+    onError: (err: Error) => {
+      toast({ title: "Error", description: err.message, variant: "destructive" });
+    },
+  });
+
+  const approveRec = useMutation({
+    mutationFn: async () => {
+      const res = await fetch(`/api/work-items/${workItemId}/stage/approve`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ approved_by: "Dustin Sparks" }),
+      });
+      if (!res.ok) throw new Error(`Failed (${res.status})`);
+      return res.json();
+    },
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['/api/work-items', workItemId, 'stage'] });
+      toast({ title: "Approved", description: "Recommendation approved. Drop generation enabled." });
+    },
+    onError: (err: Error) => {
+      toast({ title: "Error", description: err.message, variant: "destructive" });
+    },
+  });
+
+  const genDrop = useMutation({
+    mutationFn: async () => {
+      const res = await fetch(`/api/work-items/${workItemId}/stage/drop`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ targetRepo: "GigsterGarage" }),
+      });
+      if (!res.ok) throw new Error(`Failed (${res.status})`);
+      return res.json();
+    },
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['/api/work-items', workItemId, 'stage'] });
+      toast({ title: "Drop generated", description: "FILE/END_FILE drop is ready for GigsterGarage." });
+    },
+    onError: (err: Error) => {
+      toast({ title: "Error", description: err.message, variant: "destructive" });
+    },
+  });
+
+  const handleCopyDrop = () => {
+    if (stage?.drop?.text) {
+      navigator.clipboard.writeText(stage.drop.text);
+      toast({ title: "Copied!", description: "Drop text copied to clipboard." });
+    }
+  };
 
   if (isLoading) {
     return (
@@ -274,6 +360,95 @@ export default function WorkItemDetail() {
           </CardContent>
         </Card>
       )}
+
+      {/* Execution Pipeline */}
+      <Card data-testid="execution-pipeline-panel">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <FileText className="h-5 w-5" />
+            Execution Pipeline
+          </CardTitle>
+          <CardDescription>
+            Recommendation → Approval → Drop (non-executing). Target repo: <span className="font-medium">GigsterGarage</span>.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex flex-wrap gap-2">
+            <Badge variant="outline" data-testid="badge-stage">Stage: {stage?.stage || "NONE"}</Badge>
+            <Badge variant="secondary">No auto-apply</Badge>
+            <Badge variant="secondary">No VSuiteHQ push</Badge>
+          </div>
+
+          <div className="flex flex-wrap gap-2">
+            <Button
+              onClick={() => genRec.mutate()}
+              disabled={!workItem?.id || genRec.isPending}
+              variant="outline"
+              data-testid="button-gen-recommendation"
+            >
+              <Wand2 className="mr-2 h-4 w-4" />
+              {genRec.isPending ? "Generating..." : "Generate Recommendation"}
+            </Button>
+
+            <Button
+              onClick={() => approveRec.mutate()}
+              disabled={approveRec.isPending || !stage?.recommendation?.text}
+              data-testid="button-approve-recommendation"
+            >
+              <Check className="mr-2 h-4 w-4" />
+              {approveRec.isPending ? "Approving..." : "Approve Recommendation"}
+            </Button>
+
+            <Button
+              onClick={() => genDrop.mutate()}
+              disabled={genDrop.isPending || stage?.stage !== "RECOMMENDATION_APPROVED"}
+              variant="default"
+              data-testid="button-gen-drop"
+            >
+              <FileText className="mr-2 h-4 w-4" />
+              {genDrop.isPending ? "Generating..." : "Generate GigsterGarage Drop"}
+            </Button>
+          </div>
+
+          {stage?.recommendation?.text && (
+            <div className="space-y-2">
+              <div className="text-sm font-medium">Recommendation (Draft)</div>
+              <Textarea 
+                value={stage.recommendation.text} 
+                readOnly 
+                className="min-h-[200px] font-mono text-xs" 
+                data-testid="textarea-recommendation"
+              />
+            </div>
+          )}
+
+          {stage?.approval && (
+            <div className="rounded-md border bg-green-500/10 border-green-500/30 p-3">
+              <div className="text-sm font-medium text-green-600 dark:text-green-400">
+                Approved by {stage.approval.approved_by} on {format(new Date(stage.approval.approved_at), "PPp")}
+              </div>
+            </div>
+          )}
+
+          {stage?.drop?.text && (
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <div className="text-sm font-medium">Drop (Ready for {stage.drop.targetRepo})</div>
+                <Button size="sm" variant="outline" onClick={handleCopyDrop} data-testid="button-copy-drop">
+                  <Copy className="mr-2 h-3 w-3" />
+                  Copy Drop
+                </Button>
+              </div>
+              <Textarea 
+                value={stage.drop.text} 
+                readOnly 
+                className="min-h-[200px] font-mono text-xs" 
+                data-testid="textarea-drop"
+              />
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Next Actions Panel */}
       <NextActionsPanel

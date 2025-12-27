@@ -1,0 +1,64 @@
+Not yet **as a confirmed, implemented feature** — we’ve **designed it and I provided the patch drop**, but you haven’t told me you applied it / verified it running the way you did for **Convert to Work Item** and the provenance badge.
+
+So status is:
+
+* ✅ **Strategy → Lock → Convert → Work Item** = implemented + tested (you confirmed)
+* ⚠️ **Work Item stages (RECOMMENDATION → APPROVED → DROP_READY)** = **not confirmed implemented** yet
+
+---
+
+## What “added” would look like (how to verify in 60 seconds)
+
+If the stages patch is applied, these should exist in **DreamTeamHub**:
+
+### 1) API routes respond
+
+* `GET /api/work-items/:id/stage`
+* `POST /api/work-items/:id/stage/recommendation`
+* `POST /api/work-items/:id/stage/approve`
+* `POST /api/work-items/:id/stage/drop`
+
+Quick check: open a Work Item, hit the stage endpoint in browser/devtools:
+
+* `/api/work-items/33/stage` (use a real id)
+
+### 2) New data folder appears
+
+* `data/work-item-stages/<workItemId>.json`
+
+### 3) UI shows the pipeline controls on Work Item detail
+
+On `client/src/pages/work-item-detail.tsx` you should see:
+
+* “Execution Pipeline” card
+* Buttons:
+
+  * Generate Recommendation
+  * Approve Recommendation
+  * Generate GigsterGarage Drop
+* Stage badge changes as you click through
+
+---
+
+## If you want, I can give you the exact drop again (clean + aligned to your current Work Item fields)
+
+Because you mentioned your Convert payload includes:
+
+* `owner` (good)
+* `inputs` (full strategy markdown)
+* `output` (“Execute the locked strategy…”)
+* `playbook` (provenance text + source id + locked timestamp)
+
+That’s great — and it means the stage generator should use `workItem.inputs` and maybe show `workItem.owner` in the recommendation.
+
+### Tell me just one thing:
+
+Are you storing Work Item “inputs” as **`inputs`** or **`input`** on the Work Item record returned by `/api/work-items/:id`?
+
+If it’s `inputs` (most likely), I’ll produce a final patch drop that:
+
+* uses your field names exactly
+* uses your existing provenance parsing to pass `strategySessionId`
+* adds a clean “Stage” badge to `/work` (optional)
+
+But if you already applied the earlier stage patch, just reply: **“Yes, applied”** and paste any error you hit (if any), and I’ll adjust quickly.
