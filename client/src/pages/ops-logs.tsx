@@ -1,5 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useLocation } from "wouter";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,6 +9,11 @@ import { Badge } from "@/components/ui/badge";
 import { Download, RefreshCw, Filter } from "lucide-react";
 import { PageBreadcrumb } from "@/components/PageBreadcrumb";
 import { formatDistanceToNow } from "date-fns";
+
+function getSearchParams(location: string) {
+  const idx = location.indexOf("?");
+  return new URLSearchParams(idx >= 0 ? location.slice(idx + 1) : "");
+}
 
 interface OpsEvent {
   id: number;
@@ -58,10 +64,38 @@ function downloadCsv(filename: string, text: string) {
 }
 
 export default function OpsLogsPage() {
+  const [location] = useLocation();
   const [kindFilter, setKindFilter] = useState("");
   const [ownerTypeFilter, setOwnerTypeFilter] = useState("");
   const [ownerIdFilter, setOwnerIdFilter] = useState("");
   const [autoRefresh, setAutoRefresh] = useState(false);
+  const [prefillNote, setPrefillNote] = useState<string | null>(null);
+  const [prefillApplied, setPrefillApplied] = useState(false);
+
+  const urlParams = useMemo(() => getSearchParams(location), [location]);
+
+  useEffect(() => {
+    if (prefillApplied) return;
+
+    const workItemId = urlParams.get("workItemId")?.trim();
+    const context = urlParams.get("context")?.trim();
+    const q = urlParams.get("q")?.trim();
+
+    if (!workItemId && !context && !q) return;
+
+    if (workItemId) {
+      setOwnerIdFilter(workItemId);
+      setOwnerTypeFilter((prev) => prev || "workItem");
+    }
+
+    const noteParts: string[] = [];
+    if (workItemId) noteParts.push(`workItemId=${workItemId}`);
+    if (context) noteParts.push(`context=${context}`);
+    if (q) noteParts.push(`q=${q}`);
+
+    setPrefillNote(`Prefilled from link: ${noteParts.join(" • ")}`);
+    setPrefillApplied(true);
+  }, [urlParams, prefillApplied]);
 
   const queryParams = new URLSearchParams();
   if (kindFilter) queryParams.set("kind", kindFilter);
@@ -84,8 +118,8 @@ export default function OpsLogsPage() {
     downloadCsv(`ops-logs_${kindParam}_${ownerParam}_${ts}.csv`, csv);
   };
 
-  const kindTypes = Array.from(new Set(events.map(e => e.kind))).filter(Boolean).sort();
-  const ownerTypes = Array.from(new Set(events.map(e => e.ownerType))).filter(Boolean).sort();
+  const kindTypes = Array.from(new Set(events.map(e => e.kind))).filter((v): v is string => Boolean(v)).sort();
+  const ownerTypes = Array.from(new Set(events.map(e => e.ownerType))).filter((v): v is string => Boolean(v)).sort();
 
   const breadcrumbSegments = [
     { label: "i³ Collective", href: "/" },
@@ -102,6 +136,12 @@ export default function OpsLogsPage() {
           View and filter operational events across the platform
         </p>
       </div>
+
+      {prefillNote && (
+        <div className="text-xs text-muted-foreground" data-testid="ops-logs-prefill-note">
+          {prefillNote}
+        </div>
+      )}
 
       <Card>
         <CardHeader>

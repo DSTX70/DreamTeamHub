@@ -1,16 +1,26 @@
 import { useState, useEffect, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useRoute, useLocation, Link } from "wouter";
-import { Plus, Filter, FolderKanban, Calendar, Users, CheckCircle2, AlertCircle, Clock, Sparkles, Lightbulb, Shield, Package, ClipboardList } from "lucide-react";
+import { Plus, Filter, FolderKanban, Calendar, Users, CheckCircle2, AlertCircle, Clock, Sparkles, Lightbulb, Shield, Package, ClipboardList, ExternalLink } from "lucide-react";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import type { Project, Brand } from "@shared/schema";
 import { IdeaSparksList } from "@/components/idea-sparks-list";
 import { BrandDetailsModal } from "@/components/brand-details-modal";
 import { PageBreadcrumb, buildBreadcrumbs } from "@/components/PageBreadcrumb";
 import { EmptyState } from "@/components/empty-state";
+
+function getSearchParams(location: string) {
+  const idx = location.indexOf("?");
+  return new URLSearchParams(idx >= 0 ? location.slice(idx + 1) : "");
+}
+
+function enc(v: string) {
+  return encodeURIComponent(v);
+}
 
 const PILLAR_ICONS = {
   Imagination: Sparkles,
@@ -47,13 +57,22 @@ const categoryToSlug = (category: string): string => {
 
 export default function Projects() {
   const [, params] = useRoute("/projects/:category");
-  const [, setLocation] = useLocation();
+  const [location, setLocation] = useLocation();
   const categoryFromUrl = normalizeCategoryFromUrl(params?.category);
   
   const [selectedCategory, setSelectedCategory] = useState<string>(categoryFromUrl);
   const [selectedStatus, setSelectedStatus] = useState<string>("all");
   const [selectedBrand, setSelectedBrand] = useState<Brand | null>(null);
   const [isBrandModalOpen, setIsBrandModalOpen] = useState(false);
+
+  const urlParams = useMemo(() => getSearchParams(location), [location]);
+  const workItemId = urlParams.get("workItemId")?.trim() || "";
+  const contextParam = urlParams.get("context")?.trim() || "";
+  const qParam = urlParams.get("q")?.trim() || "";
+  const hasWorkItemContext = Boolean(workItemId || contextParam || qParam);
+
+  const logsHref = `/ops/logs?workItemId=${enc(workItemId)}&context=${enc(contextParam)}&q=${enc(qParam)}`;
+  const verificationHref = `/verification?workItemId=${enc(workItemId)}&context=${enc(contextParam)}&q=${enc(qParam)}`;
 
   // Sync category with URL parameter
   useEffect(() => {
@@ -164,6 +183,30 @@ export default function Projects() {
       <div className="p-6 space-y-6">
         {/* Breadcrumb */}
         <PageBreadcrumb segments={breadcrumbs} />
+
+        {/* Work-item context banner */}
+        {hasWorkItemContext && (
+          <Alert data-testid="projects-context-banner">
+            <AlertTitle className="flex items-center gap-2">
+              <ExternalLink className="h-4 w-4" />
+              Work-item context detected
+            </AlertTitle>
+            <AlertDescription className="space-y-3">
+              <div className="text-sm">
+                Use your normal Project filters/search. This link carried:
+                {workItemId ? ` workItemId=${workItemId}` : ""}{contextParam ? ` • context=${contextParam}` : ""}{qParam ? ` • q=${qParam}` : ""}
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <Button size="sm" variant="outline" onClick={() => setLocation(verificationHref)} data-testid="button-context-verification">
+                  Verification
+                </Button>
+                <Button size="sm" onClick={() => setLocation(logsHref)} data-testid="button-context-logs">
+                  Open Logs
+                </Button>
+              </div>
+            </AlertDescription>
+          </Alert>
+        )}
         
         {/* Header */}
         <div className="flex items-center justify-between">
