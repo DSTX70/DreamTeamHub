@@ -1,0 +1,252 @@
+✅ **Repo/Replit:** **DreamTeamHub**
+Locked. Here’s a **paste-ready Replit drop** that canonizes both pods with **evidence-grade artifacts + locked decisions**, and updates both index files.
+
+* **EVID-0062** — GigsterGarage Pilot Pod (curated cast + guardrails)
+* **EVID-0063** — Tenant & Billing Pod (Revenue Systems)
+* **DTH-20251227-060** — Lock GigsterGarage Pod
+* **DTH-20251227-061** — Lock Tenant & Billing Pod
+* Index updates: `_EVIDENCE_INDEX.json`, `_DECISION_INDEX.json`
+
+---
+
+```diff
+FILE: canon/heritage/evidence/EVID-0062.md
++Confidential and proprietary and copyright Dustin Sparks 2025
++
++# EVID-0062 — GigsterGarage Pilot Pod (Curated Cast + Approval-First Delivery)
++
++## Problem
++Pilots fail when execution lacks: clear ownership, safe rollout discipline, evidence traceability, and business/ops realism. “Fast shipping” without gates creates regressions and loss of trust.
++
++## Constraints
++- Approval-first execution (Dustin is sole approver)
++- Non-executing outputs by default (paste-ready drops only)
++- No schema changes unless explicitly approved
++- Evidence-grade receipts and traceability
++- Target isolation: GigsterGarage pilot repo
++
++## Pod Definition (Locked)
++**Pod Key:** `gigster_garage_pilot`  
++**Purpose:** Run the DTH pipeline for GigsterGarage: Strategy → Lock → Work Item → Recommendation → Approval → Drop (manual apply), with QA/security/evidence gates and SMB viability checks.
++
++### Recommended Cast (Assigned)
++**Core delivery engine**
++- OS — orchestration + gate enforcement
++- Lume — UX clarity and workflow simplification
++- Forge — architecture/backend correctness
++- LexiCode — paste-ready patches + repo realism
++- CodeBlock — modular/flag gating (adapter-first)
++- Verifier — QA + CI gates + regression checks
++- Pulse — perf guardrails (avoid regressions)
++- Sentinel — security review and risk flags
++- Aegis — governance/control points
++- Archivist — evidence/traceability packs
++- Conductor — pilot cadence + KPI framing
++- Scout — research/validation support
++
++**Business / SMB SMEs (required for viability)**
++- Ledger — pricing/unit economics + billing implications + ROI sanity checks
++- Navi — ops/process and rollout sequencing (how it runs in real life)
++- Amani — SMB operator lens + partnerships/market-fit constraints
++- ChieSan — experience/trust + customer-facing language nuance
++
++### Activation Rules
++- Repo hint includes `GigsterGarage`
++- Target repo is `GigsterGarage`
++- Any pilot patch cycle using approval-first execution pipeline
++
++### Guardrails
++- No auto-apply
++- No VSuiteHQ push until explicitly enabled
++- FILE/END_FILE discipline required for drops
++- No schema changes unless explicitly approved
++- Evidence packs required for “done”
++
++## Why it worked
++It keeps pilots fast but safe: the execution engine ships, the SMEs prevent non-viable choices, and governance/evidence preserves trust.
++
++## Outcome
++- Repeatable pilot delivery without silent execution
++- Clear accountability per role
++- Better “real world” viability (SMB + ops) before scaling
++
++## Where it landed
++DreamTeamHub cast presets + Heritage pod definition for GigsterGarage pilot workflows
++
++## Related Skills
++- strategy_to_execution_pipeline
++- patch_drop_discipline
++- pilot_factory_ops
++
++## Related Decisions
++- DTH-20251227-060
++
+END_FILE
+```
+
+```diff
+FILE: canon/heritage/evidence/EVID-0063.md
++Confidential and proprietary and copyright Dustin Sparks 2025
++
++# EVID-0063 — Tenant & Billing Pod (Revenue Systems) (Security + Financial Boundary)
++
++## Problem
++Tenant isolation and billing are hard boundaries: mistakes can cause access leaks, incorrect charges, disputes, and security incidents. These concerns are specialized enough to require a dedicated pod.
++
++## Constraints
++- Approval-first execution (no silent billing changes)
++- Staging-first verification before any production billing
++- Webhook signature verification + idempotency required
++- Audit logs for billing state transitions
++- Privacy posture and retention considerations (as applicable)
++
++## Pod Definition (Locked)
++**Pod Key:** `tenant_billing_revenue_systems`  
++**Purpose:** Own multi-tenant isolation, entitlements, and billing/subscription lifecycle safely (Stripe/webhooks/idempotency), with explicit approval and evidence-grade artifacts.
++
++### Recommended Cast (Assigned)
++- OS — orchestration + approval gates
++- Forge — architecture and tenant data model
++- LexiCode — implementation + patch drops
++- Bridge — SDK/connector contracts (policy headers + audit)
++- Verifier — QA (webhook/idempotency + regression gates)
++- Pulse — perf/cost guardrails
++- Sentinel — security boundary review
++- Praetor — privacy posture/retention guidance (as needed)
++- Aegis — governance/control points
++- Archivist — evidence/traceability packs
++- Ledger — pricing/unit economics sanity
++- Navi — ops rollout sequencing (staging → prod discipline)
++
++### Activation Rules
++- Work includes: tenant, multi-tenant, entitlement, subscription, billing, Stripe, invoices, proration, trials, metering
++- Any work touching payment flows or plan-based access gating
++
++### Guardrails
++- No production billing without explicit approval + staging verification
++- Webhook signature verification required
++- Idempotency required on billing mutations
++- Audit logs required for billing state transitions
++- No auto-apply by default
++
++## Why it worked
++It treats billing and tenancy as a boundary layer with gates, tests, and evidence — rather than “just another feature.”
++
++## Outcome
++- Lower risk of financial/security incidents
++- Clear ownership and review paths
++- Higher confidence in revenue-system changes
++
++## Where it landed
++DreamTeamHub heritage pod definition + cast preset for tenant/billing work
++
++## Related Skills
++- security_risk_review
++- patch_drop_discipline
++
++## Related Decisions
++- DTH-20251227-061
++
+END_FILE
+```
+
+```diff
+FILE: canon/heritage/decisions/DTH-20251227-060.md
++Confidential and proprietary and copyright Dustin Sparks 2025
++
++# Decision: DTH-20251227-060 — Lock GigsterGarage Pilot Pod (Curated Cast)
++**Date:** 2025-12-27  
++**Status:** Locked  
++
++## Decision
++Establish `gigster_garage_pilot` as the official GigsterGarage pilot pod and curated cast. This pod is responsible for approval-first delivery using the DTH pipeline and includes business/SMB SMEs (Ledger, Navi, Amani, ChieSan) as required participants for viability.
++
++## Rationale
++Ensures pilots ship safely and credibly with gates, evidence, and real-world business/ops constraints.
++
++## References
++- canon/heritage/evidence/EVID-0062.md
++
+END_FILE
+```
+
+```diff
+FILE: canon/heritage/decisions/DTH-20251227-061.md
++Confidential and proprietary and copyright Dustin Sparks 2025
++
++# Decision: DTH-20251227-061 — Lock Tenant & Billing Pod (Revenue Systems)
++**Date:** 2025-12-27  
++**Status:** Locked  
++
++## Decision
++Establish `tenant_billing_revenue_systems` as the official pod for multi-tenant isolation, entitlements, and billing/subscription lifecycle work. This pod enforces staging-first verification, webhook signature verification, idempotency, audit logs, and approval-first governance.
++
++## Rationale
++Tenant + billing are security and financial boundaries; dedicated ownership and gates reduce risk and prevent costly incidents.
++
++## References
++- canon/heritage/evidence/EVID-0063.md
++
+END_FILE
+```
+
+```diff
+FILE: canon/heritage/evidence/_EVIDENCE_INDEX.json
+@@
+   "evidence": [
++    {
++      "evidenceId": "EVID-0062",
++      "title": "GigsterGarage Pilot Pod (Curated Cast + Approval-First Delivery)",
++      "path": "canon/heritage/evidence/EVID-0062.md",
++      "tags": ["gigsterGarage", "pilot", "pod", "approval-first"],
++      "relatedDecisions": ["DTH-20251227-060"]
++    },
++    {
++      "evidenceId": "EVID-0063",
++      "title": "Tenant & Billing Pod (Revenue Systems) (Security + Financial Boundary)",
++      "path": "canon/heritage/evidence/EVID-0063.md",
++      "tags": ["tenant", "billing", "revenue-systems", "security"],
++      "relatedDecisions": ["DTH-20251227-061"]
++    }
+   ]
+ }
+ 
+ END_FILE
+```
+
+```diff
+FILE: canon/heritage/decisions/_DECISION_INDEX.json
+@@
+   "decisions": [
++    {
++      "decisionId": "DTH-20251227-060",
++      "title": "Lock GigsterGarage Pilot Pod (Curated Cast)",
++      "path": "canon/heritage/decisions/DTH-20251227-060.md",
++      "status": "Locked",
++      "tags": ["gigsterGarage", "pilot", "pod"]
++    },
++    {
++      "decisionId": "DTH-20251227-061",
++      "title": "Lock Tenant & Billing Pod (Revenue Systems)",
++      "path": "canon/heritage/decisions/DTH-20251227-061.md",
++      "status": "Locked",
++      "tags": ["tenant", "billing", "revenue-systems"]
++    }
+   ]
+ }
+ 
+ END_FILE
+```
+
+---
+
+## After applying
+
+Run the scoreboard refresh (since you’re tracking totals tightly):
+
+```bash
+npm run heritage:status
+npm run heritage:index:sync
+```
+
+If you want, next we can also add **two Cast Preset “badges”** on Strategy sessions and Work Items (e.g., “GigsterGarage Pod” / “Tenant & Billing Pod”) based on repo_hint or keywords so the UI reflects the pod selection visibly.

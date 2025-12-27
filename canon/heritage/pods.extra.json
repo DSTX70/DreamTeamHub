@@ -1,0 +1,88 @@
+{
+  "schemaVersion": "v1",
+  "packVersion": "v1.0",
+  "updated_at": "2025-12-27",
+  "pods": [
+    {
+      "podKey": "gigster_garage_pilot",
+      "name": "GigsterGarage Pilot Pod",
+      "purpose": "Approval-first delivery for GigsterGarage using the DTH pipeline: Strategy→Lock→Work Item→Recommendation→Approval→Drop (manual apply), with QA/security/evidence gates.",
+      "scope": [
+        "Pilot execution inside DreamTeamHub",
+        "Non-executing recommendations and FILE/END_FILE drops",
+        "Manual apply to GigsterGarage repo",
+        "Verification checklists and evidence capture",
+        "Business/SMB viability and ops constraints (Ledger/Navi/Amani)"
+      ],
+      "members": [
+        { "handle": "OS", "role": "Orchestration & Gates" },
+        { "handle": "Lume", "role": "UX / Flow Clarity" },
+        { "handle": "Forge", "role": "Architecture & Backend" },
+        { "handle": "LexiCode", "role": "Patch Drops & Integration" },
+        { "handle": "CodeBlock", "role": "Modular Builds & Feature Flags" },
+        { "handle": "Verifier", "role": "QA Automation / CI Gates" },
+        { "handle": "Pulse", "role": "Performance Guardrails" },
+        { "handle": "Sentinel", "role": "Security & Risk Review" },
+        { "handle": "Praetor", "role": "Privacy Counsel (as needed)" },
+        { "handle": "Aegis", "role": "Governance / Control Points" },
+        { "handle": "Archivist", "role": "Evidence Curator / Traceability" },
+        { "handle": "Conductor", "role": "Pilot Cadence / KPI Framing" },
+        { "handle": "Scout", "role": "Research & Discovery" },
+        { "handle": "Ledger", "role": "Business / Unit Economics" },
+        { "handle": "Navi", "role": "Ops / Rollout Sequencing" },
+        { "handle": "Amani", "role": "SMB Operator Lens / Partnerships" },
+        { "handle": "ChieSan", "role": "Experience / Trust & Language Nuance" }
+      ],
+      "activationRules": [
+        "Repo hint includes GigsterGarage",
+        "Work Item target repo is GigsterGarage",
+        "Any pilot patch cycle requiring approval-first execution"
+      ],
+      "guardrails": [
+        "No auto-apply",
+        "No VSuiteHQ push until explicitly enabled",
+        "FILE/END_FILE required for drops",
+        "No schema changes unless explicitly approved"
+      ]
+    },
+    {
+      "podKey": "tenant_billing_revenue_systems",
+      "name": "Tenant & Billing Pod (Revenue Systems)",
+      "purpose": "Own multi-tenant isolation, entitlements, and billing/subscription lifecycle safely (Stripe/webhooks/idempotency), with explicit approval and evidence-grade artifacts.",
+      "scope": [
+        "Tenant model + isolation boundaries",
+        "Entitlements / roles / plan gating",
+        "Billing catalog (plans, pricing, proration, trials)",
+        "Metering and invoice readiness",
+        "Webhook verification + idempotency",
+        "Audit logs and reconciliation support",
+        "Staging-first validation (no silent prod billing)"
+      ],
+      "members": [
+        { "handle": "OS", "role": "Orchestration & Approval Gates" },
+        { "handle": "Forge", "role": "Architecture & Data Model" },
+        { "handle": "LexiCode", "role": "Implementation / Patch Drops" },
+        { "handle": "Bridge", "role": "SDK / Connector Contracts" },
+        { "handle": "Verifier", "role": "QA / Webhook & Idempotency Tests" },
+        { "handle": "Pulse", "role": "Perf / Cost Guardrails" },
+        { "handle": "Sentinel", "role": "Security Boundary Review" },
+        { "handle": "Praetor", "role": "Privacy / Retention Guidance" },
+        { "handle": "Aegis", "role": "Governance / Controls" },
+        { "handle": "Archivist", "role": "Evidence / Traceability" },
+        { "handle": "Ledger", "role": "Pricing / Unit Economics" },
+        { "handle": "Navi", "role": "Ops / Rollout Sequencing" }
+      ],
+      "activationRules": [
+        "Work includes: tenant, multi-tenant, entitlement, subscription, billing, Stripe, invoices, proration",
+        "Any work that touches payment flows or access gating by plan"
+      ],
+      "guardrails": [
+        "No prod billing without explicit approval and staging verification",
+        "Webhook signature verification required",
+        "Idempotency required on billing mutations",
+        "Audit logs required for billing state transitions",
+        "No auto-apply"
+      ]
+    }
+  ]
+}

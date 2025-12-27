@@ -1,0 +1,374 @@
+✅ **Repo/Replit:** **DreamTeamHub**
+
+Here’s the **expanded GigsterGarage Pod** with the business/SMB SMEs you asked for, plus my recommended **Tenant & Billing Pod** (and a drop to implement both in DTH).
+
+---
+
+## GigsterGarage Pod — updated assigned Cast (with SMEs)
+
+### Core delivery engine (ship safely)
+
+* **OS** — orchestration + gates
+* **Lume** — UX/flow clarity
+* **Forge** — architecture/backend correctness
+* **LexiCode** — paste-ready drops + repo realism
+* **CodeBlock** — modular/flag gating
+* **Verifier** — QA + CI gates
+* **Pulse** — performance guardrails
+* **Sentinel** — security review
+* **Aegis** — governance/control points
+* **Archivist** — evidence/traceability packs
+* **Conductor** — pilot cadence + KPI framing
+* **Scout** — research/validation support
+
+### Business / Small Business SMEs (added)
+
+* **Ledger** — pricing/unit economics, billing implications, ROI sanity checks
+* **Navi** — ops/process, rollout sequencing, “how this is run” in real life
+* **Amani** — SMB operator lens + partnerships/market fit constraints
+* **ChieSan** — experience/sensitivity lens (especially customer-facing language + trust cues)
+
+These 4 don’t slow execution—they prevent “we shipped the feature but it’s not viable.”
+
+---
+
+## Thoughts on a Tenant & Billing Pod
+
+Yes: Tenant & Billing is **specialized enough** to warrant its own pod. Why?
+
+* Multi-tenant isolation + entitlements is a *security boundary*
+* Billing/Stripe/webhooks is a *financial boundary*
+* Small mistakes create real-world damage (access leaks, charges, disputes)
+
+### Tenant & Billing Pod (Revenue Systems) — recommended members
+
+* **Forge** (architecture)
+* **LexiCode** (implementation)
+* **Bridge** (SDK/connector patterns)
+* **Ledger** (pricing/billing logic)
+* **Navi** (ops/process)
+* **Sentinel** (security boundary review)
+* **Praetor** (privacy posture)
+* **Verifier** (tests + webhook/idempotency gates)
+* **Pulse** (perf/cost)
+* **Aegis** (governance/controls)
+* **Archivist** (evidence + traceability)
+* **OS** (orchestration + approvals)
+
+**Guardrails:** staging-first, idempotency required, webhook signature verification, no prod billing without explicit approval, and zero auto-apply.
+
+---
+
+# ✅ Replit Drop: Add GigsterGarage curated cast + Tenant & Billing Pod (canon + UI presets)
+
+This implements:
+
+1. **Cast presets**: Default, GigsterGarage, Tenant & Billing
+2. **Strategy session UI** preset buttons updated
+3. **Heritage canon pod cards** via `pods.extra.json` (additive, no risk to your existing pods.json)
+4. **Heritage loader merge** so DTH can retrieve these pods as canon
+
+```diff
+FILE: client/src/lib/castPresets.ts
++export type CastPresetKey = "default" | "gigsterGarage" | "tenantBilling";
++
++export const DEFAULT_CAST: string[] = [
++  "OS",
++  "Forge",
++  "LexiCode",
++  "Lume",
++  "Sentinel",
++  "Aegis",
++  "Sparkster",
++];
++
++// GigsterGarage Pilot Pod (expanded with SMEs)
++export const GIGSTER_GARAGE_CAST: string[] = [
++  "OS",
++  "Lume",
++  "Forge",
++  "LexiCode",
++  "CodeBlock",
++  "Verifier",
++  "Pulse",
++  "Sentinel",
++  "Praetor",
++  "Aegis",
++  "Archivist",
++  "Conductor",
++  "Scout",
++  "Ledger",
++  "Navi",
++  "Amani",
++  "ChieSan",
++];
++
++export const GIGSTER_GARAGE_CAST_OPTIONS: string[] = Array.from(
++  new Set([
++    ...GIGSTER_GARAGE_CAST,
++    "Bridge",
++    "Beacon",
++    "Prism",
++    "Echo",
++    "Nova",
++    "Storybloom",
++  ])
++).sort((a, b) => a.localeCompare(b));
++
++// Tenant & Billing Pod (Revenue Systems)
++export const TENANT_BILLING_CAST: string[] = [
++  "OS",
++  "Forge",
++  "LexiCode",
++  "Bridge",
++  "Verifier",
++  "Pulse",
++  "Sentinel",
++  "Praetor",
++  "Aegis",
++  "Archivist",
++  "Ledger",
++  "Navi",
++];
++
++export const TENANT_BILLING_CAST_OPTIONS: string[] = Array.from(
++  new Set([
++    ...TENANT_BILLING_CAST,
++    "Conductor",
++    "Scout",
++    "Amani",
++  ])
++).sort((a, b) => a.localeCompare(b));
++
++export const CAST_PRESETS: Record<
++  CastPresetKey,
++  { label: string; recommended: string[]; options: string[] }
++> = {
++  default: {
++    label: "Default",
++    recommended: DEFAULT_CAST,
++    options: Array.from(new Set([...DEFAULT_CAST, "Storybloom", "Muse", "Scout", "Nova", "Prism", "Echo"])).sort(
++      (a, b) => a.localeCompare(b)
++    ),
++  },
++  gigsterGarage: {
++    label: "GigsterGarage",
++    recommended: GIGSTER_GARAGE_CAST,
++    options: GIGSTER_GARAGE_CAST_OPTIONS,
++  },
++  tenantBilling: {
++    label: "Tenant & Billing",
++    recommended: TENANT_BILLING_CAST,
++    options: TENANT_BILLING_CAST_OPTIONS,
++  },
++};
++
++export function inferPresetFromRepoHint(repoHint?: string | null): CastPresetKey {
++  const s = (repoHint || "").toLowerCase();
++  if (s.includes("gigster")) return "gigsterGarage";
++  return "default";
++}
++
++export function uniqSorted(list: string[]) {
++  return Array.from(new Set(list.map((s) => s.trim()).filter(Boolean))).sort((a, b) => a.localeCompare(b));
++}
++
+END_FILE
+```
+
+```diff
+FILE: client/src/pages/strategy/strategy-detail.tsx
+@@
+-import { CAST_PRESETS, inferPresetFromRepoHint, uniqSorted, type CastPresetKey } from "@/lib/castPresets";
++import { CAST_PRESETS, inferPresetFromRepoHint, uniqSorted, type CastPresetKey } from "@/lib/castPresets";
+@@
+-              <Button
+-                variant={presetKey === "default" ? "default" : "outline"}
+-                onClick={() => { setPresetKey("default"); setRecommendedCastForPreset("default"); }}
+-              >
+-                Default
+-              </Button>
+-              <Button
+-                variant={presetKey === "gigsterGarage" ? "default" : "outline"}
+-                onClick={() => { setPresetKey("gigsterGarage"); setRecommendedCastForPreset("gigsterGarage"); }}
+-              >
+-                GigsterGarage
+-              </Button>
++              <Button
++                variant={presetKey === "default" ? "default" : "outline"}
++                onClick={() => { setPresetKey("default"); setRecommendedCastForPreset("default"); }}
++              >
++                Default
++              </Button>
++              <Button
++                variant={presetKey === "gigsterGarage" ? "default" : "outline"}
++                onClick={() => { setPresetKey("gigsterGarage"); setRecommendedCastForPreset("gigsterGarage"); }}
++              >
++                GigsterGarage
++              </Button>
++              <Button
++                variant={presetKey === "tenantBilling" ? "default" : "outline"}
++                onClick={() => { setPresetKey("tenantBilling"); setRecommendedCastForPreset("tenantBilling"); }}
++              >
++                Tenant & Billing
++              </Button>
+             </div>
+ 
+ END_FILE
+```
+
+```diff
+FILE: canon/heritage/pods.extra.json
++{
++  "schemaVersion": "v1",
++  "packVersion": "v1.0",
++  "updated_at": "2025-12-27",
++  "pods": [
++    {
++      "podKey": "gigster_garage_pilot",
++      "name": "GigsterGarage Pilot Pod",
++      "purpose": "Approval-first delivery for GigsterGarage using the DTH pipeline: Strategy→Lock→Work Item→Recommendation→Approval→Drop (manual apply), with QA/security/evidence gates.",
++      "scope": [
++        "Pilot execution inside DreamTeamHub",
++        "Non-executing recommendations and FILE/END_FILE drops",
++        "Manual apply to GigsterGarage repo",
++        "Verification checklists and evidence capture",
++        "Business/SMB viability and ops constraints (Ledger/Navi/Amani)"
++      ],
++      "members": [
++        { "handle": "OS", "role": "Orchestration & Gates" },
++        { "handle": "Lume", "role": "UX / Flow Clarity" },
++        { "handle": "Forge", "role": "Architecture & Backend" },
++        { "handle": "LexiCode", "role": "Patch Drops & Integration" },
++        { "handle": "CodeBlock", "role": "Modular Builds & Feature Flags" },
++        { "handle": "Verifier", "role": "QA Automation / CI Gates" },
++        { "handle": "Pulse", "role": "Performance Guardrails" },
++        { "handle": "Sentinel", "role": "Security & Risk Review" },
++        { "handle": "Praetor", "role": "Privacy Counsel (as needed)" },
++        { "handle": "Aegis", "role": "Governance / Control Points" },
++        { "handle": "Archivist", "role": "Evidence Curator / Traceability" },
++        { "handle": "Conductor", "role": "Pilot Cadence / KPI Framing" },
++        { "handle": "Scout", "role": "Research & Discovery" },
++        { "handle": "Ledger", "role": "Business / Unit Economics" },
++        { "handle": "Navi", "role": "Ops / Rollout Sequencing" },
++        { "handle": "Amani", "role": "SMB Operator Lens / Partnerships" },
++        { "handle": "ChieSan", "role": "Experience / Trust & Language Nuance" }
++      ],
++      "activationRules": [
++        "Repo hint includes GigsterGarage",
++        "Work Item target repo is GigsterGarage",
++        "Any pilot patch cycle requiring approval-first execution"
++      ],
++      "guardrails": [
++        "No auto-apply",
++        "No VSuiteHQ push until explicitly enabled",
++        "FILE/END_FILE required for drops",
++        "No schema changes unless explicitly approved"
++      ]
++    },
++    {
++      "podKey": "tenant_billing_revenue_systems",
++      "name": "Tenant & Billing Pod (Revenue Systems)",
++      "purpose": "Own multi-tenant isolation, entitlements, and billing/subscription lifecycle safely (Stripe/webhooks/idempotency), with explicit approval and evidence-grade artifacts.",
++      "scope": [
++        "Tenant model + isolation boundaries",
++        "Entitlements / roles / plan gating",
++        "Billing catalog (plans, pricing, proration, trials)",
++        "Metering and invoice readiness",
++        "Webhook verification + idempotency",
++        "Audit logs and reconciliation support",
++        "Staging-first validation (no silent prod billing)"
++      ],
++      "members": [
++        { "handle": "OS", "role": "Orchestration & Approval Gates" },
++        { "handle": "Forge", "role": "Architecture & Data Model" },
++        { "handle": "LexiCode", "role": "Implementation / Patch Drops" },
++        { "handle": "Bridge", "role": "SDK / Connector Contracts" },
++        { "handle": "Verifier", "role": "QA / Webhook & Idempotency Tests" },
++        { "handle": "Pulse", "role": "Perf / Cost Guardrails" },
++        { "handle": "Sentinel", "role": "Security Boundary Review" },
++        { "handle": "Praetor", "role": "Privacy / Retention Guidance" },
++        { "handle": "Aegis", "role": "Governance / Controls" },
++        { "handle": "Archivist", "role": "Evidence / Traceability" },
++        { "handle": "Ledger", "role": "Pricing / Unit Economics" },
++        { "handle": "Navi", "role": "Ops / Rollout Sequencing" }
++      ],
++      "activationRules": [
++        "Work includes: tenant, multi-tenant, entitlement, subscription, billing, Stripe, invoices, proration",
++        "Any work that touches payment flows or access gating by plan"
++      ],
++      "guardrails": [
++        "No prod billing without explicit approval and staging verification",
++        "Webhook signature verification required",
++        "Idempotency required on billing mutations",
++        "Audit logs required for billing state transitions",
++        "No auto-apply"
++      ]
++    }
++  ]
++}
++
+END_FILE
+```
+
+```diff
+FILE: server/lib/contextPack/heritageLoader.ts
+@@
+ async function safeJson<T>(filePath: string): Promise<T> {
+   const raw = await readFile(filePath, "utf-8");
+   return JSON.parse(raw) as T;
+ }
++
++function mergeByPodKey(base: HeritagePod[], extra: HeritagePod[]): HeritagePod[] {
++  const map = new Map<string, HeritagePod>();
++  for (const p of base) map.set(p.podKey, p);
++  for (const p of extra) map.set(p.podKey, p); // extra overrides base by podKey
++  return Array.from(map.values());
++}
+@@
+ export async function loadHeritagePack(repoRoot = process.cwd()): Promise<HeritagePack> {
+   const base = path.join(repoRoot, "canon", "heritage");
+ 
+-  const podsJson = await safeJson<{ pods: HeritagePod[] }>(path.join(base, "pods.json"));
++  const podsJson = await safeJson<{ pods: HeritagePod[] }>(path.join(base, "pods.json"));
++  let pods = podsJson.pods ?? [];
++  // Optional additive pods file (avoids rewriting the main pods.json)
++  try {
++    const extraPodsJson = await safeJson<{ pods: HeritagePod[] }>(path.join(base, "pods.extra.json"));
++    pods = mergeByPodKey(pods, extraPodsJson.pods ?? []);
++  } catch {
++    // no extra pods file
++  }
+ 
+   const agentsJson = await safeJson<{ agents: HeritageAgent[] }>(path.join(base, "agents.json"));
+   const skillsJson = await safeJson<{ skills: HeritageSkill[] }>(path.join(base, "skills.json"));
+@@
+   return {
+-    pods: podsJson.pods ?? [],
++    pods,
+     agents: agentsJson.agents ?? [],
+     skills: skillsJson.skills ?? [],
+     decisionLogText,
+     heritagePackText,
+   };
+ }
+ 
+ END_FILE
+```
+
+---
+
+## What to do after applying
+
+1. Start a Strategy Session with `repo_hint = GigsterGarage`
+2. On Strategy detail, pick **GigsterGarage** preset → it will include Ledger/Amani/Navi/ChieSan
+3. If the work is tenant/billing heavy, pick **Tenant & Billing** preset
+4. Save the session → cast persists
+
+---
+
+## Next step if you want this “locked” as official canon
+
+Say: **“Lock GigsterGarage Pod and Tenant & Billing Pod”** and I’ll generate:
+
+* an Evidence Pack + Decision IDs for both pods (so they’re not just JSON, they’re *governed*).

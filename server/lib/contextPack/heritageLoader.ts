@@ -61,10 +61,27 @@ async function safeJson<T>(filePath: string): Promise<T> {
   return JSON.parse(raw) as T;
 }
 
+function mergeByPodKey(base: HeritagePod[], extra: HeritagePod[]): HeritagePod[] {
+  const map = new Map<string, HeritagePod>();
+  for (const p of base) map.set(p.podKey, p);
+  for (const p of extra) map.set(p.podKey, p); // extra overrides base by podKey
+  return Array.from(map.values());
+}
+
 export async function loadHeritagePack(repoRoot = process.cwd()): Promise<HeritagePack> {
   const base = path.join(repoRoot, "canon", "heritage");
 
   const podsJson = await safeJson<{ pods: HeritagePod[] }>(path.join(base, "pods.json"));
+  let pods = podsJson.pods ?? [];
+
+  // Optional additive pods file (avoids rewriting the main pods.json)
+  try {
+    const extraPodsJson = await safeJson<{ pods: HeritagePod[] }>(path.join(base, "pods.extra.json"));
+    pods = mergeByPodKey(pods, extraPodsJson.pods ?? []);
+  } catch {
+    // no extra pods file - that's fine
+  }
+
   const agentsJson = await safeJson<{ agents: HeritageAgent[] }>(path.join(base, "agents.json"));
   const skillsJson = await safeJson<{ skills: HeritageSkill[] }>(path.join(base, "skills.json"));
 
@@ -72,7 +89,7 @@ export async function loadHeritagePack(repoRoot = process.cwd()): Promise<Herita
   const heritagePackText = await readFile(path.join(base, "HeritagePack.v1.0.md"), "utf-8");
 
   return {
-    pods: podsJson.pods ?? [],
+    pods,
     agents: agentsJson.agents ?? [],
     skills: skillsJson.skills ?? [],
     decisionLogText,

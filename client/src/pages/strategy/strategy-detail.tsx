@@ -10,47 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { ArrowLeft, ArrowRight, Lock, Save, Trash2, Users, Check, X } from "lucide-react";
 import { Link } from "wouter";
-
-const DEFAULT_CAST = ["OS", "Forge", "LexiCode", "Lume", "Sentinel", "Aegis", "Sparkster"];
-
-const CURATED_CAST_OPTIONS = [
-  ...DEFAULT_CAST,
-  "Nova",
-  "Storybloom",
-  "Echo",
-  "Prism",
-  "Muse",
-  "Scout",
-  "Bridge",
-  "Pulse",
-  "Verifier",
-  "Atlas",
-  "Praetor",
-  "Coda",
-  "Archivist",
-  "Conductor",
-  "Beacon",
-  "Walt",
-  "Izumi Takahashi",
-  "ChieSan",
-  "Kaoru Arai",
-  "Harbor",
-  "Relief",
-  "Nest",
-  "Shield",
-  "Boost",
-  "Tally",
-  "Compass",
-  "Lens",
-  "Uplift",
-  "Dr. Rowan Vagus",
-  "Dr. Somnus Hale",
-  "Avery Marlowe",
-];
-
-function uniqSorted(list: string[]) {
-  return Array.from(new Set(list.map((s) => s.trim()).filter(Boolean))).sort((a, b) => a.localeCompare(b));
-}
+import { CAST_PRESETS, inferPresetFromRepoHint, uniqSorted, type CastPresetKey } from "@/lib/castPresets";
 
 type StrategySession = {
   id: string;
@@ -84,20 +44,26 @@ export default function StrategyDetailPage() {
   const [localParticipants, setLocalParticipants] = useState<string[]>([]);
   const [castSearch, setCastSearch] = useState("");
   const [showCastPicker, setShowCastPicker] = useState(false);
+  const [presetKey, setPresetKey] = useState<CastPresetKey>("default");
 
   useEffect(() => {
     if (!data) return;
     setLocalTitle(data.title);
     setLocalBody(data.bodyMd);
-    setLocalParticipants(uniqSorted(data.participants?.length ? data.participants : DEFAULT_CAST));
+    const inferred = inferPresetFromRepoHint(data.repo_hint);
+    setPresetKey(inferred);
+    const defaultCastForPreset = CAST_PRESETS[inferred].recommended;
+    setLocalParticipants(uniqSorted(data.participants?.length ? data.participants : defaultCastForPreset));
   }, [data?.id]);
+
+  const currentPreset = CAST_PRESETS[presetKey];
 
   const filteredCastOptions = useMemo(() => {
     const needle = castSearch.trim().toLowerCase();
-    const options = uniqSorted(CURATED_CAST_OPTIONS);
+    const options = uniqSorted(currentPreset.options);
     if (!needle) return options;
     return options.filter((n) => n.toLowerCase().includes(needle));
-  }, [castSearch]);
+  }, [castSearch, currentPreset.options]);
 
   function toggleParticipant(name: string) {
     setLocalParticipants((prev) => {
@@ -108,9 +74,10 @@ export default function StrategyDetailPage() {
     });
   }
 
-  function setDefaultCast() {
-    setLocalParticipants(uniqSorted(DEFAULT_CAST));
-    toast({ title: "Default Cast applied", description: "Standard invited cast set for this Strategy Session." });
+  function applyPreset(key: CastPresetKey) {
+    setPresetKey(key);
+    setLocalParticipants(uniqSorted(CAST_PRESETS[key].recommended));
+    toast({ title: `${CAST_PRESETS[key].label} Cast applied`, description: `Preset cast set for this Strategy Session.` });
   }
 
   const saveMutation = useMutation({
@@ -275,18 +242,38 @@ export default function StrategyDetailPage() {
             Cast (Participants)
           </CardTitle>
           <CardDescription>
-            Default Cast is the standard invited group. Curated Cast lets you tailor who participates in the Strategy Session.
+            Select a pod preset or curate who participates in the Strategy Session.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
+          {/* Preset buttons */}
           <div className="flex flex-wrap items-center gap-2">
-            <Button variant="outline" onClick={setDefaultCast} data-testid="button-default-cast">
-              Use Default Cast
+            <Button
+              variant={presetKey === "default" ? "default" : "outline"}
+              onClick={() => applyPreset("default")}
+              data-testid="button-preset-default"
+            >
+              Default
+            </Button>
+            <Button
+              variant={presetKey === "gigsterGarage" ? "default" : "outline"}
+              onClick={() => applyPreset("gigsterGarage")}
+              data-testid="button-preset-gigsterGarage"
+            >
+              GigsterGarage
+            </Button>
+            <Button
+              variant={presetKey === "tenantBilling" ? "default" : "outline"}
+              onClick={() => applyPreset("tenantBilling")}
+              data-testid="button-preset-tenantBilling"
+            >
+              Tenant & Billing
             </Button>
             <Button variant="outline" onClick={() => setShowCastPicker((v) => !v)} data-testid="button-curate-cast">
               {showCastPicker ? "Hide Curated Cast" : "Curate Cast"}
             </Button>
             <Badge variant="secondary" data-testid="badge-cast-count">Selected: {localParticipants.length}</Badge>
+            <Badge variant="outline" data-testid="badge-preset-label">{currentPreset.label}</Badge>
           </div>
 
           {/* Selected chips */}
