@@ -1,0 +1,106 @@
+{
+  "version": "1.0.0",
+  "updated": "2025-12-26",
+  "description": "Evidence Pack ledger for Heritage Canon retrieval",
+  "entries": [
+    {
+      "id": "EVID-0001",
+      "title": "Context Banner System (Business Unit Scoped UI)",
+      "file": "EVID-0001.md",
+      "tags": ["engineering", "ux", "context-awareness"],
+      "relatedPods": ["engineering_pod"],
+      "relatedSkills": ["context_banner_system"],
+      "relatedDecisions": []
+    },
+    {
+      "id": "EVID-0004",
+      "title": "IP Pod Operating System (Aegis/Atlas/Archivist/Sentinel/Praetor/Coda)",
+      "file": "EVID-0004.md",
+      "tags": ["ip", "compliance", "governance"],
+      "relatedPods": ["ip_compliance_pod"],
+      "relatedSkills": ["ip_strategy", "evidence_traceability_matrix", "security_risk_review"],
+      "relatedDecisions": ["DTH-20251226-002"]
+    },
+    {
+      "id": "EVID-0005",
+      "title": "Claim↔Spec↔Figure↔Evidence Matrix Discipline",
+      "file": "EVID-0005.md",
+      "tags": ["ip", "traceability", "filings"],
+      "relatedPods": ["ip_compliance_pod"],
+      "relatedSkills": ["evidence_traceability_matrix", "ip_strategy"],
+      "relatedDecisions": ["DTH-20251226-003"]
+    },
+    {
+      "id": "EVID-0006",
+      "title": "Patch-Kit Strategy (Additive-only / Adapter-first / Feature-flag staged)",
+      "file": "EVID-0006.md",
+      "tags": ["engineering", "shipping", "stability"],
+      "relatedPods": ["engineering_pod"],
+      "relatedSkills": ["patch_drop_discipline", "patchkit_adapter_first"],
+      "relatedDecisions": ["DTH-20251226-004"]
+    },
+    {
+      "id": "EVID-0007",
+      "title": "FILE-block Drop Discipline + END_FILE Guardrails",
+      "file": "EVID-0007.md",
+      "tags": ["engineering", "automation", "shipping"],
+      "relatedPods": ["engineering_pod"],
+      "relatedSkills": ["patch_drop_discipline", "drop_validation_file_blocks"],
+      "relatedDecisions": ["DTH-20251226-005"]
+    },
+    {
+      "id": "EVID-0008",
+      "title": "Three-pass Translation Workflow (Izumi → ChieSan → Kaoru)",
+      "file": "EVID-0008.md",
+      "tags": ["translation", "localization", "dramaturgy"],
+      "relatedPods": ["translation_pod"],
+      "relatedSkills": ["translation_three_pass_workflow"],
+      "relatedDecisions": ["DTH-20251226-006"]
+    },
+    {
+      "id": "EVID-0009",
+      "title": "Brand Lock Governance System (No Unapproved Variants)",
+      "file": "EVID-0009.md",
+      "tags": ["brand", "governance", "design"],
+      "relatedPods": ["brand_pod", "design_pod"],
+      "relatedSkills": ["brand_lock_governance", "brand_voice_tone_systems"],
+      "relatedDecisions": ["DTH-20251226-007"]
+    },
+    {
+      "id": "EVID-0010",
+      "title": "dreamshitter.com Brand Lock (Name Visibility + Character + Accent Colors)",
+      "file": "EVID-0010.md",
+      "tags": ["brand", "dreamshitter"],
+      "relatedPods": ["brand_pod", "design_pod"],
+      "relatedSkills": ["dreamshitter_brand_lock", "brand_lock_governance"],
+      "relatedDecisions": ["DTH-20251226-008"]
+    },
+    {
+      "id": "EVID-0011",
+      "title": "Fab Card Co Brand System Lock (Parent Brand + Collections + Format Rules)",
+      "file": "EVID-0011.md",
+      "tags": ["brand", "fabcardco", "collections"],
+      "relatedPods": ["brand_pod", "design_pod"],
+      "relatedSkills": ["fabcardco_collection_brand_systems", "brand_lock_governance", "brand_voice_tone_systems"],
+      "relatedDecisions": ["DTH-20251226-009"]
+    },
+    {
+      "id": "EVID-0012",
+      "title": "fabulousAF™ Brand Lock (Logo + Tagline Lockup)",
+      "file": "EVID-0012.md",
+      "tags": ["brand", "fabulousaf"],
+      "relatedPods": ["brand_pod", "design_pod"],
+      "relatedSkills": ["fabulousaf_brand_lock", "brand_lock_governance"],
+      "relatedDecisions": ["DTH-20251226-010"]
+    },
+    {
+      "id": "EVID-0013",
+      "title": "The Fabulous Brand Company + FabulousGram Brand Governance (Channel Layer Without Drift)",
+      "file": "EVID-0013.md",
+      "tags": ["brand", "tfbc", "fabulousgram", "channels"],
+      "relatedPods": ["brand_pod"],
+      "relatedSkills": ["brand_lock_governance", "brand_voice_tone_systems"],
+      "relatedDecisions": ["DTH-20251226-011"]
+    }
+  ]
+}

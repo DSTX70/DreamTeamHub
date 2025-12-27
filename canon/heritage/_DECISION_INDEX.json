@@ -1,0 +1,117 @@
+{
+  "version": "1.0.0",
+  "updated": "2025-12-26",
+  "description": "Decision ledger for Heritage Canon retrieval",
+  "entries": [
+    {
+      "id": "DTH-20251226-001",
+      "title": "Work Orders vs Work Items Distinction",
+      "status": "Locked",
+      "date": "2025-12-26",
+      "tags": ["architecture", "ia", "routing"],
+      "relatedPods": ["engineering_pod", "ops_pod"],
+      "relatedSkills": [],
+      "relatedEvidence": []
+    },
+    {
+      "id": "DTH-20251226-002",
+      "title": "IP Pod Operating System (Aegis/Atlas/Archivist/Sentinel/Praetor/Coda)",
+      "status": "Locked",
+      "date": "2025-12-26",
+      "tags": ["ip", "compliance", "governance"],
+      "relatedPods": ["ip_compliance_pod"],
+      "relatedSkills": ["ip_strategy", "evidence_traceability_matrix", "security_risk_review"],
+      "relatedEvidence": ["EVID-0004"]
+    },
+    {
+      "id": "DTH-20251226-003",
+      "title": "Claim↔Spec↔Figure↔Evidence Matrix Discipline",
+      "status": "Locked",
+      "date": "2025-12-26",
+      "tags": ["ip", "traceability", "filings"],
+      "relatedPods": ["ip_compliance_pod"],
+      "relatedSkills": ["evidence_traceability_matrix", "ip_strategy"],
+      "relatedEvidence": ["EVID-0005"]
+    },
+    {
+      "id": "DTH-20251226-004",
+      "title": "Additive-only, Adapter-first Patch-Kit Strategy",
+      "status": "Locked",
+      "date": "2025-12-26",
+      "tags": ["engineering", "shipping", "stability"],
+      "relatedPods": ["engineering_pod"],
+      "relatedSkills": ["patch_drop_discipline", "patchkit_adapter_first"],
+      "relatedEvidence": ["EVID-0006"]
+    },
+    {
+      "id": "DTH-20251226-005",
+      "title": "FILE/END_FILE Drop Discipline",
+      "status": "Locked",
+      "date": "2025-12-26",
+      "tags": ["engineering", "automation", "shipping"],
+      "relatedPods": ["engineering_pod"],
+      "relatedSkills": ["patch_drop_discipline", "drop_validation_file_blocks"],
+      "relatedEvidence": ["EVID-0007"]
+    },
+    {
+      "id": "DTH-20251226-006",
+      "title": "Three-pass JP↔EN Translation Governance",
+      "status": "Locked",
+      "date": "2025-12-26",
+      "tags": ["translation", "localization", "dramaturgy"],
+      "relatedPods": ["translation_pod"],
+      "relatedSkills": ["translation_three_pass_workflow"],
+      "relatedEvidence": ["EVID-0008"]
+    },
+    {
+      "id": "DTH-20251226-007",
+      "title": "Brand Lock Governance (No Unapproved Variants)",
+      "status": "Locked",
+      "date": "2025-12-26",
+      "tags": ["brand", "governance", "design"],
+      "relatedPods": ["brand_pod", "design_pod"],
+      "relatedSkills": ["brand_lock_governance", "brand_voice_tone_systems"],
+      "relatedEvidence": ["EVID-0009"]
+    },
+    {
+      "id": "DTH-20251226-008",
+      "title": "dreamshitter.com Brand Lock",
+      "status": "Locked",
+      "date": "2025-12-26",
+      "tags": ["brand", "dreamshitter"],
+      "relatedPods": ["brand_pod", "design_pod"],
+      "relatedSkills": ["dreamshitter_brand_lock", "brand_lock_governance"],
+      "relatedEvidence": ["EVID-0010"]
+    },
+    {
+      "id": "DTH-20251226-009",
+      "title": "Fab Card Co Parent Brand + Collections System",
+      "status": "Locked",
+      "date": "2025-12-26",
+      "tags": ["brand", "fabcardco", "collections"],
+      "relatedPods": ["brand_pod", "design_pod"],
+      "relatedSkills": ["fabcardco_collection_brand_systems", "brand_lock_governance", "brand_voice_tone_systems"],
+      "relatedEvidence": ["EVID-0011"]
+    },
+    {
+      "id": "DTH-20251226-010",
+      "title": "fabulousAF™ Logo + Tagline Lockup",
+      "status": "Locked",
+      "date": "2025-12-26",
+      "tags": ["brand", "fabulousaf"],
+      "relatedPods": ["brand_pod", "design_pod"],
+      "relatedSkills": ["fabulousaf_brand_lock", "brand_lock_governance"],
+      "relatedEvidence": ["EVID-0012"]
+    },
+    {
+      "id": "DTH-20251226-011",
+      "title": "TFBC Governance + FabulousGram Channel Rules",
+      "status": "Locked",
+      "date": "2025-12-26",
+      "tags": ["brand", "tfbc", "fabulousgram", "channels"],
+      "relatedPods": ["brand_pod"],
+      "relatedSkills": ["brand_lock_governance", "brand_voice_tone_systems"],
+      "relatedEvidence": ["EVID-0013"]
+    }
+  ]
+}
