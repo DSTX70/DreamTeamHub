@@ -22,7 +22,7 @@ const coreNavigation: NavGroup[] = [
     title: "Core",
     items: [
       { title: "Intent", url: "/intent", icon: Target },
-      { title: "Work", url: "/work-orders", icon: Briefcase },
+      { title: "Work", url: "/work", icon: Briefcase },
       { title: "Artifacts", url: "/artifacts", icon: Package },
       { title: "Verification", url: "/verification", icon: BadgeCheck },
       { title: "System", url: "/help", icon: Settings },

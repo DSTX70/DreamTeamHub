@@ -34,6 +34,7 @@ import Academy from "@/pages/academy";
 import CopilotPage from "@/pages/copilot";
 import IntegrationsPage from "@/pages/integrations";
 import WorkOrdersPage from "@/pages/work-orders";
+import WorkTower from "@/pages/work/work-tower";
 import BUHomePage from "@/pages/bu-home";
 import OpsLogsPage from "@/pages/ops-logs";
 import OpsDashboardPage from "@/pages/ops-dashboard";
@@ -91,6 +92,7 @@ function AuthenticatedRoutes() {
       <Route path="/audits" component={Audits} />
       <Route path="/decisions" component={Decisions} />
       <Route path="/intake" component={Intake} />
+      <Route path="/work" component={WorkTower} />
       <Route path="/work-items/:id" component={WorkItemDetail} />
       <Route path="/pods" component={Pods} />
       <Route path="/projects/new" component={ProjectCreate} />

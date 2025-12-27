@@ -1,0 +1,443 @@
+✅ **Repo/Replit:** **DreamTeamHub**
+Below is a **single paste-ready patch drop** that implements the remaining “Audit” UI recommendation: **a /work Control Tower that shows active execution (Work Items), with Target Context + Cast at-a-glance**, and wires the sidebar “Work” to it.
+
+This is **UI-only** (no schema changes). It uses your existing `GET /api/work-items` endpoint and filters client-side.
+
+---
+
+```diff
+FILE: client/src/pages/work/work-tower.tsx
++import React, { useEffect, useMemo, useState } from "react";
++import { Link, useSearchParams } from "react-router-dom";
++
++type WorkItem = {
++  id: string;
++  title?: string;
++  status?: string;
++  created_at?: string;
++  updated_at?: string;
++  // Target context can show up in various shapes depending on backend evolution
++  targetContext?: any;
++  target_context?: any;
++  context?: any;
++  // Cast can vary too
++  cast?: any;
++  assigned?: any;
++};
++
++function safeJsonParse(s: string): any {
++  try {
++    return JSON.parse(s);
++  } catch {
++    return null;
++  }
++}
++
++function toTitleCase(s: string) {
++  return s
++    .replace(/[_-]+/g, " ")
++    .trim()
++    .replace(/\s+/g, " ")
++    .replace(/\b\w/g, (c) => c.toUpperCase());
++}
++
++function isCompletedStatus(status?: string) {
++  const s = (status || "").toLowerCase();
++  if (!s) return false;
++  return (
++    s.includes("done") ||
++    s.includes("complete") ||
++    s.includes("completed") ||
++    s.includes("closed") ||
++    s.includes("cancel") ||
++    s.includes("archiv")
++  );
++}
++
++function normalizeTargetContext(w: WorkItem): any {
++  const raw =
++    w.targetContext ??
++    w.target_context ??
++    w.context ??
++    null;
++
++  if (!raw) return null;
++  if (typeof raw === "string") {
++    const parsed = safeJsonParse(raw);
++    return parsed ?? raw;
++  }
++  return raw;
++}
++
++function deriveContextChips(ctx: any): string[] {
++  if (!ctx) return [];
++
++  // If it's a simple string, make it one chip (truncate later in render)
++  if (typeof ctx === "string") return [ctx];
++
++  // If it's an array, chipify items
++  if (Array.isArray(ctx)) {
++    return ctx
++      .map((x) => (typeof x === "string" ? x : JSON.stringify(x)))
++      .filter(Boolean)
++      .slice(0, 8);
++  }
++
++  // If it's an object, prefer common keys
++  if (typeof ctx === "object") {
++    const preferKeys = [
++      "projectKey",
++      "repo",
++      "repoSlug",
++      "repoName",
++      "path",
++      "pathPrefix",
++      "env",
++      "mode",
++      "branch",
++    ];
++
++    const chips: string[] = [];
++
++    for (const k of preferKeys) {
++      if (k in ctx && ctx[k] != null && String(ctx[k]).trim() !== "") {
++        const label =
++          k === "repoSlug" || k === "repoName" || k === "repo"
++            ? `Repo: ${ctx[k]}`
++            : k === "projectKey"
++              ? `Project: ${ctx[k]}`
++              : k === "path" || k === "pathPrefix"
++                ? `Path: ${ctx[k]}`
++                : k === "env"
++                  ? `Env: ${ctx[k]}`
++                  : k === "mode"
++                    ? `Mode: ${ctx[k]}`
++                    : `${toTitleCase(k)}: ${ctx[k]}`;
++        chips.push(label);
++      }
++      if (chips.length >= 4) break;
++    }
++
++    // If none found, fall back to first 4 keys
++    if (chips.length === 0) {
++      const keys = Object.keys(ctx).slice(0, 4);
++      for (const k of keys) {
++        const v = ctx[k];
++        if (v == null) continue;
++        chips.push(`${toTitleCase(k)}: ${typeof v === "string" ? v : JSON.stringify(v)}`);
++      }
++    }
++
++    return chips;
++  }
++
++  return [];
++}
++
++function deriveCastInitials(w: WorkItem): string[] {
++  const raw = w.cast ?? w.assigned ?? null;
++  if (!raw) return [];
++
++  // Common shapes:
++  // - [{handle:"Nova"}]
++  // - ["Nova","Forge"]
++  // - {members:[...]}
++  const list =
++    Array.isArray(raw)
++      ? raw
++      : Array.isArray(raw?.members)
++        ? raw.members
++        : Array.isArray(raw?.cast)
++          ? raw.cast
++          : [];
++
++  const names = list
++    .map((x: any) => {
++      if (!x) return "";
++      if (typeof x === "string") return x;
++      return x.handle || x.name || x.agent || x.pod || "";
++    })
++    .filter((s: string) => Boolean(s && s.trim()));
++
++  return names.slice(0, 6).map((n: string) => {
++    const parts = n.trim().split(/\s+/);
++    const a = parts[0]?.[0] ?? "";
++    const b = parts.length > 1 ? (parts[parts.length - 1]?.[0] ?? "") : "";
++    return (a + b).toUpperCase();
++  });
++}
++
++export default function WorkTower() {
++  const [sp, setSp] = useSearchParams();
++  const initialTab = (sp.get("tab") || "active").toLowerCase();
++
++  const [tab, setTab] = useState<"active" | "recent">(initialTab === "recent" ? "recent" : "active");
++  const [q, setQ] = useState(sp.get("q") || "");
++
++  const [items, setItems] = useState<WorkItem[]>([]);
++  const [loading, setLoading] = useState(false);
++  const [err, setErr] = useState<string | null>(null);
++
++  useEffect(() => {
++    // keep URL updated (refresh-safe)
++    const next = new URLSearchParams(sp);
++    next.set("tab", tab);
++    if (q.trim()) next.set("q", q.trim());
++    else next.delete("q");
++    setSp(next, { replace: true });
++    // eslint-disable-next-line react-hooks/exhaustive-deps
++  }, [tab, q]);
++
++  useEffect(() => {
++    let cancelled = false;
++    setLoading(true);
++    setErr(null);
++    fetch("/api/work-items", { credentials: "include" })
++      .then(async (r) => {
++        if (!r.ok) throw new Error(`Failed to load work items (${r.status})`);
++        return (await r.json()) as WorkItem[];
++      })
++      .then((data) => {
++        if (cancelled) return;
++        setItems(Array.isArray(data) ? data : []);
++      })
++      .catch((e: any) => {
++        if (cancelled) return;
++        setErr(e?.message || "Failed to load work items");
++      })
++      .finally(() => {
++        if (cancelled) return;
++        setLoading(false);
++      });
++    return () => {
++      cancelled = true;
++    };
++  }, []);
++
++  const filtered = useMemo(() => {
++    const needle = q.trim().toLowerCase();
++    const byTab = items.filter((w) => (tab === "recent" ? isCompletedStatus(w.status) : !isCompletedStatus(w.status)));
++
++    if (!needle) return byTab;
++    return byTab.filter((w) => {
++      const title = (w.title || "").toLowerCase();
++      const status = (w.status || "").toLowerCase();
++      const ctx = normalizeTargetContext(w);
++      const ctxStr = typeof ctx === "string" ? ctx.toLowerCase() : JSON.stringify(ctx || "").toLowerCase();
++      return title.includes(needle) || status.includes(needle) || ctxStr.includes(needle) || w.id.toLowerCase().includes(needle);
++    });
++  }, [items, tab, q]);
++
++  return (
++    <div className="space-y-4 p-4">
++      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
++        <div>
++          <h1 className="text-xl font-semibold">Work</h1>
++          <div className="text-sm text-muted-foreground">
++            Active execution (Work Items). Target Context + Cast are visible here.
++          </div>
++        </div>
++
++        <div className="flex flex-wrap gap-2">
++          <Link to="/intent" className="rounded-md border px-3 py-1.5 text-sm">
++            New Work
++          </Link>
++        </div>
++      </div>
++
++      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
++        <div className="flex gap-2">
++          <button
++            type="button"
++            className={`rounded-md border px-3 py-1.5 text-sm ${tab === "active" ? "bg-muted" : ""}`}
++            onClick={() => setTab("active")}
++          >
++            Active
++          </button>
++          <button
++            type="button"
++            className={`rounded-md border px-3 py-1.5 text-sm ${tab === "recent" ? "bg-muted" : ""}`}
++            onClick={() => setTab("recent")}
++          >
++            Recent
++          </button>
++        </div>
++
++        <div className="flex w-full gap-2 md:w-[420px]">
++          <input
++            value={q}
++            onChange={(e) => setQ(e.target.value)}
++            placeholder="Search title, status, context, id…"
++            className="w-full rounded-md border px-3 py-2 text-sm"
++          />
++          {q.trim() ? (
++            <button type="button" className="rounded-md border px-3 py-2 text-sm" onClick={() => setQ("")}>
++              Clear
++            </button>
++          ) : null}
++        </div>
++      </div>
++
++      {loading ? <div className="text-sm text-muted-foreground">Loading…</div> : null}
++      {err ? <div className="rounded-md border p-3 text-sm">{err}</div> : null}
++
++      <div className="rounded-xl border">
++        <div className="grid grid-cols-12 gap-2 border-b px-3 py-2 text-xs font-semibold text-muted-foreground">
++          <div className="col-span-6">Work Item</div>
++          <div className="col-span-2">Status</div>
++          <div className="col-span-3">Target Context</div>
++          <div className="col-span-1 text-right">Cast</div>
++        </div>
++
++        {filtered.length === 0 && !loading ? (
++          <div className="px-3 py-6 text-sm text-muted-foreground">No work items found.</div>
++        ) : null}
++
++        {filtered.map((w) => {
++          const ctx = normalizeTargetContext(w);
++          const chips = deriveContextChips(ctx);
++          const cast = deriveCastInitials(w);
++
++          return (
++            <Link
++              key={w.id}
++              to={`/work-items/${w.id}`}
++              className="grid grid-cols-12 gap-2 px-3 py-3 text-sm hover:bg-muted/50"
++            >
++              <div className="col-span-6">
++                <div className="font-medium">{w.title || "Untitled work item"}</div>
++                <div className="text-xs text-muted-foreground">{w.id}</div>
++              </div>
++
++              <div className="col-span-2">
++                <span className="inline-flex rounded-full border px-2 py-0.5 text-xs">
++                  {w.status ? toTitleCase(w.status) : "Unknown"}
++                </span>
++              </div>
++
++              <div className="col-span-3 flex flex-wrap gap-1">
++                {chips.length ? (
++                  <>
++                    {chips.slice(0, 3).map((c, idx) => (
++                      <span key={idx} className="inline-flex max-w-[260px] truncate rounded-full border px-2 py-0.5 text-xs">
++                        {c}
++                      </span>
++                    ))}
++                    {chips.length > 3 ? (
++                      <span className="inline-flex rounded-full border px-2 py-0.5 text-xs">
++                        +{chips.length - 3}
++                      </span>
++                    ) : null}
++                  </>
++                ) : (
++                  <span className="inline-flex rounded-full border px-2 py-0.5 text-xs text-muted-foreground">
++                    No target set
++                  </span>
++                )}
++              </div>
++
++              <div className="col-span-1 flex justify-end gap-1">
++                {cast.length ? (
++                  cast.slice(0, 3).map((c, idx) => (
++                    <span
++                      key={idx}
++                      className="inline-flex h-7 w-7 items-center justify-center rounded-full border text-xs"
++                      title={c}
++                    >
++                      {c}
++                    </span>
++                  ))
++                ) : (
++                  <span className="text-xs text-muted-foreground">—</span>
++                )}
++              </div>
++            </Link>
++          );
++        })}
++      </div>
++    </div>
++  );
++}
++
+END_FILE
+```
+
+---
+
+```diff
+FILE: client/src/App.tsx
+@@
++import WorkTower from "./pages/work/work-tower";
+@@
+   return (
+     <>
+       {/* existing layout */}
+       {/* existing routes */}
+@@
+-          {/* existing routes */}
++          {/* Work (active execution) */}
++          <Route path="/work" element={<WorkTower />} />
++
++          {/* existing routes */}
+     </>
+   );
+ }
+ 
+ END_FILE
+```
+
+> Notes:
+>
+> * I’m assuming you’re using `react-router-dom` `<Route />` routes in `App.tsx` already.
+> * This adds a new `/work` route without changing anything else.
+
+---
+
+```diff
+FILE: client/src/components/app-sidebar.tsx
+@@
+-  // existing nav items...
++  // Ensure "Work" routes to active execution (Work Items), not templates.
++  // If a Work link already exists, update its href/to to "/work".
+@@
+-      {/* Example: <SidebarLink to="/work-orders">Work</SidebarLink> */}
++      {/* Work = active execution */}
++      {/* If you already render a Work item, make sure it points to /work */}
++      {/* Add this item if it doesn't exist */}
++      <a
++        href="/work"
++        className="flex items-center gap-2 rounded-md px-3 py-2 text-sm hover:bg-muted/50"
++      >
++        <span>Work</span>
++      </a>
+ 
+ END_FILE
+```
+
+**Important:** Sidebar implementations vary a lot. The above is intentionally minimal, but it may not match your sidebar’s component structure (e.g., you may have `NavLink`, `SidebarItem`, an items array, or a `links` config).
+If your sidebar already has a “Work” entry, the only required change is: **make it point to `/work`**.
+
+If you want a guaranteed-perfect sidebar patch, paste the relevant nav items block from `client/src/components/app-sidebar.tsx` and I’ll return a micro-diff that matches your exact structure.
+
+---
+
+## Post-apply verification checklist (Audit close-out)
+
+1. Navigate to `/work`
+
+   * Shows **Active** by default
+   * Lists Work Items
+   * Target Context chips visible per row
+   * Cast initials visible per row
+
+2. Sidebar “Work” click goes to `/work`
+
+3. Clicking a row goes to `/work-items/:id` (existing detail page)
+
+   * If your detail route differs, tell me the correct path and I’ll adjust.
+
+4. No schema changes; API unchanged.
+
+---
+
+If you paste the small sidebar nav snippet, I’ll tighten that last file so it matches your exact component pattern (no guessing).

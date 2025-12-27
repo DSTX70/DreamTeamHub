@@ -1,0 +1,332 @@
+✅ **Repo/Replit:** **DreamTeamHub**
+
+You gave me the right **file paths**, but I’m blocked from producing a *guaranteed-correct* **exact diff** for `app-sidebar.tsx` and `App.tsx` without seeing how you currently render:
+
+* the sidebar links (array config vs JSX vs Radix/shadcn NavLink wrapper)
+* the router (React Router `<Routes>` vs `createBrowserRouter`/`RouterProvider`, nested layouts, etc.)
+
+If I “guess,” you’ll get merge conflicts or broken navigation — and per your working rule, I shouldn’t invent structure.
+
+### What I can ship right now (safe + paste-ready)
+
+1. **Add the new `/work` page** file (no dependencies on your app structure)
+2. Give you **two paste-ready route snippets** (RRv6 `<Routes>` and `createBrowserRouter`) you can drop into `App.tsx` once you confirm which pattern you use
+3. Give you the **exact sidebar change** once you paste just the nav block (10–30 lines)
+
+---
+
+## 1) ✅ New page file (safe to add now)
+
+Paste this file into **DreamTeamHub**:
+
+```diff
+FILE: client/src/pages/work/work-tower.tsx
++import React, { useEffect, useMemo, useState } from "react";
++import { Link, useSearchParams } from "react-router-dom";
++
++type WorkItem = {
++  id: string;
++  title?: string;
++  status?: string;
++  created_at?: string;
++  updated_at?: string;
++  targetContext?: any;
++  target_context?: any;
++  context?: any;
++  cast?: any;
++  assigned?: any;
++};
++
++function safeJsonParse(s: string): any {
++  try { return JSON.parse(s); } catch { return null; }
++}
++
++function toTitleCase(s: string) {
++  return s.replace(/[_-]+/g, " ").trim().replace(/\s+/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
++}
++
++function isCompletedStatus(status?: string) {
++  const s = (status || "").toLowerCase();
++  return s.includes("done") || s.includes("complete") || s.includes("completed") || s.includes("closed") || s.includes("cancel") || s.includes("archiv");
++}
++
++function normalizeTargetContext(w: WorkItem): any {
++  const raw = w.targetContext ?? w.target_context ?? w.context ?? null;
++  if (!raw) return null;
++  if (typeof raw === "string") return safeJsonParse(raw) ?? raw;
++  return raw;
++}
++
++function deriveContextChips(ctx: any): string[] {
++  if (!ctx) return [];
++  if (typeof ctx === "string") return [ctx];
++  if (Array.isArray(ctx)) return ctx.map((x) => (typeof x === "string" ? x : JSON.stringify(x))).filter(Boolean).slice(0, 8);
++  if (typeof ctx === "object") {
++    const preferKeys = ["projectKey","repo","repoSlug","repoName","path","pathPrefix","env","mode","branch"];
++    const chips: string[] = [];
++    for (const k of preferKeys) {
++      if (k in ctx && ctx[k] != null && String(ctx[k]).trim() !== "") {
++        const label =
++          k === "repoSlug" || k === "repoName" || k === "repo" ? `Repo: ${ctx[k]}` :
++          k === "projectKey" ? `Project: ${ctx[k]}` :
++          k === "path" || k === "pathPrefix" ? `Path: ${ctx[k]}` :
++          k === "env" ? `Env: ${ctx[k]}` :
++          k === "mode" ? `Mode: ${ctx[k]}` :
++          `${toTitleCase(k)}: ${ctx[k]}`;
++        chips.push(label);
++      }
++      if (chips.length >= 4) break;
++    }
++    if (chips.length === 0) {
++      for (const k of Object.keys(ctx).slice(0, 4)) {
++        const v = ctx[k];
++        if (v == null) continue;
++        chips.push(`${toTitleCase(k)}: ${typeof v === "string" ? v : JSON.stringify(v)}`);
++      }
++    }
++    return chips;
++  }
++  return [];
++}
++
++function deriveCastInitials(w: WorkItem): string[] {
++  const raw = w.cast ?? w.assigned ?? null;
++  if (!raw) return [];
++  const list =
++    Array.isArray(raw) ? raw :
++    Array.isArray(raw?.members) ? raw.members :
++    Array.isArray(raw?.cast) ? raw.cast :
++    [];
++  const names = list.map((x: any) => {
++    if (!x) return "";
++    if (typeof x === "string") return x;
++    return x.handle || x.name || x.agent || x.pod || "";
++  }).filter((s: string) => Boolean(s && s.trim()));
++  return names.slice(0, 6).map((n: string) => {
++    const parts = n.trim().split(/\s+/);
++    const a = parts[0]?.[0] ?? "";
++    const b = parts.length > 1 ? (parts[parts.length - 1]?.[0] ?? "") : "";
++    return (a + b).toUpperCase();
++  });
++}
++
++export default function WorkTower() {
++  const [sp, setSp] = useSearchParams();
++  const initialTab = (sp.get("tab") || "active").toLowerCase();
++  const [tab, setTab] = useState<"active" | "recent">(initialTab === "recent" ? "recent" : "active");
++  const [q, setQ] = useState(sp.get("q") || "");
++
++  const [items, setItems] = useState<WorkItem[]>([]);
++  const [loading, setLoading] = useState(false);
++  const [err, setErr] = useState<string | null>(null);
++
++  useEffect(() => {
++    const next = new URLSearchParams(sp);
++    next.set("tab", tab);
++    if (q.trim()) next.set("q", q.trim());
++    else next.delete("q");
++    setSp(next, { replace: true });
++    // eslint-disable-next-line react-hooks/exhaustive-deps
++  }, [tab, q]);
++
++  useEffect(() => {
++    let cancelled = false;
++    setLoading(true);
++    setErr(null);
++    fetch("/api/work-items", { credentials: "include" })
++      .then(async (r) => {
++        if (!r.ok) throw new Error(`Failed to load work items (${r.status})`);
++        return (await r.json()) as WorkItem[];
++      })
++      .then((data) => {
++        if (cancelled) return;
++        setItems(Array.isArray(data) ? data : []);
++      })
++      .catch((e: any) => {
++        if (cancelled) return;
++        setErr(e?.message || "Failed to load work items");
++      })
++      .finally(() => {
++        if (cancelled) return;
++        setLoading(false);
++      });
++    return () => { cancelled = true; };
++  }, []);
++
++  const filtered = useMemo(() => {
++    const needle = q.trim().toLowerCase();
++    const byTab = items.filter((w) => (tab === "recent" ? isCompletedStatus(w.status) : !isCompletedStatus(w.status)));
++    if (!needle) return byTab;
++    return byTab.filter((w) => {
++      const title = (w.title || "").toLowerCase();
++      const status = (w.status || "").toLowerCase();
++      const ctx = normalizeTargetContext(w);
++      const ctxStr = typeof ctx === "string" ? ctx.toLowerCase() : JSON.stringify(ctx || "").toLowerCase();
++      return title.includes(needle) || status.includes(needle) || ctxStr.includes(needle) || w.id.toLowerCase().includes(needle);
++    });
++  }, [items, tab, q]);
++
++  return (
++    <div className="space-y-4 p-4">
++      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
++        <div>
++          <h1 className="text-xl font-semibold">Work</h1>
++          <div className="text-sm text-muted-foreground">
++            Active execution (Work Items). Target Context + Cast are visible here.
++          </div>
++        </div>
++        <div className="flex flex-wrap gap-2">
++          <Link to="/intent" className="rounded-md border px-3 py-1.5 text-sm">New Work</Link>
++        </div>
++      </div>
++
++      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
++        <div className="flex gap-2">
++          <button type="button" className={`rounded-md border px-3 py-1.5 text-sm ${tab === "active" ? "bg-muted" : ""}`} onClick={() => setTab("active")}>
++            Active
++          </button>
++          <button type="button" className={`rounded-md border px-3 py-1.5 text-sm ${tab === "recent" ? "bg-muted" : ""}`} onClick={() => setTab("recent")}>
++            Recent
++          </button>
++        </div>
++        <div className="flex w-full gap-2 md:w-[420px]">
++          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search title, status, context, id…" className="w-full rounded-md border px-3 py-2 text-sm" />
++          {q.trim() ? <button type="button" className="rounded-md border px-3 py-2 text-sm" onClick={() => setQ("")}>Clear</button> : null}
++        </div>
++      </div>
++
++      {loading ? <div className="text-sm text-muted-foreground">Loading…</div> : null}
++      {err ? <div className="rounded-md border p-3 text-sm">{err}</div> : null}
++
++      <div className="rounded-xl border">
++        <div className="grid grid-cols-12 gap-2 border-b px-3 py-2 text-xs font-semibold text-muted-foreground">
++          <div className="col-span-6">Work Item</div>
++          <div className="col-span-2">Status</div>
++          <div className="col-span-3">Target Context</div>
++          <div className="col-span-1 text-right">Cast</div>
++        </div>
++
++        {filtered.length === 0 && !loading ? (
++          <div className="px-3 py-6 text-sm text-muted-foreground">No work items found.</div>
++        ) : null}
++
++        {filtered.map((w) => {
++          const chips = deriveContextChips(normalizeTargetContext(w));
++          const cast = deriveCastInitials(w);
++          return (
++            <Link key={w.id} to={`/work-items/${w.id}`} className="grid grid-cols-12 gap-2 px-3 py-3 text-sm hover:bg-muted/50">
++              <div className="col-span-6">
++                <div className="font-medium">{w.title || "Untitled work item"}</div>
++                <div className="text-xs text-muted-foreground">{w.id}</div>
++              </div>
++              <div className="col-span-2">
++                <span className="inline-flex rounded-full border px-2 py-0.5 text-xs">{w.status ? toTitleCase(w.status) : "Unknown"}</span>
++              </div>
++              <div className="col-span-3 flex flex-wrap gap-1">
++                {chips.length ? (
++                  <>
++                    {chips.slice(0, 3).map((c, idx) => (
++                      <span key={idx} className="inline-flex max-w-[260px] truncate rounded-full border px-2 py-0.5 text-xs">{c}</span>
++                    ))}
++                    {chips.length > 3 ? <span className="inline-flex rounded-full border px-2 py-0.5 text-xs">+{chips.length - 3}</span> : null}
++                  </>
++                ) : (
++                  <span className="inline-flex rounded-full border px-2 py-0.5 text-xs text-muted-foreground">No target set</span>
++                )}
++              </div>
++              <div className="col-span-1 flex justify-end gap-1">
++                {cast.length ? cast.slice(0, 3).map((c, idx) => (
++                  <span key={idx} className="inline-flex h-7 w-7 items-center justify-center rounded-full border text-xs">{c}</span>
++                )) : <span className="text-xs text-muted-foreground">—</span>}
++              </div>
++            </Link>
++          );
++        })}
++      </div>
++    </div>
++  );
++}
++
+END_FILE
+```
+
+✅ This page will work as soon as you wire the route + sidebar link.
+
+---
+
+## 2) Route wiring in `client/src/App.tsx`
+
+Pick the snippet that matches your router style.
+
+### Variant A — React Router v6 `<Routes>`
+
+Add import:
+
+```ts
+import WorkTower from "./pages/work/work-tower";
+```
+
+Add route inside your `<Routes>`:
+
+```tsx
+<Route path="/work" element={<WorkTower />} />
+```
+
+### Variant B — `createBrowserRouter` / route objects
+
+Add import:
+
+```ts
+import WorkTower from "./pages/work/work-tower";
+```
+
+Add route object near the others:
+
+```ts
+{ path: "/work", element: <WorkTower /> },
+```
+
+---
+
+## 3) Sidebar wiring in `client/src/components/app-sidebar.tsx`
+
+I can’t safely patch this without seeing how links are built.
+
+### Blocker (what I need)
+
+Paste **just the sidebar nav items section** (about **20–60 lines**), specifically the part where links are defined/rendered (items array or JSX list).
+
+Then I’ll return an exact micro-diff that:
+
+* points **Work → `/work`**
+* ensures **Templates → Work Orders** stays separate (no confusion)
+
+---
+
+## 4) Server endpoint
+
+No change required. Your `/api/work-items` endpoints in `server/routes.ts` (lines ~1042–1078) are exactly what `/work` consumes.
+
+---
+
+### Quick verification checklist (once route + sidebar are wired)
+
+* Navigate to `/work`
+* You see “Active” tab with items
+* Each row shows:
+
+  * status pill
+  * **Target Context chips**
+  * **Cast initials**
+* Clicking a row goes to `/work-items/:id`
+
+---
+
+### Next message (fast)
+
+Paste:
+
+1. the `<Routes>` portion (or router config portion) from `client/src/App.tsx` (20–60 lines)
+2. the nav items portion from `client/src/components/app-sidebar.tsx` (20–60 lines)
+
+…and I’ll give you the **exact** patch for those two files with zero guessing.
