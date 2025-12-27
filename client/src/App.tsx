@@ -67,6 +67,8 @@ import FabCardCoHomePage from "@/pages/fcc-home";
 import IntentConsolePage from "@/pages/intent-console";
 import ArtifactsPage from "@/pages/artifacts";
 import VerificationPage from "@/pages/verification";
+import StrategyListPage from "@/pages/strategy/strategy-list";
+import StrategyDetailPage from "@/pages/strategy/strategy-detail";
 import { Button } from "@/components/ui/button";
 import { LogOut, User as UserIcon, Search } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -110,6 +112,8 @@ function AuthenticatedRoutes() {
       <Route path="/copilot" component={CopilotPage} />
       <Route path="/integrations" component={IntegrationsPage} />
       <Route path="/work-orders" component={WorkOrdersPage} />
+      <Route path="/strategy" component={StrategyListPage} />
+      <Route path="/strategy/:id" component={StrategyDetailPage} />
       <Route path="/ops-dashboard" component={OpsDashboardPage} />
       <Route path="/ops-logs" component={OpsLogsPage} />
       <Route path="/coverage" component={CoveragePage} />

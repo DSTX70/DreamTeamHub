@@ -1,4 +1,4 @@
-import { Home, Settings, Target, Briefcase, Package, BadgeCheck, Wrench, Sparkles, Activity } from "lucide-react";
+import { Home, Settings, Target, Briefcase, Package, BadgeCheck, Wrench, Sparkles, Activity, Lightbulb } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { useSystemInternals } from "@/hooks/useSystemInternals";
 import {
@@ -22,6 +22,7 @@ const coreNavigation: NavGroup[] = [
     title: "Core",
     items: [
       { title: "Intent", url: "/intent", icon: Target },
+      { title: "Strategy", url: "/strategy", icon: Lightbulb },
       { title: "Work", url: "/work", icon: Briefcase },
       { title: "Artifacts", url: "/artifacts", icon: Package },
       { title: "Verification", url: "/verification", icon: BadgeCheck },
