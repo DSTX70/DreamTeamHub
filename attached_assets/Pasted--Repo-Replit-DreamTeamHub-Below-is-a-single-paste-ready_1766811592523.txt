@@ -1,0 +1,898 @@
+✅ **Repo/Replit:** **DreamTeamHub**
+
+Below is a **single paste-ready patch drop** that delivers, in order:
+
+1. **Normalizer helper** (shared Work Item “row model” for Target Context + Cast + status)
+2. **STATUS.md auto-refresh** (one command updates totals/ranges + date)
+3. **Index completeness tooling** (check + sync for evidence/decision indexes)
+4. **UX/Product Pod execution 5-pack** (EVID-0054→0058 + Decisions DTH-20251226-052→056 + index + skills)
+
+> Notes:
+>
+> * I’m **not touching your existing `/work` page implementation** since you’ve already adapted it to **wouter + react-query**; instead I’m giving you a **drop-in helper** you can import there (and elsewhere) without risk.
+> * Scripts are **optional, non-breaking** additions.
+
+---
+
+```diff
+FILE: client/src/lib/workItemView.ts
++/**
++ * Work Item view normalizer (UI only).
++ * Goal: consistent, future-proof rendering for:
++ *  - status (Active vs Recent)
++ *  - Target Context chips
++ *  - Cast badges/initials
++ *
++ * This file intentionally tolerates multiple backend shapes without schema changes.
++ */
++
++export type WorkItemLike = {
++  id: string;
++  title?: string;
++  status?: string;
++  created_at?: string;
++  updated_at?: string;
++
++  // common variants seen over time
++  targetContext?: any;
++  target_context?: any;
++  context?: any;
++
++  cast?: any;
++  assigned?: any;
++};
++
++export type WorkItemRowModel = {
++  id: string;
++  title: string;
++  statusLabel: string;
++  isDone: boolean;
++  targetChips: string[];
++  castInitials: string[];
++};
++
++function safeJsonParse(s: string): any {
++  try {
++    return JSON.parse(s);
++  } catch {
++    return null;
++  }
++}
++
++function toTitleCase(s: string) {
++  return s
++    .replace(/[_-]+/g, " ")
++    .trim()
++    .replace(/\s+/g, " ")
++    .replace(/\b\w/g, (c) => c.toUpperCase());
++}
++
++export function isDoneStatus(status?: string) {
++  const s = (status || "").toLowerCase();
++  if (!s) return false;
++  return (
++    s.includes("done") ||
++    s.includes("complete") ||
++    s.includes("completed") ||
++    s.includes("closed") ||
++    s.includes("cancel") ||
++    s.includes("archiv")
++  );
++}
++
++export function normalizeTargetContext(w: WorkItemLike): any {
++  const raw = w.targetContext ?? w.target_context ?? w.context ?? null;
++  if (!raw) return null;
++  if (typeof raw === "string") return safeJsonParse(raw) ?? raw;
++  return raw;
++}
++
++export function getTargetContextChips(ctx: any): string[] {
++  if (!ctx) return [];
++  if (typeof ctx === "string") return [ctx];
++
++  if (Array.isArray(ctx)) {
++    return ctx
++      .map((x) => (typeof x === "string" ? x : JSON.stringify(x)))
++      .filter(Boolean)
++      .slice(0, 8);
++  }
++
++  if (typeof ctx === "object") {
++    const preferKeys = [
++      "projectKey",
++      "repo",
++      "repoSlug",
++      "repoName",
++      "path",
++      "pathPrefix",
++      "env",
++      "mode",
++      "branch",
++    ];
++
++    const chips: string[] = [];
++    for (const k of preferKeys) {
++      if (!(k in ctx)) continue;
++      const v = ctx[k];
++      if (v == null || String(v).trim() === "") continue;
++
++      const label =
++        k === "repoSlug" || k === "repoName" || k === "repo"
++          ? `Repo: ${v}`
++          : k === "projectKey"
++            ? `Project: ${v}`
++            : k === "path" || k === "pathPrefix"
++              ? `Path: ${v}`
++              : k === "env"
++                ? `Env: ${v}`
++                : k === "mode"
++                  ? `Mode: ${v}`
++                  : `${toTitleCase(k)}: ${typeof v === "string" ? v : JSON.stringify(v)}`;
++
++      chips.push(label);
++      if (chips.length >= 4) break;
++    }
++
++    if (chips.length === 0) {
++      for (const k of Object.keys(ctx).slice(0, 4)) {
++        const v = ctx[k];
++        if (v == null) continue;
++        chips.push(`${toTitleCase(k)}: ${typeof v === "string" ? v : JSON.stringify(v)}`);
++      }
++    }
++
++    return chips;
++  }
++
++  return [];
++}
++
++export function getCastInitials(w: WorkItemLike): string[] {
++  const raw = w.cast ?? w.assigned ?? null;
++  if (!raw) return [];
++
++  // Common shapes:
++  // - ["Nova","Forge"]
++  // - [{handle:"Nova"}]
++  // - {members:[...]}
++  const list =
++    Array.isArray(raw)
++      ? raw
++      : Array.isArray(raw?.members)
++        ? raw.members
++        : Array.isArray(raw?.cast)
++          ? raw.cast
++          : [];
++
++  const names = list
++    .map((x: any) => {
++      if (!x) return "";
++      if (typeof x === "string") return x;
++      return x.handle || x.name || x.agent || x.pod || "";
++    })
++    .filter((s: string) => Boolean(s && s.trim()));
++
++  return names.slice(0, 6).map((n: string) => {
++    const parts = n.trim().split(/\s+/);
++    const a = parts[0]?.[0] ?? "";
++    const b = parts.length > 1 ? (parts[parts.length - 1]?.[0] ?? "") : "";
++    return (a + b).toUpperCase();
++  });
++}
++
++export function toWorkItemRowModel(w: WorkItemLike): WorkItemRowModel {
++  const ctx = normalizeTargetContext(w);
++  const chips = getTargetContextChips(ctx);
++  const cast = getCastInitials(w);
++  const done = isDoneStatus(w.status);
++
++  return {
++    id: w.id,
++    title: w.title || "Untitled work item",
++    statusLabel: w.status ? toTitleCase(w.status) : "Unknown",
++    isDone: done,
++    targetChips: chips,
++    castInitials: cast,
++  };
++}
++
+END_FILE
+```
+
+> ✅ Use it in your `client/src/pages/work/work-tower.tsx` by importing:
+> `import { toWorkItemRowModel } from "@/lib/workItemView";`
+> and replacing any local chip/cast logic with `const vm = toWorkItemRowModel(item);`
+
+---
+
+```diff
+FILE: scripts/heritage_update_status.mjs
++import fs from "node:fs";
++import path from "node:path";
++
++function list(dir) {
++  try {
++    return fs.readdirSync(dir, { withFileTypes: true });
++  } catch {
++    return [];
++  }
++}
++
++function sortIdsNumeric(ids) {
++  return [...ids].sort((a, b) => {
++    const na = parseInt(a.replace(/\D/g, ""), 10);
++    const nb = parseInt(b.replace(/\D/g, ""), 10);
++    return na - nb;
++  });
++}
++
++function todayISO() {
++  const d = new Date();
++  const yyyy = d.getFullYear();
++  const mm = String(d.getMonth() + 1).padStart(2, "0");
++  const dd = String(d.getDate()).padStart(2, "0");
++  return `${yyyy}-${mm}-${dd}`;
++}
++
++function main() {
++  const repoRoot = process.cwd();
++  const evidenceDir = path.join(repoRoot, "canon", "heritage", "evidence");
++  const decisionsDir = path.join(repoRoot, "canon", "heritage", "decisions");
++  const statusPath = path.join(repoRoot, "canon", "heritage", "STATUS.md");
++
++  const evidFiles = list(evidenceDir)
++    .filter((d) => d.isFile())
++    .map((d) => d.name)
++    .filter((n) => /^EVID-\d{4}\.md$/.test(n));
++
++  const decisionFiles = list(decisionsDir)
++    .filter((d) => d.isFile())
++    .map((d) => d.name)
++    .filter((n) => /^DTH-\d{8}-\d{3}\.md$/.test(n));
++
++  const evidIds = sortIdsNumeric(evidFiles.map((n) => n.replace(".md", "")));
++  const dthIds = sortIdsNumeric(decisionFiles.map((n) => n.replace(".md", "")));
++
++  const evidMin = evidIds[0] ?? "(none)";
++  const evidMax = evidIds[evidIds.length - 1] ?? "(none)";
++  const dthMin = dthIds[0] ?? "(none)";
++  const dthMax = dthIds[dthIds.length - 1] ?? "(none)";
++
++  if (!fs.existsSync(statusPath)) {
++    console.error("STATUS.md not found at canon/heritage/STATUS.md");
++    process.exit(1);
++  }
++
++  const raw = fs.readFileSync(statusPath, "utf-8");
++  const updatedAt = todayISO();
++
++  const next = raw
++    // frontmatter updated_at
++    .replace(/updated_at:\s*".*?"/, `updated_at: "${updatedAt}"`)
++    // Evidence line
++    .replace(
++      /- \*\*Evidence Packs:\*\* .*$/m,
++      `- **Evidence Packs:** ${evidIds.length}  _(${evidMin} → ${evidMax})_`
++    )
++    // Decisions line
++    .replace(
++      /- \*\*Locked Decisions:\*\* .*$/m,
++      `- **Locked Decisions:** ${dthIds.length}  _(${dthMin} → ${dthMax})_`
++    );
++
++  fs.writeFileSync(statusPath, next, "utf-8");
++  console.log("Updated:", path.relative(repoRoot, statusPath));
++  console.log(`Evidence Packs: ${evidIds.length} (${evidMin} → ${evidMax})`);
++  console.log(`Decision Files: ${dthIds.length} (${dthMin} → ${dthMax})`);
++}
++
++main();
++
+END_FILE
+```
+
+```diff
+FILE: scripts/heritage_index_check.mjs
++import fs from "node:fs";
++import path from "node:path";
++
++function readJson(p) {
++  return JSON.parse(fs.readFileSync(p, "utf-8"));
++}
++
++function list(dir) {
++  try {
++    return fs.readdirSync(dir, { withFileTypes: true });
++  } catch {
++    return [];
++  }
++}
++
++function mdTitle(filePath) {
++  try {
++    const txt = fs.readFileSync(filePath, "utf-8");
++    const m = txt.match(/^#\s+(.+)\s*$/m);
++    return m?.[1]?.trim() || path.basename(filePath);
++  } catch {
++    return path.basename(filePath);
++  }
++}
++
++function uniq(arr) {
++  return Array.from(new Set(arr));
++}
++
++function main() {
++  const args = new Set(process.argv.slice(2));
++  const write = args.has("--write");
++
++  const repoRoot = process.cwd();
++  const evidenceDir = path.join(repoRoot, "canon", "heritage", "evidence");
++  const decisionsDir = path.join(repoRoot, "canon", "heritage", "decisions");
++
++  const evidIndexPath = path.join(evidenceDir, "_EVIDENCE_INDEX.json");
++  const dthIndexPath = path.join(decisionsDir, "_DECISION_INDEX.json");
++
++  if (!fs.existsSync(evidIndexPath) || !fs.existsSync(dthIndexPath)) {
++    console.error("Missing index files:", {
++      evidIndexPath: fs.existsSync(evidIndexPath),
++      dthIndexPath: fs.existsSync(dthIndexPath),
++    });
++    process.exit(1);
++  }
++
++  const evidIndex = readJson(evidIndexPath);
++  const dthIndex = readJson(dthIndexPath);
++
++  const evidFiles = list(evidenceDir)
++    .filter((d) => d.isFile())
++    .map((d) => d.name)
++    .filter((n) => /^EVID-\d{4}\.md$/.test(n));
++
++  const dthFiles = list(decisionsDir)
++    .filter((d) => d.isFile())
++    .map((d) => d.name)
++    .filter((n) => /^DTH-\d{8}-\d{3}\.md$/.test(n));
++
++  const evidFolderIds = evidFiles.map((n) => n.replace(".md", ""));
++  const dthFolderIds = dthFiles.map((n) => n.replace(".md", ""));
++
++  const evidIndexIds = (evidIndex.evidence || []).map((e) => e.evidenceId);
++  const dthIndexIds = (dthIndex.decisions || []).map((d) => d.decisionId);
++
++  const missingEvid = evidFolderIds.filter((id) => !evidIndexIds.includes(id));
++  const missingDth = dthFolderIds.filter((id) => !dthIndexIds.includes(id));
++
++  const extraEvid = evidIndexIds.filter((id) => !evidFolderIds.includes(id));
++  const extraDth = dthIndexIds.filter((id) => !dthFolderIds.includes(id));
++
++  console.log("=== Heritage Index Check ===");
++  console.log("Evidence in folder:", evidFolderIds.length, "Index entries:", evidIndexIds.length);
++  console.log("Decisions in folder:", dthFolderIds.length, "Index entries:", dthIndexIds.length);
++  console.log("");
++  console.log("Missing Evidence Index entries:", missingEvid.length ? missingEvid.join(", ") : "(none)");
++  console.log("Missing Decision Index entries:", missingDth.length ? missingDth.join(", ") : "(none)");
++  console.log("Extra Evidence Index entries:", extraEvid.length ? extraEvid.join(", ") : "(none)");
++  console.log("Extra Decision Index entries:", extraDth.length ? extraDth.join(", ") : "(none)");
++
++  if (!write) return;
++
++  // Append missing entries (minimal + deterministic)
++  if (missingEvid.length) {
++    evidIndex.evidence = evidIndex.evidence || [];
++    for (const id of missingEvid) {
++      const p = path.join(evidenceDir, `${id}.md`);
++      evidIndex.evidence.push({
++        evidenceId: id,
++        title: mdTitle(p),
++        path: `canon/heritage/evidence/${id}.md`,
++        tags: [],
++        relatedDecisions: [],
++      });
++    }
++    evidIndex.evidence = uniq(evidIndex.evidence.map((e) => JSON.stringify(e))).map((s) => JSON.parse(s));
++    evidIndex.updated_at = new Date().toISOString().slice(0, 10);
++    fs.writeFileSync(evidIndexPath, JSON.stringify(evidIndex, null, 2) + "\n", "utf-8");
++    console.log("\nWrote:", path.relative(repoRoot, evidIndexPath));
++  }
++
++  if (missingDth.length) {
++    dthIndex.decisions = dthIndex.decisions || [];
++    for (const id of missingDth) {
++      const p = path.join(decisionsDir, `${id}.md`);
++      dthIndex.decisions.push({
++        decisionId: id,
++        title: mdTitle(p).replace(/^Decision:\s*/i, ""),
++        path: `canon/heritage/decisions/${id}.md`,
++        status: "Locked",
++        tags: [],
++      });
++    }
++    dthIndex.decisions = uniq(dthIndex.decisions.map((d) => JSON.stringify(d))).map((s) => JSON.parse(s));
++    dthIndex.updated_at = new Date().toISOString().slice(0, 10);
++    fs.writeFileSync(dthIndexPath, JSON.stringify(dthIndex, null, 2) + "\n", "utf-8");
++    console.log("Wrote:", path.relative(repoRoot, dthIndexPath));
++  }
++}
++
++main();
++
+END_FILE
+```
+
+```diff
+FILE: package.json
+@@
+   "scripts": {
+@@
+     "heritage:scoreboard": "node scripts/heritage_scoreboard.mjs",
++    "heritage:status": "node scripts/heritage_update_status.mjs",
++    "heritage:index:check": "node scripts/heritage_index_check.mjs",
++    "heritage:index:sync": "node scripts/heritage_index_check.mjs --write",
+     "check": "tsc",
+     "db:push": "drizzle-kit push"
+   },
+ END_FILE
+```
+
+---
+
+## UX/Product Pod execution 5-pack (EVID-0054 → 0058)
+
+```diff
+FILE: canon/heritage/evidence/EVID-0054.md
++Confidential and proprietary and copyright Dustin Sparks 2025
++
++# EVID-0054 — IA Rules: Default First, Obvious Paths, No Hidden “Work”
++
++## Problem
++Users stall when information architecture mixes templates with execution, hides active work, or forces explanation.
++
++## Constraints
++- Default mode must feel complete and coherent
++- Pro mode can add power without forking the product
++- “Work” must mean active execution (Work Items), not templates
++
++## Approach
++**IA rules**
++- Default landing: `/intent` for starting work
++- Primary visibility: `/work` for active execution (Work Items)
++- Templates live under a Templates section (Work Orders)
++- Pro adds advanced routes but does not redefine meanings
++
++## Why it worked
++Users immediately understand what’s happening: start work, view work, use templates—no decoding required.
++
++## Outcome
++- Less cognitive load
++- Faster navigation
++- Higher trust (“I can see what’s being worked on”)
++
++## Where it landed
++DreamTeamHub routing and nav conventions
++
++## Related Skills
++- ia_navigation_conventions
++
++## Related Decisions
++- DTH-20251226-052
++
+END_FILE
+```
+
+```diff
+FILE: canon/heritage/evidence/EVID-0055.md
++Confidential and proprietary and copyright Dustin Sparks 2025
++
++# EVID-0055 — Default vs Pro Gating Convention (Global Toggle, Same Mental Model)
++
++## Problem
++“Pro” can create confusion if it changes meaning rather than adding capability.
++
++## Constraints
++- Pro toggle is global (header + sidebar)
++- Default must remain usable without Pro
++- Pro must never relabel core concepts
++
++## Approach
++**Gating convention**
++- Default: core flows (Intent, Work, Templates)
++- Pro: adds advanced views (ops orchestration, deeper logs, advanced filters)
++- Pro features must be additive and non-destructive
++
++## Why it worked
++It protects comprehension: Pro is “more,” not “different.”
++
++## Outcome
++- Reduced user confusion
++- Safer progressive disclosure of complex tools
++
++## Where it landed
++Navigation and feature gating conventions
++
++## Related Skills
++- pro_gating_conventions
++
++## Related Decisions
++- DTH-20251226-053
++
+END_FILE
+```
+
+```diff
+FILE: canon/heritage/evidence/EVID-0056.md
++Confidential and proprietary and copyright Dustin Sparks 2025
++
++# EVID-0056 — Page Layout Patterns (Tower → Detail → Deep Links)
++
++## Problem
++Users get lost when list pages, detail pages, and supporting pages don’t share a consistent structure.
++
++## Constraints
++- Must prioritize at-a-glance visibility
++- Must preserve “escape hatches” and next actions
++- Must be consistent across surfaces
++
++## Approach
++**Pattern**
++1) Tower page (list): at-a-glance status + context + cast
++2) Detail page: full context + cast + outputs + next actions
++3) Supporting pages: accept context via query params and provide quick jumps
++
++## Why it worked
++The user never hits a dead end: every page tells you where you are and what’s next.
++
++## Outcome
++- Faster triage
++- Less backtracking
++- Better “state continuity” across navigation
++
++## Where it landed
++/work (tower), /work-items/:id (detail), /ops/logs /verification /artifacts (supporting)
++
++## Related Skills
++- page_layout_patterns
++
++## Related Decisions
++- DTH-20251226-054
++
+END_FILE
+```
+
+```diff
+FILE: canon/heritage/evidence/EVID-0057.md
++Confidential and proprietary and copyright Dustin Sparks 2025
++
++# EVID-0057 — “No Schema Changes Unless Approved” Operational Gate
++
++## Problem
++Schema churn creates cascading refactors and slows shipping. Many UX wins can be achieved without schema changes.
++
++## Constraints
++- Prefer additive UI changes and tolerant parsing
++- Schema changes require explicit approval and rationale
++
++## Approach
++**Operational gate**
++- Default assumption: no schema changes
++- If blocked: list blockers and propose minimal schema change only if unavoidable
++- UI should tolerate multiple backend shapes (normalizers)
++
++## Why it worked
++It preserves velocity and stability while still enabling UX progress.
++
++## Outcome
++- Fewer regressions
++- Faster iteration
++- Cleaner governance and review
++
++## Where it landed
++DreamTeamHub working rule and UI implementation style
++
++## Related Skills
++- no_schema_change_gate
++
++## Related Decisions
++- DTH-20251226-055
++
+END_FILE
+```
+
+```diff
+FILE: canon/heritage/evidence/EVID-0058.md
++Confidential and proprietary and copyright Dustin Sparks 2025
++
++# EVID-0058 — Context Surface Patterns (Chips, Banners, Clear) as a UX Standard
++
++## Problem
++Context is lost across pages without explicit UI affordances; users feel “stuck” in filtered states.
++
++## Constraints
++- Must be refresh-safe (URL-driven)
++- Must explain why a page is filtered or scoped
++- Must provide a one-click escape hatch (Clear)
++
++## Approach
++**Context surface standards**
++- Chips for Target Context on list rows
++- Consistent “work item context detected” banner on supporting pages
++- Clear button removes context params and resets scoped state when appropriate
++
++## Why it worked
++It makes state visible and reversible.
++
++## Outcome
++- Less confusion
++- Faster navigation
++- Higher trust in workflow
++
++## Where it landed
++Work visibility surfaces (Work Tower + supporting pages)
++
++## Related Skills
++- ux_context_surface_patterns
++
++## Related Decisions
++- DTH-20251226-056
++
+END_FILE
+```
+
+### Decisions (DTH-20251226-052 → 056)
+
+```diff
+FILE: canon/heritage/decisions/DTH-20251226-052.md
++Confidential and proprietary and copyright Dustin Sparks 2025
++
++# Decision: DTH-20251226-052 — IA Rule: “Work” Means Active Execution
++**Date:** 2025-12-26
++**Status:** Locked
++
++## Decision
++“Work” routes to active execution (Work Items). Templates (Work Orders) live under Templates.
++
++## References
++- canon/heritage/evidence/EVID-0054.md
++
+END_FILE
+```
+
+```diff
+FILE: canon/heritage/decisions/DTH-20251226-053.md
++Confidential and proprietary and copyright Dustin Sparks 2025
++
++# Decision: DTH-20251226-053 — Default vs Pro Is Additive, Not Concept-Changing
++**Date:** 2025-12-26
++**Status:** Locked
++
++## Decision
++Pro adds power; it does not rename or redefine core mental models.
++
++## References
++- canon/heritage/evidence/EVID-0055.md
++
+END_FILE
+```
+
+```diff
+FILE: canon/heritage/decisions/DTH-20251226-054.md
++Confidential and proprietary and copyright Dustin Sparks 2025
++
++# Decision: DTH-20251226-054 — Tower→Detail→Supporting Layout Pattern Is Standard
++**Date:** 2025-12-26
++**Status:** Locked
++
++## Decision
++Use a consistent flow: list/tower pages → detail pages → supporting pages with context deep links.
++
++## References
++- canon/heritage/evidence/EVID-0056.md
++
+END_FILE
+```
+
+```diff
+FILE: canon/heritage/decisions/DTH-20251226-055.md
++Confidential and proprietary and copyright Dustin Sparks 2025
++
++# Decision: DTH-20251226-055 — No Schema Changes Unless Explicitly Approved
++**Date:** 2025-12-26
++**Status:** Locked
++
++## Decision
++Prefer additive UI and tolerant parsing; schema changes require explicit approval and rationale.
++
++## References
++- canon/heritage/evidence/EVID-0057.md
++
+END_FILE
+```
+
+```diff
+FILE: canon/heritage/decisions/DTH-20251226-056.md
++Confidential and proprietary and copyright Dustin Sparks 2025
++
++# Decision: DTH-20251226-056 — Context Surfaces (Chips/Banners/Clear) Are a UX Standard
++**Date:** 2025-12-26
++**Status:** Locked
++
++## Decision
++Context must be visible (chips/banners) and reversible (Clear) across workflows.
++
++## References
++- canon/heritage/evidence/EVID-0058.md
++
+END_FILE
+```
+
+### Index + skills updates
+
+```diff
+FILE: canon/heritage/evidence/_EVIDENCE_INDEX.json
+@@
+   "evidence": [
++    {
++      "evidenceId": "EVID-0054",
++      "title": "IA Rules: Default First, Obvious Paths, No Hidden “Work”",
++      "path": "canon/heritage/evidence/EVID-0054.md",
++      "tags": ["ux", "ia", "navigation"],
++      "relatedDecisions": ["DTH-20251226-052"]
++    },
++    {
++      "evidenceId": "EVID-0055",
++      "title": "Default vs Pro Gating Convention (Global Toggle, Same Mental Model)",
++      "path": "canon/heritage/evidence/EVID-0055.md",
++      "tags": ["ux", "pro", "gating"],
++      "relatedDecisions": ["DTH-20251226-053"]
++    },
++    {
++      "evidenceId": "EVID-0056",
++      "title": "Page Layout Patterns (Tower → Detail → Deep Links)",
++      "path": "canon/heritage/evidence/EVID-0056.md",
++      "tags": ["ux", "layout", "patterns"],
++      "relatedDecisions": ["DTH-20251226-054"]
++    },
++    {
++      "evidenceId": "EVID-0057",
++      "title": "“No Schema Changes Unless Approved” Operational Gate",
++      "path": "canon/heritage/evidence/EVID-0057.md",
++      "tags": ["ux", "governance", "schema"],
++      "relatedDecisions": ["DTH-20251226-055"]
++    },
++    {
++      "evidenceId": "EVID-0058",
++      "title": "Context Surface Patterns (Chips, Banners, Clear) as a UX Standard",
++      "path": "canon/heritage/evidence/EVID-0058.md",
++      "tags": ["ux", "context", "visibility"],
++      "relatedDecisions": ["DTH-20251226-056"]
++    }
+   ]
+ }
+ 
+ END_FILE
+```
+
+```diff
+FILE: canon/heritage/decisions/_DECISION_INDEX.json
+@@
+   "decisions": [
++    {
++      "decisionId": "DTH-20251226-052",
++      "title": "IA Rule: “Work” Means Active Execution",
++      "path": "canon/heritage/decisions/DTH-20251226-052.md",
++      "status": "Locked",
++      "tags": ["ux", "ia", "navigation"]
++    },
++    {
++      "decisionId": "DTH-20251226-053",
++      "title": "Default vs Pro Is Additive, Not Concept-Changing",
++      "path": "canon/heritage/decisions/DTH-20251226-053.md",
++      "status": "Locked",
++      "tags": ["ux", "pro", "gating"]
++    },
++    {
++      "decisionId": "DTH-20251226-054",
++      "title": "Tower→Detail→Supporting Layout Pattern Is Standard",
++      "path": "canon/heritage/decisions/DTH-20251226-054.md",
++      "status": "Locked",
++      "tags": ["ux", "layout", "patterns"]
++    },
++    {
++      "decisionId": "DTH-20251226-055",
++      "title": "No Schema Changes Unless Explicitly Approved",
++      "path": "canon/heritage/decisions/DTH-20251226-055.md",
++      "status": "Locked",
++      "tags": ["ux", "governance", "schema"]
++    },
++    {
++      "decisionId": "DTH-20251226-056",
++      "title": "Context Surfaces (Chips/Banners/Clear) Are a UX Standard",
++      "path": "canon/heritage/decisions/DTH-20251226-056.md",
++      "status": "Locked",
++      "tags": ["ux", "context", "visibility"]
++    }
+   ]
+ }
+ 
+ END_FILE
+```
+
+```diff
+FILE: canon/heritage/skills.json
+@@
+   "skills": [
++    {
++      "skillKey": "ia_navigation_conventions",
++      "name": "IA & Navigation Conventions",
++      "description": "Maintain a clear mental model where default users can start work, see active work, and access templates without confusion.",
++      "levels": { "L0": "Understands nav structure.", "L1": "Can propose IA tweaks.", "L2": "Can implement IA patterns safely.", "L3": "Can standardize IA across a portfolio." },
++      "guardrails": ["Work = Work Items; Templates = Work Orders."],
++      "patterns": { "do": ["Default-first nav", "Obvious entry points"], "dont": ["Mix templates with execution"] },
++      "evidenceLinks": [{ "evidenceId": "EVID-0054", "label": "IA rules", "location": "canon/heritage/evidence/EVID-0054.md" }]
++    },
++    {
++      "skillKey": "pro_gating_conventions",
++      "name": "Default vs Pro Gating Conventions",
++      "description": "Add advanced capability in Pro mode without changing core meanings or workflows.",
++      "levels": { "L0": "Knows Pro exists.", "L1": "Can gate a feature.", "L2": "Can keep mental model consistent.", "L3": "Can standardize gating conventions." },
++      "guardrails": ["Pro must be additive."],
++      "patterns": { "do": ["Global toggle", "Add advanced filters/ops"], "dont": ["Rename core concepts"] },
++      "evidenceLinks": [{ "evidenceId": "EVID-0055", "label": "Default vs Pro gating", "location": "canon/heritage/evidence/EVID-0055.md" }]
++    },
++    {
++      "skillKey": "page_layout_patterns",
++      "name": "Page Layout Patterns (Tower→Detail→Supporting)",
++      "description": "Use a consistent list→detail→supporting layout so users never get lost and always have next actions.",
++      "levels": { "L0": "Can describe layouts.", "L1": "Can apply pattern.", "L2": "Can implement pattern across pages.", "L3": "Can enforce it portfolio-wide." },
++      "guardrails": ["Supporting pages must accept context and provide quick jumps."],
++      "patterns": { "do": ["At-a-glance visibility", "Next actions"], "dont": ["Dead-end pages"] },
++      "evidenceLinks": [{ "evidenceId": "EVID-0056", "label": "Layout patterns", "location": "canon/heritage/evidence/EVID-0056.md" }]
++    },
++    {
++      "skillKey": "no_schema_change_gate",
++      "name": "No Schema Changes Gate",
++      "description": "Prefer tolerant parsing and additive UI; propose schema changes only when unavoidable and explicitly approved.",
++      "levels": { "L0": "Knows schema changes are risky.", "L1": "Avoids schema edits.", "L2": "Can implement tolerant UI parsing.", "L3": "Can enforce governance for changes." },
++      "guardrails": ["No schema changes unless explicitly approved."],
++      "patterns": { "do": ["Normalizers", "Additive UI"], "dont": ["Unapproved schema churn"] },
++      "evidenceLinks": [{ "evidenceId": "EVID-0057", "label": "No schema change gate", "location": "canon/heritage/evidence/EVID-0057.md" }]
++    },
++    {
++      "skillKey": "ux_context_surface_patterns",
++      "name": "Context Surface Patterns (Chips/Banners/Clear)",
++      "description": "Keep context visible and reversible across navigation for higher trust and less friction.",
++      "levels": { "L0": "Shows context.", "L1": "Carries context via URL.", "L2": "Standardizes across pages.", "L3": "Institutionalizes as a UX standard." },
++      "guardrails": ["Explain state + provide Clear."],
++      "patterns": { "do": ["Chips + banners", "Clear context"], "dont": ["Hidden filters"] },
++      "evidenceLinks": [{ "evidenceId": "EVID-0058", "label": "Context surface patterns", "location": "canon/heritage/evidence/EVID-0058.md" }]
++    }
+   ]
+ }
+ END_FILE
+```
+
+---
+
+## Run order (exactly as you requested)
+
+1. **Adopt the normalizer helper**
+
+   * Import `toWorkItemRowModel` in `/work` and use it for chips/cast/status.
+
+2. **Refresh scoreboard totals**
+
+```bash
+npm run heritage:status
+```
+
+3. **Ensure indexes are complete**
+
+```bash
+npm run heritage:index:check
+npm run heritage:index:sync
+```
+
+4. **UX/Product Pod execution pack is now preserved** (EVID-0054→0058 + decisions 052→056)
+
+If you want, paste the small render section from your current `/work` tower where it maps items → rows, and I’ll give you a *micro-diff* showing the cleanest `toWorkItemRowModel()` adoption for your exact code (wouter + react-query).
