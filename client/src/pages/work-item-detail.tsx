@@ -13,7 +13,8 @@ import { WorkItemPacksPanel } from "@/components/workItems/WorkItemPacksPanel";
 import { LifestyleHeroPreview } from "@/components/workItems/LifestyleHeroPreview";
 import NextActionsPanel from "@/components/workItems/NextActionsPanel";
 import { getTargetContext } from "@/lib/castReceipt";
-import { ArrowLeft, Calendar, User, Target, Route, Compass, Users } from "lucide-react";
+import { ArrowLeft, Calendar, User, Target, Route, Compass, Users, Lightbulb } from "lucide-react";
+import { Link } from "wouter";
 import { format } from "date-fns";
 import type { WorkItem } from "@shared/schema";
 
@@ -80,6 +81,12 @@ function parseCastReceipt(description?: string | null) {
   };
 }
 
+function extractStrategyProvenance(playbook?: string | null): string | null {
+  if (!playbook) return null;
+  const match = playbook.match(/\*\*Source:\*\*\s*Strategy Session\s+([a-zA-Z0-9]+)/i);
+  return match?.[1] ?? null;
+}
+
 export default function WorkItemDetail() {
   const { id } = useParams();
   const [, setLocation] = useLocation();
@@ -91,6 +98,7 @@ export default function WorkItemDetail() {
   });
 
   const cast = useMemo(() => parseCastReceipt(workItem?.description ?? null), [workItem?.description]);
+  const strategySessionId = useMemo(() => extractStrategyProvenance(workItem?.playbook ?? null), [workItem?.playbook]);
 
   if (isLoading) {
     return (
@@ -145,6 +153,14 @@ export default function WorkItemDetail() {
               <div className="flex items-center gap-2 flex-wrap">
                 <StatusBadge status={workItem.status} />
                 {workItem.priority && <StatusBadge status={workItem.priority} />}
+                {strategySessionId && (
+                  <Link href={`/strategy/${strategySessionId}`}>
+                    <Badge variant="outline" className="cursor-pointer gap-1" data-testid="badge-strategy-provenance">
+                      <Lightbulb className="h-3 w-3" />
+                      Seeded from Strategy: {strategySessionId.slice(0, 8)}
+                    </Badge>
+                  </Link>
+                )}
               </div>
             </div>
           </div>

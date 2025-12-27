@@ -1,0 +1,130 @@
+✅ **Repo/Replit: DreamTeamHub**
+Here’s a paste-ready drop that adds a **“Seeded from Strategy Session”** badge + link on the **Work Item Detail** page, using the provenance you’re already storing (prefers `targetContext.strategySessionId`, falls back to parsing `playbook`).
+
+---
+
+```diff
+FILE: client/src/components/strategy-seed-badge.tsx
++import { Link } from "wouter";
++import { Badge } from "@/components/ui/badge";
++
++function safeJsonParse(s: string): any {
++  try {
++    return JSON.parse(s);
++  } catch {
++    return null;
++  }
++}
++
++function extractStrategySessionId(workItem: any): string | null {
++  if (!workItem) return null;
++
++  // 1) Prefer structured context if present
++  const ctxRaw =
++    workItem.targetContext ??
++    workItem.target_context ??
++    workItem.context ??
++    null;
++
++  const ctx =
++    typeof ctxRaw === "string" ? (safeJsonParse(ctxRaw) ?? ctxRaw) : ctxRaw;
++
++  const fromCtx =
++    ctx && typeof ctx === "object"
++      ? (ctx.strategySessionId || ctx.strategy_session_id || null)
++      : null;
++
++  if (fromCtx && typeof fromCtx === "string") return fromCtx;
++
++  // 2) Fall back to playbook/provenance string parsing
++  const playbook = String(workItem.playbook || "");
++  if (!playbook) return null;
++
++  // Matches:
++  // strategySessionId: abc123
++  // "strategySessionId"="abc123"
++  // strategySessionId=abc123
++  const m = playbook.match(/strategySessionId["']?\s*[:=]\s*["']?([a-z0-9]{6,})/i);
++  if (m?.[1]) return m[1];
++
++  // Matches embedded route "/strategy/<id>"
++  const m2 = playbook.match(/\/strategy\/([a-z0-9]{6,})/i);
++  if (m2?.[1]) return m2[1];
++
++  return null;
++}
++
++export function StrategySeedBadge({ workItem }: { workItem: any }) {
++  const strategyId = extractStrategySessionId(workItem);
++  if (!strategyId) return null;
++
++  return (
++    <div className="mt-2 flex flex-wrap items-center gap-2">
++      <Badge variant="outline">Seeded from Strategy</Badge>
++      <Link
++        href={`/strategy/${strategyId}`}
++        className="text-sm underline underline-offset-4 text-muted-foreground hover:text-foreground"
++      >
++        Open Strategy {strategyId}
++      </Link>
++    </div>
++  );
++}
++
+END_FILE
+```
+
+---
+
+```diff
+FILE: client/src/pages/work-item-detail.tsx
+@@
++import { StrategySeedBadge } from "@/components/strategy-seed-badge";
+@@
+ export default function WorkItemDetailPage() {
+@@
+-  // wherever you have the loaded Work Item object (often `workItem` or `data`)
++  // Wherever you have the loaded Work Item object (often `workItem` or `data`)
+@@
+   return (
+     <div className="space-y-4 p-4">
+-      {/* your existing header/title block */}
++      {/* your existing header/title block */}
++      {/* Add this directly under the Work Item title/header */}
++      <StrategySeedBadge workItem={workItem} />
+ 
+       {/* rest of your existing detail UI */}
+     </div>
+   );
+ }
+ 
+ END_FILE
+```
+
+### One tiny thing you may need to adjust
+
+In `work-item-detail.tsx`, the loaded object might be named something other than `workItem` (e.g., `data`, `item`, `workItemQuery.data`).
+If so, just change this one line:
+
+```tsx
+<StrategySeedBadge workItem={workItem} />
+```
+
+to:
+
+```tsx
+<StrategySeedBadge workItem={data} />
+```
+
+(or whatever your variable is).
+
+---
+
+## Quick verification
+
+1. Open a Work Item created from Strategy conversion
+2. Confirm badge appears + link opens `/strategy/<id>`
+3. Open a regular Work Item not from Strategy
+4. Confirm badge does **not** appear
+
+If you paste the top ~40 lines of `client/src/pages/work-item-detail.tsx` (imports + query hook + header render), I can return a follow-up micro-diff that slots the badge in the perfect place with the correct variable name automatically.

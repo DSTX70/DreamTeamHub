@@ -618,6 +618,17 @@
       "relatedPods": ["ux_product_pod"],
       "relatedSkills": ["ia_navigation_conventions", "pro_gating_conventions"],
       "relatedEvidence": ["EVID-0059"]
+    },
+    {
+      "id": "DTH-20251226-058",
+      "title": "Strategy Must Be LOCKED Before Converting to Work Item",
+      "status": "Locked",
+      "date": "2025-12-26",
+      "file": "decisions/DTH-20251226-058.md",
+      "tags": ["strategy", "approval", "governance"],
+      "relatedPods": ["engineering_pod", "ux_product_pod"],
+      "relatedSkills": ["strategy_to_execution_pipeline"],
+      "relatedEvidence": ["EVID-0060"]
     }
   ]
 }

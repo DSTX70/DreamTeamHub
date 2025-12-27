@@ -82,6 +82,29 @@
         "dont": ["Ambiguous targets", "Missing context", "Untested patches"]
       },
       "evidenceLinks": []
+    },
+    {
+      "skillKey": "strategy_to_execution_pipeline",
+      "name": "Strategy-to-Execution Pipeline (Lock → Convert → Work)",
+      "description": "Run non-executing strategy sessions, lock direction, convert to Work Items with full provenance, then execute as controlled work.",
+      "levels": {
+        "L0": "Understands strategy vs execution separation.",
+        "L1": "Can run a strategy session and produce a lock-ready artifact.",
+        "L2": "Can enforce lock-first conversion and preserve provenance.",
+        "L3": "Can institutionalize approval-first execution across the portfolio."
+      },
+      "guardrails": ["No conversion unless LOCKED.", "Strategy sessions are non-executing."],
+      "patterns": {
+        "do": ["Lock direction before execution", "Carry full context + provenance"],
+        "dont": ["Generate drops during brainstorm"]
+      },
+      "evidenceLinks": [
+        {
+          "evidenceId": "EVID-0060",
+          "label": "Strategy→Lock→Convert→Work pipeline",
+          "location": "canon/heritage/evidence/EVID-0060.md"
+        }
+      ]
     }
   ]
 }

@@ -515,6 +515,15 @@
       "relatedPods": ["ux_product_pod"],
       "relatedSkills": ["ia_navigation_conventions", "pro_gating_conventions", "page_layout_patterns"],
       "relatedDecisions": ["DTH-20251226-057"]
+    },
+    {
+      "id": "EVID-0060",
+      "title": "Strategy→Lock→Convert→Work Pipeline (Approval-First Execution)",
+      "file": "EVID-0060.md",
+      "tags": ["strategy", "work-items", "approval", "governance"],
+      "relatedPods": ["engineering_pod", "ux_product_pod"],
+      "relatedSkills": ["strategy_to_execution_pipeline", "ia_navigation_conventions", "no_schema_change_gate"],
+      "relatedDecisions": ["DTH-20251226-058"]
     }
   ]
 }
