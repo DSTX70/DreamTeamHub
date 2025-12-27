@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useLocation, useRoute } from "wouter";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { queryClient } from "@/lib/queryClient";
@@ -8,8 +8,49 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, ArrowRight, Lock, Save, Trash2 } from "lucide-react";
+import { ArrowLeft, ArrowRight, Lock, Save, Trash2, Users, Check, X } from "lucide-react";
 import { Link } from "wouter";
+
+const DEFAULT_CAST = ["OS", "Forge", "LexiCode", "Lume", "Sentinel", "Aegis", "Sparkster"];
+
+const CURATED_CAST_OPTIONS = [
+  ...DEFAULT_CAST,
+  "Nova",
+  "Storybloom",
+  "Echo",
+  "Prism",
+  "Muse",
+  "Scout",
+  "Bridge",
+  "Pulse",
+  "Verifier",
+  "Atlas",
+  "Praetor",
+  "Coda",
+  "Archivist",
+  "Conductor",
+  "Beacon",
+  "Walt",
+  "Izumi Takahashi",
+  "ChieSan",
+  "Kaoru Arai",
+  "Harbor",
+  "Relief",
+  "Nest",
+  "Shield",
+  "Boost",
+  "Tally",
+  "Compass",
+  "Lens",
+  "Uplift",
+  "Dr. Rowan Vagus",
+  "Dr. Somnus Hale",
+  "Avery Marlowe",
+];
+
+function uniqSorted(list: string[]) {
+  return Array.from(new Set(list.map((s) => s.trim()).filter(Boolean))).sort((a, b) => a.localeCompare(b));
+}
 
 type StrategySession = {
   id: string;
@@ -40,19 +81,48 @@ export default function StrategyDetailPage() {
 
   const [localTitle, setLocalTitle] = useState("");
   const [localBody, setLocalBody] = useState("");
+  const [localParticipants, setLocalParticipants] = useState<string[]>([]);
+  const [castSearch, setCastSearch] = useState("");
+  const [showCastPicker, setShowCastPicker] = useState(false);
 
   useEffect(() => {
     if (!data) return;
     setLocalTitle(data.title);
     setLocalBody(data.bodyMd);
+    setLocalParticipants(uniqSorted(data.participants?.length ? data.participants : DEFAULT_CAST));
   }, [data?.id]);
+
+  const filteredCastOptions = useMemo(() => {
+    const needle = castSearch.trim().toLowerCase();
+    const options = uniqSorted(CURATED_CAST_OPTIONS);
+    if (!needle) return options;
+    return options.filter((n) => n.toLowerCase().includes(needle));
+  }, [castSearch]);
+
+  function toggleParticipant(name: string) {
+    setLocalParticipants((prev) => {
+      const set = new Set(prev);
+      if (set.has(name)) set.delete(name);
+      else set.add(name);
+      return uniqSorted(Array.from(set));
+    });
+  }
+
+  function setDefaultCast() {
+    setLocalParticipants(uniqSorted(DEFAULT_CAST));
+    toast({ title: "Default Cast applied", description: "Standard invited cast set for this Strategy Session." });
+  }
 
   const saveMutation = useMutation({
     mutationFn: async () => {
       const res = await fetch(`/api/strategy-sessions/${id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title: localTitle, bodyMd: localBody }),
+        body: JSON.stringify({
+          title: localTitle,
+          bodyMd: localBody,
+          participants: uniqSorted(localParticipants),
+        }),
       });
       if (!res.ok) throw new Error(`Save failed (${res.status})`);
       return (await res.json()) as StrategySession;
@@ -194,6 +264,91 @@ export default function StrategyDetailPage() {
           >
             <Trash2 className="mr-2 h-4 w-4" /> Delete
           </Button>
+        </CardContent>
+      </Card>
+
+      {/* Cast controls */}
+      <Card data-testid="card-cast-controls">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Users className="h-5 w-5" />
+            Cast (Participants)
+          </CardTitle>
+          <CardDescription>
+            Default Cast is the standard invited group. Curated Cast lets you tailor who participates in the Strategy Session.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <div className="flex flex-wrap items-center gap-2">
+            <Button variant="outline" onClick={setDefaultCast} data-testid="button-default-cast">
+              Use Default Cast
+            </Button>
+            <Button variant="outline" onClick={() => setShowCastPicker((v) => !v)} data-testid="button-curate-cast">
+              {showCastPicker ? "Hide Curated Cast" : "Curate Cast"}
+            </Button>
+            <Badge variant="secondary" data-testid="badge-cast-count">Selected: {localParticipants.length}</Badge>
+          </div>
+
+          {/* Selected chips */}
+          <div className="flex flex-wrap gap-2">
+            {localParticipants.map((p) => (
+              <Badge key={p} variant="outline" className="gap-2" data-testid={`badge-participant-${p}`}>
+                {p}
+                <button
+                  type="button"
+                  className="opacity-70 hover:opacity-100"
+                  onClick={() => toggleParticipant(p)}
+                  title="Remove"
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              </Badge>
+            ))}
+            {localParticipants.length === 0 && (
+              <div className="text-sm text-muted-foreground">No participants selected.</div>
+            )}
+          </div>
+
+          {/* Curated picker */}
+          {showCastPicker && (
+            <div className="rounded-lg border p-3 space-y-3">
+              <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+                <div className="text-sm font-medium">Curated Cast</div>
+                <div className="w-full md:w-[360px]">
+                  <Input
+                    value={castSearch}
+                    onChange={(e) => setCastSearch(e.target.value)}
+                    placeholder="Search cast..."
+                    data-testid="input-cast-search"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
+                {filteredCastOptions.map((name) => {
+                  const selected = localParticipants.includes(name);
+                  return (
+                    <button
+                      key={name}
+                      type="button"
+                      onClick={() => toggleParticipant(name)}
+                      className={`flex items-center justify-between rounded-md border px-3 py-2 text-sm hover:bg-muted/40 ${
+                        selected ? "bg-muted" : ""
+                      }`}
+                      data-testid={`button-cast-option-${name}`}
+                    >
+                      <span className="truncate">{name}</span>
+                      {selected && <Check className="h-4 w-4" />}
+                    </button>
+                  );
+                })}
+              </div>
+
+              <div className="text-xs text-muted-foreground">
+                Tip: hit <span className="font-medium">Save</span> to persist cast changes.
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
 

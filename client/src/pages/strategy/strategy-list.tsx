@@ -14,6 +14,7 @@ type StrategySession = {
   mode: string;
   author: string;
   approval_required_for_execution: boolean;
+  participants?: string[];
   created_at: string;
   updated_at: string;
   locked_at?: string;
@@ -103,8 +104,22 @@ export default function StrategyListPage() {
                 <div className="flex flex-wrap items-center gap-2">
                   <Badge variant={s.status === "OPEN" ? "default" : "secondary"} data-testid={`badge-status-${s.id}`}>{s.status}</Badge>
                   <Badge variant="outline">NON-EXECUTING</Badge>
+                  <Badge variant="secondary" data-testid={`badge-cast-${s.id}`}>
+                    Cast: {s.participants?.length ?? 0}
+                  </Badge>
                 </div>
               </div>
+
+              {s.participants?.length ? (
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {s.participants.slice(0, 3).map((p) => (
+                    <Badge key={p} variant="outline">{p}</Badge>
+                  ))}
+                  {s.participants.length > 3 && (
+                    <Badge variant="outline">+{s.participants.length - 3}</Badge>
+                  )}
+                </div>
+              ) : null}
             </Card>
           </Link>
         ))}

@@ -1,0 +1,345 @@
+✅ **Repo/Replit:** **DreamTeamHub**
+Below is a **paste-ready Replit drop** that adds **Default Cast** + **Curated Cast** controls to the **Strategy Session detail page**, and shows a **cast preview** on the **Strategy Sessions list**.
+
+### What this adds
+
+* **Default Cast** button (one click sets the standard invited cast)
+* **Curated Cast** selector (multi-select from an expanded roster)
+* **Participants saved on the Strategy Session** (`participants` field) via the existing `PUT /api/strategy-sessions/:id`
+* List page shows **Cast count + preview** (first 3 names)
+
+No backend changes required.
+
+---
+
+```diff
+FILE: client/src/pages/strategy/strategy-detail.tsx
+@@
+-import { useMemo, useState } from "react";
++import { useMemo, useState } from "react";
+ import { useLocation, useRoute } from "wouter";
+ import { useMutation, useQuery } from "@tanstack/react-query";
+ import { queryClient } from "@/lib/queryClient";
+ import { Button } from "@/components/ui/button";
+ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+ import { Input } from "@/components/ui/input";
+ import { Textarea } from "@/components/ui/textarea";
+ import { Badge } from "@/components/ui/badge";
+ import { useToast } from "@/hooks/use-toast";
+-import { Lock, Save, Trash2 } from "lucide-react";
++import { Lock, Save, Trash2, Users, Check, X } from "lucide-react";
+@@
+ type StrategySession = {
+@@
+   participants?: string[];
+@@
+ };
+ 
++const DEFAULT_CAST = ["OS", "Forge", "LexiCode", "Lume", "Sentinel", "Aegis", "Sparkster"];
++
++// Curated roster (expandable; safe subset from your canon)
++const CURATED_CAST_OPTIONS = [
++  ...DEFAULT_CAST,
++  "Nova",
++  "Storybloom",
++  "Echo",
++  "Prism",
++  "Muse",
++  "Scout",
++  "Bridge",
++  "Pulse",
++  "Verifier",
++  "Atlas",
++  "Praetor",
++  "Coda",
++  "Archivist",
++  "Conductor",
++  "Beacon",
++  "Walt",
++  "Izumi Takahashi",
++  "ChieSan",
++  "Kaoru Arai",
++  "Harbor",
++  "Relief",
++  "Nest",
++  "Shield",
++  "Boost",
++  "Tally",
++  "Compass",
++  "Lens",
++  "Uplift",
++  "Dr. Rowan Vagus",
++  "Dr. Somnus Hale",
++  "Avery Marlowe",
++];
++
++function uniqSorted(list: string[]) {
++  return Array.from(new Set(list.map((s) => s.trim()).filter(Boolean))).sort((a, b) => a.localeCompare(b));
++}
++
+ export default function StrategyDetailPage() {
+   const { toast } = useToast();
+   const [, setLocation] = useLocation();
+   const [, params] = useRoute("/strategy/:id");
+   const id = params?.id as string;
+@@
+   const [localTitle, setLocalTitle] = useState("");
+   const [localBody, setLocalBody] = useState("");
++  const [localParticipants, setLocalParticipants] = useState<string[]>([]);
++  const [castSearch, setCastSearch] = useState("");
++  const [showCastPicker, setShowCastPicker] = useState(false);
+@@
+   // initialize local state when data arrives
+   useMemo(() => {
+     if (!data) return;
+     setLocalTitle(data.title);
+     setLocalBody(data.bodyMd);
++    setLocalParticipants(uniqSorted(data.participants?.length ? data.participants : DEFAULT_CAST));
+     // eslint-disable-next-line react-hooks/exhaustive-deps
+   }, [data?.id]);
+@@
+   const saveMutation = useMutation({
+     mutationFn: async () => {
+       const res = await fetch(`/api/strategy-sessions/${id}`, {
+         method: "PUT",
+         headers: { "Content-Type": "application/json" },
+-        body: JSON.stringify({ title: localTitle, bodyMd: localBody }),
++        body: JSON.stringify({
++          title: localTitle,
++          bodyMd: localBody,
++          participants: uniqSorted(localParticipants),
++        }),
+       });
+       if (!res.ok) throw new Error(`Save failed (${res.status})`);
+       return (await res.json()) as StrategySession;
+     },
+@@
+   });
+@@
++  const filteredCastOptions = useMemo(() => {
++    const needle = castSearch.trim().toLowerCase();
++    const options = uniqSorted(CURATED_CAST_OPTIONS);
++    if (!needle) return options;
++    return options.filter((n) => n.toLowerCase().includes(needle));
++  }, [castSearch]);
++
++  function toggleParticipant(name: string) {
++    setLocalParticipants((prev) => {
++      const set = new Set(prev);
++      if (set.has(name)) set.delete(name);
++      else set.add(name);
++      return uniqSorted(Array.from(set));
++    });
++  }
++
++  function setDefaultCast() {
++    setLocalParticipants(uniqSorted(DEFAULT_CAST));
++    toast({ title: "Default Cast applied", description: "Standard invited cast set for this Strategy Session." });
++  }
++
+   if (isLoading) return <div className="p-4 text-sm text-muted-foreground">Loading…</div>;
+   if (error || !data) return <div className="p-4 text-sm">Not found.</div>;
+ 
+   return (
+     <div className="space-y-4 p-4">
+@@
+       <Card>
+         <CardHeader>
+           <div className="flex items-start justify-between gap-3">
+             <div>
+               <CardTitle>{data.title}</CardTitle>
+               <CardDescription>
+                 <span className="font-medium">NON-EXECUTING</span> brainstorm space. No code drops or repo changes.
+               </CardDescription>
+             </div>
+             <div className="flex flex-wrap gap-2">
+               <Badge variant={data.status === "OPEN" ? "default" : "secondary"}>{data.status}</Badge>
+               <Badge variant="outline">Strategy</Badge>
+             </div>
+           </div>
+         </CardHeader>
+         <CardContent className="flex flex-wrap gap-2">
+           <Button onClick={() => saveMutation.mutate()} disabled={saveMutation.isPending}>
+             <Save className="mr-2 h-4 w-4" /> Save
+           </Button>
+@@
+           <Button
+             variant="destructive"
+             onClick={() => deleteMutation.mutate()}
+             disabled={deleteMutation.isPending}
+             title="Delete session"
+           >
+             <Trash2 className="mr-2 h-4 w-4" /> Delete
+           </Button>
+         </CardContent>
+       </Card>
++
++      {/* Cast controls */}
++      <Card>
++        <CardHeader>
++          <CardTitle className="flex items-center gap-2">
++            <Users className="h-5 w-5" />
++            Cast (Participants)
++          </CardTitle>
++          <CardDescription>
++            Default Cast is the standard invited group. Curated Cast lets you tailor who participates in the Strategy Session.
++          </CardDescription>
++        </CardHeader>
++        <CardContent className="space-y-3">
++          <div className="flex flex-wrap items-center gap-2">
++            <Button variant="outline" onClick={setDefaultCast}>
++              Use Default Cast
++            </Button>
++            <Button variant="outline" onClick={() => setShowCastPicker((v) => !v)}>
++              {showCastPicker ? "Hide Curated Cast" : "Curate Cast"}
++            </Button>
++            <Badge variant="secondary">Selected: {localParticipants.length}</Badge>
++          </div>
++
++          {/* Selected chips */}
++          <div className="flex flex-wrap gap-2">
++            {localParticipants.map((p) => (
++              <Badge key={p} variant="outline" className="gap-2">
++                {p}
++                <button
++                  type="button"
++                  className="opacity-70 hover:opacity-100"
++                  onClick={() => toggleParticipant(p)}
++                  title="Remove"
++                >
++                  <X className="h-3 w-3" />
++                </button>
++              </Badge>
++            ))}
++            {localParticipants.length === 0 ? (
++              <div className="text-sm text-muted-foreground">No participants selected.</div>
++            ) : null}
++          </div>
++
++          {/* Curated picker */}
++          {showCastPicker ? (
++            <div className="rounded-lg border p-3 space-y-3">
++              <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
++                <div className="text-sm font-medium">Curated Cast</div>
++                <div className="w-full md:w-[360px]">
++                  <Input
++                    value={castSearch}
++                    onChange={(e) => setCastSearch(e.target.value)}
++                    placeholder="Search cast…"
++                  />
++                </div>
++              </div>
++
++              <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
++                {filteredCastOptions.map((name) => {
++                  const selected = localParticipants.includes(name);
++                  return (
++                    <button
++                      key={name}
++                      type="button"
++                      onClick={() => toggleParticipant(name)}
++                      className={`flex items-center justify-between rounded-md border px-3 py-2 text-sm hover:bg-muted/40 ${
++                        selected ? "bg-muted" : ""
++                      }`}
++                    >
++                      <span className="truncate">{name}</span>
++                      {selected ? <Check className="h-4 w-4" /> : null}
++                    </button>
++                  );
++                })}
++              </div>
++
++              <div className="text-xs text-muted-foreground">
++                Tip: hit <span className="font-medium">Save</span> to persist cast changes.
++              </div>
++            </div>
++          ) : null}
++        </CardContent>
++      </Card>
+ 
+       <Card>
+         <CardHeader>
+           <CardTitle>Edit Session</CardTitle>
+           <CardDescription>Update the title and the session body. Lock when ready.</CardDescription>
+         </CardHeader>
+         <CardContent className="space-y-3">
+@@
+         </CardContent>
+       </Card>
+     </div>
+   );
+ }
+ 
+ END_FILE
+```
+
+---
+
+```diff
+FILE: client/src/pages/strategy/strategy-list.tsx
+@@
+ type StrategySession = {
+   id: string;
+   title: string;
+   status: "OPEN" | "LOCKED" | "ARCHIVED";
+   mode: string;
+   author: string;
+   approval_required_for_execution: boolean;
++  participants?: string[];
+   created_at: string;
+   updated_at: string;
+   locked_at?: string;
+ };
+@@
+         {sessions.map((s) => (
+           <Link key={s.id} href={`/strategy/${s.id}`}>
+             <Card className="p-4 hover:bg-muted/40">
+               <div className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
+                 <div className="min-w-0">
+                   <div className="truncate font-medium">{s.title}</div>
+                   <div className="text-xs text-muted-foreground">
+                     {s.id} • {s.author}
+                   </div>
+                 </div>
+                 <div className="flex flex-wrap items-center gap-2">
+                   <Badge variant={s.status === "OPEN" ? "default" : "secondary"}>{s.status}</Badge>
+                   <Badge variant="outline">NON-EXECUTING</Badge>
++                  <Badge variant="secondary">
++                    Cast: {s.participants?.length ?? 0}
++                  </Badge>
+                 </div>
+               </div>
++
++              {s.participants?.length ? (
++                <div className="mt-2 flex flex-wrap gap-2">
++                  {s.participants.slice(0, 3).map((p) => (
++                    <Badge key={p} variant="outline">{p}</Badge>
++                  ))}
++                  {s.participants.length > 3 ? (
++                    <Badge variant="outline">+{s.participants.length - 3}</Badge>
++                  ) : null}
++                </div>
++              ) : null}
+             </Card>
+           </Link>
+         ))}
+@@
+ }
+ 
+ END_FILE
+```
+
+---
+
+## Post-apply verification checklist
+
+1. Open `/strategy/:id`
+2. See **Cast (Participants)** card
+3. Click **Use Default Cast** → selected chips update
+4. Click **Curate Cast** → select/deselect names
+5. Click **Save** → refresh page → cast persists
+6. `/strategy` list shows cast count + preview badges
+
+---
+
+If you want the “Default Cast” to be different per repo (e.g., GigsterGarage vs DreamTeamHub), tell me the mapping you want and I’ll add a simple `DEFAULT_CAST_BY_REPO_HINT` map.
