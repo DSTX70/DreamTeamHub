@@ -497,6 +497,61 @@
       "relatedPods": ["personal_finance_pod"],
       "relatedSkills": ["tax_credit_guardrails"],
       "relatedEvidence": ["EVID-0048"]
+    },
+    {
+      "id": "DTH-20251226-047",
+      "title": "Creative Output Uses the Visual Asset Pipeline OS",
+      "status": "Locked",
+      "date": "2025-12-26",
+      "file": "decisions/DTH-20251226-047.md",
+      "tags": ["creative", "design", "pipeline"],
+      "relatedPods": ["creative_design_pod"],
+      "relatedSkills": ["visual_asset_pipeline"],
+      "relatedEvidence": ["EVID-0049"]
+    },
+    {
+      "id": "DTH-20251226-048",
+      "title": "Template Governance Prevents Near-Match Drift",
+      "status": "Locked",
+      "date": "2025-12-26",
+      "file": "decisions/DTH-20251226-048.md",
+      "tags": ["creative", "templates", "governance"],
+      "relatedPods": ["creative_design_pod"],
+      "relatedSkills": ["template_governance"],
+      "relatedEvidence": ["EVID-0050"]
+    },
+    {
+      "id": "DTH-20251226-049",
+      "title": "Export Specs Are Deterministic and Safe-Area Aware",
+      "status": "Locked",
+      "date": "2025-12-26",
+      "file": "decisions/DTH-20251226-049.md",
+      "tags": ["creative", "exports", "specs"],
+      "relatedPods": ["creative_design_pod"],
+      "relatedSkills": ["export_specs_and_safe_areas"],
+      "relatedEvidence": ["EVID-0051"]
+    },
+    {
+      "id": "DTH-20251226-050",
+      "title": "Tone/Voice Is Enforced as a Gate for Public-Facing Copy",
+      "status": "Locked",
+      "date": "2025-12-26",
+      "file": "decisions/DTH-20251226-050.md",
+      "tags": ["creative", "voice", "copy"],
+      "relatedPods": ["creative_design_pod"],
+      "relatedSkills": ["brand_voice_enforcement"],
+      "relatedEvidence": ["EVID-0052"]
+    },
+    {
+      "id": "DTH-20251226-051",
+      "title": "Creative Review Gates Are Required (Brand Lock + LIAC + Safety Escalation)",
+      "status": "Locked",
+      "date": "2025-12-26",
+      "file": "decisions/DTH-20251226-051.md",
+      "tags": ["creative", "review", "liac", "safety"],
+      "relatedPods": ["creative_design_pod"],
+      "relatedSkills": ["creative_review_gates"],
+      "relatedEvidence": ["EVID-0053"]
     }
   ]
 }

@@ -416,6 +416,51 @@
       "relatedPods": ["personal_finance_pod"],
       "relatedSkills": ["tax_credit_guardrails"],
       "relatedDecisions": ["DTH-20251226-046"]
+    },
+    {
+      "id": "EVID-0049",
+      "title": "Visual Asset Pipeline OS (Brief → Build → QA → Export → Manifest)",
+      "file": "EVID-0049.md",
+      "tags": ["creative", "design", "pipeline", "qa"],
+      "relatedPods": ["creative_design_pod"],
+      "relatedSkills": ["visual_asset_pipeline"],
+      "relatedDecisions": ["DTH-20251226-047"]
+    },
+    {
+      "id": "EVID-0050",
+      "title": "Template Governance (2-up, Square/Portrait/Landscape, Hero Crops) + No Near-Match Templates",
+      "file": "EVID-0050.md",
+      "tags": ["creative", "templates", "governance", "formats"],
+      "relatedPods": ["creative_design_pod"],
+      "relatedSkills": ["template_governance"],
+      "relatedDecisions": ["DTH-20251226-048"]
+    },
+    {
+      "id": "EVID-0051",
+      "title": "Export Specs Discipline (Web + Social + Print/KDP) + Safe Area Guides",
+      "file": "EVID-0051.md",
+      "tags": ["creative", "exports", "specs", "safe-area"],
+      "relatedPods": ["creative_design_pod"],
+      "relatedSkills": ["export_specs_and_safe_areas"],
+      "relatedDecisions": ["DTH-20251226-049"]
+    },
+    {
+      "id": "EVID-0052",
+      "title": "Tone/Voice Enforcement for Creative Deliverables (Sparkster + Storybloom)",
+      "file": "EVID-0052.md",
+      "tags": ["creative", "voice", "copy", "governance"],
+      "relatedPods": ["creative_design_pod"],
+      "relatedSkills": ["brand_voice_enforcement"],
+      "relatedDecisions": ["DTH-20251226-050"]
+    },
+    {
+      "id": "EVID-0053",
+      "title": "Creative Review Gates (Brand Lock + LIAC + Safety Escalation)",
+      "file": "EVID-0053.md",
+      "tags": ["creative", "review", "liac", "safety"],
+      "relatedPods": ["creative_design_pod"],
+      "relatedSkills": ["creative_review_gates"],
+      "relatedDecisions": ["DTH-20251226-051"]
     }
   ]
 }
