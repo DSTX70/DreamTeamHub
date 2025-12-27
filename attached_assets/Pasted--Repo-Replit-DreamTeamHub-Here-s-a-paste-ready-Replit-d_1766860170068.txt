@@ -1,0 +1,133 @@
+✅ **Repo/Replit: DreamTeamHub**
+Here’s a **paste-ready Replit drop** to add **“Convert to Work Item”** from a Strategy Session.
+
+### Behavior
+
+* Button appears on **Strategy Detail** page.
+* Enabled only when `status === "LOCKED"` (keeps the “no execution without lock” rule real).
+* Creates a Work Item via `POST /api/work-items` with a **minimal, tolerant payload**:
+
+  * `title`
+  * `inputs` (the strategy markdown body, so the thinking carries over)
+  * `targetContext` (includes `strategySessionId` + repo hint so Work Tower chips show provenance)
+* On success: redirects to `/work-items/:id` and shows a toast.
+* On failure: shows toast with the HTTP status/message (no silent failure).
+
+---
+
+```diff
+FILE: client/src/pages/strategy/strategy-detail.tsx
+@@
+-import { Lock, Save, Trash2 } from "lucide-react";
++import { Lock, Save, Trash2, ArrowRight } from "lucide-react";
+@@
+ export default function StrategyDetailPage() {
+@@
+   const lockMutation = useMutation({
+@@
+   });
+ 
++  const convertMutation = useMutation({
++    mutationFn: async () => {
++      // Only allow conversion after direction is locked
++      if (!data || data.status !== "LOCKED") {
++        throw new Error("Strategy must be LOCKED before converting to a Work Item.");
++      }
++
++      // Minimal payload: keep it tolerant to backend shape without schema changes
++      const payload: any = {
++        title: data.title.replace(/Strategy Session/i, "Work Item").trim(),
++        // carry the full thinking forward into the Work Item input
++        inputs: data.bodyMd,
++        // preserve provenance + target hint for Work Tower chips
++        targetContext: {
++          kind: "strategy",
++          strategySessionId: data.id,
++          repoHint: data.repo_hint || "Gigster Garage (pilot candidate)",
++        },
++      };
++
++      const res = await fetch("/api/work-items", {
++        method: "POST",
++        headers: { "Content-Type": "application/json" },
++        body: JSON.stringify(payload),
++      });
++      if (!res.ok) {
++        const text = await res.text().catch(() => "");
++        throw new Error(`Convert failed (${res.status}) ${text}`.trim());
++      }
++      return (await res.json()) as { id: string };
++    },
++    onSuccess: async (wi) => {
++      // Refresh Work surfaces if they are query-driven
++      await queryClient.invalidateQueries({ queryKey: ["/api/work-items"] });
++      toast({ title: "Converted", description: "Strategy locked → Work Item created." });
++      if (wi?.id) setLocation(`/work-items/${wi.id}`);
++      else setLocation("/work");
++    },
++  });
++
+   const deleteMutation = useMutation({
+@@
+   return (
+     <div className="space-y-4 p-4">
+       <Card>
+         <CardHeader>
+@@
+         </CardHeader>
+         <CardContent className="flex flex-wrap gap-2">
+           <Button onClick={() => saveMutation.mutate()} disabled={saveMutation.isPending}>
+             <Save className="mr-2 h-4 w-4" /> Save
+           </Button>
+           <Button
+             variant="outline"
+             onClick={() => lockMutation.mutate()}
+             disabled={lockMutation.isPending || data.status === "LOCKED"}
+             title="Locks direction; execution still requires approval in Work Items."
+           >
+             <Lock className="mr-2 h-4 w-4" /> Lock Direction
+           </Button>
++
++          <Button
++            variant="default"
++            onClick={() => convertMutation.mutate()}
++            disabled={convertMutation.isPending || data.status !== "LOCKED"}
++            title={data.status === "LOCKED" ? "Create a Work Item seeded with this Strategy Session" : "Lock direction first"}
++          >
++            <ArrowRight className="mr-2 h-4 w-4" />
++            Convert to Work Item
++          </Button>
++
+           <Button
+             variant="destructive"
+             onClick={() => deleteMutation.mutate()}
+             disabled={deleteMutation.isPending}
+             title="Delete session"
+           >
+             <Trash2 className="mr-2 h-4 w-4" /> Delete
+           </Button>
+         </CardContent>
+       </Card>
+@@
+     </div>
+   );
+ }
+ 
+ END_FILE
+```
+
+---
+
+## Post-apply verification (2 minutes)
+
+1. Create a Strategy Session → save it
+2. Try **Convert to Work Item** while OPEN → button disabled
+3. Click **Lock Direction** → status becomes LOCKED
+4. Click **Convert to Work Item**
+5. Confirm redirect to `/work-items/:id` and the Work Item shows up in `/work` with target chips indicating strategy provenance
+
+---
+
+## If your `/api/work-items` expects different field names
+
+If conversion fails with a 400, paste the error text (it’ll be in the toast) and I’ll adjust the payload to match your exact endpoint contract (still without schema changes).

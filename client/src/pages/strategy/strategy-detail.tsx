@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, Lock, Save, Trash2 } from "lucide-react";
+import { ArrowLeft, ArrowRight, Lock, Save, Trash2 } from "lucide-react";
 import { Link } from "wouter";
 
 type StrategySession = {
@@ -81,6 +81,43 @@ export default function StrategyDetailPage() {
     },
   });
 
+  const convertMutation = useMutation({
+    mutationFn: async () => {
+      if (!data || data.status !== "LOCKED") {
+        throw new Error("Strategy must be LOCKED before converting to a Work Item.");
+      }
+
+      const payload = {
+        title: data.title.replace(/Strategy Session/i, "Work Item").trim() || data.title,
+        owner: data.author || "agent",
+        inputs: data.bodyMd || "Strategy session content",
+        output: `Execute the locked strategy: ${data.goal || data.title}`,
+        autonomy: "L1",
+        playbook: `## Strategy Provenance\n\n**Source:** Strategy Session ${data.id}\n**Locked at:** ${data.locked_at || "N/A"}\n**Repo Hint:** ${data.repo_hint || "Gigster Garage (pilot candidate)"}\n\n---\n\n${data.bodyMd}`,
+      };
+
+      const res = await fetch("/api/work-items", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) {
+        const text = await res.text().catch(() => "");
+        throw new Error(`Convert failed (${res.status}) ${text}`.trim());
+      }
+      return (await res.json()) as { id: number };
+    },
+    onSuccess: async (wi) => {
+      await queryClient.invalidateQueries({ queryKey: ["/api/work-items"] });
+      toast({ title: "Converted", description: "Strategy locked → Work Item created." });
+      if (wi?.id) setLocation(`/work-items/${wi.id}`);
+      else setLocation("/work");
+    },
+    onError: (err: Error) => {
+      toast({ title: "Conversion failed", description: err.message, variant: "destructive" });
+    },
+  });
+
   const deleteMutation = useMutation({
     mutationFn: async () => {
       const res = await fetch(`/api/strategy-sessions/${id}`, { method: "DELETE" });
@@ -138,6 +175,15 @@ export default function StrategyDetailPage() {
             data-testid="button-lock"
           >
             <Lock className="mr-2 h-4 w-4" /> Lock Direction
+          </Button>
+          <Button
+            variant="default"
+            onClick={() => convertMutation.mutate()}
+            disabled={convertMutation.isPending || data.status !== "LOCKED"}
+            title={data.status === "LOCKED" ? "Create a Work Item seeded with this Strategy Session" : "Lock direction first"}
+            data-testid="button-convert"
+          >
+            <ArrowRight className="mr-2 h-4 w-4" /> Convert to Work Item
           </Button>
           <Button
             variant="destructive"
