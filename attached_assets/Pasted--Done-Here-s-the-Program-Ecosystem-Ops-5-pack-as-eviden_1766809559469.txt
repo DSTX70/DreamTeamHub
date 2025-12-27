@@ -1,0 +1,545 @@
+✅ Done. Here’s the **Program & Ecosystem Ops 5-pack** as evidence-grade canon for the **DreamTeamHub repo**, with **EVID-0024 → EVID-0028** and decisions **DTH-20251226-022 → 026**, plus index updates.
+
+## ✅ Paste into: **DreamTeamHub** repo / Replit
+
+```diff
+FILE: canon/heritage/evidence/EVID-0024.md
++Confidential and proprietary and copyright Dustin Sparks 2025
++
++# EVID-0024 — Pilot Factory Operating System (Intake → SOW → KPIs → Evidence → Case Study)
++
++## Problem
++Pilots fail when they are treated like “ad hoc demos”: unclear scope, missing success metrics, weak evidence, and no path to a reusable case study.
++
++## Constraints
++- Must be repeatable and light enough to run often
++- Must generate evidence, not vibes
++- Must produce output that can become a case study without rework
++- Must coordinate multiple pods without chaos
++
++## Approach (Pilot Factory OS)
++1) **Intake**
++   - Identify sponsor, problem statement, target users, constraints, timeline
++2) **SOW (simple)**
++   - Define deliverables, responsibilities, environments, data handling, and boundaries
++3) **KPIs**
++   - Define 3–7 KPIs that prove value (latency, cost, accuracy, time saved, risk reduced)
++4) **Execution cadence**
++   - Weekly pilot review (status, blockers, KPI deltas, evidence plan)
++5) **Evidence Pack**
++   - Capture before/after, logs, screenshots, and artifacts that substantiate claims
++6) **Case Study conversion**
++   - Convert evidence + narrative into an external-ready story (post-approval)
++
++## Why it worked
++It turned pilots into a production line: measurable outcomes, repeatable execution, and a built-in path to marketing/PR assets.
++
++## Outcome
++- Clear pilot success criteria
++- Faster iteration and stakeholder alignment
++- Evidence-backed case studies instead of memory-based claims
++
++## Where it landed
++Program Ops (Conductor-led) pilot execution governance
++
++## Related Skills
++- pilot_factory_ops
++
++## Related Decisions
++- DTH-20251226-022
++
+END_FILE
+```
+
+```diff
+FILE: canon/heritage/evidence/EVID-0025.md
++Confidential and proprietary and copyright Dustin Sparks 2025
++
++# EVID-0025 — SOW + KPI Template Discipline (Decision-Grade Pilots)
++
++## Problem
++Pilot outcomes become unprovable when SOWs are vague and KPIs are undefined or subjective. This creates scope creep and weak results.
++
++## Constraints
++- SOW must be short and usable (not legal bloat)
++- KPIs must be measurable and tied to the problem statement
++- Must support evidence capture as part of the plan
++
++## Approach
++**SOW template fields**
++- Problem statement & target users
++- Deliverables (what will exist at the end)
++- Non-goals (explicit exclusions)
++- Timeline & milestones
++- Environments and access needs
++- Data/privacy constraints (if any)
++- Responsibilities (who does what)
++
++**KPI template fields**
++- KPI name + definition
++- Baseline (before)
++- Target (after)
++- Measurement method (how we prove it)
++- Evidence artifact(s) required
++
++## Why it worked
++It eliminated ambiguity, reduced scope creep, and made outcomes provable because KPIs were paired with evidence requirements upfront.
++
++## Outcome
++- Faster alignment with stakeholders
++- Stronger evidence posture
++- Cleaner “done” definition for pilots
++
++## Where it landed
++Program Ops Pilot Factory intake and planning
++
++## Related Skills
++- sow_kpi_templates
++
++## Related Decisions
++- DTH-20251226-023
++
+END_FILE
+```
+
+```diff
+FILE: canon/heritage/evidence/EVID-0026.md
++Confidential and proprietary and copyright Dustin Sparks 2025
++
++# EVID-0026 — Evidence Pack → Case Study Pipeline (Truthful Narratives)
++
++## Problem
++Case studies fail when they are written from memory or marketing hype. Without evidence, claims are fragile and credibility suffers.
++
++## Constraints
++- Claims must be evidence-backed
++- Narrative must match what was actually proven
++- Must support internal and external versions (with redactions as needed)
++
++## Approach
++**Evidence Pack first**
++- Archivist/Conductor ensures the pilot has a complete evidence pack:
++  - baseline vs after metrics
++  - artifacts/screenshots/logs
++  - constraints + caveats
++
++**Case study conversion**
++- Convert evidence into a truthful narrative:
++  - Problem → Approach → Results → Proof → Lessons
++- Define which claims are public-safe and which remain internal
++- Apply privacy/security review before publishing externally (Sentinel/Praetor as needed)
++
++## Why it worked
++It kept storytelling honest and powerful: proof drives narrative, not the other way around.
++
++## Outcome
++- Higher credibility with customers/partners
++- Faster analyst/PR readiness
++- Reusable proof assets for sales and marketing
++
++## Where it landed
++Pilot Factory → Analyst/PR pipeline (Conductor + Beacon)
++
++## Related Skills
++- evidence_to_case_study
++
++## Related Decisions
++- DTH-20251226-024
++
+END_FILE
+```
+
+```diff
+FILE: canon/heritage/evidence/EVID-0027.md
++Confidential and proprietary and copyright Dustin Sparks 2025
++
++# EVID-0027 — Partnership ROI Rubric (Amani Lens) + Ecosystem Fit
++
++## Problem
++Partnership conversations drift into “sounds good” without clear economics or fit. This wastes time and can create bad deals.
++
++## Constraints
++- Must be SMB-realistic (operator lens)
++- Must clarify value exchange and costs
++- Must be actionable (next steps, not theory)
++
++## Approach
++**ROI rubric**
++- Value delivered (measurable outcomes)
++- Cost to deliver (build/support/sales time)
++- Distribution leverage (who brings audience?)
++- Retention/expansion potential
++- Risk profile (privacy/security/IP)
++- Operational burden (support, onboarding, integration)
++
++**Ecosystem fit**
++- Does it amplify existing brands or distract?
++- Does it integrate into i³ stack cleanly?
++- Can it generate evidence-grade wins?
++
++## Why it worked
++It replaces vague optimism with grounded economics and fit checks—enabling faster yes/no decisions.
++
++## Outcome
++- Better partner selection
++- Cleaner deal structures
++- Less wasted execution
++
++## Where it landed
++Program Ops + Partnerships governance (Amani)
++
++## Related Skills
++- partnership_roi_rubric
++
++## Related Decisions
++- DTH-20251226-025
++
+END_FILE
+```
+
+```diff
+FILE: canon/heritage/evidence/EVID-0028.md
++Confidential and proprietary and copyright Dustin Sparks 2025
++
++# EVID-0028 — Analyst Narrative Discipline (Beacon) + Evidence-Grade Messaging
++
++## Problem
++Analyst/PR narratives collapse if they overclaim or can’t be substantiated. Without discipline, messaging becomes inconsistent across releases.
++
++## Constraints
++- Claims must be backed by evidence packs
++- Narrative must be consistent with governance and safety constraints
++- Must be modular for different audiences (analyst vs customer vs internal)
++
++## Approach
++**Evidence-grade narrative**
++- Every marquee claim links to:
++  - KPI result
++  - proof artifact
++  - scope/caveats
++- Maintain a core narrative statement and supporting proof bullets
++
++**Packaging**
++- Analyst brief: what’s new, why it matters, proof, differentiation
++- PR summary: benefits, proof, safe framing
++- Internal memo: details + technical depth + risks
++
++## Why it worked
++It kept narratives credible and repeatable: proof drives claims, governance prevents overreach, and messaging stays aligned.
++
++## Outcome
++- Higher trust with analysts and partners
++- Fewer contradictions across releases
++- Faster briefing readiness
++
++## Where it landed
++Program Ops + Analyst Relations/PR (Beacon)
++
++## Related Skills
++- analyst_narrative_evidence_grade
++
++## Related Decisions
++- DTH-20251226-026
++
+END_FILE
+```
+
+```diff
+FILE: canon/heritage/decisions/DTH-20251226-022.md
++Confidential and proprietary and copyright Dustin Sparks 2025
++
++# Decision: DTH-20251226-022 — Pilot Factory Operating System
++**Date:** 2025-12-26  
++**Status:** Locked  
++
++## Decision
++Pilots must follow the Pilot Factory OS: Intake → SOW → KPIs → Evidence Pack → Case Study conversion.
++
++## Rationale
++Ensures measurable outcomes and repeatable delivery instead of ad hoc demos.
++
++## References
++- canon/heritage/evidence/EVID-0024.md
++
+END_FILE
+```
+
+```diff
+FILE: canon/heritage/decisions/DTH-20251226-023.md
++Confidential and proprietary and copyright Dustin Sparks 2025
++
++# Decision: DTH-20251226-023 — SOW + KPI Template Discipline
++**Date:** 2025-12-26  
++**Status:** Locked  
++
++## Decision
++All pilots require a short SOW and KPI set with measurement method and required evidence artifacts defined upfront.
++
++## Rationale
++Prevents scope creep and makes outcomes provable.
++
++## References
++- canon/heritage/evidence/EVID-0025.md
++
+END_FILE
+```
+
+```diff
+FILE: canon/heritage/decisions/DTH-20251226-024.md
++Confidential and proprietary and copyright Dustin Sparks 2025
++
++# Decision: DTH-20251226-024 — Evidence Pack → Case Study Pipeline
++**Date:** 2025-12-26  
++**Status:** Locked  
++
++## Decision
++Case studies must be derived from Evidence Packs; claims must map to proof artifacts and caveats, with safety/privacy review for public versions when required.
++
++## Rationale
++Protects credibility and speeds analyst/PR readiness.
++
++## References
++- canon/heritage/evidence/EVID-0026.md
++
+END_FILE
+```
+
+```diff
+FILE: canon/heritage/decisions/DTH-20251226-025.md
++Confidential and proprietary and copyright Dustin Sparks 2025
++
++# Decision: DTH-20251226-025 — Partnership ROI Rubric
++**Date:** 2025-12-26  
++**Status:** Locked  
++
++## Decision
++Partnership evaluation must use a grounded ROI rubric and ecosystem fit checks (SMB operator lens) before committing execution.
++
++## Rationale
++Improves partner selection and reduces wasted work.
++
++## References
++- canon/heritage/evidence/EVID-0027.md
++
+END_FILE
+```
+
+```diff
+FILE: canon/heritage/decisions/DTH-20251226-026.md
++Confidential and proprietary and copyright Dustin Sparks 2025
++
++# Decision: DTH-20251226-026 — Evidence-Grade Analyst Narrative Discipline
++**Date:** 2025-12-26  
++**Status:** Locked  
++
++## Decision
++External narratives (analyst/PR) must be evidence-grade: marquee claims link to KPIs, proof artifacts, and caveats; messaging packages must remain consistent across audiences.
++
++## Rationale
++Protects credibility and accelerates briefing readiness.
++
++## References
++- canon/heritage/evidence/EVID-0028.md
++
+END_FILE
+```
+
+```diff
+FILE: canon/heritage/evidence/_EVIDENCE_INDEX.json
+@@
+   "evidence": [
+@@
++    {
++      "evidenceId": "EVID-0024",
++      "title": "Pilot Factory Operating System (Intake → SOW → KPIs → Evidence → Case Study)",
++      "path": "canon/heritage/evidence/EVID-0024.md",
++      "tags": ["program-ops", "pilot-factory", "kpis", "evidence"],
++      "relatedDecisions": ["DTH-20251226-022"]
++    },
++    {
++      "evidenceId": "EVID-0025",
++      "title": "SOW + KPI Template Discipline (Decision-Grade Pilots)",
++      "path": "canon/heritage/evidence/EVID-0025.md",
++      "tags": ["program-ops", "sow", "kpis", "templates"],
++      "relatedDecisions": ["DTH-20251226-023"]
++    },
++    {
++      "evidenceId": "EVID-0026",
++      "title": "Evidence Pack → Case Study Pipeline (Truthful Narratives)",
++      "path": "canon/heritage/evidence/EVID-0026.md",
++      "tags": ["program-ops", "case-study", "evidence", "narrative"],
++      "relatedDecisions": ["DTH-20251226-024"]
++    },
++    {
++      "evidenceId": "EVID-0027",
++      "title": "Partnership ROI Rubric (Amani Lens) + Ecosystem Fit",
++      "path": "canon/heritage/evidence/EVID-0027.md",
++      "tags": ["program-ops", "partnerships", "roi", "ecosystem"],
++      "relatedDecisions": ["DTH-20251226-025"]
++    },
++    {
++      "evidenceId": "EVID-0028",
++      "title": "Analyst Narrative Discipline (Beacon) + Evidence-Grade Messaging",
++      "path": "canon/heritage/evidence/EVID-0028.md",
++      "tags": ["program-ops", "analyst-relations", "pr", "evidence-grade"],
++      "relatedDecisions": ["DTH-20251226-026"]
++    }
+   ]
+ }
+ 
+ END_FILE
+```
+
+```diff
+FILE: canon/heritage/decisions/_DECISION_INDEX.json
+@@
+   "decisions": [
+@@
++    {
++      "decisionId": "DTH-20251226-022",
++      "title": "Pilot Factory Operating System",
++      "path": "canon/heritage/decisions/DTH-20251226-022.md",
++      "status": "Locked",
++      "tags": ["program-ops", "pilot-factory"]
++    },
++    {
++      "decisionId": "DTH-20251226-023",
++      "title": "SOW + KPI Template Discipline",
++      "path": "canon/heritage/decisions/DTH-20251226-023.md",
++      "status": "Locked",
++      "tags": ["program-ops", "sow", "kpis"]
++    },
++    {
++      "decisionId": "DTH-20251226-024",
++      "title": "Evidence Pack → Case Study Pipeline",
++      "path": "canon/heritage/decisions/DTH-20251226-024.md",
++      "status": "Locked",
++      "tags": ["program-ops", "case-study", "evidence"]
++    },
++    {
++      "decisionId": "DTH-20251226-025",
++      "title": "Partnership ROI Rubric",
++      "path": "canon/heritage/decisions/DTH-20251226-025.md",
++      "status": "Locked",
++      "tags": ["program-ops", "partnerships", "roi"]
++    },
++    {
++      "decisionId": "DTH-20251226-026",
++      "title": "Evidence-Grade Analyst Narrative Discipline",
++      "path": "canon/heritage/decisions/DTH-20251226-026.md",
++      "status": "Locked",
++      "tags": ["program-ops", "analyst-relations", "pr"]
++    }
+   ]
+ }
+ 
+ END_FILE
+```
+
+```diff
+FILE: canon/heritage/skills.json
+@@
+   "skills": [
+@@
++    {
++      "skillKey": "pilot_factory_ops",
++      "name": "Pilot Factory Operations (Intake→SOW→KPIs→Evidence→Case Study)",
++      "description": "Run pilots like a production line with measurable KPIs and evidence packs that convert into credible case studies.",
++      "levels": {
++        "L0": "Understands pilots need scope and goals.",
++        "L1": "Can define a basic SOW and a few KPIs with guidance.",
++        "L2": "Can run weekly cadence, track KPIs, and produce evidence packs.",
++        "L3": "Can scale pilot factory across multiple teams and standardize outputs."
++      },
++      "guardrails": ["No ad hoc pilots without KPIs and evidence plan."],
++      "patterns": { "do": ["Define KPIs + measurement methods", "Capture evidence continuously"], "dont": ["Rely on vibes"] },
++      "evidenceLinks": [
++        { "evidenceId": "EVID-0024", "label": "Pilot Factory OS", "location": "canon/heritage/evidence/EVID-0024.md" }
++      ]
++    },
++    {
++      "skillKey": "sow_kpi_templates",
++      "name": "SOW + KPI Template Discipline",
++      "description": "Use short, decision-grade SOWs and measurable KPI sets paired with required evidence artifacts.",
++      "levels": {
++        "L0": "Knows what a SOW is.",
++        "L1": "Can fill a template with guidance.",
++        "L2": "Can define KPIs with baselines, targets, and measurement methods.",
++        "L3": "Can standardize templates across a portfolio."
++      },
++      "guardrails": ["Every KPI must name a measurement method and evidence artifact."],
++      "patterns": { "do": ["Baseline → target → method → evidence"], "dont": ["Vague success criteria"] },
++      "evidenceLinks": [
++        { "evidenceId": "EVID-0025", "label": "SOW + KPI template discipline", "location": "canon/heritage/evidence/EVID-0025.md" }
++      ]
++    },
++    {
++      "skillKey": "evidence_to_case_study",
++      "name": "Evidence Pack → Case Study Conversion",
++      "description": "Convert proof artifacts and KPIs into truthful narratives suitable for analysts/customers with safety reviews as needed.",
++      "levels": {
++        "L0": "Understands case studies need proof.",
++        "L1": "Can draft a basic structure from evidence.",
++        "L2": "Can map claims to proof artifacts + caveats.",
++        "L3": "Can produce modular narratives for different audiences reliably."
++      },
++      "guardrails": ["No marquee claims without linked proof + caveats."],
++      "patterns": { "do": ["Problem→Approach→Results→Proof→Lessons"], "dont": ["Overclaim"] },
++      "evidenceLinks": [
++        { "evidenceId": "EVID-0026", "label": "Evidence → case study pipeline", "location": "canon/heritage/evidence/EVID-0026.md" }
++      ]
++    },
++    {
++      "skillKey": "partnership_roi_rubric",
++      "name": "Partnership ROI Rubric & Ecosystem Fit",
++      "description": "Evaluate partnerships with grounded economics, distribution leverage, risk, and operational burden.",
++      "levels": {
++        "L0": "Can list pros/cons.",
++        "L1": "Can apply a rubric with guidance.",
++        "L2": "Can quantify value/cost tradeoffs and propose deal structure.",
++        "L3": "Can build repeatable partner pipelines and playbooks."
++      },
++      "guardrails": ["No partnership execution without ROI + fit check."],
++      "patterns": { "do": ["Value vs cost vs risk vs burden"], "dont": ["Vague optimism"] },
++      "evidenceLinks": [
++        { "evidenceId": "EVID-0027", "label": "Partnership ROI rubric", "location": "canon/heritage/evidence/EVID-0027.md" }
++      ]
++    },
++    {
++      "skillKey": "analyst_narrative_evidence_grade",
++      "name": "Analyst Narrative Discipline (Evidence-Grade Messaging)",
++      "description": "Create analyst/PR messaging where every claim maps to proof artifacts and caveats; maintain consistency across audiences.",
++      "levels": {
++        "L0": "Can write a narrative.",
++        "L1": "Can include proof bullets with guidance.",
++        "L2": "Can produce evidence-grade briefs reliably.",
++        "L3": "Can standardize narrative kits across the portfolio."
++      },
++      "guardrails": ["No unproven claims in analyst/PR materials."],
++      "patterns": { "do": ["Claim→KPI→Proof→Caveat"], "dont": ["Hand-wavy differentiation"] },
++      "evidenceLinks": [
++        { "evidenceId": "EVID-0028", "label": "Analyst narrative discipline", "location": "canon/heritage/evidence/EVID-0028.md" }
++      ]
++    }
+   ]
+ }
+ END_FILE
+```
+
+---
+
+## Post-apply verification
+
+Run your scoreboard command:
+
+```bash
+npm run heritage:scoreboard
+```
+
+Then update `canon/heritage/STATUS.md` totals if needed.
+
+---
+
+### Next in the list (per your “work our way down”)
+
+Next we tackle **Marketing & Social Pod 5-pack** unless you want **Medical** or **Scholar Council** next.
