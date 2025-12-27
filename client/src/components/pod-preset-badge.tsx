@@ -21,18 +21,6 @@ function labelFor(k: PodPresetKey): string {
   return "Default";
 }
 
-function inferFromText(text: string): PodPresetKey | null {
-  const t = (text || "").toLowerCase();
-  const tenantBillingHits = [
-    "tenant", "multi-tenant", "multitenant", "billing", "stripe", "subscription",
-    "invoice", "proration", "trial", "checkout", "entitlement", "plan", "metering", "webhook",
-  ].some((k) => t.includes(k));
-  if (tenantBillingHits) return "tenantBilling";
-  const gigsterHits = ["gigster", "gigstergarage", "gigster garage"].some((k) => t.includes(k));
-  if (gigsterHits) return "gigsterGarage";
-  return null;
-}
-
 function getExplicitKey(source: any): PodPresetKey | null {
   if (!source) return null;
   const direct = normalize(source.podPresetKey || source.pod_preset_key);
@@ -53,34 +41,61 @@ function getExplicitKey(source: any): PodPresetKey | null {
   return null;
 }
 
-function buildSignalText(source: any): string {
+function inferLegacyKeyFromText(text: string): PodPresetKey | null {
+  const t = (text || "").toLowerCase();
+
+  const tenantBillingHits = [
+    "tenant",
+    "multi-tenant",
+    "multitenant",
+    "billing",
+    "stripe",
+    "subscription",
+    "invoice",
+    "proration",
+    "trial",
+    "checkout",
+    "entitlement",
+    "plan",
+    "metering",
+    "webhook",
+  ].some((k) => t.includes(k));
+  if (tenantBillingHits) return "tenantBilling";
+
+  const gigsterHits = ["gigster", "gigstergarage", "gigster garage"].some((k) => t.includes(k));
+  if (gigsterHits) return "gigsterGarage";
+
+  return null;
+}
+
+function buildLegacySignalText(source: any): string {
   if (!source) return "";
-  const repoHint = typeof source.repo_hint === "string" ? source.repo_hint : "";
-  const title = typeof source.title === "string" ? source.title : "";
-  const output = typeof source.output === "string" ? source.output : "";
-  const playbook = typeof source.playbook === "string" ? source.playbook : "";
-  return [repoHint, title, output, playbook].filter(Boolean).join(" ");
+  const parts: string[] = [];
+
+  if (typeof source.repo_hint === "string") parts.push(source.repo_hint);
+
+  const ctxRaw = source.targetContext ?? source.target_context ?? source.context ?? null;
+  if (typeof ctxRaw === "string") parts.push(ctxRaw);
+  else if (ctxRaw && typeof ctxRaw === "object") parts.push(JSON.stringify(ctxRaw));
+
+  if (typeof source.title === "string") parts.push(source.title);
+  if (typeof source.output === "string") parts.push(source.output);
+  if (typeof source.playbook === "string") parts.push(source.playbook);
+
+  return parts.join(" ");
 }
 
 export function PodPresetBadge({ source, className }: { source: any; className?: string }) {
-  const explicitKey = getExplicitKey(source);
-  if (explicitKey && explicitKey !== "default") {
-    return (
-      <Badge variant="secondary" className={className} data-testid={`badge-pod-${explicitKey}`} title="Explicit pod preset">
-        {labelFor(explicitKey)}
-      </Badge>
-    );
+  let key = getExplicitKey(source);
+
+  if (!key) {
+    key = inferLegacyKeyFromText(buildLegacySignalText(source));
   }
 
-  const signal = buildSignalText(source);
-  const inferredKey = inferFromText(signal);
-  if (inferredKey && inferredKey !== "default") {
-    return (
-      <Badge variant="secondary" className={className} data-testid={`badge-pod-${inferredKey}`} title="Pod inferred from keywords">
-        {labelFor(inferredKey)}
-      </Badge>
-    );
-  }
-
-  return null;
+  if (!key || key === "default") return null;
+  return (
+    <Badge variant="secondary" className={className} data-testid={`badge-pod-${key}`} title={key === getExplicitKey(source) ? "Explicit pod preset" : "Pod inferred from keywords"}>
+      {labelFor(key)}
+    </Badge>
+  );
 }
