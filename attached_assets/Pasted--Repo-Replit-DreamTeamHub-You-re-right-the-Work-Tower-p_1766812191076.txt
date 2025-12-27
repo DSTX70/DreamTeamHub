@@ -1,0 +1,253 @@
+✅ **Repo/Replit:** **DreamTeamHub**
+
+You’re right: the **Work Tower** page can be mechanically simplified (easy win), but the *real* “complicated/confusing” feeling you’re describing is usually the **Work Orders (Templates) page** because it *looks like “work”* even though it’s not execution.
+
+I’ll do both in the right order:
+
+1. **Ship a clean refactor of `/work`** (use the shared normalizer helper; remove local parsing/helpers).
+2. Give you a **Default vs Pro UX plan for Work Orders** (and I can patch it once you confirm the exact file path for that page).
+
+---
+
+# 1) ✅ Patch: Refactor Work Tower to use the shared helper
+
+This removes the local helper functions and replaces them with the canonical view-model from `@/lib/workItemView`.
+
+```diff
+FILE: client/src/pages/work/work-tower.tsx
+-import { useEffect, useMemo, useState } from "react";
+-import { Link, useLocation } from "wouter";
++import { useMemo, useState } from "react";
++import { Link, useLocation } from "wouter";
+ import { useQuery } from "@tanstack/react-query";
+ import { Input } from "@/components/ui/input";
+ import { Button } from "@/components/ui/button";
+ import { Badge } from "@/components/ui/badge";
+ import { Card } from "@/components/ui/card";
+ import { Plus, Search, X } from "lucide-react";
+-type WorkItem = {
+-  id: string;
+-  title?: string;
+-  status?: string;
+-  created_at?: string;
+-  updated_at?: string;
+-  targetContext?: any;
+-  target_context?: any;
+-  context?: any;
+-  cast?: any;
+-  assigned?: any;
+-};
+-// ... helper functions (safeJsonParse, toTitleCase, isCompletedStatus, normalizeTargetContext, deriveContextChips, deriveCastInitials)
++
++import { isDoneStatus, toWorkItemRowModel, type WorkItemLike } from "@/lib/workItemView";
++
++type Tab = "active" | "recent";
+ 
+ export default function WorkTower() {
+-  // ... component implementation with tabs, search, and rendering
++  const [, setLocation] = useLocation();
++  const [tab, setTab] = useState<Tab>("active");
++  const [q, setQ] = useState("");
++
++  const workItemsQuery = useQuery({
++    queryKey: ["work-items"],
++    queryFn: async () => {
++      const res = await fetch("/api/work-items", { credentials: "include" });
++      if (!res.ok) throw new Error(`Failed to load work items (${res.status})`);
++      const data = (await res.json()) as WorkItemLike[];
++      return Array.isArray(data) ? data : [];
++    },
++  });
++
++  const rows = useMemo(() => {
++    const items = workItemsQuery.data ?? [];
++    return items.map((w) => toWorkItemRowModel(w));
++  }, [workItemsQuery.data]);
++
++  const filtered = useMemo(() => {
++    const needle = q.trim().toLowerCase();
++    const byTab = rows.filter((r) => (tab === "recent" ? r.isDone : !r.isDone));
++    if (!needle) return byTab;
++
++    return byTab.filter((r) => {
++      const hay = [
++        r.title,
++        r.statusLabel,
++        r.id,
++        r.targetChips.join(" "),
++        r.castInitials.join(" "),
++      ]
++        .join(" | ")
++        .toLowerCase();
++      return hay.includes(needle);
++    });
++  }, [rows, tab, q]);
++
++  return (
++    <div className="space-y-4 p-4">
++      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
++        <div>
++          <h1 className="text-xl font-semibold">Work</h1>
++          <div className="text-sm text-muted-foreground">
++            Active execution (Work Items). Templates live under Work Orders.
++          </div>
++        </div>
++        <div className="flex flex-wrap gap-2">
++          <Button onClick={() => setLocation("/intent")}>
++            <Plus className="mr-2 h-4 w-4" />
++            New Work
++          </Button>
++        </div>
++      </div>
++
++      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
++        <div className="flex gap-2">
++          <Button
++            variant={tab === "active" ? "default" : "outline"}
++            onClick={() => setTab("active")}
++          >
++            Active
++          </Button>
++          <Button
++            variant={tab === "recent" ? "default" : "outline"}
++            onClick={() => setTab("recent")}
++          >
++            Recent
++          </Button>
++        </div>
++
++        <div className="flex w-full items-center gap-2 md:w-[440px]">
++          <div className="relative w-full">
++            <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
++            <Input
++              value={q}
++              onChange={(e) => setQ(e.target.value)}
++              placeholder="Search title, status, context, id…"
++              className="pl-9"
++            />
++          </div>
++          {q.trim() ? (
++            <Button variant="outline" onClick={() => setQ("")} title="Clear search">
++              <X className="h-4 w-4" />
++            </Button>
++          ) : null}
++        </div>
++      </div>
++
++      {workItemsQuery.isLoading ? (
++        <div className="text-sm text-muted-foreground">Loading…</div>
++      ) : null}
++      {workItemsQuery.error ? (
++        <Card className="p-3 text-sm">
++          {(workItemsQuery.error as Error)?.message || "Failed to load work items"}
++        </Card>
++      ) : null}
++
++      <div className="space-y-2">
++        {filtered.length === 0 && !workItemsQuery.isLoading ? (
++          <Card className="p-6 text-sm text-muted-foreground">No work items found.</Card>
++        ) : null}
++
++        {filtered.map((vm) => (
++          <Link key={vm.id} href={`/work-items/${vm.id}`}>
++            <Card className="p-4 hover:bg-muted/40">
++              <div className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
++                <div className="min-w-0">
++                  <div className="truncate font-medium">{vm.title}</div>
++                  <div className="truncate text-xs text-muted-foreground">{vm.id}</div>
++                </div>
++
++                <div className="flex flex-wrap items-center gap-2 md:justify-end">
++                  <Badge variant="outline">{vm.statusLabel}</Badge>
++
++                  {vm.targetChips.length ? (
++                    <>
++                      {vm.targetChips.slice(0, 3).map((c, idx) => (
++                        <Badge key={idx} variant="secondary" className="max-w-[260px] truncate">
++                          {c}
++                        </Badge>
++                      ))}
++                      {vm.targetChips.length > 3 ? (
++                        <Badge variant="secondary">+{vm.targetChips.length - 3}</Badge>
++                      ) : null}
++                    </>
++                  ) : (
++                    <Badge variant="secondary" className="text-muted-foreground">
++                      No target set
++                    </Badge>
++                  )}
++
++                  <div className="flex items-center gap-1">
++                    {vm.castInitials.length ? (
++                      vm.castInitials.slice(0, 3).map((c, idx) => (
++                        <span
++                          key={idx}
++                          className="inline-flex h-7 w-7 items-center justify-center rounded-full border text-xs"
++                          title={c}
++                        >
++                          {c}
++                        </span>
++                      ))
++                    ) : (
++                      <span className="text-xs text-muted-foreground">—</span>
++                    )}
++                  </div>
++                </div>
++              </div>
++            </Card>
++          </Link>
++        ))}
++      </div>
++    </div>
++  );
+ }
+ 
+ END_FILE
+```
+
+**What this accomplishes**
+
+* Removes the complicated inline parsing logic from the page
+* All context/cast/status normalization is now **one canonical helper**
+* `/work` becomes a straightforward “tabs + search + list” component
+
+---
+
+# 2) Work Orders page is the confusing one — Default vs Pro fix
+
+### The real fix is *IA + labeling + affordances* (not more features)
+
+Work Orders must scream **Templates**, not “active work”.
+
+## Default (Work Orders)
+
+* Page title: **Templates**
+* Subtitle: “Work Orders are runbooks. Active execution lives in Work Items.”
+* Big buttons:
+
+  * **Go to Work → /work**
+  * **New Work → /intent**
+* Work Order list is fine, but treat it like a library:
+
+  * “Run / Create Work Item” CTA per template (if supported)
+  * Otherwise just “View”
+
+## Pro (Work Orders)
+
+Everything in Default +:
+
+* “Runs from this template” stats (count, last run)
+* Advanced search by playbookHandle / caps / KPIs
+* Debug: show raw Work Order JSON
+
+### Why this works
+
+Default users stop confusing templates for execution.
+Pro users still get power—without changing meanings.
+
+✅ **Blocker to patch this** (so I don’t guess wrong):
+Tell me the actual Work Orders page file path (e.g., `client/src/pages/work-orders.tsx` or wherever it lives) and I’ll ship the exact banner/CTA/rename patch.
+
+---
+
+If you paste just the top of the Work Orders page component (imports + header render + list render, ~60 lines), I’ll return a paste-ready patch that makes it instantly clearer in Default and adds the Pro affordances behind the global toggle.
