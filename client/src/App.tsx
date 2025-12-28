@@ -69,6 +69,7 @@ import ArtifactsPage from "@/pages/artifacts";
 import VerificationPage from "@/pages/verification";
 import StrategyListPage from "@/pages/strategy/strategy-list";
 import StrategyDetailPage from "@/pages/strategy/strategy-detail";
+import GigsterGarageConnectorPage from "@/pages/connectors/gigsterGarage";
 import { Button } from "@/components/ui/button";
 import { LogOut, User as UserIcon, Search } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -143,6 +144,9 @@ function AuthenticatedRoutes() {
       <Route path="/checkout" component={RetiredPage} />
       <Route path="/help" component={HelpPage} />
       <Route path="/demo" component={Demo} />
+      {/* Connectors */}
+      <Route path="/connectors/gigsterGarage" component={GigsterGarageConnectorPage} />
+      <Route path="/connectors/gigster-garage" component={GigsterGarageConnectorPage} />
       <Route component={NotFound} />
     </Switch>
   );
