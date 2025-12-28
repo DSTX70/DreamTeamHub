@@ -1,0 +1,68 @@
+Locked — ✅ **Pilot C context injection is fully in place** (and still within your constraints: read-only, no schema changes, no auto-apply, no VSuiteHQ).
+
+### Where we are now
+
+**Phase 3A DoD is satisfied**:
+
+* Connector fetch works
+* Prompt augmentation is gated + safe
+* Errors become `ERROR` blocks (no crashes)
+* Feature flag `PILOTC_GG_CONTEXT_ENABLED` controls it
+
+### What’s blocked (and why)
+
+To generate the **Pilot C “real diffs” drop for GigsterGarage** (no placeholders), I need the **actual current code** of the affected files (the 7 target paths), because the fixes must be **line-accurate** to your app’s existing auth + query patterns.
+
+Right now, I can’t see those files’ contents in this chat, so I won’t invent diffs.
+
+### Fastest way to unblock (no new tooling)
+
+Since your connector is working, use DreamTeamHub to fetch the 7 files and paste them here.
+
+**Option A (recommended): one console fetch → paste JSON**
+In the **DreamTeamHub** browser console:
+
+```js
+const paths = [
+  "client/src/hooks/useAuth.ts",
+  "client/src/lib/queryClient.ts",
+  "client/src/components/timer-widget.tsx",
+  "client/src/pages/productivity.tsx",
+  "client/src/pages/mobile-time-tracking.tsx",
+  "client/src/components/app-header.tsx",
+  "client/src/components/QuickActionButton.tsx",
+];
+
+fetch("/api/connectors/gigsterGarage/files", {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({ paths }),
+})
+  .then(r => r.json())
+  .then(x => {
+    console.log(x._meta || x.meta || x);
+    // copy/paste x.files into chat
+    window.__GG = x;
+  });
+```
+
+Then paste `__GG.files` (or the whole JSON) here.
+
+**Option B: paste the file contents directly**
+Copy each file’s visible content from the connector UI and paste it.
+
+---
+
+## What I will ship immediately once you paste the file contents
+
+**Repo:** `GigsterGarage` (manual apply)
+A single, real patch drop that typically includes:
+
+* **queryClient.ts**: `retry` function that returns `false` on 401/403, plus `refetchOnWindowFocus/refetchOnReconnect/refetchOnMount` tuned to avoid auth-spam loops
+* **useAuth.ts**: ensure `authReady` + `isAuthed` are reliable and exported/consumed consistently
+* **pages/components with polling**: guard intervals/effects so they don’t run unless `authReady && isAuthed`
+* **global 401 handling** (if present): stop cascading retries, optional “silent” logout behavior, and prevent query invalidations from immediately refetching while unauthenticated
+
+All with **file-aware changes only** (no placeholders).
+
+Paste the fetched file payload and I’ll return the **GigsterGarage Pilot C drop** in the next message.
