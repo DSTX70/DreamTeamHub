@@ -101,7 +101,7 @@ router.post("/api/connectors/gigsterGarage/files", jsonParser, async (req: Reque
             "Content-Type": "application/json",
             "x-dth-token": token,
           },
-          body: JSON.stringify({ path: p }),
+          body: JSON.stringify({ paths: [p] }),
         });
 
         const contentType = fetchRes.headers.get("content-type") || "";
