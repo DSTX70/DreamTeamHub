@@ -4,6 +4,24 @@ const router = Router();
 
 type FileResult = { path: string; ok: boolean; content?: string; error?: string };
 
+router.get("/api/connectors/gigsterGarage/debug", (_req: Request, res: Response) => {
+  const base = process.env.GIGSTER_GARAGE_BASE_URL || "";
+  const token = process.env.GIGSTER_GARAGE_READONLY_TOKEN || "";
+  let upstreamUrl = "";
+  try {
+    upstreamUrl = base ? new URL("/api/dth/files", base).toString() : "";
+  } catch {
+    upstreamUrl = "(invalid base url)";
+  }
+  res.json({
+    ok: true,
+    base,
+    upstreamUrl,
+    tokenSet: Boolean(token),
+    tokenLast4: token ? token.slice(-4) : "",
+  });
+});
+
 router.post("/api/connectors/gigsterGarage/files", async (req: Request, res: Response) => {
   try {
     const { paths } = req.body as { paths?: string[] };
