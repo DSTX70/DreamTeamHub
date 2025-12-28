@@ -1,5 +1,6 @@
 import { promises as fs } from "node:fs";
 import path from "node:path";
+import { fetchGigsterGarageFiles, formatGigsterFilesForPrompt } from "../services/connectors/gigsterGarageReadonly";
 
 export type WorkItemStageName =
   | "NONE"
@@ -91,6 +92,92 @@ export function buildRecommendation(params: {
     `\n---\n\n` +
     `## Approval required\n` +
     `No drop should be generated or applied until Dustin approves this recommendation.\n`;
+}
+
+const PILOT_C_PATHS = [
+  "client/src/hooks/useAuth.ts",
+  "client/src/lib/queryClient.ts",
+  "client/src/components/timer-widget.tsx",
+  "client/src/pages/productivity.tsx",
+  "client/src/pages/mobile-time-tracking.tsx",
+  "client/src/components/app-header.tsx",
+  "client/src/components/QuickActionButton.tsx",
+];
+
+function ggContextEnabled(): boolean {
+  const v = (process.env.RECOMMENDATION_GG_CONTEXT_ENABLED ?? "true").toLowerCase().trim();
+  return v !== "0" && v !== "false" && v !== "off";
+}
+
+function looksLikePilotC(text: string): boolean {
+  const t = (text || "").toLowerCase();
+  const keywords = [
+    "pilot c",
+    "401",
+    "unauthorized",
+    "auth",
+    "authready",
+    "isauthed",
+    "useauth",
+    "queryclient",
+    "react-query",
+    "tanstack",
+    "retry",
+    "refetch",
+    "poll",
+    "polling",
+    "interval",
+    "spam",
+    "query noise",
+    "refetchonwindowfocus",
+    "refetchonmount",
+    "refetchinterval",
+    "staletime",
+    "logout",
+    "expired",
+    "token",
+  ];
+  return keywords.some((k) => t.includes(k));
+}
+
+function repoIsGigsterGarage(repoHint?: string): boolean {
+  return (repoHint || "").toLowerCase().includes("gigstergarage");
+}
+
+export async function buildRecommendationWithRepoContext(params: {
+  title?: string;
+  inputs?: string;
+  repoHint?: string;
+  strategySessionId?: string | null;
+}): Promise<string> {
+  const base = buildRecommendation(params);
+
+  const hintText = `${params.title || ""}\n${params.inputs || ""}`;
+  if (!ggContextEnabled()) return base;
+  if (!repoIsGigsterGarage(params.repoHint)) return base;
+  if (!looksLikePilotC(hintText)) return base;
+
+  if (!process.env.GIGSTER_GARAGE_BASE_URL || !process.env.GIGSTER_GARAGE_READONLY_TOKEN) return base;
+
+  const fetched = await fetchGigsterGarageFiles(PILOT_C_PATHS, {
+    perFileMaxChars: 18_000,
+    totalMaxChars: 75_000,
+  });
+
+  const metaLine =
+    `requested=${fetched.meta.requestedCount} returned=${fetched.meta.returnedCount} ` +
+    `nonEmpty=${fetched.meta.nonEmptyCount} errors=${fetched.meta.errorCount} ` +
+    `truncatedChars=${fetched.meta.truncatedTotalChars}`;
+
+  const ctx =
+    `\n\n---\n` +
+    `## Read-only repo context (GigsterGarage)\n` +
+    `**Source:** DreamTeamHub → GigsterGarage read-only connector\n` +
+    `**Meta:** ${metaLine}\n\n` +
+    `Use the file blocks below to propose *specific diffs* that stop 401 spam + query noise.\n\n` +
+    `${formatGigsterFilesForPrompt(fetched.files)}\n`;
+
+  return base + ctx;
 }
 
 export function buildDrop(params: {

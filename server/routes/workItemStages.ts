@@ -1,5 +1,5 @@
 import type { Express } from "express";
-import { buildDrop, buildRecommendation, getStage, saveStage } from "../lib/workItemStages";
+import { buildDrop, buildRecommendation, buildRecommendationWithRepoContext, getStage, saveStage } from "../lib/workItemStages";
 
 export function registerWorkItemStageRoutes(app: Express) {
   // Read stage record
@@ -20,7 +20,7 @@ export function registerWorkItemStageRoutes(app: Express) {
       const rec = await getStage(workItemId);
 
       const { title, inputs, repoHint, strategySessionId } = req.body || {};
-      const text = buildRecommendation({ title, inputs, repoHint, strategySessionId });
+      const text = await buildRecommendationWithRepoContext({ title, inputs, repoHint, strategySessionId });
 
       const next = await saveStage({
         ...rec,
