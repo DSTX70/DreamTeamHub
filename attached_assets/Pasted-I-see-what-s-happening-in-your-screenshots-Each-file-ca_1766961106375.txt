@@ -1,7 +1,32 @@
+I see what’s happening in your screenshots:
+
+* ✅ Each file card shows **OK**
+* ❌ The **content panes are blank**
+
+That pattern almost always means **the upstream payload has file entries, but the content field name doesn’t match what the DTH UI is reading** (e.g., upstream returns `content` or `text`, UI is reading `contents`, etc.). So the UI renders “OK” but `value=""`.
+
+### Fix (no schema changes): normalize the upstream response in the DTH proxy
+
+We’ll make the DreamTeamHub proxy **always return `files[]` with BOTH `contents` and `content` populated**, regardless of what GigsterGarage called it.
+
+---
+
+## DROP B — DreamTeamHub (apply manually)
+
+**Repo:** `DreamTeamHub`
+**Replace file:** `server/routes/connectors/gigsterGarage.route.ts`
+
+```ts
+FILE: server/routes/connectors/gigsterGarage.route.ts
 import express, { Request, Response } from "express";
 
 const router = express.Router();
 
+/**
+ * Route-local body parsing (robust against missing/wrong Content-Type)
+ * - Try express.json for real JSON requests
+ * - Fallback to express.text and attempt JSON.parse or treat as newline pathsText
+ */
 const jsonParser = express.json({
   limit: "2mb",
   type: ["application/json", "application/*+json"],
@@ -16,14 +41,17 @@ function routeBodyParser(req: Request, res: Response, next: (err?: any) => void)
   jsonParser(req, res, (err) => {
     if (err) return next(err);
 
+    // If jsonParser ran and produced an object, we're done.
     if (req.body && typeof req.body === "object") return next();
 
+    // Otherwise fallback to text parsing.
     textParser(req, res, (err2) => {
       if (err2) return next(err2);
 
       if (typeof req.body === "string") {
         const raw = req.body.trim();
 
+        // If it looks like JSON, try parsing; otherwise treat as newline list.
         if (raw.startsWith("{") || raw.startsWith("[")) {
           try {
             req.body = JSON.parse(raw);
@@ -45,6 +73,7 @@ type ParsedPathsResult = { paths: string[]; source: string };
 function parsePaths(body: any): ParsedPathsResult {
   if (!body) return { paths: [], source: "none" };
 
+  // Allow raw string body to be treated as pathsText
   if (typeof body === "string") {
     const split = body
       .split(/\r?\n/)
@@ -53,6 +82,7 @@ function parsePaths(body: any): ParsedPathsResult {
     return { paths: split, source: "raw-string" };
   }
 
+  // { paths: ["a","b"] }
   if (Array.isArray(body.paths)) {
     return {
       paths: body.paths.map(String).map((s) => s.trim()).filter(Boolean),
@@ -60,6 +90,7 @@ function parsePaths(body: any): ParsedPathsResult {
     };
   }
 
+  // { paths: "a\nb" } OR { pathsText: "a\nb" } OR { paths_string: "a\nb" }
   const raw =
     typeof body.paths === "string"
       ? body.paths
@@ -100,8 +131,10 @@ function safeKeys(x: any): string[] {
 
 function tryDecodeBase64(s: string): string | null {
   try {
+    // Heuristic: if it decodes cleanly and contains mostly printable chars, accept it.
     const buf = Buffer.from(s, "base64");
     const out = buf.toString("utf8");
+    // If decoding gives lots of replacement chars, reject.
     const bad = (out.match(/\uFFFD/g) || []).length;
     if (bad > 3) return null;
     return out;
@@ -125,6 +158,7 @@ function pickContentField(obj: any): { text: string; from: string } {
     if (typeof v === "string") return { text: v, from: k };
   }
 
+  // base64 variants
   const b64Candidates: Array<[string, any]> = [
     ["contentBase64", obj?.contentBase64],
     ["contentsBase64", obj?.contentsBase64],
@@ -162,6 +196,7 @@ type NormalizedFile = {
 };
 
 function normalizeUpstreamPayload(payload: any) {
+  // Identify a list of file-ish items
   let items: any[] = [];
   let normalizedFrom = "unknown";
 
@@ -172,9 +207,11 @@ function normalizeUpstreamPayload(payload: any) {
     items = payload.results;
     normalizedFrom = "payload.results[]";
   } else if (payload?.files && typeof payload.files === "object") {
+    // files: { "path": "content" }
     items = Object.entries(payload.files).map(([path, v]) => ({ path, content: v }));
     normalizedFrom = "payload.files:map";
   } else if (payload?.data && typeof payload.data === "object" && !Array.isArray(payload.data)) {
+    // data: { "path": "content" }
     items = Object.entries(payload.data).map(([path, v]) => ({ path, content: v }));
     normalizedFrom = "payload.data:map";
   } else if (Array.isArray(payload)) {
@@ -194,6 +231,7 @@ function normalizeUpstreamPayload(payload: any) {
       path,
       ok,
       error,
+      // Provide BOTH keys to satisfy whichever the UI expects
       contents,
       content: contents,
       _contentFrom: picked.from,
@@ -209,6 +247,7 @@ function normalizeUpstreamPayload(payload: any) {
   return {
     ok: topOk,
     files,
+    // extra aliases for compatibility
     results: files,
     _meta: {
       normalized: true,
@@ -226,7 +265,11 @@ function normalizeUpstreamPayload(payload: any) {
   };
 }
 
-router.post("/api/connectors/gigsterGarage/echo", routeBodyParser, (req: Request, res: Response) => {
+/**
+ * DEBUG: proves what DTH parsed from the request body
+ * POST /api/connectors/gigsterGarage/echo
+ */
+router.post("/echo", routeBodyParser, (req: Request, res: Response) => {
   const parsed = parsePaths(req.body);
 
   res.json({
@@ -241,25 +284,11 @@ router.post("/api/connectors/gigsterGarage/echo", routeBodyParser, (req: Request
   });
 });
 
-router.get("/api/connectors/gigsterGarage/debug", (_req: Request, res: Response) => {
-  const base = process.env.GIGSTER_GARAGE_BASE_URL || "";
-  const token = process.env.GIGSTER_GARAGE_READONLY_TOKEN || "";
-  let upstreamUrl = "";
-  try {
-    upstreamUrl = base ? new URL("/api/dth/files", base).toString() : "";
-  } catch {
-    upstreamUrl = "(invalid base url)";
-  }
-  res.json({
-    ok: true,
-    base,
-    upstreamUrl,
-    tokenSet: Boolean(token),
-    tokenLast4: token ? token.slice(-4) : "",
-  });
-});
-
-router.post("/api/connectors/gigsterGarage/files", routeBodyParser, async (req: Request, res: Response) => {
+/**
+ * Read-only proxy to GigsterGarage:
+ * POST /api/connectors/gigsterGarage/files
+ */
+router.post("/files", routeBodyParser, async (req: Request, res: Response) => {
   try {
     const parsed = parsePaths(req.body);
 
@@ -284,6 +313,7 @@ router.post("/api/connectors/gigsterGarage/files", routeBodyParser, async (req: 
 
     const upstreamUrl = `${ggBase}/api/dth/files`;
 
+    // Force upstream to receive proper JSON no matter what came in.
     const upstreamRes = await fetch(upstreamUrl, {
       method: "POST",
       headers: {
@@ -297,6 +327,7 @@ router.post("/api/connectors/gigsterGarage/files", routeBodyParser, async (req: 
     const ct = upstreamRes.headers.get("content-type") || "";
     const text = await upstreamRes.text();
 
+    // Bubble upstream errors with useful diagnostics (no secrets).
     if (!upstreamRes.ok) {
       let upstreamJson: any = null;
       if (ct.includes("application/json")) {
@@ -320,6 +351,7 @@ router.post("/api/connectors/gigsterGarage/files", routeBodyParser, async (req: 
       });
     }
 
+    // Successful upstream response — normalize to ensure UI sees contents.
     if (ct.includes("application/json")) {
       try {
         const upstreamJson = JSON.parse(text);
@@ -350,3 +382,45 @@ router.post("/api/connectors/gigsterGarage/files", routeBodyParser, async (req: 
 });
 
 export default router;
+END_FILE
+```
+
+---
+
+## Retest (what you should see now)
+
+Go back to `/connectors/gigsterGarage` → **Fetch files**.
+
+Even if the UI is reading `content` *or* `contents`, it should now populate.
+If it *still* looks blank, the normalized response will include:
+
+* `_meta.nonEmptyCount`
+* `_meta.sample[].contentLen`
+
+So we’ll immediately know whether:
+
+* **content is present but UI styling is hiding it**, or
+* **GigsterGarage truly isn’t returning any content** (contentLen = 0)
+
+---
+
+## One quick diagnostic (no new UI patch needed)
+
+In browser console on DreamTeamHub:
+
+```js
+fetch("/api/connectors/gigsterGarage/files", {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({ paths: [
+    "client/src/hooks/useAuth.ts",
+    "client/src/lib/queryClient.ts",
+    "server/routes.ts"
+  ]}),
+}).then(r => r.json()).then(console.log);
+```
+
+If `_meta.nonEmptyCount` is **3**, we’re good and the UI just needs styling.
+If it’s **0**, then GigsterGarage is returning entries without content and we patch that next.
+
+Once you paste the console JSON (just the `_meta` block is enough), I’ll immediately ship the next drop (either **DTH UI styling** or **GigsterGarage route-local parser/return content**), and then we move into **Pilot C**.
