@@ -3,6 +3,7 @@ import type { LLMConfig } from "../../shared/llm/types";
 import { readFileSync } from "fs";
 import { join, dirname } from "path";
 import { fileURLToPath } from "url";
+import { maybeAugmentUserPromptWithPilotCContext } from "./context/pilotC_gigsterGarageContext";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -44,7 +45,12 @@ export async function runSkill(options: RunSkillOptions): Promise<any> {
 
   const llmProvider = makeProvider(llmConfig);
 
-  const userPrompt = `Work Item Input:\n${JSON.stringify(input, null, 2)}\n\nRespond with JSON ONLY matching the output schema.`;
+  const baseUserPrompt = `Work Item Input:\n${JSON.stringify(input, null, 2)}\n\nRespond with JSON ONLY matching the output schema.`;
+
+  const userPrompt = await maybeAugmentUserPromptWithPilotCContext(baseUserPrompt, {
+    skillName,
+    input,
+  });
 
   const fullPrompt = `${skill.system_prompt}\n\n${userPrompt}`;
 

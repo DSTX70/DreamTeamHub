@@ -1,0 +1,455 @@
+**Connector fetch OK** ✅ — and nice: the “File too large” guardrail is doing its job.
+
+You gave me the **right target surface area**. Next patch is **DreamTeamHub repo** and it does exactly one thing:
+
+> **When the LLM skill runner is invoked for Pilot C–type work (auth/401/query noise), it automatically pulls read-only context from GigsterGarage (the 7 target files) and injects it into the prompt** — **no schema changes**, **no auto-apply**, **no VSuiteHQ push**.
+
+Because you didn’t paste the code bodies, I’m choosing the **lowest-risk integration point**: `server/ai/runSkill.ts` (single choke-point) with **tight gating** so this only triggers for Pilot C-like runs.
+
+---
+
+# DROP C2 — DreamTeamHub (manual apply)
+
+## What this drop does
+
+* Adds a **Pilot C context injector** that:
+
+  * fetches the 7 GigsterGarage files (skipping large files automatically via GG limits)
+  * formats them into `FILE: … END_FILE` blocks
+  * appends them to the **user prompt** only when Pilot C heuristics match (401/auth/query noise)
+* Modifies `server/ai/runSkill.ts` to call the injector **right before** OpenAI execution.
+
+> ✅ No DB changes.
+> ✅ No schema changes.
+> ✅ No auto-apply.
+> ✅ Works even if GG fetch fails (it appends error blocks, does not crash).
+
+---
+
+## 1) NEW file — Pilot C context injector
+
+**Repo:** `DreamTeamHub`
+**Add file:** `server/ai/context/pilotC_gigsterGarageContext.ts`
+
+```ts
+FILE: server/ai/context/pilotC_gigsterGarageContext.ts
+import { fetchGigsterGarageFiles, formatGigsterFilesForPrompt } from "../../services/connectors/gigsterGarageReadonly";
+
+const PILOT_C_PATHS = [
+  "client/src/hooks/useAuth.ts",
+  "client/src/lib/queryClient.ts",
+  "client/src/components/timer-widget.tsx",
+  "client/src/pages/productivity.tsx",
+  "client/src/pages/mobile-time-tracking.tsx",
+  "client/src/components/app-header.tsx",
+  "client/src/components/QuickActionButton.tsx",
+];
+
+function envEnabled(): boolean {
+  const v = (process.env.PILOTC_GG_CONTEXT_ENABLED ?? "true").toLowerCase().trim();
+  return v !== "0" && v !== "false" && v !== "off";
+}
+
+/**
+ * Tight gating: only attach context when the request smells like Pilot C:
+ * - mentions 401 spam, auth gating, query retry/refetch, polling loops
+ * - mentions GigsterGarage paths or known files
+ */
+export function shouldAttachPilotCContext(hintText: string): boolean {
+  const t = (hintText || "").toLowerCase();
+
+  const keywords = [
+    "pilot c",
+    "401",
+    "unauthorized",
+    "authready",
+    "isauthed",
+    "useauth",
+    "queryclient",
+    "react-query",
+    "tanstack",
+    "retry",
+    "refetch",
+    "poll",
+    "polling",
+    "interval",
+    "spam",
+    "query noise",
+    "staleTime".toLowerCase(),
+    "refetchOnWindowFocus".toLowerCase(),
+    "refetchOnMount".toLowerCase(),
+    "refetchInterval".toLowerCase(),
+    "onerror".toLowerCase(),
+    "logout",
+    "expired",
+    "token",
+    "gigstergarage",
+  ];
+
+  // Also match direct file path mentions
+  const pathHints = PILOT_C_PATHS.map((p) => p.toLowerCase());
+
+  return keywords.some((k) => t.includes(k)) || pathHints.some((p) => t.includes(p));
+}
+
+export async function buildPilotCGigsterGarageContextBlock(): Promise<string> {
+  if (!envEnabled()) return "";
+
+  // If connector env vars are missing, do not throw; just skip.
+  if (!process.env.GIGSTER_GARAGE_BASE_URL || !process.env.GIGSTER_GARAGE_READONLY_TOKEN) {
+    return "";
+  }
+
+  const fetched = await fetchGigsterGarageFiles(PILOT_C_PATHS, {
+    perFileMaxChars: 18_000,
+    totalMaxChars: 75_000,
+  });
+
+  // Always return a block (even if upstream errors) to keep runs reproducible.
+  const header =
+    `\n\n` +
+    `====================\n` +
+    `READ-ONLY CONTEXT — GigsterGarage (Pilot C)\n` +
+    `Source: connector fetch (token-protected)\n` +
+    `Notes: Large files may be blocked by upstream limits; errors are included as ERROR blocks.\n` +
+    `====================\n\n`;
+
+  const body = formatGigsterFilesForPrompt(fetched.files);
+
+  const footer =
+    `\n\n` +
+    `====================\n` +
+    `END READ-ONLY CONTEXT — GigsterGarage (Pilot C)\n` +
+    `Meta: requested=${fetched.meta.requestedCount} returned=${fetched.meta.returnedCount} nonEmpty=${fetched.meta.nonEmptyCount} errors=${fetched.meta.errorCount} truncatedChars=${fetched.meta.truncatedTotalChars}\n` +
+    `====================\n\n`;
+
+  return header + body + footer;
+}
+END_FILE
+```
+
+---
+
+## 2) Ensure the fetch helper exists (if you already applied my earlier helper, keep yours)
+
+If you **already have** `server/services/connectors/gigsterGarageReadonly.ts`, do **not** overwrite it.
+If you **don’t**, add it now:
+
+```ts
+FILE: server/services/connectors/gigsterGarageReadonly.ts
+type GGFileResult = {
+  path: string;
+  ok: boolean;
+  error?: string;
+  contents: string;
+};
+
+type FetchGGFilesResponse = {
+  ok: boolean;
+  files: GGFileResult[];
+  meta: {
+    requestedCount: number;
+    returnedCount: number;
+    nonEmptyCount: number;
+    tooLargeCount: number;
+    errorCount: number;
+    truncatedTotalChars: number;
+  };
+};
+
+function envOrThrow(key: string): string {
+  const v = process.env[key];
+  if (!v) throw new Error(`Missing env var ${key}`);
+  return v;
+}
+
+function baseUrl(url: string): string {
+  return url.replace(/\/+$/, "");
+}
+
+function pickContentField(obj: any): string {
+  const candidates = [obj?.contents, obj?.content, obj?.text, obj?.body, obj?.data, obj?.raw];
+  for (const v of candidates) {
+    if (typeof v === "string") return v;
+  }
+  return "";
+}
+
+function normalizeFiles(payload: any): GGFileResult[] {
+  const arr = Array.isArray(payload?.files)
+    ? payload.files
+    : Array.isArray(payload?.results)
+      ? payload.results
+      : [];
+
+  return arr.map((it: any) => {
+    const path = String(it?.path ?? it?.filePath ?? it?.name ?? "").trim();
+    const ok = typeof it?.ok === "boolean" ? it.ok : true;
+    const error = typeof it?.error === "string" ? it.error : undefined;
+    const contents = pickContentField(it) ?? "";
+    return { path, ok, error, contents };
+  });
+}
+
+function truncate(s: string, maxChars: number): { text: string; truncated: boolean } {
+  if (s.length <= maxChars) return { text: s, truncated: false };
+  return { text: s.slice(0, maxChars) + `\n\n/* …truncated at ${maxChars} chars… */\n`, truncated: true };
+}
+
+export async function fetchGigsterGarageFiles(
+  paths: string[],
+  opts?: { perFileMaxChars?: number; totalMaxChars?: number }
+): Promise<FetchGGFilesResponse> {
+  const perFileMaxChars = opts?.perFileMaxChars ?? 18_000;
+  const totalMaxChars = opts?.totalMaxChars ?? 70_000;
+
+  const ggBase = baseUrl(envOrThrow("GIGSTER_GARAGE_BASE_URL"));
+  const token = envOrThrow("GIGSTER_GARAGE_READONLY_TOKEN");
+
+  const upstreamUrl = `${ggBase}/api/dth/files`;
+
+  const upstreamRes = await fetch(upstreamUrl, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Accept: "application/json",
+      "x-dth-token": token,
+    },
+    body: JSON.stringify({ paths }),
+  });
+
+  const text = await upstreamRes.text();
+  if (!upstreamRes.ok) {
+    return {
+      ok: false,
+      files: paths.map((p) => ({
+        path: p,
+        ok: false,
+        error: `Upstream error ${upstreamRes.status}: ${text.slice(0, 200)}`,
+        contents: "",
+      })),
+      meta: {
+        requestedCount: paths.length,
+        returnedCount: 0,
+        nonEmptyCount: 0,
+        tooLargeCount: 0,
+        errorCount: paths.length,
+        truncatedTotalChars: 0,
+      },
+    };
+  }
+
+  let payload: any;
+  try {
+    payload = JSON.parse(text);
+  } catch {
+    return {
+      ok: false,
+      files: paths.map((p) => ({
+        path: p,
+        ok: false,
+        error: "Upstream returned non-JSON",
+        contents: "",
+      })),
+      meta: {
+        requestedCount: paths.length,
+        returnedCount: 0,
+        nonEmptyCount: 0,
+        tooLargeCount: 0,
+        errorCount: paths.length,
+        truncatedTotalChars: 0,
+      },
+    };
+  }
+
+  const normalized = normalizeFiles(payload);
+
+  let runningTotal = 0;
+  let truncatedTotalChars = 0;
+
+  const capped = normalized.map((f) => {
+    if (!f.contents) return f;
+
+    const t1 = truncate(f.contents, perFileMaxChars);
+    let contents = t1.text;
+
+    const remaining = Math.max(0, totalMaxChars - runningTotal);
+    if (contents.length > remaining) {
+      const t2 = truncate(contents, remaining);
+      if (t2.truncated) truncatedTotalChars += contents.length - t2.text.length;
+      contents = t2.text;
+    }
+
+    if (t1.truncated) truncatedTotalChars += f.contents.length - t1.text.length;
+
+    runningTotal += contents.length;
+    return { ...f, contents };
+  });
+
+  const tooLargeCount = capped.filter((f) => /too large/i.test(f.error ?? "")).length;
+  const errorCount = capped.filter((f) => !f.ok).length;
+  const nonEmptyCount = capped.filter((f) => (f.contents ?? "").length > 0).length;
+
+  return {
+    ok: true,
+    files: capped,
+    meta: {
+      requestedCount: paths.length,
+      returnedCount: capped.length,
+      nonEmptyCount,
+      tooLargeCount,
+      errorCount,
+      truncatedTotalChars,
+    },
+  };
+}
+
+export function formatGigsterFilesForPrompt(files: GGFileResult[]): string {
+  const blocks: string[] = [];
+
+  for (const f of files) {
+    if (!f.path) continue;
+
+    if (!f.ok) {
+      blocks.push(
+        `FILE: ${f.path}\n` +
+          `ERROR: ${f.error || "unknown error"}\n` +
+          `END_FILE\n`
+      );
+      continue;
+    }
+
+    blocks.push(`FILE: ${f.path}\n${f.contents || ""}\nEND_FILE\n`);
+  }
+
+  return blocks.join("\n");
+}
+END_FILE
+```
+
+---
+
+## 3) Patch — inject context in the LLM skill runner
+
+**Repo:** `DreamTeamHub`
+**Edit file:** `server/ai/runSkill.ts`
+
+This patch is written to be **backwards compatible**:
+
+* It does nothing unless Pilot C gating matches.
+* It does nothing if GG env vars aren’t set.
+
+```ts
+FILE: server/ai/runSkill.ts
+// NOTE: This patch assumes runSkill.ts constructs a prompt string before calling OpenAI.
+// If your file already has different structure, apply the same insertion at the point
+// where you have the final user prompt (right before the OpenAI call).
+
+import { buildPilotCGigsterGarageContextBlock, shouldAttachPilotCContext } from "./context/pilotC_gigsterGarageContext";
+
+// ...keep your existing imports...
+
+// --- keep existing code above ---
+
+/**
+ * Best-effort extraction of "hint text" for Pilot C gating.
+ * We avoid schema changes by using only existing strings we already have in-memory.
+ */
+function buildPilotCHintText(args: any): string {
+  try {
+    const parts: string[] = [];
+    if (args?.skillName) parts.push(String(args.skillName));
+    if (args?.skillId) parts.push(String(args.skillId));
+    if (args?.packTitle) parts.push(String(args.packTitle));
+    if (args?.workItemTitle) parts.push(String(args.workItemTitle));
+    if (args?.intent) parts.push(String(args.intent));
+    if (args?.input) parts.push(String(args.input));
+    if (args?.prompt) parts.push(String(args.prompt));
+    return parts.join("\n");
+  } catch {
+    return "";
+  }
+}
+
+// --- somewhere in your runSkill function, right before calling OpenAI ---
+// Example insertion point:
+//
+//   const userPrompt = ...;  // whatever you currently pass to OpenAI as the user content
+//   const systemPrompt = ...;
+//   const result = await openaiService.complete({ system: systemPrompt, user: userPrompt, ... })
+//
+// Insert the following block just after you finalize userPrompt:
+
+async function maybeAugmentUserPromptWithPilotCContext(userPrompt: string, metaForHints: any): Promise<string> {
+  const hintText = buildPilotCHintText({ ...metaForHints, input: userPrompt });
+  if (!shouldAttachPilotCContext(hintText)) return userPrompt;
+
+  const ctx = await buildPilotCGigsterGarageContextBlock();
+  if (!ctx) return userPrompt;
+
+  return userPrompt + "\n\n" + ctx;
+}
+
+// --- APPLY: You must wire this into your existing runSkill flow ---
+// Search in this file for where you call OpenAI (e.g., openaiService, chat.completions, createChatCompletion, etc.)
+// Then wrap the final user prompt:
+//
+//   const finalUserPrompt = await maybeAugmentUserPromptWithPilotCContext(userPrompt, {
+//     skillName: skill?.name,
+//     skillId: skill?.id,
+//     packTitle: pack?.title,
+//     workItemTitle: workItem?.title,
+//     intent: workItem?.intent,
+//   });
+//
+// And pass finalUserPrompt into the OpenAI call instead of userPrompt.
+//
+// If you cannot easily access skill/pack/workItem, pass whatever you have (or {}).
+//
+// --- keep existing code below ---
+END_FILE
+```
+
+### Important note about this last file
+
+Because I don’t have your exact `runSkill.ts` contents, I **didn’t fabricate your whole file** (that would risk breaking compilation). Instead, I gave you a **surgical, paste-ready insertion** that you apply at the OpenAI call site in that file.
+
+If you paste the current contents of `server/ai/runSkill.ts` here, I will immediately return a **true full-file patch** (exact diff) with zero ambiguity.
+
+---
+
+# How to verify DROP C2 (2 minutes)
+
+1. In DreamTeamHub, trigger the recommendation/skill that corresponds to Pilot C work.
+2. Temporarily add a one-line debug log in `runSkill.ts` around the augmentation:
+
+```ts
+console.log("[PilotCContext]", { attached: finalUserPrompt.includes("READ-ONLY CONTEXT — GigsterGarage") });
+```
+
+3. Confirm:
+
+* For Pilot C runs: `attached: true`
+* For unrelated runs: `attached: false`
+
+---
+
+# What I need next to generate the real Pilot C DROP (GigsterGarage code changes)
+
+Now that the pipe is ready, to generate the **actual diffs** that stop 401 spam, I need the **fetched contents** of these GigsterGarage files (from the connector UI you now have):
+
+* `client/src/hooks/useAuth.ts`
+* `client/src/lib/queryClient.ts`
+* `client/src/components/timer-widget.tsx`
+* `client/src/pages/productivity.tsx`
+* `client/src/pages/mobile-time-tracking.tsx`
+* `client/src/components/app-header.tsx`
+* `client/src/components/QuickActionButton.tsx`
+
+Paste them here (or paste just the relevant sections that handle auth + query/polling). Then I’ll produce the **Pilot C drop** with real file-aware changes:
+
+* gate protected queries until `authReady && isAuthed`
+* disable retry/refetch loops on 401
+* stop polling loops that keep firing while logged out/expired
+
+**Repo for that next drop:** `GigsterGarage` (manual apply).
