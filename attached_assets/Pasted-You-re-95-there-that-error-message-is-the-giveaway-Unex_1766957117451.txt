@@ -1,0 +1,130 @@
+You’re **95% there** — that error message is the giveaway:
+
+> `Unexpected token '<' ... <!DOCTYPE ... is not valid JSON`
+
+That means **DTH is receiving an HTML page from GigsterGarage**, not JSON. In practice this happens when **DTH is calling the wrong upstream URL**, most commonly:
+
+* `GIGSTER_GARAGE_BASE_URL` includes a **path** (like `/settings`), so DTH calls `.../settings/api/dth/files` → frontend returns HTML
+* `GIGSTER_GARAGE_BASE_URL` is the **wrong host** (points to DTH domain or a different repl)
+* GigsterGarage is returning an HTML error page upstream (rare here)
+
+## Quick fix checklist (DreamTeamHub Secrets)
+
+In **DreamTeamHub** → Secrets, make sure:
+
+* `GIGSTER_GARAGE_BASE_URL` is **exactly** the root domain, like:
+  `https://25d8009a-...riker.replit.dev`
+  ✅ no trailing path like `/settings`
+  ✅ no trailing spaces
+* `GIGSTER_GARAGE_READONLY_TOKEN` matches GigsterGarage `DTH_READONLY_TOKEN`
+
+Restart DreamTeamHub after changing secrets.
+
+---
+
+## Make this bulletproof (adds better diagnostics + correct URL joining)
+
+✅ **Repo/Replit to paste into:** **DreamTeamHub**
+
+This patch:
+
+* builds the upstream URL safely using `new URL("/api/dth/files", base)`
+* if upstream returns HTML, it throws a clear error like:
+  “Upstream returned non-JSON (text/html) … first chars: <!DOCTYPE…”
+* includes `upstreamUrl` in the error so you can instantly see if BASE_URL is wrong
+
+```diff
+FILE: server/services/gigsterGarageReadonlyClient.ts
+@@
+ type FileResult = { path: string; ok: boolean; content?: string; error?: string };
+ 
+ export async function fetchGigsterGarageFiles(paths: string[]): Promise<FileResult[]> {
+   const base = process.env.GIGSTER_GARAGE_BASE_URL;
+   const token = process.env.GIGSTER_GARAGE_READONLY_TOKEN;
+ 
+   if (!base) throw new Error("GIGSTER_GARAGE_BASE_URL not set");
+   if (!token) throw new Error("GIGSTER_GARAGE_READONLY_TOKEN not set");
+ 
+-  const url = `${base.replace(/\/+$/, "")}/api/dth/files`;
++  let upstreamUrl: string;
++  try {
++    upstreamUrl = new URL("/api/dth/files", base).toString();
++  } catch {
++    throw new Error(`Invalid GIGSTER_GARAGE_BASE_URL: ${base}`);
++  }
+ 
+-  const res = await fetch(url, {
++  const res = await fetch(upstreamUrl, {
+     method: "POST",
+     headers: {
+       "Content-Type": "application/json",
+       "x-dth-token": token,
+     },
+     body: JSON.stringify({ paths }),
+   });
+ 
+   if (!res.ok) {
+     const text = await res.text().catch(() => "");
+-    throw new Error(`GigsterGarage fetch failed (${res.status}) ${text}`.trim());
++    throw new Error(`GigsterGarage fetch failed (${res.status}) url=${upstreamUrl} ${text}`.trim());
+   }
+ 
+-  const json = (await res.json()) as { ok: boolean; files: FileResult[] };
++  const contentType = res.headers.get("content-type") || "";
++  if (!contentType.toLowerCase().includes("application/json")) {
++    const text = await res.text().catch(() => "");
++    const head = text.slice(0, 160).replace(/\s+/g, " ").trim();
++    throw new Error(
++      `GigsterGarage returned non-JSON content-type=${contentType} url=${upstreamUrl} head="${head}"`
++    );
++  }
++
++  const json = (await res.json()) as { ok: boolean; files: FileResult[] };
+   return Array.isArray(json.files) ? json.files : [];
+ }
+ 
+ END_FILE
+```
+
+```diff
+FILE: server/routes/connectorsGigsterGarage.ts
+@@
+ export function registerGigsterGarageConnectorRoutes(app: Express) {
+   // Proxy (server-side) so token is never exposed to browser
+   app.post("/api/connectors/gigsterGarage/files", async (req, res) => {
+     const paths = Array.isArray(req.body?.paths) ? req.body.paths.map(String) : [];
+     if (!paths.length) return res.status(400).json({ ok: false, error: "paths[] required" });
+ 
+     try {
+       const files = await fetchGigsterGarageFiles(paths);
+       res.json({ ok: true, files });
+     } catch (e: any) {
+-      res.status(500).json({ ok: false, error: e?.message || "connector failed" });
++      res.status(502).json({ ok: false, error: e?.message || "connector failed" });
+     }
+   });
+ }
+ 
+ END_FILE
+```
+
+### What you’ll see after this patch
+
+If BASE_URL is wrong, the UI will show an error that includes:
+
+* the exact `url=.../api/dth/files`
+* the content-type (likely `text/html`)
+* the first characters of the HTML page (often `<!DOCTYPE...`)
+
+That makes the fix immediate.
+
+---
+
+## Next step after connector is fetching successfully
+
+Once the connector shows **OK** and returns file contents, we’ll do the next phase:
+
+✅ **Attach fetched GigsterGarage files into Work Item stage** automatically during “Generate Recommendation”
+→ No more placeholders for Pilot C.
+
+If you want, paste what your current `GIGSTER_GARAGE_BASE_URL` is set to (just the domain, no token), and I’ll tell you in one line whether it’s the culprit.

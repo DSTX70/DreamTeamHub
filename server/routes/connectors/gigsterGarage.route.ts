@@ -9,49 +9,62 @@ router.post("/api/connectors/gigsterGarage/files", async (req: Request, res: Res
     const { paths } = req.body as { paths?: string[] };
 
     if (!Array.isArray(paths) || paths.length === 0) {
-      return res.status(400).json({ error: "paths must be a non-empty array of strings" });
+      return res.status(400).json({ ok: false, error: "paths must be a non-empty array of strings" });
     }
 
     const baseUrl = process.env.GIGSTER_GARAGE_BASE_URL;
     const token = process.env.GIGSTER_GARAGE_READONLY_TOKEN;
 
     if (!baseUrl) {
-      return res.status(500).json({ error: "GIGSTER_GARAGE_BASE_URL not configured in environment" });
+      return res.status(502).json({ ok: false, error: "GIGSTER_GARAGE_BASE_URL not configured in environment" });
     }
 
     if (!token) {
-      return res.status(500).json({ error: "GIGSTER_GARAGE_READONLY_TOKEN not configured in environment" });
+      return res.status(502).json({ ok: false, error: "GIGSTER_GARAGE_READONLY_TOKEN not configured in environment" });
+    }
+
+    let upstreamUrl: string;
+    try {
+      upstreamUrl = new URL("/api/dth/files", baseUrl).toString();
+    } catch {
+      return res.status(502).json({ ok: false, error: `Invalid GIGSTER_GARAGE_BASE_URL: ${baseUrl}` });
     }
 
     const results: FileResult[] = [];
 
     for (const p of paths.slice(0, 20)) {
       try {
-        const endpoint = `${baseUrl.replace(/\/$/, "")}/api/dth/files`;
-        const fetchRes = await fetch(endpoint, {
+        const fetchRes = await fetch(upstreamUrl, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
+            "x-dth-token": token,
           },
           body: JSON.stringify({ path: p }),
         });
 
+        const contentType = fetchRes.headers.get("content-type") || "";
+
         if (!fetchRes.ok) {
           const errText = await fetchRes.text().catch(() => "");
-          results.push({ path: p, ok: false, error: `HTTP ${fetchRes.status}: ${errText}` });
+          const head = errText.slice(0, 160).replace(/\s+/g, " ").trim();
+          results.push({ path: p, ok: false, error: `HTTP ${fetchRes.status} url=${upstreamUrl} head="${head}"` });
+        } else if (!contentType.toLowerCase().includes("application/json")) {
+          const text = await fetchRes.text().catch(() => "");
+          const head = text.slice(0, 160).replace(/\s+/g, " ").trim();
+          results.push({ path: p, ok: false, error: `Non-JSON response content-type=${contentType} url=${upstreamUrl} head="${head}"` });
         } else {
           const json = await fetchRes.json();
           results.push({ path: p, ok: true, content: json.content || "" });
         }
       } catch (err: any) {
-        results.push({ path: p, ok: false, error: err.message || String(err) });
+        results.push({ path: p, ok: false, error: `${err.message || String(err)} url=${upstreamUrl}` });
       }
     }
 
-    res.json({ files: results });
+    res.json({ ok: true, files: results });
   } catch (err: any) {
-    res.status(500).json({ error: err.message || "Internal server error" });
+    res.status(502).json({ ok: false, error: err.message || "connector failed" });
   }
 });
 
