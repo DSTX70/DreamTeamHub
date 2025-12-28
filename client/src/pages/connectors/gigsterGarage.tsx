@@ -26,7 +26,7 @@ export default function GigsterGarageConnectorPage() {
       const res = await fetch("/api/connectors/gigsterGarage/files", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ paths }),
+        body: JSON.stringify({ paths, pathsText }),
       });
       const json = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(json?.error || `fetch failed (${res.status})`);

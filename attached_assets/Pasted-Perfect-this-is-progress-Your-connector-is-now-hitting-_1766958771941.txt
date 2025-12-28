@@ -1,0 +1,147 @@
+Perfect — **this is progress**. ✅
+
+Your connector is now hitting the **correct host** (`…riker.replit.dev`) and it’s returning **JSON**, not HTML. The new error:
+
+> `{"ok":false,"error":"paths[] required"}` (HTTP 400)
+
+means **GigsterGarage didn’t receive a valid `paths` array** in the request body.
+
+So we’re down to one issue: **DTH is not forwarding the paths correctly** (or it’s forwarding an empty array / wrong shape).
+
+---
+
+# ✅ Fix (DreamTeamHub repo): make the proxy accept multiple body shapes + always send paths[]
+
+Paste this drop into **DreamTeamHub**.
+
+```diff
+FILE: server/services/gigsterGarageReadonlyClient.ts
+@@
+ export async function fetchGigsterGarageFiles(paths: string[]): Promise<FileResult[]> {
++  if (!Array.isArray(paths) || paths.length === 0) {
++    throw new Error("Connector: paths[] required (non-empty)");
++  }
+   const base = process.env.GIGSTER_GARAGE_BASE_URL;
+   const token = process.env.GIGSTER_GARAGE_READONLY_TOKEN;
+@@
+-  const res = await fetch(upstreamUrl, {
++  const res = await fetch(upstreamUrl, {
+     method: "POST",
+     headers: {
+       "Content-Type": "application/json",
+       "x-dth-token": token,
+     },
+     body: JSON.stringify({ paths }),
+   });
+@@
+ END_FILE
+```
+
+```diff
+FILE: server/routes/connectorsGigsterGarage.ts
+@@
+ import type { Express } from "express";
+ import { fetchGigsterGarageFiles } from "../services/gigsterGarageReadonlyClient";
+ 
++function parsePaths(body: any): string[] {
++  // Body might be:
++  // - { paths: ["a","b"] }
++  // - { paths: "a\nb\nc" }
++  // - { pathsText: "a\nb\nc" }
++  // - raw string JSON (if body parser differs)
++  if (!body) return [];
++
++  let obj: any = body;
++  if (typeof body === "string") {
++    // try JSON first
++    try {
++      obj = JSON.parse(body);
++    } catch {
++      // treat as newline list
++      obj = { paths: body };
++    }
++  }
++
++  const raw = obj.paths ?? obj.pathsText ?? obj.pathList ?? null;
++  if (!raw) return [];
++
++  if (Array.isArray(raw)) return raw.map(String).map((s) => s.trim()).filter(Boolean);
++  if (typeof raw === "string") return raw.split("\n").map((s) => s.trim()).filter(Boolean);
++
++  return [];
++}
++
+ export function registerGigsterGarageConnectorRoutes(app: Express) {
+   // Proxy (server-side) so token is never exposed to browser
+   app.post("/api/connectors/gigsterGarage/files", async (req, res) => {
+-    const paths = Array.isArray(req.body?.paths) ? req.body.paths.map(String) : [];
+-    if (!paths.length) return res.status(400).json({ ok: false, error: "paths[] required" });
++    const paths = parsePaths(req.body);
++    if (!paths.length) {
++      return res.status(400).json({
++        ok: false,
++        error: "paths[] required",
++        hint: "Send JSON: { paths: [\"client/src/...\", ...] }",
++      });
++    }
+ 
+     try {
+       const files = await fetchGigsterGarageFiles(paths);
+       res.json({ ok: true, files });
+     } catch (e: any) {
+       res.status(502).json({ ok: false, error: e?.message || "connector failed" });
+     }
+   });
+ }
+ 
+ END_FILE
+```
+
+```diff
+FILE: client/src/pages/connectors/gigsterGarage.tsx
+@@
+   const m = useMutation({
+     mutationFn: async () => {
+       const res = await fetch("/api/connectors/gigsterGarage/files", {
+         method: "POST",
+         headers: { "Content-Type": "application/json" },
+-        body: JSON.stringify({ paths }),
++        // Send both array + newline text as a belt-and-suspenders fallback
++        body: JSON.stringify({ paths, pathsText: pathsText }),
+       });
+       const json = await res.json().catch(() => ({}));
+       if (!res.ok) throw new Error(json?.error || `fetch failed (${res.status})`);
+       return (json.files || []) as FileResult[];
+     },
+   });
+ END_FILE
+```
+
+✅ After applying, **restart DreamTeamHub** and retry `/connectors/gigsterGarage`.
+
+---
+
+# What you should see after this fix
+
+* Each file row should flip from **FAIL** → **OK**
+* The file contents will appear in the textarea cards
+
+If anything fails, you’ll now get a clean error telling you whether it’s:
+
+* token mismatch (401)
+* path blocked (“Path not allowed”)
+* file too large (“File too large”)
+
+---
+
+# Next step (once it fetches OK)
+
+When you confirm **OK file fetch**, we’ll plug this into **Work Item Stage recommendation generation** so Pilot C can auto-pull:
+
+* `client/src/hooks/useAuth.ts`
+* `client/src/lib/queryClient.ts`
+* the noisy query files
+
+…and DTH will generate a **real patch drop** without you pasting snippets.
+
+Say: **“Connector fetch OK”** when the connector shows file contents, and I’ll drop the next patch to attach fetched files into the Work Item stage record automatically.

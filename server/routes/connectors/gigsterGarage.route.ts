@@ -4,6 +4,27 @@ const router = Router();
 
 type FileResult = { path: string; ok: boolean; content?: string; error?: string };
 
+function parsePaths(body: any): string[] {
+  if (!body) return [];
+
+  let obj: any = body;
+  if (typeof body === "string") {
+    try {
+      obj = JSON.parse(body);
+    } catch {
+      obj = { paths: body };
+    }
+  }
+
+  const raw = obj.paths ?? obj.pathsText ?? obj.pathList ?? null;
+  if (!raw) return [];
+
+  if (Array.isArray(raw)) return raw.map(String).map((s) => s.trim()).filter(Boolean);
+  if (typeof raw === "string") return raw.split("\n").map((s) => s.trim()).filter(Boolean);
+
+  return [];
+}
+
 router.get("/api/connectors/gigsterGarage/debug", (_req: Request, res: Response) => {
   const base = process.env.GIGSTER_GARAGE_BASE_URL || "";
   const token = process.env.GIGSTER_GARAGE_READONLY_TOKEN || "";
@@ -24,10 +45,14 @@ router.get("/api/connectors/gigsterGarage/debug", (_req: Request, res: Response)
 
 router.post("/api/connectors/gigsterGarage/files", async (req: Request, res: Response) => {
   try {
-    const { paths } = req.body as { paths?: string[] };
+    const paths = parsePaths(req.body);
 
-    if (!Array.isArray(paths) || paths.length === 0) {
-      return res.status(400).json({ ok: false, error: "paths must be a non-empty array of strings" });
+    if (!paths.length) {
+      return res.status(400).json({
+        ok: false,
+        error: "paths[] required",
+        hint: "Send JSON: { paths: [\"client/src/...\", ...] }",
+      });
     }
 
     const baseUrl = process.env.GIGSTER_GARAGE_BASE_URL;
