@@ -1,6 +1,7 @@
-import { Router, Request, Response } from "express";
+import { Router, Request, Response, json } from "express";
 
 const router = Router();
+const jsonParser = json({ limit: "1mb" });
 
 type FileResult = { path: string; ok: boolean; content?: string; error?: string };
 
@@ -43,7 +44,7 @@ router.get("/api/connectors/gigsterGarage/debug", (_req: Request, res: Response)
   });
 });
 
-router.post("/api/connectors/gigsterGarage/files", async (req: Request, res: Response) => {
+router.post("/api/connectors/gigsterGarage/files", jsonParser, async (req: Request, res: Response) => {
   try {
     const paths = parsePaths(req.body);
 

@@ -1,0 +1,99 @@
+✅ Good news: you’re now hitting the **correct upstream** (`…riker.replit.dev`) and getting **JSON**, not HTML.
+
+The remaining error:
+
+> `{"ok":false,"error":"paths[] required"}` (HTTP 400)
+
+means **GigsterGarage is receiving an empty/missing `paths` array**. In other words, DTH is reaching the right place, but **not actually sending the paths in the request body** (usually because the DTH route isn’t parsing JSON for that endpoint).
+
+## Fix (DreamTeamHub repo): add a route-local JSON body parser + hard guard
+
+This guarantees `req.body` is populated and `paths[]` is always forwarded.
+
+### ✅ Paste into: **DreamTeamHub** repo / Replit
+
+```diff
+FILE: server/routes/connectors/gigsterGarage.route.ts
++import express from "express";
+ import type { Express } from "express";
+ import { fetchGigsterGarageFiles } from "../../services/gigsterGarageReadonlyClient";
+ 
++const jsonParser = express.json({ limit: "1mb" });
++
+ function parsePaths(body: any): string[] {
+   if (!body) return [];
+@@
+ }
+ 
+ export function registerGigsterGarageConnectorRoutes(app: Express) {
+   // Proxy (server-side) so token is never exposed to browser
+-  app.post("/api/connectors/gigsterGarage/files", async (req, res) => {
++  app.post("/api/connectors/gigsterGarage/files", jsonParser, async (req, res) => {
+     const paths = parsePaths(req.body);
+-    if (!paths.length) {
+-      return res.status(400).json({
+-        ok: false,
+-        error: "paths[] required",
+-        hint: "Send JSON: { paths: [\"client/src/...\", ...] }",
+-      });
+-    }
++    if (!paths.length) return res.status(400).json({ ok: false, error: "paths[] required" });
+ 
+     try {
+       const files = await fetchGigsterGarageFiles(paths);
+       res.json({ ok: true, files });
+     } catch (e: any) {
+       res.status(502).json({ ok: false, error: e?.message || "connector failed" });
+     }
+   });
+ }
+ 
+ END_FILE
+```
+
+> If your file is instead `server/routes/connectorsGigsterGarage.ts`, apply the same change there — the key is adding `jsonParser` to that POST route.
+
+---
+
+## Also ensure the client sends `paths` (belt + suspenders)
+
+(You said you already do, but this guarantees it.)
+
+```diff
+FILE: client/src/pages/connectors/gigsterGarage.tsx
+@@
+   const m = useMutation({
+     mutationFn: async () => {
+       const res = await fetch("/api/connectors/gigsterGarage/files", {
+         method: "POST",
+         headers: { "Content-Type": "application/json" },
+-        body: JSON.stringify({ paths, pathsText: pathsText }),
++        body: JSON.stringify({ paths, pathsText }),
+       });
+@@
+     },
+   });
+ END_FILE
+```
+
+---
+
+## After applying
+
+1. **Restart DreamTeamHub**
+2. Go to `/connectors/gigsterGarage`
+3. Click **Fetch files**
+
+✅ Expected: each file row becomes **OK** and shows contents.
+
+---
+
+## Why this works
+
+The connector endpoint was almost certainly receiving an empty `req.body` (no JSON parsing), so it forwarded `paths: []` → GigsterGarage correctly responded **paths[] required**.
+
+Adding `express.json()` **at that route** fixes it even if global middleware order is weird.
+
+---
+
+If it still fails after this, the next step is to open DevTools → Network in DTH and click “Fetch files”, then confirm the request payload includes `"paths":[...]`. But I’m confident this route-local parser will resolve it.
