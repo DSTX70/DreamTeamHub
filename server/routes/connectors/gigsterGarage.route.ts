@@ -1,7 +1,8 @@
-import { Router, Request, Response, json } from "express";
+import { Router, Request, Response, json, text } from "express";
 
 const router = Router();
 const jsonParser = json({ limit: "1mb" });
+const textParser = text({ type: "*/*", limit: "1mb" });
 
 type FileResult = { path: string; ok: boolean; content?: string; error?: string };
 
@@ -25,6 +26,18 @@ function parsePaths(body: any): string[] {
 
   return [];
 }
+
+router.post("/api/connectors/gigsterGarage/echo", jsonParser, textParser, (req: Request, res: Response) => {
+  const body = typeof req.body === "string" ? req.body : JSON.stringify(req.body || {});
+  const paths = parsePaths(req.body);
+  res.json({
+    ok: true,
+    receivedType: typeof req.body,
+    receivedBodyHead: body.slice(0, 180),
+    parsedPathsCount: paths.length,
+    parsedPaths: paths,
+  });
+});
 
 router.get("/api/connectors/gigsterGarage/debug", (_req: Request, res: Response) => {
   const base = process.env.GIGSTER_GARAGE_BASE_URL || "";
@@ -52,6 +65,10 @@ router.post("/api/connectors/gigsterGarage/files", jsonParser, async (req: Reque
       return res.status(400).json({
         ok: false,
         error: "paths[] required",
+        debug: {
+          receivedType: typeof req.body,
+          receivedKeys: req.body && typeof req.body === "object" ? Object.keys(req.body) : [],
+        },
         hint: "Send JSON: { paths: [\"client/src/...\", ...] }",
       });
     }
@@ -106,9 +123,14 @@ router.post("/api/connectors/gigsterGarage/files", jsonParser, async (req: Reque
       }
     }
 
-    res.json({ ok: true, files: results });
+    res.json({ ok: true, files: results, sentPathsCount: paths.length });
   } catch (err: any) {
-    res.status(502).json({ ok: false, error: err.message || "connector failed" });
+    res.status(502).json({
+      ok: false,
+      error: err.message || "connector failed",
+      sentPathsCount: paths.length,
+      sentPathsPreview: paths.slice(0, 5),
+    });
   }
 });
 

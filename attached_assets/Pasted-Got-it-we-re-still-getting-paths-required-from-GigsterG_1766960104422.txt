@@ -1,0 +1,175 @@
+Got it — we’re **still getting `paths[] required` from GigsterGarage**, which means **GigsterGarage is not receiving a parsed `paths` array** in the upstream request.
+
+At this point there are only two realistic causes:
+
+1. **DTH is sending an empty/undefined `paths`** (even though the textarea has lines), or
+2. **GigsterGarage isn’t parsing the JSON body for `/api/dth/files`** (most often because the route is registered before JSON middleware, or body parsing isn’t enabled in that app path)
+
+Let’s make this deterministic with a small DTH patch that:
+
+* **Proves what DTH is sending** (echo endpoint)
+* **Stops calling upstream if paths are empty**
+* **Adds “sentPathsCount” to error responses**
+* Optionally: lets DTH send a “known good test payload” to upstream
+
+✅ **Repo/Replit to paste into:** **DreamTeamHub**
+
+---
+
+## ✅ Replit Drop — Add echo/debug + hard guards (DreamTeamHub)
+
+```diff
+FILE: server/routes/connectors/gigsterGarage.route.ts
+@@
+-import type { Express } from "express";
++import type { Express } from "express";
++import express from "express";
+ import { fetchGigsterGarageFiles } from "../../services/gigsterGarageReadonlyClient";
+ 
++const jsonParser = express.json({ limit: "1mb" });
++const textParser = express.text({ type: "*/*", limit: "1mb" });
++
+ function parsePaths(body: any): string[] {
+   // Body might be:
+   // - { paths: ["a","b"] }
+   // - { paths: "a\nb\nc" }
+   // - { pathsText: "a\nb\nc" }
+   // - raw string JSON
+   if (!body) return [];
+ 
+-  let obj: any = body;
++  let obj: any = body;
+   if (typeof body === "string") {
+     // try JSON first
+     try {
+       obj = JSON.parse(body);
+     } catch {
+       // treat as newline list
+       obj = { paths: body };
+     }
+   }
+ 
+   const raw = obj.paths ?? obj.pathsText ?? obj.pathList ?? null;
+   if (!raw) return [];
+ 
+   if (Array.isArray(raw)) return raw.map(String).map((s) => s.trim()).filter(Boolean);
+   if (typeof raw === "string") return raw.split("\n").map((s) => s.trim()).filter(Boolean);
+ 
+   return [];
+ }
+ 
+ export function registerGigsterGarageConnectorRoutes(app: Express) {
++  // Debug helper: prove what the server receives from the browser
++  app.post("/api/connectors/gigsterGarage/echo", jsonParser, textParser, (req: any, res) => {
++    const body = typeof req.body === "string" ? req.body : JSON.stringify(req.body || {});
++    const paths = parsePaths(req.body);
++    res.json({
++      ok: true,
++      receivedType: typeof req.body,
++      receivedBodyHead: body.slice(0, 180),
++      parsedPathsCount: paths.length,
++      parsedPaths: paths,
++    });
++  });
++
+   // Proxy (server-side) so token is never exposed to browser
+-  app.post("/api/connectors/gigsterGarage/files", async (req, res) => {
++  app.post("/api/connectors/gigsterGarage/files", jsonParser, textParser, async (req: any, res) => {
+     const paths = parsePaths(req.body);
+     if (!paths.length) {
+       return res.status(400).json({
+         ok: false,
+         error: "paths[] required",
++        debug: {
++          receivedType: typeof req.body,
++          receivedKeys: req.body && typeof req.body === "object" ? Object.keys(req.body) : [],
++        },
+         hint: "Send JSON: { paths: [\"client/src/...\", ...] }",
+       });
+     }
+ 
+     try {
+       const files = await fetchGigsterGarageFiles(paths);
+       res.json({ ok: true, files });
+     } catch (e: any) {
+-      res.status(502).json({ ok: false, error: e?.message || "connector failed" });
++      res.status(502).json({
++        ok: false,
++        error: e?.message || "connector failed",
++        sentPathsCount: paths.length,
++        sentPathsPreview: paths.slice(0, 5),
++      });
+     }
+   });
+ }
+ 
+ END_FILE
+```
+
+```diff
+FILE: server/services/gigsterGarageReadonlyClient.ts
+@@
+ export async function fetchGigsterGarageFiles(paths: string[]): Promise<FileResult[]> {
++  // Hard guard so we never hit upstream with an empty payload
++  if (!Array.isArray(paths) || paths.length === 0) {
++    throw new Error("Connector: paths[] required (non-empty)");
++  }
+   const base = process.env.GIGSTER_GARAGE_BASE_URL;
+   const token = process.env.GIGSTER_GARAGE_READONLY_TOKEN;
+@@
+ END_FILE
+```
+
+---
+
+## ✅ What to do after applying (2 quick tests)
+
+### Test A — confirm DTH receives the paths from the browser
+
+Open DevTools console and run:
+
+```js
+fetch("/api/connectors/gigsterGarage/echo", {
+  method: "POST",
+  headers: {"Content-Type":"application/json"},
+  body: JSON.stringify({ paths: ["client/src/hooks/useAuth.ts","server/routes.ts"] })
+}).then(r=>r.json()).then(console.log)
+```
+
+You should see:
+
+* `parsedPathsCount: 2`
+* `parsedPaths: [...]`
+
+If this returns `parsedPathsCount: 0`, then the issue is on the **DTH UI request**.
+
+### Test B — confirm DTH is sending paths to GigsterGarage
+
+Then click **Fetch files** in the UI again.
+If upstream still says `paths[] required`, the DTH server response will now show:
+
+* `sentPathsCount` and `sentPathsPreview`
+
+That will prove whether DTH is sending an empty array or not.
+
+---
+
+## If DTH is sending non-empty paths but GigsterGarage still returns `paths[] required`
+
+Then the issue is **GigsterGarage body parsing** for `/api/dth/files`.
+
+Fix on **GigsterGarage** (add route-local JSON parser):
+
+```ts
+// in server/routes_dth_readonly.ts
+import express from "express";
+const jsonParser = express.json({ limit: "1mb" });
+
+app.post("/api/dth/files", jsonParser, async (req,res)=>{ ... })
+```
+
+That guarantees `req.body.paths` is available even if middleware order differs.
+
+---
+
+If you run **Test A** and paste the JSON output here (it’s safe), I’ll tell you immediately whether the problem is on the DTH-side request or GigsterGarage parsing.
