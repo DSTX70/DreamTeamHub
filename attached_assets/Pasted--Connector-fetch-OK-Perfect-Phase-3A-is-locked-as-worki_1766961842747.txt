@@ -1,0 +1,247 @@
+**Connector fetch OK** ✅
+
+Perfect — Phase 3A is locked as **working**, and the `server/routes.ts` “File too large” behavior is exactly what we want from GigsterGarage’s read-only guardrails.
+
+To ship the **next patch (Pilot C enablement)** cleanly **without schema changes**, I need to patch the *existing* DreamTeamHub “Recommendation generation” pipeline **at the exact file(s) where the LLM prompt is assembled**. I don’t have those source files in this chat, so I won’t guess.
+
+### Blockers (exact)
+
+Paste **one** of the following (whichever exists in DreamTeamHub):
+
+* The **route** that handles “Generate Recommendation” for a Work Item (the POST endpoint)
+* The **service** that builds the recommendation prompt / calls the model (often named like `recommendation*.ts`, `workItem*.ts`, `llm*.ts`, `agent*.ts`)
+
+If you want to find it fast in Replit, run:
+
+```bash
+rg -n "recommendation|recommend|work item|workitem|LLM|openai|model|prompt" server client
+```
+
+Then paste the most relevant file(s).
+
+---
+
+## While you grab that, here’s DROP C1 (safe, additive): a reusable fetch helper
+
+This adds a **server-side helper** that pulls file context from GigsterGarage directly (same secrets you already have) and returns a normalized, prompt-ready bundle. This is **not** wired into recommendations yet (that wiring is the next drop once you paste the target files).
+
+### DROP C1 — DreamTeamHub (apply manually)
+
+**Repo:** `DreamTeamHub`
+**New file:** `server/services/connectors/gigsterGarageReadonly.ts`
+
+```ts
+FILE: server/services/connectors/gigsterGarageReadonly.ts
+type GGFileResult = {
+  path: string;
+  ok: boolean;
+  error?: string;
+  contents: string;
+};
+
+type FetchGGFilesResponse = {
+  ok: boolean;
+  files: GGFileResult[];
+  meta: {
+    requestedCount: number;
+    returnedCount: number;
+    nonEmptyCount: number;
+    tooLargeCount: number;
+    errorCount: number;
+    truncatedTotalChars: number;
+  };
+};
+
+function envOrThrow(key: string): string {
+  const v = process.env[key];
+  if (!v) throw new Error(`Missing env var ${key}`);
+  return v;
+}
+
+function baseUrl(url: string): string {
+  return url.replace(/\/+$/, "");
+}
+
+function pickContentField(obj: any): string {
+  const candidates = [obj?.contents, obj?.content, obj?.text, obj?.body, obj?.data, obj?.raw];
+  for (const v of candidates) {
+    if (typeof v === "string") return v;
+  }
+  return "";
+}
+
+function normalizeFiles(payload: any): GGFileResult[] {
+  const arr = Array.isArray(payload?.files)
+    ? payload.files
+    : Array.isArray(payload?.results)
+      ? payload.results
+      : [];
+
+  return arr.map((it: any) => {
+    const path = String(it?.path ?? it?.filePath ?? it?.name ?? "").trim();
+    const ok = typeof it?.ok === "boolean" ? it.ok : true;
+    const error = typeof it?.error === "string" ? it.error : undefined;
+    const contents = pickContentField(it) ?? "";
+    return { path, ok, error, contents };
+  });
+}
+
+function truncate(s: string, maxChars: number): { text: string; truncated: boolean } {
+  if (s.length <= maxChars) return { text: s, truncated: false };
+  return { text: s.slice(0, maxChars) + `\n\n/* …truncated at ${maxChars} chars… */\n`, truncated: true };
+}
+
+/**
+ * Fetch read-only files from GigsterGarage for prompt context.
+ * - Uses env vars already in DreamTeamHub:
+ *   GIGSTER_GARAGE_BASE_URL
+ *   GIGSTER_GARAGE_READONLY_TOKEN
+ */
+export async function fetchGigsterGarageFiles(paths: string[], opts?: { perFileMaxChars?: number; totalMaxChars?: number }): Promise<FetchGGFilesResponse> {
+  const perFileMaxChars = opts?.perFileMaxChars ?? 18_000; // keeps prompts sane per file
+  const totalMaxChars = opts?.totalMaxChars ?? 70_000;     // overall cap for a single recommendation
+
+  const ggBase = baseUrl(envOrThrow("GIGSTER_GARAGE_BASE_URL"));
+  const token = envOrThrow("GIGSTER_GARAGE_READONLY_TOKEN");
+
+  const upstreamUrl = `${ggBase}/api/dth/files`;
+
+  const upstreamRes = await fetch(upstreamUrl, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Accept: "application/json",
+      "x-dth-token": token,
+    },
+    body: JSON.stringify({ paths }),
+  });
+
+  const text = await upstreamRes.text();
+  if (!upstreamRes.ok) {
+    return {
+      ok: false,
+      files: paths.map((p) => ({
+        path: p,
+        ok: false,
+        error: `Upstream error ${upstreamRes.status}: ${text.slice(0, 200)}`,
+        contents: "",
+      })),
+      meta: {
+        requestedCount: paths.length,
+        returnedCount: 0,
+        nonEmptyCount: 0,
+        tooLargeCount: 0,
+        errorCount: paths.length,
+        truncatedTotalChars: 0,
+      },
+    };
+  }
+
+  let payload: any;
+  try {
+    payload = JSON.parse(text);
+  } catch {
+    return {
+      ok: false,
+      files: paths.map((p) => ({
+        path: p,
+        ok: false,
+        error: "Upstream returned non-JSON",
+        contents: "",
+      })),
+      meta: {
+        requestedCount: paths.length,
+        returnedCount: 0,
+        nonEmptyCount: 0,
+        tooLargeCount: 0,
+        errorCount: paths.length,
+        truncatedTotalChars: 0,
+      },
+    };
+  }
+
+  const normalized = normalizeFiles(payload);
+
+  // Apply truncation caps
+  let runningTotal = 0;
+  let truncatedTotalChars = 0;
+
+  const capped = normalized.map((f) => {
+    if (!f.contents) return f;
+
+    const t1 = truncate(f.contents, perFileMaxChars);
+    let contents = t1.text;
+
+    // Total cap enforcement
+    const remaining = Math.max(0, totalMaxChars - runningTotal);
+    if (contents.length > remaining) {
+      const t2 = truncate(contents, remaining);
+      if (t2.truncated) truncatedTotalChars += contents.length - t2.text.length;
+      contents = t2.text;
+    }
+
+    if (t1.truncated) truncatedTotalChars += f.contents.length - t1.text.length;
+
+    runningTotal += contents.length;
+    return { ...f, contents };
+  });
+
+  const tooLargeCount = capped.filter((f) => /too large/i.test(f.error ?? "")).length;
+  const errorCount = capped.filter((f) => !f.ok).length;
+  const nonEmptyCount = capped.filter((f) => (f.contents ?? "").length > 0).length;
+
+  return {
+    ok: true,
+    files: capped,
+    meta: {
+      requestedCount: paths.length,
+      returnedCount: capped.length,
+      nonEmptyCount,
+      tooLargeCount,
+      errorCount,
+      truncatedTotalChars,
+    },
+  };
+}
+
+/**
+ * Formats fetched files as prompt-ready context blocks.
+ */
+export function formatGigsterFilesForPrompt(files: GGFileResult[]): string {
+  const blocks: string[] = [];
+
+  for (const f of files) {
+    if (!f.path) continue;
+
+    if (!f.ok) {
+      blocks.push(
+        `FILE: ${f.path}\n` +
+          `ERROR: ${f.error || "unknown error"}\n` +
+          `END_FILE\n`
+      );
+      continue;
+    }
+
+    blocks.push(
+      `FILE: ${f.path}\n` +
+        `${f.contents || ""}\n` +
+        `END_FILE\n`
+    );
+  }
+
+  return blocks.join("\n");
+}
+END_FILE
+```
+
+---
+
+## Next drop (DROP C2) depends on 1 paste
+
+As soon as you paste the **DreamTeamHub recommendation generator route/service**, I’ll produce **DROP C2** that:
+
+* Automatically pulls Pilot C file context (the 7 paths you listed) via `fetchGigsterGarageFiles()`
+* Injects the formatted `FILE: … END_FILE` bundle into the recommendation prompt
+* Keeps everything **read-only**, **manual apply**, **no schema changes**, **no VSuiteHQ**
+
+Paste the file(s) that build the recommendation prompt, and I’ll ship DROP C2 immediately.
