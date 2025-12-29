@@ -17,7 +17,7 @@ import { LifestyleHeroPreview } from "@/components/workItems/LifestyleHeroPrevie
 import NextActionsPanel from "@/components/workItems/NextActionsPanel";
 import { getTargetContext } from "@/lib/castReceipt";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, Calendar, User, Target, Route, Compass, Users, Lightbulb, Wand2, Check, FileText, Copy } from "lucide-react";
+import { ArrowLeft, Calendar, User, Target, Route, Compass, Users, Lightbulb, Wand2, Check, FileText, Copy, Upload, ChevronDown } from "lucide-react";
 import { Link } from "wouter";
 import { format } from "date-fns";
 import type { WorkItem } from "@shared/schema";
@@ -226,6 +226,8 @@ export default function WorkItemDetail() {
     rationale?: string;
     evidence?: string;
   } | null>(null);
+  const [additionalEvidence, setAdditionalEvidence] = useState("");
+  const [showEvidenceInput, setShowEvidenceInput] = useState(false);
 
   const genDrop = useMutation({
     mutationFn: async () => {
@@ -557,44 +559,61 @@ export default function WorkItemDetail() {
 
           {/* BLOCKED Banner */}
           {lastDropResult?.blocked && (
-            <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 p-3" data-testid="blocked-evidence-banner">
+            <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 space-y-3" data-testid="blocked-evidence-banner">
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <div className="font-medium text-amber-600 dark:text-amber-200">BLOCKED — Missing Evidence</div>
                   <div className="text-sm text-amber-700 dark:text-amber-100/90">
-                    The system can't generate a safe patch drop yet. Paste the requested evidence, fetch the suggested files, then rerun.
+                    The system can't generate a safe patch drop yet. Paste the requested evidence below, upload screenshots, and fetch the suggested files.
                   </div>
                 </div>
 
-                {lastDropResult.evidenceRequest && (
+                <div className="flex gap-2 flex-shrink-0">
+                  {lastDropResult.evidenceRequest && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="border-amber-400/40 text-amber-700 dark:text-amber-100 hover:bg-amber-400/10"
+                      onClick={async () => {
+                        try {
+                          await navigator.clipboard.writeText(lastDropResult.evidenceRequest || "");
+                          toast({ title: "Copied", description: "Evidence request copied to clipboard." });
+                        } catch {
+                          toast({ title: "Copy failed", description: "Clipboard not available.", variant: "destructive" });
+                        }
+                      }}
+                      data-testid="button-copy-evidence-request"
+                    >
+                      <Copy className="mr-2 h-3 w-3" />
+                      Copy request
+                    </Button>
+                  )}
                   <Button
                     size="sm"
                     variant="outline"
                     className="border-amber-400/40 text-amber-700 dark:text-amber-100 hover:bg-amber-400/10"
-                    onClick={async () => {
-                      try {
-                        await navigator.clipboard.writeText(lastDropResult.evidenceRequest || "");
-                        toast({ title: "Copied", description: "Evidence request copied to clipboard." });
-                      } catch {
-                        toast({ title: "Copy failed", description: "Clipboard not available.", variant: "destructive" });
+                    onClick={() => {
+                      const filesSection = document.getElementById("files-section");
+                      if (filesSection) {
+                        filesSection.scrollIntoView({ behavior: "smooth" });
                       }
                     }}
-                    data-testid="button-copy-evidence-request"
+                    data-testid="button-scroll-to-upload"
                   >
-                    <Copy className="mr-2 h-3 w-3" />
-                    Copy evidence request
+                    <Upload className="mr-2 h-3 w-3" />
+                    Upload files
                   </Button>
-                )}
+                </div>
               </div>
 
               {lastDropResult.evidenceRequest && (
-                <pre className="mt-3 whitespace-pre-wrap rounded-md bg-black/30 p-2 text-xs text-amber-700 dark:text-amber-100/90">
+                <pre className="whitespace-pre-wrap rounded-md bg-black/30 p-2 text-xs text-amber-700 dark:text-amber-100/90">
                   {lastDropResult.evidenceRequest}
                 </pre>
               )}
 
               {Array.isArray(lastDropResult.suggestedFileFetchPaths) && lastDropResult.suggestedFileFetchPaths.length > 0 && (
-                <div className="mt-3 text-xs text-amber-700 dark:text-amber-100/90">
+                <div className="text-xs text-amber-700 dark:text-amber-100/90">
                   <div className="font-medium mb-1">Suggested files to fetch:</div>
                   <ul className="list-disc ml-5">
                     {lastDropResult.suggestedFileFetchPaths.slice(0, 12).map((p, i) => (
@@ -603,6 +622,37 @@ export default function WorkItemDetail() {
                   </ul>
                 </div>
               )}
+
+              <div className="border-t border-amber-500/30 pt-3">
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="text-amber-700 dark:text-amber-100 hover:bg-amber-400/10 w-full justify-between"
+                  onClick={() => setShowEvidenceInput(!showEvidenceInput)}
+                  data-testid="button-toggle-evidence-input"
+                >
+                  <span className="flex items-center gap-2">
+                    <FileText className="h-3 w-3" />
+                    Paste Network/Console evidence
+                  </span>
+                  <ChevronDown className={`h-4 w-4 transition-transform ${showEvidenceInput ? "rotate-180" : ""}`} />
+                </Button>
+                
+                {showEvidenceInput && (
+                  <div className="mt-2 space-y-2">
+                    <Textarea
+                      placeholder="Paste your Network request details (URL, Method, Status, Payload, Response) and Console errors here..."
+                      value={additionalEvidence}
+                      onChange={(e) => setAdditionalEvidence(e.target.value)}
+                      className="min-h-[120px] font-mono text-xs bg-background/50"
+                      data-testid="textarea-additional-evidence"
+                    />
+                    <div className="text-xs text-amber-600 dark:text-amber-200/80">
+                      After pasting evidence and uploading files, click <strong>Generate Recommendation</strong> → <strong>Generate Drop</strong> to retry.
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
           )}
 
@@ -701,7 +751,7 @@ export default function WorkItemDetail() {
           <LifestyleHeroPreview workItemId={workItem.id} />
 
           {/* Files */}
-          <Card>
+          <Card id="files-section">
             <CardHeader>
               <CardTitle>Files</CardTitle>
             </CardHeader>
