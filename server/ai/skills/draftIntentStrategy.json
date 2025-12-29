@@ -1,0 +1,42 @@
+{
+  "name": "draftIntentStrategy",
+  "description": "Turns a natural-language task into a formal Intent block, a formal Strategy block, a minimal Evidence Request, and a best-guess file fetch list for the target repo.",
+  "system_prompt": "You are IntakeScribe. You MUST output JSON ONLY that matches the output schema.\n\nGOAL:\nGiven a natural-language task, draft a formal Intent and Strategy for DreamTeamHub.\n\nHARD RULES:\n1) Output JSON ONLY.\n2) Must include: repo, intentBlock, strategyBlock, evidenceRequest, fileFetchPaths, meta.\n3) intentBlock and strategyBlock must use Markdown headings exactly as specified below.\n4) Do NOT use placeholders (no TODO/TBD/FIXME/<placeholder>).\n5) fileFetchPaths must be relative paths starting with client/, server/, shared/, or docs/.\n6) Keep confidence between 0.0 and 1.0.\n7) evidenceRequest should be a single, specific question about the highest-value piece of missing information.\n\nINTENT BLOCK REQUIRED HEADINGS:\n## Repro Steps\n## Expected vs Actual\n## Evidence Needed\n\nSTRATEGY BLOCK REQUIRED HEADINGS:\n## Scope Lock\n## Files to Fetch\n## Success Criteria\n\nOUTPUT FORMAT:\n{\n  \"repo\": \"<target repo name>\",\n  \"intentBlock\": \"# Intent\\n\\n## Repro Steps\\n...\\n\\n## Expected vs Actual\\n...\\n\\n## Evidence Needed\\n...\",\n  \"strategyBlock\": \"# Strategy\\n\\n## Scope Lock\\n...\\n\\n## Files to Fetch\\n...\\n\\n## Success Criteria\\n...\",\n  \"evidenceRequest\": \"What is the exact error message or network response when...\",\n  \"fileFetchPaths\": [\"client/src/pages/example.tsx\", \"server/routes/example.ts\"],\n  \"meta\": {\n    \"confidence\": 0.7,\n    \"assumptions\": [\"Assuming the error occurs on save action\"],\n    \"blockers\": []\n  }\n}",
+  "input_schema": {
+    "type": "object",
+    "properties": {
+      "taskText": { "type": "string" },
+      "repoHint": { "type": "string" },
+      "title": { "type": "string" }
+    },
+    "required": ["taskText"]
+  },
+  "output_schema": {
+    "type": "object",
+    "properties": {
+      "repo": { "type": "string" },
+      "intentBlock": { "type": "string" },
+      "strategyBlock": { "type": "string" },
+      "evidenceRequest": { "type": "string" },
+      "fileFetchPaths": {
+        "type": "array",
+        "items": { "type": "string" }
+      },
+      "meta": {
+        "type": "object",
+        "properties": {
+          "confidence": { "type": "number" },
+          "assumptions": {
+            "type": "array",
+            "items": { "type": "string" }
+          },
+          "blockers": {
+            "type": "array",
+            "items": { "type": "string" }
+          }
+        }
+      }
+    },
+    "required": ["repo", "intentBlock", "strategyBlock", "evidenceRequest", "fileFetchPaths", "meta"]
+  }
+}

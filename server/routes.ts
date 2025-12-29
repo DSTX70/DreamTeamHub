@@ -34,6 +34,7 @@ import { getFccSkuMapByKey } from "./lib/fccSkuMap";
 import { PACK_REGISTRY } from "./ai/packRegistry";
 import { createPackActionHandler } from "./ai/packFactory";
 import { postGeneratePatchDrop } from "./routes/workItemActions/generatePatchDrop";
+import { postDraftIntentStrategy } from "./routes/workItemActions/draftIntentStrategy";
 import multer from "multer";
 import { z } from "zod";
 import { generateLifestyleHeroesForWorkItem } from "./services/lifestyleHeroes";
@@ -1158,6 +1159,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Pilot F — Patch Drop Generator (non-persisting, returns drop text for manual apply)
   app.post("/api/work-items/:id/actions/generatePatchDrop", isAuthenticated, postGeneratePatchDrop);
+
+  // Pilot G — Natural Language Intake → Draft Intent + Strategy
+  app.post("/api/work-items/:id/actions/draftIntentStrategy", isAuthenticated, postDraftIntentStrategy);
   
   // Pack to Drive routes
   const { postSavePackToDrive, getWorkItemDriveFiles } = await import("./api/packToDrive.route");
