@@ -1,0 +1,272 @@
+Got it. Here’s **Pilot F — Milestone 1 (Draft)** as a single **DreamTeamHub** patch drop:
+
+* Adds a **Generate Patch Drop** action handler (server-only, returns output, does **not** persist)
+* Adds a **strict drop validator** (`Repo:` header, `Manual apply only`, `FILE/END_FILE` pairing, no placeholders)
+* Adds a **new skill**: `generatePatchDrop.json` (outputs JSON with `repo` + `dropText`)
+* Designed to work with your existing pattern: `runSkill({ skillName, input })`
+  (and it will automatically include Pilot C repo context if keywords match, because that’s already in `runSkill.ts`)
+
+**Repo:** `DreamTeamHub`
+**Manual apply only** ✅
+**No schema changes** ✅
+**No auto-apply / no VSuiteHQ** ✅
+
+---
+
+```ts
+FILE: server/ai/drops/validatePatchDrop.ts
+export type DropValidationResult = {
+  ok: boolean;
+  errors: string[];
+};
+
+const PLACEHOLDER_RE = /\b(TODO|TBD|FIXME|PLACEHOLDER)\b|<placeholder>|…|\.\.\./i;
+
+export function validatePatchDropFormat(dropText: string): DropValidationResult {
+  const errors: string[] = [];
+
+  const text = (dropText || "").trim();
+  if (!text) {
+    return { ok: false, errors: ["Drop is empty"] };
+  }
+
+  // Required header lines
+  if (!/^Repo:\s*\S+/m.test(text)) {
+    errors.push(`Missing required header: "Repo: <RepoName>"`);
+  }
+  if (!/Manual apply only/i.test(text)) {
+    errors.push(`Missing required line: "Manual apply only"`);
+  }
+
+  // Must contain FILE blocks
+  if (!/^\s*FILE:\s+/m.test(text)) {
+    errors.push(`No FILE blocks found (must include at least one "FILE: <path>" block)`);
+  }
+  if (!/^\s*END_FILE\s*$/m.test(text)) {
+    errors.push(`No END_FILE markers found (each FILE block must end with END_FILE)`);
+  }
+
+  // Pair FILE / END_FILE markers in order
+  const lines = text.split(/\r?\n/);
+  let openCount = 0;
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+
+    if (/^\s*FILE:\s+/.test(line)) openCount++;
+    if (/^\s*END_FILE\s*$/.test(line)) openCount--;
+
+    if (openCount < 0) {
+      errors.push(`END_FILE without a matching FILE at line ${i + 1}`);
+      openCount = 0; // avoid cascading
+    }
+  }
+  if (openCount !== 0) {
+    errors.push(`Unclosed FILE block(s): found FILE without matching END_FILE`);
+  }
+
+  // Placeholder guardrail
+  if (PLACEHOLDER_RE.test(text)) {
+    errors.push(`Drop contains placeholder markers (TODO/TBD/FIXME/<placeholder>/...); must be fully concrete`);
+  }
+
+  return { ok: errors.length === 0, errors };
+}
+END_FILE
+```
+
+```ts
+FILE: server/ai/schemas/patchDrop.ts
+import { z } from "zod";
+
+export const PatchDropSchema = z.object({
+  repo: z.string().min(1),
+  dropText: z.string().min(1),
+});
+
+export type PatchDrop = z.infer<typeof PatchDropSchema>;
+END_FILE
+```
+
+```ts
+FILE: server/ai/skills/generatePatchDrop.json
+{
+  "name": "generatePatchDrop",
+  "description": "Generates a paste-ready patch drop (manual apply only) for a target repo based on a locked recommendation + repo context file blocks.",
+  "system_prompt": "You are PatchDropGen. You MUST output JSON ONLY that matches the output schema.\n\nGOAL:\nGenerate a paste-ready patch drop that a human can apply manually.\n\nHARD RULES (NON-NEGOTIABLE):\n1) Your JSON MUST have keys: repo, dropText.\n2) dropText MUST start with a line: \"Repo: <RepoName>\".\n3) dropText MUST include a line: \"Manual apply only\".\n4) dropText MUST contain one or more FILE blocks in this exact format:\n   FILE: <path>\n   <full file contents>\n   END_FILE\n5) Every FILE must have a matching END_FILE.\n6) DO NOT include placeholders (no TODO, TBD, FIXME, <placeholder>, ...).\n7) Touch ONLY files that are present in the provided repo context (FILE blocks) unless the input explicitly allows additional paths.\n8) No commentary outside the patch drop. Put any notes into the verification checklist section inside dropText.\n\nOUTPUT CONTENT REQUIREMENTS:\n- dropText must include a \"Post-apply verification checklist\" section with bullet points.\n- The patch should be minimal and compile-safe.\n\nINPUT:\nYou will receive a JSON object called \"Work Item Input\" that may include:\n- title\n- repoHint\n- lockedRecommendation (often includes FILE blocks)\n- additional context\n\nIf repoHint is missing, infer repo from the recommendation header if present; otherwise default to \"GigsterGarage\".\n\nReturn JSON ONLY.",
+  "input_schema": {
+    "type": "object",
+    "properties": {
+      "title": { "type": "string" },
+      "repoHint": { "type": "string" },
+      "lockedRecommendation": { "type": "string" },
+      "notes": { "type": "string" }
+    }
+  },
+  "output_schema": {
+    "type": "object",
+    "properties": {
+      "repo": { "type": "string" },
+      "dropText": { "type": "string" }
+    },
+    "required": ["repo", "dropText"]
+  }
+}
+END_FILE
+```
+
+```ts
+FILE: server/routes/workItemActions/generatePatchDrop.ts
+import type { Request, Response } from "express";
+import { runSkill } from "../../ai/runSkill";
+import { PatchDropSchema } from "../../ai/schemas/patchDrop";
+import { validatePatchDropFormat } from "../../ai/drops/validatePatchDrop";
+
+/**
+ * Pilot F — Milestone 1 (Draft)
+ * Server-only patch drop generator.
+ *
+ * Contract:
+ * POST /api/work-items/:id/actions/generatePatchDrop
+ *
+ * Body (no schema change; tolerant):
+ * {
+ *   title?: string,
+ *   repoHint?: string,
+ *   lockedRecommendation?: string,   // recommended: the saved recommendation text including FILE blocks
+ *   notes?: string
+ * }
+ *
+ * Returns:
+ * 200 { ok:true, repo, dropText }
+ * 400 { ok:false, error, details:{ validationErrors, rawModelOutput? } }
+ */
+export async function postGeneratePatchDrop(req: Request, res: Response) {
+  try {
+    const workItemId = req.params.id; // currently unused; kept for future wiring
+    const { title, repoHint, lockedRecommendation, notes } = (req.body || {}) as any;
+
+    if (!lockedRecommendation || typeof lockedRecommendation !== "string" || lockedRecommendation.trim().length < 20) {
+      return res.status(400).json({
+        ok: false,
+        error: "lockedRecommendation is required (include the saved Recommendation text, ideally with FILE blocks).",
+      });
+    }
+
+    const input = {
+      title: title || `Work Item ${workItemId}`,
+      repoHint: repoHint || "GigsterGarage",
+      lockedRecommendation,
+      notes: notes || "",
+    };
+
+    // LLM run (runSkill already injects Pilot C context when keywords match)
+    const raw = await runSkill({
+      skillName: "generatePatchDrop",
+      input,
+    });
+
+    // Validate JSON shape
+    const parsed = PatchDropSchema.safeParse(raw);
+    if (!parsed.success) {
+      return res.status(400).json({
+        ok: false,
+        error: "Model output did not match PatchDrop schema",
+        details: parsed.error.flatten(),
+        rawModelOutput: raw,
+      });
+    }
+
+    const { repo, dropText } = parsed.data;
+
+    // Validate drop format
+    const validation = validatePatchDropFormat(dropText);
+    if (!validation.ok) {
+      return res.status(400).json({
+        ok: false,
+        error: "Generated drop failed format validation",
+        details: {
+          validationErrors: validation.errors,
+        },
+        repo,
+        dropText,
+      });
+    }
+
+    return res.json({
+      ok: true,
+      repo,
+      dropText,
+    });
+  } catch (err: any) {
+    return res.status(500).json({
+      ok: false,
+      error: err?.message || "Unknown error",
+    });
+  }
+}
+END_FILE
+```
+
+```ts
+FILE: server/routes/workItemActions/_pilotF_wiring_note.md
+Pilot F — Milestone 1 (Draft) Wiring Note
+Confidential and proprietary and copyright Dustin Sparks 2025
+
+You now have:
+- server/routes/workItemActions/generatePatchDrop.ts (exports postGeneratePatchDrop)
+
+To wire it, add it to the same router file that mounts other Work Item Actions.
+
+Look for something like:
+- server/routes/workItemActions/index.ts
+or
+- server/routes.ts
+or wherever generateLifestylePack is registered.
+
+Mount:
+POST /api/work-items/:id/actions/generatePatchDrop  -> postGeneratePatchDrop
+
+Body should include:
+{
+  "title": "...",
+  "repoHint": "GigsterGarage",
+  "lockedRecommendation": "<the saved Recommendation text (with FILE blocks)>"
+}
+
+Behavior:
+- returns 200 with { ok:true, repo, dropText } if valid
+- returns 400 with validation errors if the model output is not a compliant drop
+END_FILE
+```
+
+---
+
+## How to use Pilot F (Milestone 1) right now
+
+1. Create a Work Item and generate the **Recommendation** (which now includes the repo FILE blocks).
+2. Copy the saved recommendation text.
+3. Call:
+
+`POST /api/work-items/:id/actions/generatePatchDrop`
+
+with body:
+
+```json
+{
+  "repoHint": "GigsterGarage",
+  "title": "Pilot F test",
+  "lockedRecommendation": "…full recommendation text including FILE blocks…"
+}
+```
+
+4. If the model returns anything that violates format, you’ll get **400** with exact reasons.
+
+---
+
+## Definition of Done — Milestone 1
+
+* Endpoint returns a compliant drop (Repo header + Manual apply + FILE blocks + END_FILE + verification checklist)
+* Invalid drops are rejected with actionable errors
+* No persistence / no schema changes / no auto-apply
+
+If you paste the file where WorkItemActions are mounted (router index), I’ll ship **Milestone 2 (UI button + preview + copy)** as the next drop.

@@ -33,6 +33,7 @@ import { getFccSkuMapByKey } from "./lib/fccSkuMap";
 // Pack generation handlers now use the registry pattern
 import { PACK_REGISTRY } from "./ai/packRegistry";
 import { createPackActionHandler } from "./ai/packFactory";
+import { postGeneratePatchDrop } from "./routes/workItemActions/generatePatchDrop";
 import multer from "multer";
 import { z } from "zod";
 import { generateLifestyleHeroesForWorkItem } from "./services/lifestyleHeroes";
@@ -1154,6 +1155,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const handler = createPackActionHandler(config);
     app.post(path, isAuthenticated, handler);
   }
+
+  // Pilot F — Patch Drop Generator (non-persisting, returns drop text for manual apply)
+  app.post("/api/work-items/:id/actions/generatePatchDrop", isAuthenticated, postGeneratePatchDrop);
   
   // Pack to Drive routes
   const { postSavePackToDrive, getWorkItemDriveFiles } = await import("./api/packToDrive.route");
