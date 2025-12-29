@@ -477,7 +477,21 @@ export default function WorkItemDetail() {
 
           {stage?.recommendation?.text && (
             <div className="space-y-2">
-              <div className="text-sm font-medium">Recommendation (Draft)</div>
+              <div className="flex items-center justify-between">
+                <div className="text-sm font-medium">Recommendation (Draft)</div>
+                <Button 
+                  size="sm" 
+                  variant="outline" 
+                  onClick={() => {
+                    navigator.clipboard.writeText(stage.recommendation?.text || "");
+                    toast({ title: "Copied!", description: "Recommendation copied to clipboard." });
+                  }}
+                  data-testid="button-copy-recommendation"
+                >
+                  <Copy className="mr-2 h-3 w-3" />
+                  Copy
+                </Button>
+              </div>
               <Textarea 
                 value={stage.recommendation.text} 
                 readOnly 
