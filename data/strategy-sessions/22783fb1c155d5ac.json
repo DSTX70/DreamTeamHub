@@ -1,0 +1,30 @@
+{
+  "id": "22783fb1c155d5ac",
+  "title": "Dream Team Hub — Strategy Session v1.0 (Pre-Execution)",
+  "status": "LOCKED",
+  "mode": "STRATEGY / BRAINSTORM (NON-EXECUTING)",
+  "author": "Dustin Sparks",
+  "approval_required_for_execution": true,
+  "repo_hint": "Gigster Garage (pilot candidate)",
+  "podPresetKey": "gigsterGarage",
+  "participants": [
+    "OS",
+    "Forge",
+    "LexiCode",
+    "Lume",
+    "Sentinel",
+    "Aegis",
+    "Sparkster"
+  ],
+  "questions": [
+    "What must happen before any recommendation or drop is allowed?",
+    "What is the minimum approval artifact that blocks execution?",
+    "Which tasks require a Strategy Session vs fast-path execution?",
+    "Where do Strategy Sessions end and Work Orders begin?",
+    "What information must survive as a permanent artifact?"
+  ],
+  "bodyMd": "TITLE: Dream Team Hub — Strategy Session v1.0 (Pre-Execution)\n\nSTATUS: OPEN\nMODE: STRATEGY / BRAINSTORM (NON-EXECUTING)\n\nAUTHOR: Dustin Sparks\nAPPROVAL_REQUIRED_FOR_EXECUTION: true\n\n---\n\n## PURPOSE\n\nThis Strategy Session exists to:\n- Clarify intent before solutions\n- Explore ideas, tradeoffs, and risks\n- Refine *what problem we are actually solving*\n- Prevent premature recommendations, code, or drops\n\nThis session is explicitly **non-executing**.\n\n---\n\n## SCOPE & RULES\n\nAllowed:\n- Brainstorming\n- Debate and disagreement\n- Option exploration\n- Risk identification\n- Clarifying questions\n- Directional thinking\n\nNot Allowed:\n- Code drops\n- Repo changes\n- Replit handoff\n- Shipping, ingest, or apply actions\n\nNo outputs from this session may be executed without an explicit **Strategy Lock** and subsequent approval.\n\n---\n\n## CONTEXT\n\nProject / Repo:\n- Gigster Garage (pilot candidate)\n\nGoal:\n- Define the correct workflow and boundaries for agents + repos doing real work together\n- Ensure Dustin Sparks remains the sole approval authority\n- Establish the clean separation between:\n  Strategy -> Recommendations -> Execution\n\nConstraints:\n- Safety over speed\n- No silent execution paths\n- Human approval must be enforceable, not implied\n\n---\n\n## PARTICIPANTS (INVITED)\n\n- OS (Orchestration)\n- Forge (Architecture)\n- LexiCode (Implementation realism)\n- Lume (UX / flow)\n- Sentinel (Risk & safety)\n- Aegis (Governance / control points)\n- Sparkster (Clarity of intent & language)\n\n---\n\n## QUESTIONS TO ADDRESS\n\n1. What *must* happen before any recommendation or drop is allowed?\n2. What is the minimum approval artifact that blocks execution?\n3. Which tasks require a Strategy Session vs fast-path execution?\n4. Where do Strategy Sessions end and Work Orders begin?\n5. What information must survive as a permanent artifact?\n\n---\n\n## EXIT CRITERIA\n\nThis session remains OPEN until:\n- A clear direction is agreed upon\n- Dustin Sparks issues a **Strategy Lock**\n\nOnly after a Strategy Lock may recommendations or execution artifacts be created.\n",
+  "created_at": "2025-12-29T16:24:50.172Z",
+  "updated_at": "2025-12-29T16:25:18.371Z",
+  "locked_at": "2025-12-29T16:25:18.371Z"
+}
