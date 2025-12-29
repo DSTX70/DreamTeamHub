@@ -4,23 +4,10 @@ import { PatchDropSchema } from "../../ai/schemas/patchDrop";
 import { validatePatchDropFormat } from "../../ai/drops/validatePatchDrop";
 
 /**
- * Pilot F — Milestone 1 (Draft)
- * Server-only patch drop generator.
- *
- * Contract:
- * POST /api/work-items/:id/actions/generatePatchDrop
- *
- * Body:
- * {
- *   title?: string,
- *   repoHint?: string,
- *   lockedRecommendation?: string,
- *   notes?: string
- * }
- *
- * Returns:
- * 200 { ok:true, repo, dropText }
- * 400 { ok:false, error, details:{ validationErrors, rawModelOutput? } }
+ * Pilot F — Patch Drop Generator (Milestone 1+)
+ * Supports:
+ *  - Patch needed: validated FILE blocks
+ *  - No patch needed: noPatchRequired=true with rationale/evidence, validated as a no-op outcome
  */
 export async function postGeneratePatchDrop(req: Request, res: Response) {
   try {
@@ -56,25 +43,35 @@ export async function postGeneratePatchDrop(req: Request, res: Response) {
       });
     }
 
-    const { repo, dropText } = parsed.data;
+    const data = parsed.data as any;
 
-    const validation = validatePatchDropFormat(dropText);
+    // Always validate the resulting dropText format (supports both paths)
+    const validation = validatePatchDropFormat(data.dropText);
     if (!validation.ok) {
       return res.status(400).json({
         ok: false,
         error: "Generated drop failed format validation",
-        details: {
-          validationErrors: validation.errors,
-        },
-        repo,
-        dropText,
+        details: { validationErrors: validation.errors },
+        repo: data.repo,
+        dropText: data.dropText,
+        noPatchRequired: data.noPatchRequired === true,
+        rationale: data.rationale,
+        evidence: data.evidence,
       });
     }
 
+    // Success (either patch needed or no patch needed)
     return res.json({
       ok: true,
-      repo,
-      dropText,
+      repo: data.repo,
+      dropText: data.dropText,
+      noPatchRequired: data.noPatchRequired === true,
+      ...(data.noPatchRequired === true
+        ? {
+            rationale: data.rationale,
+            evidence: data.evidence,
+          }
+        : {}),
     });
   } catch (err: any) {
     return res.status(500).json({
