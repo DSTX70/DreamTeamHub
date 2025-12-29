@@ -1,0 +1,29 @@
+{
+  "id": "f530753f74050054",
+  "title": "Strategy Session — Agency Hub Save shows “Error — An error occurred” even though POST /api/agenc...",
+  "status": "OPEN",
+  "mode": "STRATEGY / BRAINSTORM (NON-EXECUTING)",
+  "author": "Dustin Sparks",
+  "approval_required_for_execution": true,
+  "repo_hint": "GigsterGarage",
+  "podPresetKey": "gigsterGarage",
+  "participants": [
+    "OS",
+    "Forge",
+    "LexiCode",
+    "Lume",
+    "Sentinel",
+    "Aegis",
+    "Sparkster"
+  ],
+  "questions": [
+    "What must happen before any recommendation or drop is allowed?",
+    "What is the minimum approval artifact that blocks execution?",
+    "Which tasks require a Strategy Session vs fast-path execution?",
+    "Where do Strategy Sessions end and Work Orders begin?",
+    "What information must survive as a permanent artifact?"
+  ],
+  "bodyMd": "# Pilot G — Draft Intent + Strategy\n> Repo: GigsterGarage\n> Meta:\n> - confidence: 0.7\n> - assumptions: Assuming the error occurs on save action\n---\n# Intent\n\n## Repro Steps\n1. Go to the Agency Hub page.\n2. Click on the Save button.\n3. Observe the error toast message.\n\n## Expected vs Actual\n- **Expected:** No error toast should be displayed after a successful save. The success message should appear and the list should be updated with the new entry.\n- **Actual:** An error toast saying “Error — An error occurred” is displayed even though the POST /api/agency/create returns a 200 status with JSON content.\n\n## Evidence Needed\nWe need to capture the response from saved-items?type=marketing and any console error stack trace that appears after the Save action.\n---\n# Strategy\n\n## Scope Lock\nFocus on debugging the client-side code that handles the response from the POST /api/agency/create and the subsequent refresh action to fetch saved items.\n\n## Files to Fetch\nExamine the client-side components and hooks involved in the save action and response handling.\n\n## Success Criteria\nNo error toast is displayed upon a successful save. The success message appears, and the saved items list updates correctly.\n---\n## Evidence Request (paste into Intent Evidence Needed)\nWhat is the exact error message or network response when the error toast is displayed after saving?\n## Suggested Files to Fetch (via connector)\n- client/src/pages/example.tsx\n- server/routes/example.ts",
+  "created_at": "2025-12-29T23:48:07.901Z",
+  "updated_at": "2025-12-29T23:48:07.901Z"
+}
