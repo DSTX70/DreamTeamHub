@@ -378,7 +378,7 @@ export default function IntentConsolePage() {
       });
       setIntent("");
       setDraft(null);
-      setLocation(`/work/${result.workItem.id}`);
+      setLocation(`/work-items/${result.workItem.id}`);
     },
     onError: (err: any) => {
       toast({
