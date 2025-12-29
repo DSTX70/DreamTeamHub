@@ -1,3 +1,18 @@
+Yep — and since **Pilot G Milestone 1** is already deployed, we can add the **“Apply Draft to Intent + Strategy”** button purely in the **Intent Console UI** by:
+
+1. Calling your endpoint: `POST /api/work-items/0/actions/draftIntentStrategy` *(the `:id` is unused server-side, so `0` is safe)*
+2. Showing the returned draft (Intent block + Strategy block + Evidence request + file list)
+3. One-click:
+
+   * **Apply Draft to Intent** (replaces the intent textarea)
+   * **Create Strategy Session from Draft** (creates a Strategy Session prefilled with the draft + evidence request + file list, and navigates you there)
+
+Below is a single **DreamTeamHub** patch drop that does exactly that.
+
+---
+
+```ts
+FILE: client/src/pages/intent-console.tsx
 import { useMemo, useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -627,3 +642,17 @@ export default function IntentConsolePage() {
     </div>
   );
 }
+END_FILE
+```
+
+---
+
+### Notes on what this enables (immediately)
+
+* You stay on **Intent**.
+* Click **Draft Intent + Strategy**.
+* Click **Create Strategy Session** → it auto-fills Strategy and navigates you to the Strategy editor with everything in place.
+
+If you also want a small badge on the Strategy list (“Created from Pilot G”), I can add that next, but this delivers the core “Apply Draft to Intent + Strategy” button now.
+
+(Loaded references: `intent-console.tsx`, `strategy-detail.tsx`, `strategy-list.tsx`.)
