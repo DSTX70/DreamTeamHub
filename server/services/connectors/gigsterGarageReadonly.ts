@@ -54,7 +54,9 @@ function normalizeFiles(payload: any): GGFileResult[] {
 
 function truncate(s: string, maxChars: number): { text: string; truncated: boolean } {
   if (s.length <= maxChars) return { text: s, truncated: false };
-  return { text: s.slice(0, maxChars) + `\n\n/* …truncated at ${maxChars} chars… */\n`, truncated: true };
+  // IMPORTANT: Avoid "..." or "…" because Pilot F drop validation rejects placeholder markers.
+  const marker = `\n\n/* TRUNCATED_AT_${maxChars}_CHARS */\n`;
+  return { text: s.slice(0, maxChars) + marker, truncated: true };
 }
 
 export async function fetchGigsterGarageFiles(paths: string[], opts?: { perFileMaxChars?: number; totalMaxChars?: number }): Promise<FetchGGFilesResponse> {

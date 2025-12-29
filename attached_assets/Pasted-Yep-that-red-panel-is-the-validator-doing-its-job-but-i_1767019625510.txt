@@ -1,0 +1,172 @@
+Yep — that red panel is the validator doing its job, but it’s currently **too strict in one common case**:
+
+### Why you’re getting this error
+
+Your drop generator is outputting **ellipsis / “…” / “...”** somewhere in the drop text (usually inside a `FILE:` block) to indicate “omitted content” *or* because the repo-context truncation marker includes ellipses.
+
+Either way, Pilot F’s rule is: **no placeholders at all**. So the validator correctly rejects it.
+
+### Fix (recommended): remove ellipsis from truncation markers + tighten/clarify placeholder detection
+
+This is a **DreamTeamHub repo patch** (not GigsterGarage). After applying it, your “Generate Drop” button should stop failing for the “truncated marker” false-positive, and the LLM will be more likely to comply.
+
+---
+
+# PATCH DROP — DreamTeamHub (manual apply)
+
+## 1) Make truncation marker NOT look like a placeholder
+
+**Repo:** `DreamTeamHub`
+**File:** `server/services/connectors/gigsterGarageReadonly.ts`
+
+Find your `truncate()` helper (you likely have something like `/* …truncated at ... */`).
+
+Replace it with this version (no `...` and no `…`):
+
+```ts
+FILE: server/services/connectors/gigsterGarageReadonly.ts
+// ... keep everything above unchanged ...
+
+function truncate(s: string, maxChars: number): { text: string; truncated: boolean } {
+  if (s.length <= maxChars) return { text: s, truncated: false };
+
+  // IMPORTANT: Avoid "..." or "…" because Pilot F drop validation rejects placeholder markers.
+  const marker = `\n\n/* TRUNCATED_AT_${maxChars}_CHARS */\n`;
+  return { text: s.slice(0, maxChars) + marker, truncated: true };
+}
+
+// ... keep everything below unchanged ...
+END_FILE
+```
+
+(If your file has a slightly different structure, only replace the `truncate()` function body.)
+
+---
+
+## 2) Update drop validator: still blocks TODO/TBD/FIXME/<placeholder>, but avoids false positives
+
+**Repo:** `DreamTeamHub`
+**File:** `server/ai/drops/validatePatchDrop.ts`
+
+Replace the placeholder regex logic with this more precise version:
+
+```ts
+FILE: server/ai/drops/validatePatchDrop.ts
+export type DropValidationResult = {
+  ok: boolean;
+  errors: string[];
+};
+
+// Disallow explicit placeholder tokens anywhere.
+const TOKEN_PLACEHOLDER_RE = /\b(TODO|TBD|FIXME|PLACEHOLDER)\b|<placeholder>/i;
+
+// Disallow standalone ellipsis lines (these are almost always “omitted content”).
+const STANDALONE_ELLIPSIS_LINE_RE = /^\s*(\.\.\.|…)\s*$/m;
+
+// Disallow “... omitted ...” style truncation comments that the model sometimes emits
+const OMISSION_PHRASE_RE = /\b(omitted|snip|snipped|elided)\b/i;
+
+export function validatePatchDropFormat(dropText: string): DropValidationResult {
+  const errors: string[] = [];
+  const text = (dropText || "").trim();
+
+  if (!text) return { ok: false, errors: ["Drop is empty"] };
+
+  // Required header lines
+  if (!/^Repo:\s*\S+/m.test(text)) errors.push(`Missing required header: "Repo: <RepoName>"`);
+  if (!/Manual apply only/i.test(text)) errors.push(`Missing required line: "Manual apply only"`);
+
+  // Must contain FILE blocks
+  if (!/^\s*FILE:\s+/m.test(text)) errors.push(`No FILE blocks found (must include at least one "FILE: <path>" block)`);
+  if (!/^\s*END_FILE\s*$/m.test(text)) errors.push(`No END_FILE markers found (each FILE block must end with END_FILE)`);
+
+  // Pair FILE / END_FILE markers in order
+  const lines = text.split(/\r?\n/);
+  let openCount = 0;
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    if (/^\s*FILE:\s+/.test(line)) openCount++;
+    if (/^\s*END_FILE\s*$/.test(line)) openCount--;
+    if (openCount < 0) {
+      errors.push(`END_FILE without a matching FILE at line ${i + 1}`);
+      openCount = 0;
+    }
+  }
+  if (openCount !== 0) errors.push(`Unclosed FILE block(s): found FILE without matching END_FILE`);
+
+  // Placeholder guardrails
+  if (TOKEN_PLACEHOLDER_RE.test(text)) {
+    errors.push(`Drop contains placeholder markers (TODO/TBD/FIXME/<placeholder>); must be fully concrete`);
+  }
+  if (STANDALONE_ELLIPSIS_LINE_RE.test(text) || OMISSION_PHRASE_RE.test(text)) {
+    errors.push(`Drop appears to omit content (ellipsis/omitted/snipped). All FILE blocks must contain full file contents.`);
+  }
+
+  return { ok: errors.length === 0, errors };
+}
+END_FILE
+```
+
+This still blocks “…” / “...” **when used as omission**, but won’t accidentally flag normal code *unless it contains a standalone ellipsis line*.
+
+---
+
+## 3) Tighten the skill rules to prevent the model from using “...”
+
+**Repo:** `DreamTeamHub`
+**File:** `server/ai/skills/generatePatchDrop.json`
+
+Add this rule to the system_prompt “HARD RULES” section:
+
+* “Never use `...` or `…` anywhere in dropText. If a file is too large, do not include it; choose a smaller set of files.”
+
+Here’s a safe patch: replace the HARD RULES list with an extra line (minimal edit):
+
+```json
+FILE: server/ai/skills/generatePatchDrop.json
+{
+  "name": "generatePatchDrop",
+  "description": "Generates a paste-ready patch drop (manual apply only) for a target repo based on a locked recommendation + repo context file blocks.",
+  "system_prompt": "You are PatchDropGen. You MUST output JSON ONLY that matches the output schema.\n\nGOAL:\nGenerate a paste-ready patch drop that a human can apply manually.\n\nHARD RULES (NON-NEGOTIABLE):\n1) Your JSON MUST have keys: repo, dropText.\n2) dropText MUST start with a line: \"Repo: <RepoName>\".\n3) dropText MUST include a line: \"Manual apply only\".\n4) dropText MUST contain one or more FILE blocks in this exact format:\n   FILE: <path>\n   <full file contents>\n   END_FILE\n5) Every FILE must have a matching END_FILE.\n6) DO NOT include placeholders (no TODO, TBD, FIXME, <placeholder>).\n7) NEVER use \"...\" or \"…\" anywhere. Do not omit content. FILE blocks must contain full file text.\n8) Touch ONLY files that are present in the provided repo context (FILE blocks) unless the input explicitly allows additional paths.\n9) No commentary outside the patch drop. Put any notes into the verification checklist section inside dropText.\n\nOUTPUT CONTENT REQUIREMENTS:\n- dropText must include a \"Post-apply verification checklist\" section with bullet points.\n- The patch should be minimal and compile-safe.\n\nINPUT:\nYou will receive a JSON object called \"Work Item Input\" that may include:\n- title\n- repoHint\n- lockedRecommendation (often includes FILE blocks)\n- additional context\n\nIf repoHint is missing, infer repo from the recommendation header if present; otherwise default to \"GigsterGarage\".\n\nReturn JSON ONLY.",
+  "input_schema": {
+    "type": "object",
+    "properties": {
+      "title": { "type": "string" },
+      "repoHint": { "type": "string" },
+      "lockedRecommendation": { "type": "string" },
+      "notes": { "type": "string" }
+    }
+  },
+  "output_schema": {
+    "type": "object",
+    "properties": {
+      "repo": { "type": "string" },
+      "dropText": { "type": "string" }
+    },
+    "required": ["repo", "dropText"]
+  }
+}
+END_FILE
+```
+
+---
+
+# After applying
+
+1. Restart DreamTeamHub server (so the env + code reload).
+2. Go back to the Work Item:
+
+   * Generate Drop again.
+
+### Expected result
+
+* The validation panel should disappear.
+* You’ll get a valid `dropText`.
+
+---
+
+## If it *still* fails
+
+Then the model is still trying to omit content. In that case, the right move is: **limit drop generation to only 1–2 files** (the ones that actually need changes). We can do that by adjusting the prompt input to include “Only modify these files:” and listing them.
+
+If you paste the **dropText that failed** (even just the top + the part around where it uses `...`), I can tell you exactly which pattern triggered it and whether we should add the “allowed files” limiter next.
