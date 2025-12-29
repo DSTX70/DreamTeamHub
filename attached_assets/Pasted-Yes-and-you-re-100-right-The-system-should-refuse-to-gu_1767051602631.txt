@@ -1,0 +1,321 @@
+Yes — and you’re 100% right. The system should **refuse to guess** when it doesn’t have enough *evidence + code context* and should instead return an **official “BLOCKED — Missing Evidence”** outcome with a copy/paste evidence request.
+
+Important nuance: the agents **cannot automatically pull your DevTools Network/Console data** (that lives in your browser), but they *can* do the next-best thing: **detect “insufficient context” and prompt you for exactly what’s missing** (one small evidence packet), instead of returning “No Patch Needed.”
+
+Below is a **DreamTeamHub** patch that makes that behavior real.
+
+---
+
+# ✅ Pilot F Upgrade: Official “BLOCKED — Missing Evidence” outcome
+
+## What this changes
+
+When you click **Generate Drop**:
+
+* If the approved recommendation **does not include any `FILE:` blocks**, the endpoint returns:
+
+  * `ok: true`
+  * `blocked: true`
+  * `evidenceRequest` (exact capture template)
+  * `dropText` containing a **BLOCKED** section (validator accepts it)
+* The UI can show a clear banner + copy button for the evidence request.
+* This prevents false “No Patch Needed” and prevents wasted drops.
+
+---
+
+# PATCH DROP — DreamTeamHub (manual apply)
+
+## 1) Update PatchDrop schema to include `blocked` outcomes
+
+**Repo:** `DreamTeamHub`
+**File:** `server/ai/schemas/patchDrop.ts`
+
+```ts
+FILE: server/ai/schemas/patchDrop.ts
+import { z } from "zod";
+
+/**
+ * PatchDrop can be:
+ * A) Patch needed (FILE blocks)
+ * B) No patch needed (explicit rationale/evidence)
+ * C) BLOCKED: missing evidence/context (asks user for the minimal next artifact)
+ *
+ * Backward compatible: all shapes include dropText for UI display/copy.
+ */
+
+const PatchDropWithChanges = z.object({
+  repo: z.string().min(1),
+  noPatchRequired: z.literal(false).optional().default(false),
+  blocked: z.literal(false).optional().default(false),
+  dropText: z.string().min(1),
+});
+
+const PatchDropNoPatchNeeded = z.object({
+  repo: z.string().min(1),
+  noPatchRequired: z.literal(true),
+  blocked: z.literal(false).optional().default(false),
+  rationale: z.string().min(1),
+  evidence: z.string().optional(),
+  dropText: z.string().min(1),
+});
+
+const PatchDropBlocked = z.object({
+  repo: z.string().min(1),
+  blocked: z.literal(true),
+  noPatchRequired: z.literal(false).optional().default(false),
+  evidenceRequest: z.string().min(1),
+  suggestedFileFetchPaths: z.array(z.string().min(1)).max(20).optional().default([]),
+  dropText: z.string().min(1),
+});
+
+export const PatchDropSchema = z.union([PatchDropWithChanges, PatchDropNoPatchNeeded, PatchDropBlocked]);
+
+export type PatchDrop = z.infer<typeof PatchDropSchema>;
+END_FILE
+```
+
+---
+
+## 2) Update drop validator to accept BLOCKED (no FILE blocks required)
+
+**Repo:** `DreamTeamHub`
+**File:** `server/ai/drops/validatePatchDrop.ts`
+
+```ts
+FILE: server/ai/drops/validatePatchDrop.ts
+export type DropValidationResult = {
+  ok: boolean;
+  errors: string[];
+};
+
+const TOKEN_PLACEHOLDER_RE = /\b(TODO|TBD|FIXME|PLACEHOLDER)\b|<placeholder>/i;
+const STANDALONE_ELLIPSIS_LINE_RE = /^\s*(\.\.\.|…)\s*$/m;
+const OMISSION_PHRASE_RE = /\b(omitted|snip|snipped|elided)\b/i;
+
+function hasFileBlocks(text: string): boolean {
+  return /^\s*FILE:\s+/m.test(text) && /^\s*END_FILE\s*$/m.test(text);
+}
+function hasNoPatchSection(text: string): boolean {
+  return /##\s*No Patch Needed/i.test(text);
+}
+function hasBlockedSection(text: string): boolean {
+  return /##\s*BLOCKED\s*—\s*Missing Evidence/i.test(text) || /##\s*BLOCKED\b/i.test(text);
+}
+
+export function validatePatchDropFormat(dropText: string): DropValidationResult {
+  const errors: string[] = [];
+  const text = (dropText || "").trim();
+
+  if (!text) return { ok: false, errors: ["Drop is empty"] };
+
+  // Always require these headers
+  if (!/^Repo:\s*\S+/m.test(text)) errors.push(`Missing required header: "Repo: <RepoName>"`);
+  if (!/Manual apply only/i.test(text)) errors.push(`Missing required line: "Manual apply only"`);
+  if (!/Post-apply verification checklist/i.test(text)) errors.push(`Missing "Post-apply verification checklist" section`);
+
+  const fileBlocks = hasFileBlocks(text);
+  const noPatch = hasNoPatchSection(text);
+  const blocked = hasBlockedSection(text);
+
+  // Must be one of the valid modes
+  if (!fileBlocks && !noPatch && !blocked) {
+    errors.push(`Drop must include FILE blocks OR "No Patch Needed" section OR "BLOCKED — Missing Evidence" section`);
+  }
+
+  // Pairing rules only if FILE blocks exist
+  if (fileBlocks) {
+    const lines = text.split(/\r?\n/);
+    let openCount = 0;
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+      if (/^\s*FILE:\s+/.test(line)) openCount++;
+      if (/^\s*END_FILE\s*$/.test(line)) openCount--;
+      if (openCount < 0) {
+        errors.push(`END_FILE without a matching FILE at line ${i + 1}`);
+        openCount = 0;
+      }
+    }
+    if (openCount !== 0) errors.push(`Unclosed FILE block(s): found FILE without matching END_FILE`);
+
+    if (STANDALONE_ELLIPSIS_LINE_RE.test(text) || OMISSION_PHRASE_RE.test(text)) {
+      errors.push(`Drop appears to omit content (ellipsis/omitted/snipped). FILE blocks must contain full file text.`);
+    }
+  }
+
+  // Placeholders forbidden always
+  if (TOKEN_PLACEHOLDER_RE.test(text)) {
+    errors.push(`Drop contains placeholder markers (TODO/TBD/FIXME/<placeholder>); must be fully concrete`);
+  }
+
+  return { ok: errors.length === 0, errors };
+}
+END_FILE
+```
+
+---
+
+## 3) Add a preflight “context gate” in the endpoint (no FILE blocks → BLOCKED)
+
+**Repo:** `DreamTeamHub`
+**File:** `server/routes/workItemActions/generatePatchDrop.ts`
+
+```ts
+FILE: server/routes/workItemActions/generatePatchDrop.ts
+import type { Request, Response } from "express";
+import { runSkill } from "../../ai/runSkill";
+import { PatchDropSchema } from "../../ai/schemas/patchDrop";
+import { validatePatchDropFormat } from "../../ai/drops/validatePatchDrop";
+
+function hasAnyFileBlocks(text: string): boolean {
+  return /^\s*FILE:\s+/m.test(text || "");
+}
+
+function extractApiHints(text: string): string[] {
+  const t = text || "";
+  const matches = t.match(/\/api\/[a-zA-Z0-9/_-]+/g) || [];
+  // unique, small list
+  return Array.from(new Set(matches)).slice(0, 10);
+}
+
+function blockedDrop(params: { repo: string; lockedRecommendation: string }) {
+  const apiHints = extractApiHints(params.lockedRecommendation);
+  const apiLine = apiHints.length ? `Likely endpoints mentioned: ${apiHints.join(", ")}` : "Endpoint not yet captured.";
+
+  const evidenceRequest =
+    `Please paste ONE failing Network request from DevTools → Network (Fetch/XHR):\n` +
+    `- URL\n- Method\n- Status\n- Request payload\n- Response body\n\n` +
+    `Also paste any Console error stack that appears immediately after clicking the action.\n\n` +
+    `${apiLine}`;
+
+  const dropText =
+    `Repo: ${params.repo}\n` +
+    `Manual apply only\n\n` +
+    `## BLOCKED — Missing Evidence\n` +
+    `The system cannot generate a safe patch drop yet because the approved recommendation does not include repo FILE blocks for the relevant client/server code.\n\n` +
+    `### What to paste next\n` +
+    `${evidenceRequest}\n\n` +
+    `### Then fetch these files via the connector\n` +
+    `- client page/component that triggers the action\n` +
+    `- server route that handles the failing endpoint\n` +
+    `- any related shared schema used by that route\n\n` +
+    `## Post-apply verification checklist\n` +
+    `- N/A until unblocked (provide the evidence + files above)\n`;
+
+  return {
+    ok: true,
+    repo: params.repo,
+    blocked: true as const,
+    noPatchRequired: false as const,
+    evidenceRequest,
+    suggestedFileFetchPaths: [] as string[],
+    dropText,
+  };
+}
+
+/**
+ * Pilot F — Patch Drop Generator
+ * Now supports BLOCKED: Missing Evidence when no FILE context is present.
+ */
+export async function postGeneratePatchDrop(req: Request, res: Response) {
+  try {
+    const workItemId = req.params.id;
+    const { title, repoHint, lockedRecommendation, notes } = (req.body || {}) as any;
+
+    if (!lockedRecommendation || typeof lockedRecommendation !== "string" || lockedRecommendation.trim().length < 20) {
+      return res.status(400).json({
+        ok: false,
+        error: "lockedRecommendation is required (include the saved Recommendation text, ideally with FILE blocks).",
+      });
+    }
+
+    const repo = repoHint || "GigsterGarage";
+
+    // ✅ PRE-FLIGHT GATE: If no FILE blocks, do NOT call the model. Return BLOCKED.
+    if (!hasAnyFileBlocks(lockedRecommendation)) {
+      return res.json(blockedDrop({ repo, lockedRecommendation }));
+    }
+
+    const input = {
+      title: title || `Work Item ${workItemId}`,
+      repoHint: repo,
+      lockedRecommendation,
+      notes: notes || "",
+    };
+
+    const raw = await runSkill({
+      skillName: "generatePatchDrop",
+      input,
+    });
+
+    const parsed = PatchDropSchema.safeParse(raw);
+    if (!parsed.success) {
+      return res.status(400).json({
+        ok: false,
+        error: "Model output did not match PatchDrop schema",
+        details: parsed.error.flatten(),
+        rawModelOutput: raw,
+      });
+    }
+
+    const data: any = parsed.data;
+
+    const validation = validatePatchDropFormat(data.dropText);
+    if (!validation.ok) {
+      return res.status(400).json({
+        ok: false,
+        error: "Generated drop failed format validation",
+        details: { validationErrors: validation.errors },
+        repo: data.repo,
+        dropText: data.dropText,
+        blocked: data.blocked === true,
+        noPatchRequired: data.noPatchRequired === true,
+        rationale: data.rationale,
+        evidence: data.evidence,
+        evidenceRequest: data.evidenceRequest,
+      });
+    }
+
+    return res.json({
+      ok: true,
+      repo: data.repo,
+      dropText: data.dropText,
+      blocked: data.blocked === true,
+      noPatchRequired: data.noPatchRequired === true,
+      ...(data.blocked === true
+        ? { evidenceRequest: data.evidenceRequest, suggestedFileFetchPaths: data.suggestedFileFetchPaths }
+        : {}),
+      ...(data.noPatchRequired === true ? { rationale: data.rationale, evidence: data.evidence } : {}),
+    });
+  } catch (err: any) {
+    return res.status(500).json({
+      ok: false,
+      error: err?.message || "Unknown error",
+    });
+  }
+}
+END_FILE
+```
+
+---
+
+## 4) (Optional but recommended) Update the skill to allow `blocked:true`
+
+If you want the model to be able to return BLOCKED in more nuanced cases (e.g., FILE blocks exist but wrong ones), update `server/ai/skills/generatePatchDrop.json`.
+If you skip this, the endpoint preflight still solves your main pain.
+
+---
+
+# What you get after this patch
+
+* If the recommendation is generic / missing repo file blocks → **BLOCKED** with a copy/paste evidence request (no more bad no-ops).
+* Once you paste the evidence + fetch the right files → drop generation proceeds normally.
+
+---
+
+# The next UX nicety (tiny)
+
+In the Work Item page, when the drop response has `blocked:true`, show a green/amber banner with a “Copy evidence request” button. (You already did this pattern for No Patch Needed.)
+
+If you want that, paste the `genDrop` mutation response handling block from `work-item-detail.tsx` and I’ll give you the exact 10-line UI patch.
+
+This will eliminate the manual “why is it no patch needed?” loop permanently.

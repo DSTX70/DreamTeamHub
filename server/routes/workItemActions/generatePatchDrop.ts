@@ -3,11 +3,55 @@ import { runSkill } from "../../ai/runSkill";
 import { PatchDropSchema } from "../../ai/schemas/patchDrop";
 import { validatePatchDropFormat } from "../../ai/drops/validatePatchDrop";
 
+function hasAnyFileBlocks(text: string): boolean {
+  return /^\s*FILE:\s+/m.test(text || "");
+}
+
+function extractApiHints(text: string): string[] {
+  const t = text || "";
+  const matches = t.match(/\/api\/[a-zA-Z0-9/_-]+/g) || [];
+  // unique, small list
+  return Array.from(new Set(matches)).slice(0, 10);
+}
+
+function blockedDrop(params: { repo: string; lockedRecommendation: string }) {
+  const apiHints = extractApiHints(params.lockedRecommendation);
+  const apiLine = apiHints.length ? `Likely endpoints mentioned: ${apiHints.join(", ")}` : "Endpoint not yet captured.";
+
+  const evidenceRequest =
+    `Please paste ONE failing Network request from DevTools → Network (Fetch/XHR):\n` +
+    `- URL\n- Method\n- Status\n- Request payload\n- Response body\n\n` +
+    `Also paste any Console error stack that appears immediately after clicking the action.\n\n` +
+    `${apiLine}`;
+
+  const dropText =
+    `Repo: ${params.repo}\n` +
+    `Manual apply only\n\n` +
+    `## BLOCKED — Missing Evidence\n` +
+    `The system cannot generate a safe patch drop yet because the approved recommendation does not include repo FILE blocks for the relevant client/server code.\n\n` +
+    `### What to paste next\n` +
+    `${evidenceRequest}\n\n` +
+    `### Then fetch these files via the connector\n` +
+    `- client page/component that triggers the action\n` +
+    `- server route that handles the failing endpoint\n` +
+    `- any related shared schema used by that route\n\n` +
+    `## Post-apply verification checklist\n` +
+    `- N/A until unblocked (provide the evidence + files above)\n`;
+
+  return {
+    ok: true,
+    repo: params.repo,
+    blocked: true as const,
+    noPatchRequired: false as const,
+    evidenceRequest,
+    suggestedFileFetchPaths: [] as string[],
+    dropText,
+  };
+}
+
 /**
- * Pilot F — Patch Drop Generator (Milestone 1+)
- * Supports:
- *  - Patch needed: validated FILE blocks
- *  - No patch needed: noPatchRequired=true with rationale/evidence, validated as a no-op outcome
+ * Pilot F — Patch Drop Generator
+ * Now supports BLOCKED: Missing Evidence when no FILE context is present.
  */
 export async function postGeneratePatchDrop(req: Request, res: Response) {
   try {
@@ -21,9 +65,16 @@ export async function postGeneratePatchDrop(req: Request, res: Response) {
       });
     }
 
+    const repo = repoHint || "GigsterGarage";
+
+    // ✅ PRE-FLIGHT GATE: If no FILE blocks, do NOT call the model. Return BLOCKED.
+    if (!hasAnyFileBlocks(lockedRecommendation)) {
+      return res.json(blockedDrop({ repo, lockedRecommendation }));
+    }
+
     const input = {
       title: title || `Work Item ${workItemId}`,
-      repoHint: repoHint || "GigsterGarage",
+      repoHint: repo,
       lockedRecommendation,
       notes: notes || "",
     };
@@ -43,9 +94,8 @@ export async function postGeneratePatchDrop(req: Request, res: Response) {
       });
     }
 
-    const data = parsed.data as any;
+    const data: any = parsed.data;
 
-    // Always validate the resulting dropText format (supports both paths)
     const validation = validatePatchDropFormat(data.dropText);
     if (!validation.ok) {
       return res.status(400).json({
@@ -54,24 +104,24 @@ export async function postGeneratePatchDrop(req: Request, res: Response) {
         details: { validationErrors: validation.errors },
         repo: data.repo,
         dropText: data.dropText,
+        blocked: data.blocked === true,
         noPatchRequired: data.noPatchRequired === true,
         rationale: data.rationale,
         evidence: data.evidence,
+        evidenceRequest: data.evidenceRequest,
       });
     }
 
-    // Success (either patch needed or no patch needed)
     return res.json({
       ok: true,
       repo: data.repo,
       dropText: data.dropText,
+      blocked: data.blocked === true,
       noPatchRequired: data.noPatchRequired === true,
-      ...(data.noPatchRequired === true
-        ? {
-            rationale: data.rationale,
-            evidence: data.evidence,
-          }
+      ...(data.blocked === true
+        ? { evidenceRequest: data.evidenceRequest, suggestedFileFetchPaths: data.suggestedFileFetchPaths }
         : {}),
+      ...(data.noPatchRequired === true ? { rationale: data.rationale, evidence: data.evidence } : {}),
     });
   } catch (err: any) {
     return res.status(500).json({
