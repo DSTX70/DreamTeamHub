@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useParams, useLocation } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient } from "@/lib/queryClient";
@@ -191,22 +191,62 @@ export default function WorkItemDetail() {
     },
   });
 
+  type GeneratePatchDropResponse =
+    | { ok: true; repo: string; dropText: string }
+    | { ok: false; error: string; details?: { validationErrors?: string[] }; repo?: string; dropText?: string };
+
+  const [dropValidationErrors, setDropValidationErrors] = useState<string[] | null>(null);
+
   const genDrop = useMutation({
     mutationFn: async () => {
-      const res = await fetch(`/api/work-items/${workItemId}/stage/drop`, {
+      const lockedRecommendation = stage?.recommendation?.text || "";
+      if (!lockedRecommendation || lockedRecommendation.length < 20) {
+        throw new Error("Recommendation text is required before generating a drop.");
+      }
+
+      const res = await fetch(`/api/work-items/${workItemId}/actions/generatePatchDrop`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ targetRepo: "GigsterGarage" }),
+        credentials: "include",
+        body: JSON.stringify({
+          repoHint: "GigsterGarage",
+          title: workItem?.title || `Work Item ${workItemId}`,
+          lockedRecommendation,
+        }),
       });
-      if (!res.ok) throw new Error(`Failed (${res.status})`);
-      return res.json();
+
+      const data = (await res.json()) as GeneratePatchDropResponse;
+
+      if (!res.ok || data.ok === false) {
+        const msg = (data as any)?.error || `HTTP ${res.status}`;
+        const err: any = new Error(msg);
+        err.payload = data;
+        throw err;
+      }
+
+      return data as Extract<GeneratePatchDropResponse, { ok: true }>;
     },
-    onSuccess: async () => {
+    onSuccess: async (data) => {
+      setDropValidationErrors(null);
       await queryClient.invalidateQueries({ queryKey: ['/api/work-items', workItemId, 'stage'] });
-      toast({ title: "Drop generated", description: "FILE/END_FILE drop is ready for GigsterGarage." });
+      toast({ title: "Drop generated", description: `Repo: ${data.repo}. FILE/END_FILE drop is ready.` });
     },
-    onError: (err: Error) => {
-      toast({ title: "Error", description: err.message, variant: "destructive" });
+    onError: (err: any) => {
+      const payload = err?.payload as GeneratePatchDropResponse | undefined;
+      const validationErrors = payload?.details?.validationErrors;
+
+      if (Array.isArray(validationErrors) && validationErrors.length) {
+        setDropValidationErrors(validationErrors);
+        toast({
+          title: "Drop validation failed",
+          description: validationErrors.slice(0, 2).join(" | "),
+          variant: "destructive",
+        });
+        return;
+      }
+
+      setDropValidationErrors(null);
+      toast({ title: "Drop generation failed", description: err?.message || "Unknown error", variant: "destructive" });
     },
   });
 
@@ -411,6 +451,15 @@ export default function WorkItemDetail() {
               {genDrop.isPending ? "Generating..." : "Generate GigsterGarage Drop"}
             </Button>
           </div>
+
+          {dropValidationErrors && dropValidationErrors.length > 0 && (
+            <div className="rounded-md border border-destructive/50 bg-destructive/10 p-3" data-testid="drop-validation-errors">
+              <div className="text-sm font-medium text-destructive mb-2">Drop validation errors:</div>
+              <ul className="list-disc ml-5 text-sm text-destructive/80">
+                {dropValidationErrors.map((e, i) => <li key={i}>{e}</li>)}
+              </ul>
+            </div>
+          )}
 
           {stage?.recommendation?.text && (
             <div className="space-y-2">
