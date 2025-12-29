@@ -192,11 +192,40 @@ export default function WorkItemDetail() {
   });
 
   type GeneratePatchDropResponse =
-    | { ok: true; repo: string; dropText: string; noPatchRequired?: boolean; rationale?: string; evidence?: string }
-    | { ok: false; error: string; details?: { validationErrors?: string[] }; repo?: string; dropText?: string; noPatchRequired?: boolean; rationale?: string; evidence?: string };
+    | {
+        ok: true;
+        repo: string;
+        dropText: string;
+        blocked?: boolean;
+        evidenceRequest?: string;
+        suggestedFileFetchPaths?: string[];
+        noPatchRequired?: boolean;
+        rationale?: string;
+        evidence?: string;
+      }
+    | {
+        ok: false;
+        error: string;
+        details?: { validationErrors?: string[] };
+        repo?: string;
+        dropText?: string;
+        blocked?: boolean;
+        evidenceRequest?: string;
+        suggestedFileFetchPaths?: string[];
+        noPatchRequired?: boolean;
+        rationale?: string;
+        evidence?: string;
+      };
 
   const [dropValidationErrors, setDropValidationErrors] = useState<string[] | null>(null);
-  const [lastDropResult, setLastDropResult] = useState<{ noPatchRequired: boolean; rationale?: string; evidence?: string } | null>(null);
+  const [lastDropResult, setLastDropResult] = useState<{
+    blocked: boolean;
+    evidenceRequest?: string;
+    suggestedFileFetchPaths?: string[];
+    noPatchRequired: boolean;
+    rationale?: string;
+    evidence?: string;
+  } | null>(null);
 
   const genDrop = useMutation({
     mutationFn: async () => {
@@ -229,14 +258,31 @@ export default function WorkItemDetail() {
     },
     onSuccess: async (data) => {
       setDropValidationErrors(null);
+
+      const blocked = Boolean(data.blocked);
+      const noPatch = Boolean(data.noPatchRequired);
+
       setLastDropResult({
-        noPatchRequired: data.noPatchRequired === true,
+        blocked,
+        evidenceRequest: data.evidenceRequest,
+        suggestedFileFetchPaths: data.suggestedFileFetchPaths,
+        noPatchRequired: noPatch,
         rationale: data.rationale,
         evidence: data.evidence,
       });
-      await queryClient.invalidateQueries({ queryKey: ['/api/work-items', workItemId, 'stage'] });
-      
-      if (data.noPatchRequired) {
+
+      await queryClient.invalidateQueries({ queryKey: ["/api/work-items", workItemId, "stage"] });
+
+      if (blocked) {
+        toast({
+          title: "Blocked: Missing Evidence",
+          description: "Paste the requested Network/Console evidence, then re-run Generate Recommendation → Generate Drop.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      if (noPatch) {
         toast({ title: "No Patch Needed", description: data.rationale || "Fix already exists in repo." });
       } else {
         toast({ title: "Patch Generated", description: `Repo: ${data.repo}. FILE/END_FILE drop is ready.` });
@@ -509,9 +555,60 @@ export default function WorkItemDetail() {
             </div>
           )}
 
+          {/* BLOCKED Banner */}
+          {lastDropResult?.blocked && (
+            <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 p-3" data-testid="blocked-evidence-banner">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <div className="font-medium text-amber-600 dark:text-amber-200">BLOCKED — Missing Evidence</div>
+                  <div className="text-sm text-amber-700 dark:text-amber-100/90">
+                    The system can't generate a safe patch drop yet. Paste the requested evidence, fetch the suggested files, then rerun.
+                  </div>
+                </div>
+
+                {lastDropResult.evidenceRequest && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="border-amber-400/40 text-amber-700 dark:text-amber-100 hover:bg-amber-400/10"
+                    onClick={async () => {
+                      try {
+                        await navigator.clipboard.writeText(lastDropResult.evidenceRequest || "");
+                        toast({ title: "Copied", description: "Evidence request copied to clipboard." });
+                      } catch {
+                        toast({ title: "Copy failed", description: "Clipboard not available.", variant: "destructive" });
+                      }
+                    }}
+                    data-testid="button-copy-evidence-request"
+                  >
+                    <Copy className="mr-2 h-3 w-3" />
+                    Copy evidence request
+                  </Button>
+                )}
+              </div>
+
+              {lastDropResult.evidenceRequest && (
+                <pre className="mt-3 whitespace-pre-wrap rounded-md bg-black/30 p-2 text-xs text-amber-700 dark:text-amber-100/90">
+                  {lastDropResult.evidenceRequest}
+                </pre>
+              )}
+
+              {Array.isArray(lastDropResult.suggestedFileFetchPaths) && lastDropResult.suggestedFileFetchPaths.length > 0 && (
+                <div className="mt-3 text-xs text-amber-700 dark:text-amber-100/90">
+                  <div className="font-medium mb-1">Suggested files to fetch:</div>
+                  <ul className="list-disc ml-5">
+                    {lastDropResult.suggestedFileFetchPaths.slice(0, 12).map((p, i) => (
+                      <li key={`${p}-${i}`}>{p}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+          )}
+
           {currentDropText && (
             <div className="space-y-2">
-              {lastDropResult && (
+              {lastDropResult && !lastDropResult.blocked && (
                 <div 
                   className={`rounded-md border p-3 ${
                     lastDropResult.noPatchRequired 

@@ -1,0 +1,175 @@
+Got it. Here’s the **exact minimal UI patch** to support the new server response path:
+
+✅ `blocked: true`
+✅ `evidenceRequest` + optional `suggestedFileFetchPaths`
+✅ Green/amber banner + “Copy evidence request” button
+✅ Toast changes (Blocked vs No Patch vs Patch Generated)
+
+**Repo:** `DreamTeamHub`
+**File:** `client/src/pages/work-item-detail.tsx` (apply manually)
+
+---
+
+## 1) Update the response type + state
+
+Replace your `GeneratePatchDropResponse` type with this (adds `blocked`, `evidenceRequest`, `suggestedFileFetchPaths`):
+
+```ts
+type GeneratePatchDropResponse =
+  | {
+      ok: true;
+      repo: string;
+      dropText: string;
+      blocked?: boolean;
+      evidenceRequest?: string;
+      suggestedFileFetchPaths?: string[];
+      noPatchRequired?: boolean;
+      rationale?: string;
+      evidence?: string;
+    }
+  | {
+      ok: false;
+      error: string;
+      details?: { validationErrors?: string[] };
+      repo?: string;
+      dropText?: string;
+      blocked?: boolean;
+      evidenceRequest?: string;
+      suggestedFileFetchPaths?: string[];
+      noPatchRequired?: boolean;
+      rationale?: string;
+      evidence?: string;
+    };
+```
+
+Update your `lastDropResult` state to carry blocked fields:
+
+```ts
+const [lastDropResult, setLastDropResult] = useState<{
+  blocked: boolean;
+  evidenceRequest?: string;
+  suggestedFileFetchPaths?: string[];
+  noPatchRequired: boolean;
+  rationale?: string;
+  evidence?: string;
+} | null>(null);
+```
+
+---
+
+## 2) Update `onSuccess` to handle BLOCKED
+
+Replace your current `onSuccess` block with this:
+
+```ts
+onSuccess: async (data) => {
+  setDropValidationErrors(null);
+
+  const blocked = Boolean(data.blocked);
+  const noPatch = Boolean(data.noPatchRequired);
+
+  setLastDropResult({
+    blocked,
+    evidenceRequest: data.evidenceRequest,
+    suggestedFileFetchPaths: data.suggestedFileFetchPaths,
+    noPatchRequired: noPatch,
+    rationale: data.rationale,
+    evidence: data.evidence,
+  });
+
+  await queryClient.invalidateQueries({ queryKey: ["/api/work-items", workItemId, "stage"] });
+
+  if (blocked) {
+    toast({
+      title: "Blocked: Missing Evidence",
+      description: "Paste the requested Network/Console evidence, then re-run Generate Recommendation → Generate Drop.",
+      variant: "destructive",
+    });
+    return;
+  }
+
+  if (noPatch) {
+    toast({ title: "No Patch Needed", description: data.rationale || "Fix already exists in repo." });
+  } else {
+    toast({ title: "Patch Generated", description: `Repo: ${data.repo}. FILE/END_FILE drop is ready.` });
+  }
+},
+```
+
+---
+
+## 3) Add a “BLOCKED” banner in the UI
+
+Wherever you currently render your “No Patch Needed” banner, add this just above it (or alongside it):
+
+```tsx
+{lastDropResult?.blocked ? (
+  <div className="mt-3 rounded-lg border border-amber-500/40 bg-amber-500/10 p-3">
+    <div className="flex items-start justify-between gap-3">
+      <div>
+        <div className="font-medium text-amber-200">BLOCKED — Missing Evidence</div>
+        <div className="text-sm text-amber-100/90">
+          The system can’t generate a safe patch drop yet. Paste the requested evidence, fetch the suggested files, then rerun.
+        </div>
+      </div>
+
+      {lastDropResult.evidenceRequest ? (
+        <button
+          className="rounded-md border border-amber-400/40 px-3 py-1 text-sm text-amber-100 hover:bg-amber-400/10"
+          onClick={async () => {
+            try {
+              await navigator.clipboard.writeText(lastDropResult.evidenceRequest || "");
+              toast({ title: "Copied", description: "Evidence request copied to clipboard." });
+            } catch {
+              toast({ title: "Copy failed", description: "Clipboard not available.", variant: "destructive" });
+            }
+          }}
+        >
+          Copy evidence request
+        </button>
+      ) : null}
+    </div>
+
+    {lastDropResult.evidenceRequest ? (
+      <pre className="mt-3 whitespace-pre-wrap rounded-md bg-black/30 p-2 text-xs text-amber-100/90">
+        {lastDropResult.evidenceRequest}
+      </pre>
+    ) : null}
+
+    {Array.isArray(lastDropResult.suggestedFileFetchPaths) && lastDropResult.suggestedFileFetchPaths.length ? (
+      <div className="mt-3 text-xs text-amber-100/90">
+        <div className="font-medium mb-1">Suggested files to fetch:</div>
+        <ul className="list-disc ml-5">
+          {lastDropResult.suggestedFileFetchPaths.slice(0, 12).map((p, i) => (
+            <li key={`${p}-${i}`}>{p}</li>
+          ))}
+        </ul>
+      </div>
+    ) : null}
+  </div>
+) : null}
+```
+
+✅ This banner is only shown when `blocked:true`.
+
+---
+
+## 4) One tiny guard to prevent “No Patch Needed” from appearing on blocked runs
+
+Make sure wherever you render the “No Patch Needed” banner, you gate it like:
+
+```tsx
+{lastDropResult?.noPatchRequired && !lastDropResult?.blocked ? ( /* existing No Patch Needed UI */ ) : null}
+```
+
+---
+
+### Result
+
+Now the UI has **three explicit outcomes**:
+
+* **BLOCKED**: shows evidence request + copy button
+* **No Patch Needed**: green banner
+* **Patch Generated**: normal drop flow
+
+If you want, paste the small JSX section where you render the existing “No Patch Needed” banner and I’ll tell you exactly where to insert the BLOCKED block for the cleanest layout.
