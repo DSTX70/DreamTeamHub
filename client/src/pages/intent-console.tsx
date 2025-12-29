@@ -300,6 +300,95 @@ export default function IntentConsolePage() {
     },
   });
 
+  // Pilot G: Draft → Create Work Item + Strategy → Open Work Item (all-in-one)
+  const draftCreateAllMutation = useMutation({
+    mutationFn: async () => {
+      if (!intent.trim()) throw new Error("Intent is empty");
+
+      // Step 1: Draft Intent + Strategy
+      const draftRes = await fetch(`/api/work-items/0/actions/draftIntentStrategy`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          taskText: intent.trim(),
+          repoHint: targetContext || "GigsterGarage",
+          title,
+        }),
+      });
+      const draftJson = await draftRes.json().catch(() => null);
+      if (!draftRes.ok || !draftJson?.ok) {
+        throw new Error(draftJson?.error || `Draft failed (${draftRes.status})`);
+      }
+      const draftData = draftJson as IntentStrategyDraft;
+
+      // Step 2: Create Strategy Session from draft
+      const strategyBody = formatDraftIntoStrategyBody(draftData);
+      const strategyRes = await fetch("/api/strategy-sessions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          title: `Strategy Session — ${title}`,
+          author: "Dustin Sparks",
+          approval_required_for_execution: true,
+          repo_hint: draftData.repo || targetContext || "GigsterGarage",
+          bodyMd: strategyBody,
+        }),
+      });
+      const strategyJson = await strategyRes.json().catch(() => null);
+      if (!strategyRes.ok) {
+        throw new Error(strategyJson?.error || `Strategy creation failed (${strategyRes.status})`);
+      }
+      const strategyData = strategyJson as StrategySession;
+
+      // Step 3: Create Work Item with reference to strategy
+      const castReceipt = formatCastReceipt({
+        mode,
+        targetContext,
+        podSlugs: effectivePodSlugs,
+        personaSlugs: effectivePersonaSlugs,
+        podOptions,
+        personaOptions,
+        autonomy,
+      });
+
+      const workItemPayload = {
+        title,
+        description:
+          `Intent: ${draftData.intentBlock.trim()}\n\n` +
+          `Strategy Session: /strategy/${strategyData.id}\n\n` +
+          `Autonomy: ${autonomy.toUpperCase()}\n\n---\n${castReceipt}\n---\n`,
+        status: "todo",
+        priority: "medium",
+      };
+
+      const workItemRes = await apiRequest("POST", "/api/work-items", workItemPayload);
+      const workItemData = await workItemRes.json();
+
+      return { draft: draftData, strategy: strategyData, workItem: workItemData };
+    },
+    onSuccess: async (result) => {
+      await queryClient.invalidateQueries({ queryKey: ["/api/work-items"] });
+      await queryClient.invalidateQueries({ queryKey: ["/api/strategy-sessions"] });
+      await queryClient.invalidateQueries({ queryKey: ["/api/control/dashboard"] });
+      toast({
+        title: "All created",
+        description: "Draft → Strategy Session → Work Item. Opening work item…",
+      });
+      setIntent("");
+      setDraft(null);
+      setLocation(`/work/${result.workItem.id}`);
+    },
+    onError: (err: any) => {
+      toast({
+        title: "Failed",
+        description: err?.message || "Could not complete the draft → create flow.",
+        variant: "destructive",
+      });
+    },
+  });
+
   async function copyToClipboard(label: string, text: string) {
     try {
       await navigator.clipboard.writeText(text);
@@ -416,6 +505,15 @@ export default function IntentConsolePage() {
                   data-testid="pilotg-create-strategy"
                 >
                   Create Strategy Session <ArrowRight className="h-4 w-4" />
+                </Button>
+                <Button
+                  type="button"
+                  onClick={() => draftCreateAllMutation.mutate()}
+                  disabled={!intent.trim() || draftCreateAllMutation.isPending}
+                  className="gap-2"
+                  data-testid="pilotg-draft-create-all"
+                >
+                  Draft → Create Work Item + Strategy → Open Work Item
                 </Button>
               </div>
             </div>
