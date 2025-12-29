@@ -192,10 +192,11 @@ export default function WorkItemDetail() {
   });
 
   type GeneratePatchDropResponse =
-    | { ok: true; repo: string; dropText: string }
-    | { ok: false; error: string; details?: { validationErrors?: string[] }; repo?: string; dropText?: string };
+    | { ok: true; repo: string; dropText: string; noPatchRequired?: boolean; rationale?: string; evidence?: string }
+    | { ok: false; error: string; details?: { validationErrors?: string[] }; repo?: string; dropText?: string; noPatchRequired?: boolean; rationale?: string; evidence?: string };
 
   const [dropValidationErrors, setDropValidationErrors] = useState<string[] | null>(null);
+  const [lastDropResult, setLastDropResult] = useState<{ noPatchRequired: boolean; rationale?: string; evidence?: string } | null>(null);
 
   const genDrop = useMutation({
     mutationFn: async () => {
@@ -228,12 +229,22 @@ export default function WorkItemDetail() {
     },
     onSuccess: async (data) => {
       setDropValidationErrors(null);
+      setLastDropResult({
+        noPatchRequired: data.noPatchRequired === true,
+        rationale: data.rationale,
+        evidence: data.evidence,
+      });
       await queryClient.invalidateQueries({ queryKey: ['/api/work-items', workItemId, 'stage'] });
-      toast({ title: "Drop generated", description: `Repo: ${data.repo}. FILE/END_FILE drop is ready.` });
+      
+      if (data.noPatchRequired) {
+        toast({ title: "No Patch Needed", description: data.rationale || "Fix already exists in repo." });
+      } else {
+        toast({ title: "Patch Generated", description: `Repo: ${data.repo}. FILE/END_FILE drop is ready.` });
+      }
     },
     onError: (err: any) => {
-      const payload = err?.payload as GeneratePatchDropResponse | undefined;
-      const validationErrors = payload?.details?.validationErrors;
+      const payload = err?.payload as any;
+      const validationErrors = payload?.details?.validationErrors as string[] | undefined;
 
       if (Array.isArray(validationErrors) && validationErrors.length) {
         setDropValidationErrors(validationErrors);
@@ -250,9 +261,12 @@ export default function WorkItemDetail() {
     },
   });
 
+  const currentDropText = genDrop.data?.dropText || stage?.drop?.text;
+  const currentDropRepo = genDrop.data?.repo || stage?.drop?.targetRepo || "GigsterGarage";
+
   const handleCopyDrop = () => {
-    if (stage?.drop?.text) {
-      navigator.clipboard.writeText(stage.drop.text);
+    if (currentDropText) {
+      navigator.clipboard.writeText(currentDropText);
       toast({ title: "Copied!", description: "Drop text copied to clipboard." });
     }
   };
@@ -481,17 +495,48 @@ export default function WorkItemDetail() {
             </div>
           )}
 
-          {stage?.drop?.text && (
+          {currentDropText && (
             <div className="space-y-2">
+              {lastDropResult && (
+                <div 
+                  className={`rounded-md border p-3 ${
+                    lastDropResult.noPatchRequired 
+                      ? "bg-green-500/10 border-green-500/30" 
+                      : "bg-blue-500/10 border-blue-500/30"
+                  }`}
+                  data-testid="drop-status-indicator"
+                >
+                  <div className={`text-sm font-medium ${
+                    lastDropResult.noPatchRequired 
+                      ? "text-green-600 dark:text-green-400" 
+                      : "text-blue-600 dark:text-blue-400"
+                  }`}>
+                    {lastDropResult.noPatchRequired ? (
+                      <>
+                        <Check className="inline-block mr-2 h-4 w-4" />
+                        No Patch Needed
+                      </>
+                    ) : (
+                      <>
+                        <FileText className="inline-block mr-2 h-4 w-4" />
+                        Patch Generated
+                      </>
+                    )}
+                  </div>
+                  {lastDropResult.noPatchRequired && lastDropResult.rationale && (
+                    <div className="text-xs text-muted-foreground mt-1">{lastDropResult.rationale}</div>
+                  )}
+                </div>
+              )}
               <div className="flex items-center justify-between">
-                <div className="text-sm font-medium">Drop (Ready for {stage.drop.targetRepo})</div>
+                <div className="text-sm font-medium">Drop (Ready for {currentDropRepo})</div>
                 <Button size="sm" variant="outline" onClick={handleCopyDrop} data-testid="button-copy-drop">
                   <Copy className="mr-2 h-3 w-3" />
                   Copy Drop
                 </Button>
               </div>
               <Textarea 
-                value={stage.drop.text} 
+                value={currentDropText} 
                 readOnly 
                 className="min-h-[200px] font-mono text-xs" 
                 data-testid="textarea-drop"
