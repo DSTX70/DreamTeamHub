@@ -596,6 +596,12 @@ export default function WorkItemDetail() {
                       const filesSection = document.getElementById("files-section");
                       if (filesSection) {
                         filesSection.scrollIntoView({ behavior: "smooth" });
+                        setTimeout(() => {
+                          const fileInput = document.querySelector('[data-testid="input-file-upload"]') as HTMLInputElement;
+                          if (fileInput) {
+                            fileInput.click();
+                          }
+                        }, 400);
                       }
                     }}
                     data-testid="button-scroll-to-upload"
