@@ -259,6 +259,76 @@ router.get("/api/connectors/gigsterGarage/debug", (_req: Request, res: Response)
   });
 });
 
+/**
+ * GET /api/connectors/gigsterGarage/meta
+ * Returns non-sensitive connector metadata for UI.
+ * This is safe because the base URL is already a published *.replit.app endpoint.
+ */
+router.get("/api/connectors/gigsterGarage/meta", async (_req: Request, res: Response) => {
+  try {
+    const ggBase = baseUrl(envOrThrow("GIGSTER_GARAGE_BASE_URL"));
+
+    res.json({
+      ok: true,
+      baseUrl: ggBase,
+      adminUrl: `${ggBase}/admin`,
+      githubRepoUrl: "https://github.com/DSTX70/Gigster-Garage-MVP",
+      auditWorkflowUrl:
+        "https://github.com/DSTX70/Gigster-Garage-MVP/actions/workflows/website-audit.yml",
+      rule: "Use published *.replit.app URL only (no IDE/preview).",
+    });
+  } catch (err: any) {
+    res.status(500).json({
+      ok: false,
+      error: err?.message || "Failed to load GigsterGarage connector metadata.",
+    });
+  }
+});
+
+/**
+ * GET /api/connectors/gigsterGarage/health
+ * Server-side health probe so browser never hits GG directly (avoids CORS).
+ */
+router.get("/api/connectors/gigsterGarage/health", async (_req: Request, res: Response) => {
+  try {
+    const ggBase = baseUrl(envOrThrow("GIGSTER_GARAGE_BASE_URL"));
+
+    const candidates = [`${ggBase}/api/health`, `${ggBase}/health`, `${ggBase}/`];
+
+    const started = Date.now();
+    for (const url of candidates) {
+      try {
+        const t0 = Date.now();
+        const r = await fetch(url, { method: "GET" });
+        const ms = Date.now() - t0;
+
+        return res.json({
+          ok: r.ok,
+          urlTried: url,
+          status: r.status,
+          ms,
+          note: r.ok ? "Reachable" : "Responded but not OK",
+          totalMs: Date.now() - started,
+        });
+      } catch {
+        // try next
+      }
+    }
+
+    res.json({
+      ok: false,
+      urlTried: candidates.join(" | "),
+      totalMs: Date.now() - started,
+      note: "Could not reach any health endpoints.",
+    });
+  } catch (err: any) {
+    res.status(500).json({
+      ok: false,
+      error: err?.message || "Health check failed.",
+    });
+  }
+});
+
 router.post("/api/connectors/gigsterGarage/files", routeBodyParser, async (req: Request, res: Response) => {
   try {
     const parsed = parsePaths(req.body);

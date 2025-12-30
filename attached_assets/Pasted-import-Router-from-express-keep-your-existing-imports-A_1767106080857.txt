@@ -1,0 +1,84 @@
+import { Router } from "express";
+// keep your existing imports
+
+// ADD these imports (adjust paths ONLY if your repo differs)
+import { envOrThrow } from "../../lib/envOrThrow"; // if your project uses a different helper, reuse the one you already have
+import { baseUrl } from "../../lib/baseUrl"; // reuse your existing baseUrl normalizer
+import fetch from "node-fetch"; // if you're already on global fetch (Node 18+), remove this import and use global fetch
+
+const router = Router();
+
+// ... keep your existing routes (e.g. POST /files etc.)
+
+/**
+ * GET /api/connectors/gigsterGarage/meta
+ * Returns non-sensitive connector metadata for UI.
+ * This is safe because the base URL is already a published *.replit.app endpoint.
+ */
+router.get("/meta", async (req, res) => {
+  try {
+    const ggBase = baseUrl(envOrThrow("GIGSTER_GARAGE_BASE_URL"));
+
+    res.json({
+      ok: true,
+      baseUrl: ggBase,
+      adminUrl: `${ggBase}/admin`,
+      githubRepoUrl: "https://github.com/DSTX70/Gigster-Garage-MVP",
+      auditWorkflowUrl:
+        "https://github.com/DSTX70/Gigster-Garage-MVP/actions/workflows/website-audit.yml",
+      rule: "Use published *.replit.app URL only (no IDE/preview).",
+    });
+  } catch (err: any) {
+    res.status(500).json({
+      ok: false,
+      error: err?.message || "Failed to load GigsterGarage connector metadata.",
+    });
+  }
+});
+
+/**
+ * GET /api/connectors/gigsterGarage/health
+ * Server-side health probe so browser never hits GG directly (avoids CORS).
+ */
+router.get("/health", async (req, res) => {
+  try {
+    const ggBase = baseUrl(envOrThrow("GIGSTER_GARAGE_BASE_URL"));
+
+    const candidates = [`${ggBase}/api/health`, `${ggBase}/health`, `${ggBase}/`];
+
+    const started = Date.now();
+    for (const url of candidates) {
+      try {
+        const t0 = Date.now();
+        // If you have global fetch, use that.
+        const r = await fetch(url, { method: "GET" } as any);
+        const ms = Date.now() - t0;
+
+        return res.json({
+          ok: r.ok,
+          urlTried: url,
+          status: (r as any).status,
+          ms,
+          note: r.ok ? "Reachable" : "Responded but not OK",
+          totalMs: Date.now() - started,
+        });
+      } catch {
+        // try next
+      }
+    }
+
+    res.json({
+      ok: false,
+      urlTried: candidates.join(" | "),
+      totalMs: Date.now() - started,
+      note: "Could not reach any health endpoints.",
+    });
+  } catch (err: any) {
+    res.status(500).json({
+      ok: false,
+      error: err?.message || "Health check failed.",
+    });
+  }
+});
+
+export default router;

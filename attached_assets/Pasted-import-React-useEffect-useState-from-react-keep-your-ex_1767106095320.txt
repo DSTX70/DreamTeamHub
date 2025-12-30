@@ -1,0 +1,143 @@
+import React, { useEffect, useState } from "react";
+
+// keep your existing imports
+
+type GGMeta = {
+  ok: boolean;
+  baseUrl?: string;
+  adminUrl?: string;
+  githubRepoUrl?: string;
+  auditWorkflowUrl?: string;
+  rule?: string;
+  error?: string;
+};
+
+type GGHealth = {
+  ok: boolean;
+  urlTried?: string;
+  status?: number;
+  ms?: number;
+  totalMs?: number;
+  note?: string;
+  error?: string;
+};
+
+export default function GigsterGarageConnectorPage() {
+  // keep your existing state/hooks
+
+  const [meta, setMeta] = useState<GGMeta | null>(null);
+  const [health, setHealth] = useState<GGHealth | null>(null);
+  const [healthChecking, setHealthChecking] = useState(false);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const r = await fetch("/api/connectors/gigsterGarage/meta");
+        const j = (await r.json()) as GGMeta;
+        setMeta(j);
+      } catch (e: any) {
+        setMeta({ ok: false, error: e?.message || "Failed to load meta" });
+      }
+    })();
+  }, []);
+
+  async function runHealthCheck() {
+    setHealthChecking(true);
+    setHealth(null);
+    try {
+      const r = await fetch("/api/connectors/gigsterGarage/health");
+      const j = (await r.json()) as GGHealth;
+      setHealth(j);
+    } catch (e: any) {
+      setHealth({ ok: false, error: e?.message || "Health check failed" });
+    } finally {
+      setHealthChecking(false);
+    }
+  }
+
+  async function copyToClipboard(text?: string) {
+    if (!text) return;
+    try {
+      await navigator.clipboard.writeText(text);
+    } catch {
+      // ignore
+    }
+  }
+
+  return (
+    <div>
+      {/* === NEW: Quick Links + Health (server-side) === */}
+      <div className="mb-4 rounded border p-3">
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <div className="text-sm font-semibold">GigsterGarage Connector — Quick Links</div>
+            <div className="text-xs opacity-70">
+              {meta?.rule ?? "Rule: use published *.replit.app URL only (no IDE/preview)."}
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => copyToClipboard(meta?.baseUrl)}
+              className="rounded border px-3 py-1 text-sm"
+              disabled={!meta?.baseUrl}
+            >
+              Copy Base URL
+            </button>
+            <button
+              type="button"
+              onClick={runHealthCheck}
+              className="rounded border px-3 py-1 text-sm"
+              disabled={healthChecking}
+            >
+              {healthChecking ? "Checking…" : "Health Check"}
+            </button>
+          </div>
+        </div>
+
+        <div className="mt-3 flex flex-wrap gap-2">
+          <a className="rounded border px-3 py-1 text-sm" href={meta?.baseUrl || "#"} target="_blank" rel="noreferrer">
+            Open Site
+          </a>
+          <a className="rounded border px-3 py-1 text-sm" href={meta?.adminUrl || "#"} target="_blank" rel="noreferrer">
+            Open Admin
+          </a>
+          <a className="rounded border px-3 py-1 text-sm" href={meta?.githubRepoUrl || "#"} target="_blank" rel="noreferrer">
+            GitHub Repo
+          </a>
+          <a className="rounded border px-3 py-1 text-sm" href={meta?.auditWorkflowUrl || "#"} target="_blank" rel="noreferrer">
+            Website Audit Workflow
+          </a>
+        </div>
+
+        {meta?.error && (
+          <div className="mt-3 rounded border p-2 text-xs">
+            <span className="font-semibold">Meta error:</span> {meta.error}
+          </div>
+        )}
+
+        {health && (
+          <div className="mt-3 rounded border p-2 text-sm">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="font-semibold">Status:</span>
+              <span>{health.ok ? "✅ OK" : "❌ Not OK"}</span>
+              {typeof health.status === "number" && <span className="opacity-80">HTTP {health.status}</span>}
+              {typeof health.ms === "number" && <span className="opacity-80">{health.ms}ms</span>}
+              {typeof health.totalMs === "number" && <span className="opacity-80">total {health.totalMs}ms</span>}
+            </div>
+            {health.urlTried && (
+              <div className="mt-1 text-xs opacity-80">
+                Tried: <code>{health.urlTried}</code>
+              </div>
+            )}
+            {health.note && <div className="mt-1 text-xs">{health.note}</div>}
+            {health.error && <div className="mt-1 text-xs">Error: {health.error}</div>}
+          </div>
+        )}
+      </div>
+
+      {/* === keep your existing connector UI below (Fetch files, etc.) === */}
+      {/* ... existing page content ... */}
+    </div>
+  );
+}
