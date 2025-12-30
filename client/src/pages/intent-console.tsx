@@ -741,9 +741,11 @@ export default function IntentConsolePage() {
     },
 
     onError: (err: any) => {
+      const msg = err?.message || "Unknown error";
+      const isBlocked = msg.startsWith("Blocked:");
       toast({
-        title: "All-in-one failed",
-        description: err?.message || "Unknown error",
+        title: isBlocked ? "Blocked: file fetch required" : "All-in-one failed",
+        description: msg,
         variant: "destructive",
       });
     },
