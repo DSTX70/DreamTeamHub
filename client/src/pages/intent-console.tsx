@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useLocation } from "wouter";
-import { Target, Users, Wand2, X, Search, ClipboardCopy, Sparkles, ArrowRight } from "lucide-react";
+import { Target, Users, Wand2, X, Search, ClipboardCopy, Sparkles, ArrowRight, FileCode, Download } from "lucide-react";
 import { useCastingPrefs } from "@/hooks/useCastingPrefs";
 import { useCastOptions, CastOption } from "@/hooks/useCastOptions";
 import { dedupeCanonSlugs, toCanonSlug } from "@/lib/canonSlugMap";
@@ -135,6 +135,42 @@ function formatDraftIntoStrategyBody(draft: IntentStrategyDraft) {
     .join("\n");
 }
 
+type FetchedFile = { path: string; ok: boolean; content?: string; error?: string };
+
+function normalizeFilesResponse(j: any): FetchedFile[] {
+  const files = Array.isArray(j) ? j : j?.files ?? j?.data ?? [];
+  if (!Array.isArray(files)) return [];
+  return files.map((f: any) => ({
+    path: String(f?.path ?? f?.name ?? "").trim(),
+    ok: Boolean(f?.ok ?? (typeof f?.content === "string" && f.content.length >= 0)),
+    content: typeof f?.content === "string" ? f.content : f?.text,
+    error: f?.error ? String(f.error) : undefined,
+  }));
+}
+
+function buildEvidenceBlock(baseUrl: string | undefined, files: FetchedFile[]): string {
+  const header = [
+    "## GigsterGarage Evidence Pack (Fetched via DTH Connector)",
+    baseUrl ? `Base URL: ${baseUrl}` : "",
+    `Fetched at: ${new Date().toISOString()}`,
+    "",
+  ]
+    .filter(Boolean)
+    .join("\n");
+
+  const body = files
+    .map((f) => {
+      if (!f.ok) {
+        return `### ${f.path}\n> Fetch failed: ${f.error ?? "unknown error"}\n`;
+      }
+      const content = f.content ?? "";
+      return `### ${f.path}\n\`\`\`\n${content}\n\`\`\`\n`;
+    })
+    .join("\n");
+
+  return `${header}\n${body}`.trim() + "\n";
+}
+
 export default function IntentConsolePage() {
   const [intent, setIntent] = useState("");
   const [autonomy, setAutonomy] = useState<Autonomy>("standard");
@@ -152,6 +188,58 @@ export default function IntentConsolePage() {
 
   // Pilot G draft state
   const [draft, setDraft] = useState<IntentStrategyDraft | null>(null);
+
+  // Suggested files fetch state (GG Connector integration)
+  const [fetchedFiles, setFetchedFiles] = useState<FetchedFile[]>([]);
+  const [fetchingFiles, setFetchingFiles] = useState(false);
+  const [fetchFilesError, setFetchFilesError] = useState<string | null>(null);
+  const [ggMetaBaseUrl, setGgMetaBaseUrl] = useState<string | undefined>(undefined);
+
+  // Fetch GG connector meta on mount (for baseUrl display)
+  useEffect(() => {
+    (async () => {
+      try {
+        const r = await fetch("/api/connectors/gigsterGarage/meta");
+        const j = await r.json();
+        if (j?.ok && j?.baseUrl) setGgMetaBaseUrl(String(j.baseUrl));
+      } catch {
+        // ignore
+      }
+    })();
+  }, []);
+
+  // Fetch files from GG connector
+  async function fetchSuggestedFiles(paths: string[]) {
+    if (!paths?.length) return;
+    setFetchingFiles(true);
+    setFetchFilesError(null);
+    setFetchedFiles([]);
+
+    try {
+      const r = await fetch("/api/connectors/gigsterGarage/files", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ paths, pathsText: paths.join("\n") }),
+      });
+
+      if (!r.ok) {
+        const t = await r.text();
+        throw new Error(`Fetch failed (${r.status}): ${t}`);
+      }
+
+      const j = await r.json();
+      const normalized = normalizeFilesResponse(j);
+      setFetchedFiles(normalized);
+    } catch (e: any) {
+      setFetchFilesError(e?.message ?? "Failed to fetch suggested files.");
+    } finally {
+      setFetchingFiles(false);
+    }
+  }
+
+  // Evidence block computed from fetched files
+  const evidenceBlock = useMemo(() => buildEvidenceBlock(ggMetaBaseUrl, fetchedFiles), [ggMetaBaseUrl, fetchedFiles]);
 
   const title = useMemo(() => buildTitle(intent), [intent]);
 
@@ -558,6 +646,87 @@ export default function IntentConsolePage() {
                     </Button>
                   </div>
                 </div>
+
+                {/* Suggested Files Fetch (GG Connector) */}
+                {draft.fileFetchPaths && draft.fileFetchPaths.length > 0 && (
+                  <div className="rounded-md border p-3 space-y-3" data-testid="pilotg-suggested-files">
+                    <div className="flex items-start justify-between gap-3 flex-wrap">
+                      <div>
+                        <div className="font-medium flex items-center gap-2">
+                          <FileCode className="h-4 w-4" /> Suggested Files (from Pilot G)
+                        </div>
+                        <div className="text-xs text-muted-foreground">
+                          Fetch these files from GigsterGarage via the DTH connector, then copy the evidence block.
+                        </div>
+                      </div>
+                      <div className="flex gap-2 flex-wrap">
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="secondary"
+                          className="gap-2"
+                          onClick={() => fetchSuggestedFiles(draft.fileFetchPaths)}
+                          disabled={fetchingFiles}
+                          data-testid="pilotg-fetch-files"
+                        >
+                          <Download className="h-4 w-4" />
+                          {fetchingFiles ? "Fetching…" : "Fetch Suggested Files"}
+                        </Button>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          className="gap-2"
+                          onClick={() => copyToClipboard("Evidence block copied", evidenceBlock)}
+                          disabled={!fetchedFiles.length}
+                          data-testid="pilotg-copy-evidence-block"
+                        >
+                          <ClipboardCopy className="h-4 w-4" /> Copy Evidence Block
+                        </Button>
+                      </div>
+                    </div>
+
+                    <ul className="list-disc pl-5 text-xs space-y-1">
+                      {draft.fileFetchPaths.map((p) => (
+                        <li key={p}>
+                          <code className="bg-muted px-1 rounded">{p}</code>
+                        </li>
+                      ))}
+                    </ul>
+
+                    {fetchFilesError && (
+                      <div className="rounded border border-destructive/50 bg-destructive/10 p-2 text-xs text-destructive">
+                        <span className="font-semibold">Fetch error:</span> {fetchFilesError}
+                      </div>
+                    )}
+
+                    {fetchedFiles.length > 0 && (
+                      <div className="space-y-2">
+                        <div className="text-sm font-medium">Fetched Files ({fetchedFiles.filter(f => f.ok).length}/{fetchedFiles.length} OK)</div>
+                        <div className="space-y-2 max-h-64 overflow-y-auto">
+                          {fetchedFiles.map((f) => (
+                            <div key={f.path} className="rounded border p-2 text-xs">
+                              <div className="flex items-center justify-between gap-2">
+                                <code className="font-medium">{f.path}</code>
+                                <Badge variant={f.ok ? "secondary" : "destructive"} className="text-xs">
+                                  {f.ok ? "OK" : "FAIL"}
+                                </Badge>
+                              </div>
+                              {!f.ok && f.error && (
+                                <div className="mt-1 text-muted-foreground">{f.error}</div>
+                              )}
+                              {f.ok && f.content && (
+                                <pre className="mt-2 max-h-32 overflow-auto whitespace-pre-wrap rounded bg-muted/50 p-2 text-xs">
+                                  {f.content.slice(0, 2000)}{f.content.length > 2000 ? "\n…(truncated)" : ""}
+                                </pre>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             ) : (
               <div className="text-xs text-muted-foreground">

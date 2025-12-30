@@ -1,0 +1,304 @@
+Awesome — with the connector cockpit in place, the next “full wiring” move is:
+
+## Next step: **Pilot G → Suggested Files → 1-click Fetch → Copy Evidence Block → Paste into Work Item → Pilot F**
+
+Because there’s **no client-side WorkItem PUT/PATCH** right now (and we’re not doing schema/API expansion unless necessary), the fastest, safest next step is:
+
+* Add “Suggested Files” handling to **Intent Console** (Pilot G UI)
+* Let it **fetch those files via the existing GG connector endpoint**
+* Produce a **copyable Evidence Block** (markdown) you paste into the Work Item Evidence/Notes before running Pilot F
+
+This completes the loop with **zero backend API changes** and keeps auth + published URL rules intact.
+
+**Repo:** ✅ DreamTeamHub
+**File:** `client/src/pages/intent-console.tsx`
+
+---
+
+# Patch drop — Intent Console: Fetch Suggested Files + Copy Evidence Block
+
+FILE: client/src/pages/intent-console.tsx
+
+```tsx
+// === ADD near top-level imports ===
+import React, { useMemo, useState } from "react";
+
+// (If you already import React/useState/useMemo in this file, DO NOT duplicate. Add only what’s missing.)
+
+// === ADD helper types + functions somewhere near other helpers in this file ===
+type SuggestedFile = { path: string };
+type FetchedFile = { path: string; ok: boolean; content?: string; error?: string };
+
+function coerceSuggestedPaths(payload: any): string[] {
+  // Supports multiple shapes coming back from LLM outputs
+  // 1) { suggestedFiles: ["a","b"] } or { suggestedFiles: [{path:"a"}] }
+  // 2) { fileFetchSuggestions: ["a","b"] } or similar
+  // 3) { suggested_paths: "a\nb\nc" }
+  // 4) raw text containing paths (best-effort)
+  const out: string[] = [];
+  const push = (p: any) => {
+    const s = String(p || "").trim();
+    if (!s) return;
+    out.push(s);
+  };
+
+  const candidates = [
+    payload?.suggestedFiles,
+    payload?.fileFetchSuggestions,
+    payload?.file_fetch_suggestions,
+    payload?.suggested_paths,
+    payload?.suggestedPaths,
+    payload?.paths,
+  ];
+
+  for (const c of candidates) {
+    if (!c) continue;
+    if (Array.isArray(c)) {
+      for (const item of c) {
+        if (typeof item === "string") push(item);
+        else if (item?.path) push(item.path);
+      }
+    } else if (typeof c === "string") {
+      c.split(/\r?\n/).forEach(push);
+    }
+  }
+
+  // If still empty, try to parse from text
+  if (out.length === 0 && typeof payload === "string") {
+    payload
+      .split(/\r?\n/)
+      .map((l) => l.trim())
+      .filter((l) => l.startsWith("client/") || l.startsWith("server/") || l.startsWith(".github/") || l.startsWith("src/"))
+      .forEach(push);
+  }
+
+  // de-dupe
+  return Array.from(new Set(out));
+}
+
+function normalizeFilesResponse(j: any): FetchedFile[] {
+  // Accepts:
+  // { ok:true, files:[{path, content, ok}] }
+  // { files:[...] }
+  // [...]
+  const files = Array.isArray(j) ? j : j?.files ?? j?.data ?? [];
+  if (!Array.isArray(files)) return [];
+  return files.map((f: any) => ({
+    path: String(f?.path ?? f?.name ?? "").trim(),
+    ok: Boolean(f?.ok ?? (typeof f?.content === "string" && f.content.length >= 0)),
+    content: typeof f?.content === "string" ? f.content : f?.text,
+    error: f?.error ? String(f.error) : undefined,
+  }));
+}
+
+function buildEvidenceBlock(baseUrl: string | undefined, files: FetchedFile[]): string {
+  const header = [
+    "## GigsterGarage Evidence Pack (Fetched via DTH Connector)",
+    baseUrl ? `Base URL: ${baseUrl}` : "",
+    `Fetched at: ${new Date().toISOString()}`,
+    "",
+  ]
+    .filter(Boolean)
+    .join("\n");
+
+  const body = files
+    .map((f) => {
+      if (!f.ok) {
+        return `### ${f.path}\n⚠️ Fetch failed: ${f.error ?? "unknown error"}\n`;
+      }
+      const content = f.content ?? "";
+      return `### ${f.path}\n\`\`\`\n${content}\n\`\`\`\n`;
+    })
+    .join("\n");
+
+  return `${header}\n${body}`.trim() + "\n";
+}
+
+/* =========================================================================================
+   INSIDE your component: add state for suggested paths + fetched files.
+   Place near other useState hooks.
+========================================================================================= */
+
+// Add these inside the IntentConsole component function:
+const [suggestedPaths, setSuggestedPaths] = useState<string[]>([]);
+const [fetchedFiles, setFetchedFiles] = useState<FetchedFile[]>([]);
+const [fetchingFiles, setFetchingFiles] = useState(false);
+const [fetchFilesError, setFetchFilesError] = useState<string | null>(null);
+
+// If you already have meta from the connector page elsewhere, keep it separate.
+// Here we optionally pull meta for baseUrl display/copy (safe, auth-gated)
+const [ggMetaBaseUrl, setGgMetaBaseUrl] = useState<string | undefined>(undefined);
+
+// Add this useEffect inside component (once)
+React.useEffect(() => {
+  (async () => {
+    try {
+      const r = await fetch("/api/connectors/gigsterGarage/meta");
+      const j = await r.json();
+      if (j?.ok && j?.baseUrl) setGgMetaBaseUrl(String(j.baseUrl));
+    } catch {
+      // ignore
+    }
+  })();
+}, []);
+
+// Add this function inside component:
+async function fetchSuggestedFiles(paths: string[]) {
+  if (!paths?.length) return;
+  setFetchingFiles(true);
+  setFetchFilesError(null);
+  setFetchedFiles([]);
+
+  try {
+    const r = await fetch("/api/connectors/gigsterGarage/files", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        // belt-and-suspenders; backend already supports these shapes
+        paths,
+        pathsText: paths.join("\n"),
+      }),
+    });
+
+    if (!r.ok) {
+      const t = await r.text();
+      throw new Error(`Fetch failed (${r.status}): ${t}`);
+    }
+
+    const j = await r.json();
+    const normalized = normalizeFilesResponse(j);
+    setFetchedFiles(normalized);
+  } catch (e: any) {
+    setFetchFilesError(e?.message ?? "Failed to fetch suggested files.");
+  } finally {
+    setFetchingFiles(false);
+  }
+}
+
+async function copyText(text: string) {
+  try {
+    await navigator.clipboard.writeText(text);
+  } catch {
+    // ignore
+  }
+}
+
+// Evidence block computed:
+const evidenceBlock = useMemo(() => buildEvidenceBlock(ggMetaBaseUrl, fetchedFiles), [ggMetaBaseUrl, fetchedFiles]);
+
+/* =========================================================================================
+   HOOK INTO Pilot G response: after draftIntentStrategy returns, extract suggested paths.
+   Find the place where you receive Pilot G JSON result (the response body you render).
+   Right after you parse it into `result` / `draft` / whatever, add:
+========================================================================================= */
+
+// Example insertion after you parse the response JSON:
+// const data = await resp.json();
+// setDraftIntent(data);
+try {
+  const paths = coerceSuggestedPaths(data);
+  if (paths.length) setSuggestedPaths(paths);
+} catch {
+  // ignore
+}
+
+/* =========================================================================================
+   ADD UI block: Suggested Files + Fetch button + Copy Evidence block
+   Place this in intent-console.tsx UI near where you display the Pilot G draft output.
+========================================================================================= */
+
+{/* === Suggested Files (Pilot G) === */}
+{suggestedPaths.length > 0 && (
+  <div className="mt-4 rounded border p-3">
+    <div className="flex items-center justify-between gap-3">
+      <div>
+        <div className="text-sm font-semibold">Suggested Files (from Pilot G)</div>
+        <div className="text-xs opacity-70">
+          Click “Fetch Suggested Files” to pull these from GigsterGarage via the DTH connector.
+        </div>
+      </div>
+      <div className="flex items-center gap-2">
+        <button
+          type="button"
+          className="rounded border px-3 py-1 text-sm"
+          onClick={() => fetchSuggestedFiles(suggestedPaths)}
+          disabled={fetchingFiles}
+        >
+          {fetchingFiles ? "Fetching…" : "Fetch Suggested Files"}
+        </button>
+        <button
+          type="button"
+          className="rounded border px-3 py-1 text-sm"
+          onClick={() => copyText(evidenceBlock)}
+          disabled={!fetchedFiles.length}
+          title={!fetchedFiles.length ? "Fetch files first" : "Copy evidence pack to clipboard"}
+        >
+          Copy Evidence Block
+        </button>
+      </div>
+    </div>
+
+    <div className="mt-3 text-xs">
+      <ul className="list-disc pl-5">
+        {suggestedPaths.map((p) => (
+          <li key={p}>
+            <code>{p}</code>
+          </li>
+        ))}
+      </ul>
+    </div>
+
+    {fetchFilesError && (
+      <div className="mt-3 rounded border p-2 text-xs">
+        <span className="font-semibold">Fetch error:</span> {fetchFilesError}
+      </div>
+    )}
+
+    {fetchedFiles.length > 0 && (
+      <div className="mt-3 rounded border p-2">
+        <div className="text-sm font-semibold">Fetched Files</div>
+        <div className="mt-2 space-y-2 text-xs">
+          {fetchedFiles.map((f) => (
+            <div key={f.path} className="rounded border p-2">
+              <div className="flex items-center justify-between">
+                <code>{f.path}</code>
+                <span>{f.ok ? "✅" : "⚠️"}</span>
+              </div>
+              {!f.ok && <div className="mt-1 opacity-80">{f.error ?? "Unknown error"}</div>}
+              {f.ok && (
+                <pre className="mt-2 max-h-48 overflow-auto whitespace-pre-wrap rounded bg-black/5 p-2">
+                  {f.content ?? ""}
+                </pre>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+    )}
+  </div>
+)}
+```
+
+END_FILE
+
+---
+
+## What you do after applying this
+
+1. Run Pilot G in Intent Console
+2. It outputs suggested file paths → UI shows the “Suggested Files” card
+3. Click **Fetch Suggested Files**
+4. Click **Copy Evidence Block**
+5. Go to the Work Item → paste into Evidence/Notes → run **Pilot F Generate Patch Drop**
+
+That is the tightest loop without adding new APIs.
+
+---
+
+## Tiny blocker I can’t guess from your snippet
+
+I don’t know the exact variable name in `intent-console.tsx` where Pilot G’s JSON response is stored (I used `data` as a placeholder).
+
+If you paste ~20 lines around **line ~232** where `draftIntentStrategy` response is parsed, I’ll give you a micro-patch showing the **exact insertion line** so you don’t have to hunt.
+
+(You already gave line anchors; just paste that little section and I’ll snap it into place.)
