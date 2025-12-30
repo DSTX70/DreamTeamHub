@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -198,6 +198,16 @@ export default function IntentConsolePage() {
   // Active Work Item ID (auto-targeted after all-in-one creation)
   const [activeWorkItemId, setActiveWorkItemId] = useState<number | null>(null);
 
+  // Refs to access latest evidence in async mutation context
+  const evidenceBlockRef = useRef<string>("");
+  const hasFetchedFilesRef = useRef<boolean>(false);
+
+  // Keep refs up-to-date so mutationFn can reliably access latest evidence
+  useEffect(() => {
+    evidenceBlockRef.current = buildEvidenceBlock(ggMetaBaseUrl, fetchedFiles);
+    hasFetchedFilesRef.current = Array.isArray(fetchedFiles) && fetchedFiles.length > 0;
+  }, [ggMetaBaseUrl, fetchedFiles]);
+
   // Fetch GG connector meta on mount (for baseUrl display)
   useEffect(() => {
     (async () => {
@@ -287,6 +297,26 @@ export default function IntentConsolePage() {
 
   // Dynamic label for attach button
   const attachLabel = activeWorkItemId ? `Attach to WI #${activeWorkItemId}` : "Attach to Work Item…";
+
+  // Helper to append evidence to a specific work item id (no prompt, for auto-attach)
+  async function appendEvidenceToWorkItemId(workItemId: number): Promise<{ ok: boolean; skipped: boolean; reason?: string }> {
+    const block = String(evidenceBlockRef.current || "").trim();
+    if (!block) return { ok: false, skipped: true, reason: "empty_evidence" };
+
+    const r = await fetch(`/api/work-items/${workItemId}/actions/appendEvidenceNotes`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify({ evidenceNotes: block }),
+    });
+
+    if (!r.ok) {
+      const t = await r.text();
+      throw new Error(`Auto-attach failed (${r.status}): ${t}`);
+    }
+
+    return { ok: true, skipped: false };
+  }
 
   const title = useMemo(() => buildTitle(intent), [intent]);
 
@@ -501,19 +531,28 @@ export default function IntentConsolePage() {
       const workItemRes = await apiRequest("POST", "/api/work-items", workItemPayload);
       const workItemData = await workItemRes.json();
 
-      return { draft: draftData, strategy: strategyData, workItem: workItemData };
+      // Step 4: Auto-attach evidence if files were already fetched
+      let evidenceAutoAttached = false;
+      if (hasFetchedFilesRef.current && String(evidenceBlockRef.current || "").trim().length > 0) {
+        await appendEvidenceToWorkItemId(workItemData.id);
+        evidenceAutoAttached = true;
+      }
+
+      return { draft: draftData, strategy: strategyData, workItem: workItemData, evidenceAutoAttached };
     },
     onSuccess: async (result) => {
       await queryClient.invalidateQueries({ queryKey: ["/api/work-items"] });
       await queryClient.invalidateQueries({ queryKey: ["/api/strategy-sessions"] });
       await queryClient.invalidateQueries({ queryKey: ["/api/control/dashboard"] });
-      toast({
-        title: "All created",
-        description: "Draft → Strategy Session → Work Item. Opening work item…",
-      });
       setIntent("");
       setDraft(null);
       setActiveWorkItemId(result.workItem.id);
+      toast({
+        title: "All created",
+        description: result.evidenceAutoAttached
+          ? "Draft → Strategy → Work Item created. Evidence auto-attached. Opening…"
+          : "Draft → Strategy → Work Item created. Opening…",
+      });
       setLocation(`/work-items/${result.workItem.id}`);
     },
     onError: (err: any) => {
