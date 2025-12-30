@@ -106,7 +106,7 @@ export async function extractEvidenceFromWorkItemFiles(workItemId: number): Prom
     lines.push(`mime: ${file.mimeType || "unknown"} | size: ${file.sizeBytes} bytes`);
 
     try {
-      const response = await fetch(file.s3Url);
+      const response = await fetch(file.s3Url, { credentials: "include", cache: "no-store" });
       if (!response.ok) {
         lines.push(`NOTE: Could not fetch file (HTTP ${response.status})`);
         continue;
