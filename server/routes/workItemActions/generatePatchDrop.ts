@@ -2,6 +2,7 @@ import type { Request, Response } from "express";
 import { runSkill } from "../../ai/runSkill";
 import { PatchDropSchema } from "../../ai/schemas/patchDrop";
 import { validatePatchDropFormat } from "../../ai/drops/validatePatchDrop";
+import { extractEvidenceFromWorkItemFiles, buildEvidencePromptBlock } from "../../services/evidenceExtractor";
 
 function hasAnyFileBlocks(text: string): boolean {
   return /^\s*FILE:\s+/m.test(text || "");
@@ -52,11 +53,12 @@ function blockedDrop(params: { repo: string; lockedRecommendation: string }) {
 /**
  * Pilot F — Patch Drop Generator
  * Now supports BLOCKED: Missing Evidence when no FILE context is present.
+ * Automatically extracts text from uploaded evidence files and includes user-pasted notes.
  */
 export async function postGeneratePatchDrop(req: Request, res: Response) {
   try {
     const workItemId = req.params.id;
-    const { title, repoHint, lockedRecommendation, notes } = (req.body || {}) as any;
+    const { title, repoHint, lockedRecommendation, notes, evidenceNotes } = (req.body || {}) as any;
 
     if (!lockedRecommendation || typeof lockedRecommendation !== "string" || lockedRecommendation.trim().length < 20) {
       return res.status(400).json({
@@ -67,15 +69,37 @@ export async function postGeneratePatchDrop(req: Request, res: Response) {
 
     const repo = repoHint || "GigsterGarage";
 
+    // Extract text from uploaded evidence files (HAR, JSON, TXT, LOG, etc.)
+    let extractedFileText = "";
+    try {
+      const numericWorkItemId = parseInt(workItemId, 10);
+      if (!isNaN(numericWorkItemId)) {
+        extractedFileText = await extractEvidenceFromWorkItemFiles(numericWorkItemId);
+      }
+    } catch (err: any) {
+      console.warn("[generatePatchDrop] Evidence extraction warning:", err?.message);
+    }
+
+    // Build combined evidence block
+    const evidenceBlock = buildEvidencePromptBlock({
+      evidenceNotes: evidenceNotes || "",
+      extractedFileText,
+    });
+
+    // Augment recommendation with evidence
+    const augmentedRecommendation = evidenceBlock
+      ? `${lockedRecommendation}\n\n${evidenceBlock}`
+      : lockedRecommendation;
+
     // ✅ PRE-FLIGHT GATE: If no FILE blocks, do NOT call the model. Return BLOCKED.
-    if (!hasAnyFileBlocks(lockedRecommendation)) {
-      return res.json(blockedDrop({ repo, lockedRecommendation }));
+    if (!hasAnyFileBlocks(augmentedRecommendation)) {
+      return res.json(blockedDrop({ repo, lockedRecommendation: augmentedRecommendation }));
     }
 
     const input = {
       title: title || `Work Item ${workItemId}`,
       repoHint: repo,
-      lockedRecommendation,
+      lockedRecommendation: augmentedRecommendation,
       notes: notes || "",
     };
 

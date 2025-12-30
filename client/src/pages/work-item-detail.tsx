@@ -244,6 +244,7 @@ export default function WorkItemDetail() {
           repoHint: "GigsterGarage",
           title: workItem?.title || `Work Item ${workItemId}`,
           lockedRecommendation,
+          evidenceNotes: additionalEvidence || "",
         }),
       });
 
