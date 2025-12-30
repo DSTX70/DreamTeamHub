@@ -226,7 +226,7 @@ function normalizeUpstreamPayload(payload: any) {
   };
 }
 
-router.post("/api/connectors/gigsterGarage/echo", routeBodyParser, (req: Request, res: Response) => {
+router.post("/echo", routeBodyParser, (req: Request, res: Response) => {
   const parsed = parsePaths(req.body);
 
   res.json({
@@ -241,7 +241,7 @@ router.post("/api/connectors/gigsterGarage/echo", routeBodyParser, (req: Request
   });
 });
 
-router.get("/api/connectors/gigsterGarage/debug", (_req: Request, res: Response) => {
+router.get("/debug", (_req: Request, res: Response) => {
   const base = process.env.GIGSTER_GARAGE_BASE_URL || "";
   const token = process.env.GIGSTER_GARAGE_READONLY_TOKEN || "";
   let upstreamUrl = "";
@@ -264,7 +264,7 @@ router.get("/api/connectors/gigsterGarage/debug", (_req: Request, res: Response)
  * Returns non-sensitive connector metadata for UI.
  * This is safe because the base URL is already a published *.replit.app endpoint.
  */
-router.get("/api/connectors/gigsterGarage/meta", async (_req: Request, res: Response) => {
+router.get("/meta", async (_req: Request, res: Response) => {
   try {
     const ggBase = baseUrl(envOrThrow("GIGSTER_GARAGE_BASE_URL"));
 
@@ -289,7 +289,7 @@ router.get("/api/connectors/gigsterGarage/meta", async (_req: Request, res: Resp
  * GET /api/connectors/gigsterGarage/health
  * Server-side health probe so browser never hits GG directly (avoids CORS).
  */
-router.get("/api/connectors/gigsterGarage/health", async (_req: Request, res: Response) => {
+router.get("/health", async (_req: Request, res: Response) => {
   try {
     const ggBase = baseUrl(envOrThrow("GIGSTER_GARAGE_BASE_URL"));
 
@@ -329,7 +329,7 @@ router.get("/api/connectors/gigsterGarage/health", async (_req: Request, res: Re
   }
 });
 
-router.post("/api/connectors/gigsterGarage/files", routeBodyParser, async (req: Request, res: Response) => {
+router.post("/files", routeBodyParser, async (req: Request, res: Response) => {
   try {
     const parsed = parsePaths(req.body);
 

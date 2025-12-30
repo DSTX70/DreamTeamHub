@@ -2844,8 +2844,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.use("/copilot", isAuthenticated, copilot.default);
 
   // GigsterGarage Connector - Read-only file fetching from GigsterGarage repo (requires authentication)
+  // NOTE: The router defines routes under /api/connectors/gigsterGarage/* - we use that prefix to scope auth
   const gigsterGarageConnector = await import("./routes/connectors/gigsterGarage.route");
-  app.use(isAuthenticated, gigsterGarageConnector.default);
+  app.use("/api/connectors/gigsterGarage", isAuthenticated, gigsterGarageConnector.default);
 
   // Work Orders - Agent task definitions and automation specs
   const { workOrders } = await import("./work_orders");
