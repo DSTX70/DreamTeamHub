@@ -634,38 +634,29 @@ export default function IntentConsolePage() {
       }
       const draftData = draftJson as IntentStrategyDraft;
 
-      // Step 1.5: Parse suggested paths + fetch files (via DTH→GG connector)
+      // Step 1.5: Parse suggested paths + fetch files (via DTH→GG connector) — HARD GATE
       const paths = coerceSuggestedPaths(draftData);
       let fetched: FetchedFile[] = [];
-      let fetchOk = false;
-      let fetchError: string | null = null;
 
       if (paths.length > 0) {
         try {
           fetched = await fetchFilesViaConnector(paths);
-          fetchOk = true;
         } catch (e: any) {
-          fetchError = e?.message || "File fetch failed";
+          const msg = e?.message || "File fetch failed";
+          throw new Error(`Blocked: Fetch Suggested Files failed. Fix this first, then rerun. Details: ${msg}`);
+        }
+
+        // HARD GATE: require at least 1 usable file
+        const okCount = fetched.filter((f) => f.ok && typeof f.content === "string" && f.content.trim().length > 0).length;
+        if (okCount === 0) {
+          throw new Error(
+            "Blocked: Fetch Suggested Files returned zero usable files. The suggested paths are wrong or empty. Fix paths and rerun."
+          );
         }
       }
 
-      // Build evidence block NOW (even if partial fetch; it will include failures)
-      const evidenceText =
-        fetched.length > 0
-          ? buildEvidenceBlock(ggBaseUrlRef.current, fetched)
-          : paths.length > 0 && fetchError
-            ? [
-                "## GigsterGarage Evidence Pack (Fetch Failed)",
-                ggBaseUrlRef.current ? `Base URL: ${ggBaseUrlRef.current}` : "",
-                `Fetched at: ${new Date().toISOString()}`,
-                "",
-                `Paths requested:`,
-                ...paths.map((p) => `- ${p}`),
-                "",
-                `Fetch error: ${fetchError}`,
-                "",
-              ].filter(Boolean).join("\n")
-            : "";
+      // Build evidence block NOW (only when we have fetched files)
+      const evidenceText = fetched.length > 0 ? buildEvidenceBlock(ggBaseUrlRef.current, fetched) : "";
 
       // Step 2: Create Strategy Session from draft
       const strategyBody = formatDraftIntoStrategyBody(draftData);
@@ -725,8 +716,6 @@ export default function IntentConsolePage() {
         workItem: workItemData,
         suggestedPaths: paths,
         fetchedFiles: fetched,
-        fetchOk,
-        fetchError,
         evidenceAutoAttached,
       };
     },
@@ -744,10 +733,8 @@ export default function IntentConsolePage() {
       toast({
         title: "All created",
         description: result.evidenceAutoAttached
-          ? "Draft → Fetch Files → Strategy → Work Item. Evidence auto-attached. Opening…"
-          : (result.suggestedPaths?.length
-              ? "Draft → Fetch Files → Strategy → Work Item. (Evidence not attached—see fetch status.) Opening…"
-              : "Draft → Strategy → Work Item. (No suggested files.) Opening…"),
+          ? "Draft → Fetch → Strategy → Work Item. Evidence auto-attached. Opening…"
+          : "Draft → Strategy → Work Item. (No suggested files.) Opening…",
       });
 
       setLocation(`/work-items/${result.workItem.id}`);
