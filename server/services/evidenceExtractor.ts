@@ -1,8 +1,11 @@
 import { db } from "../db";
 import { workItemFiles } from "@shared/schema";
 import { eq, desc } from "drizzle-orm";
-import pdf from "pdf-parse";
 import OpenAI from "openai";
+import { createRequire } from "module";
+
+const require = createRequire(import.meta.url);
+const pdfParse = require("pdf-parse");
 
 const MAX_EXTRACT_CHARS = 80_000;
 const TEXT_EXTS = new Set([".txt", ".log", ".json", ".har", ".md", ".csv", ".xml", ".html"]);
@@ -42,7 +45,7 @@ function truncate(s: string, maxChars = MAX_EXTRACT_CHARS): string {
 
 async function extractTextFromPDF(buffer: Buffer): Promise<string> {
   try {
-    const data = await pdf(buffer);
+    const data = await pdfParse(buffer);
     return data.text || "";
   } catch (err: any) {
     return `[PDF extraction error: ${err?.message || "unknown"}]`;
