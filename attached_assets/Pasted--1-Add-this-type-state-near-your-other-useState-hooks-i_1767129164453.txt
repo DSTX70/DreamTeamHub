@@ -1,0 +1,122 @@
+// 1) Add this type + state near your other useState hooks (inside the component)
+
+type LastRunReceipt = {
+  atIso: string;
+  repoHint: string;
+  title: string;
+  strategyId?: number | string;
+  workItemId?: number;
+  suggestedPathsCount: number;
+  filesOk: number;
+  filesFail: number;
+  evidenceAutoAttached: boolean;
+};
+
+const [lastRun, setLastRun] = useState<LastRunReceipt | null>(null);
+
+// 2) In your one-button mutation onSuccess (draftFetchCreateAllMutation.onSuccess),
+// after you already have `result`, add this block (right after setSuggestedPaths/setFetchedFiles is ideal):
+
+const okCount =
+  Array.isArray(result.fetchedFiles)
+    ? result.fetchedFiles.filter((f: any) => f?.ok && typeof f?.content === "string" && f.content.trim().length > 0).length
+    : 0;
+
+const failCount =
+  Array.isArray(result.fetchedFiles)
+    ? result.fetchedFiles.filter((f: any) => !f?.ok).length
+    : 0;
+
+setLastRun({
+  atIso: new Date().toISOString(),
+  repoHint: String(targetContext || result.draft?.repo || "GigsterGarage"),
+  title: String(title || ""),
+  strategyId: result.strategy?.id,
+  workItemId: result.workItem?.id,
+  suggestedPathsCount: Array.isArray(result.suggestedPaths) ? result.suggestedPaths.length : 0,
+  filesOk: okCount,
+  filesFail: failCount,
+  evidenceAutoAttached: Boolean(result.evidenceAutoAttached),
+});
+
+// 3) Render the receipt card in JSX (place under your main one-button action area)
+// This assumes you already have `copyText()` and `evidenceBlock` in scope.
+
+{lastRun && (
+  <div className="mt-4 rounded border p-3">
+    <div className="flex items-center justify-between gap-3">
+      <div>
+        <div className="text-sm font-semibold">Last Run Receipt</div>
+        <div className="text-xs opacity-70">
+          {new Date(lastRun.atIso).toLocaleString()} • {lastRun.repoHint}
+        </div>
+      </div>
+      <button
+        type="button"
+        className="rounded border px-3 py-1 text-sm"
+        onClick={() => setLastRun(null)}
+      >
+        Clear
+      </button>
+    </div>
+
+    <div className="mt-3 space-y-1 text-xs">
+      <div>
+        <span className="font-semibold">Work Item:</span>{" "}
+        {lastRun.workItemId ? (
+          <a className="underline" href={`/work-items/${lastRun.workItemId}`}>
+            #{lastRun.workItemId}
+          </a>
+        ) : (
+          "—"
+        )}
+      </div>
+
+      <div>
+        <span className="font-semibold">Strategy:</span>{" "}
+        {lastRun.strategyId ? (
+          <a className="underline" href={`/strategy/${lastRun.strategyId}`}>
+            #{String(lastRun.strategyId)}
+          </a>
+        ) : (
+          "—"
+        )}
+      </div>
+
+      <div>
+        <span className="font-semibold">Suggested paths:</span> {lastRun.suggestedPathsCount}
+      </div>
+
+      <div>
+        <span className="font-semibold">Files:</span> ✅ {lastRun.filesOk} / ⚠️ {lastRun.filesFail}
+      </div>
+
+      <div>
+        <span className="font-semibold">Evidence auto-attached:</span>{" "}
+        {lastRun.evidenceAutoAttached ? "✅" : "❌"}
+      </div>
+    </div>
+
+    <div className="mt-3 flex flex-wrap gap-2">
+      {lastRun.workItemId && (
+        <a className="rounded border px-3 py-1 text-sm" href={`/work-items/${lastRun.workItemId}`}>
+          Open Work Item
+        </a>
+      )}
+      {lastRun.strategyId && (
+        <a className="rounded border px-3 py-1 text-sm" href={`/strategy/${lastRun.strategyId}`}>
+          Open Strategy
+        </a>
+      )}
+      <button
+        type="button"
+        className="rounded border px-3 py-1 text-sm"
+        onClick={() => copyText(evidenceBlock)}
+        disabled={!fetchedFiles.length}
+        title={!fetchedFiles.length ? "No fetched files in current view" : "Copy current evidence block"}
+      >
+        Copy Evidence
+      </button>
+    </div>
+  </div>
+)}

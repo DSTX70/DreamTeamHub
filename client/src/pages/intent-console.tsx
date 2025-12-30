@@ -34,6 +34,18 @@ type StrategySession = {
   id: string;
 };
 
+type LastRunReceipt = {
+  atIso: string;
+  repoHint: string;
+  title: string;
+  strategyId?: number | string;
+  workItemId?: number;
+  suggestedPathsCount: number;
+  filesOk: number;
+  filesFail: number;
+  evidenceAutoAttached: boolean;
+};
+
 function buildTitle(intent: string): string {
   const clean = intent.trim().replace(/\s+/g, " ");
   if (!clean) return "New work item";
@@ -191,6 +203,7 @@ export default function IntentConsolePage() {
 
   // Suggested files fetch state (GG Connector integration)
   const [fetchedFiles, setFetchedFiles] = useState<FetchedFile[]>([]);
+  const [lastRun, setLastRun] = useState<LastRunReceipt | null>(null);
   const [fetchingFiles, setFetchingFiles] = useState(false);
   const [fetchFilesError, setFetchFilesError] = useState<string | null>(null);
   const [ggMetaBaseUrl, setGgMetaBaseUrl] = useState<string | undefined>(undefined);
@@ -730,6 +743,26 @@ export default function IntentConsolePage() {
       setFetchedFiles(result.fetchedFiles || []);
       setActiveWorkItemId(result.workItem.id);
 
+      // Build last run receipt
+      const okCount = Array.isArray(result.fetchedFiles)
+        ? result.fetchedFiles.filter((f: FetchedFile) => f?.ok && typeof f?.content === "string" && f.content.trim().length > 0).length
+        : 0;
+      const failCount = Array.isArray(result.fetchedFiles)
+        ? result.fetchedFiles.filter((f: FetchedFile) => !f?.ok).length
+        : 0;
+
+      setLastRun({
+        atIso: new Date().toISOString(),
+        repoHint: String(targetContext || result.draft?.repo || "GigsterGarage"),
+        title: String(title || ""),
+        strategyId: result.strategy?.id,
+        workItemId: result.workItem?.id,
+        suggestedPathsCount: Array.isArray(result.suggestedPaths) ? result.suggestedPaths.length : 0,
+        filesOk: okCount,
+        filesFail: failCount,
+        evidenceAutoAttached: Boolean(result.evidenceAutoAttached),
+      });
+
       toast({
         title: "All created",
         description: result.evidenceAutoAttached
@@ -879,6 +912,89 @@ export default function IntentConsolePage() {
                 </Button>
               </div>
             </div>
+
+            {lastRun && (
+              <div className="mt-4 rounded border p-3" data-testid="last-run-receipt">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <div className="text-sm font-semibold">Last Run Receipt</div>
+                    <div className="text-xs text-muted-foreground">
+                      {new Date(lastRun.atIso).toLocaleString()} - {lastRun.repoHint}
+                    </div>
+                  </div>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={() => setLastRun(null)}
+                    data-testid="clear-last-run"
+                  >
+                    Clear
+                  </Button>
+                </div>
+
+                <div className="mt-3 space-y-1 text-xs">
+                  <div>
+                    <span className="font-semibold">Work Item:</span>{" "}
+                    {lastRun.workItemId ? (
+                      <a className="underline" href={`/work-items/${lastRun.workItemId}`} data-testid="link-work-item">
+                        #{lastRun.workItemId}
+                      </a>
+                    ) : (
+                      "-"
+                    )}
+                  </div>
+
+                  <div>
+                    <span className="font-semibold">Strategy:</span>{" "}
+                    {lastRun.strategyId ? (
+                      <a className="underline" href={`/strategy/${lastRun.strategyId}`} data-testid="link-strategy">
+                        #{String(lastRun.strategyId)}
+                      </a>
+                    ) : (
+                      "-"
+                    )}
+                  </div>
+
+                  <div>
+                    <span className="font-semibold">Suggested paths:</span> {lastRun.suggestedPathsCount}
+                  </div>
+
+                  <div>
+                    <span className="font-semibold">Files:</span> OK {lastRun.filesOk} / Fail {lastRun.filesFail}
+                  </div>
+
+                  <div>
+                    <span className="font-semibold">Evidence auto-attached:</span>{" "}
+                    {lastRun.evidenceAutoAttached ? "Yes" : "No"}
+                  </div>
+                </div>
+
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {lastRun.workItemId && (
+                    <Button size="sm" variant="outline" asChild data-testid="open-work-item">
+                      <a href={`/work-items/${lastRun.workItemId}`}>Open Work Item</a>
+                    </Button>
+                  )}
+                  {lastRun.strategyId && (
+                    <Button size="sm" variant="outline" asChild data-testid="open-strategy">
+                      <a href={`/strategy/${lastRun.strategyId}`}>Open Strategy</a>
+                    </Button>
+                  )}
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={() => copyToClipboard("Evidence block copied", evidenceBlock)}
+                    disabled={!fetchedFiles.length}
+                    title={!fetchedFiles.length ? "No fetched files in current view" : "Copy current evidence block"}
+                    data-testid="copy-evidence-receipt"
+                  >
+                    Copy Evidence
+                  </Button>
+                </div>
+              </div>
+            )}
 
             {draft ? (
               <div className="space-y-3">
