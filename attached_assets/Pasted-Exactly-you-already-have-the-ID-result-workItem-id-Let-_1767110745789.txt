@@ -1,0 +1,110 @@
+Exactly — you already have the ID (`result.workItem.id`). Let’s do two improvements:
+
+1. **Store `activeWorkItemId`** so “Attach to Work Item” never prompts after all-in-one.
+2. Optional (recommended): **Auto-attach evidence** immediately if files were already fetched (or if you want a “Create + Attach” toggle).
+
+Below is a clean patch for **#1** (no behavior surprises) plus an optional small enhancement for **#2**.
+
+**Repo:** ✅ DreamTeamHub
+**File:** `client/src/pages/intent-console.tsx`
+
+---
+
+## Patch drop — auto-target Attach to Work Item (no prompt after all-in-one)
+
+FILE: client/src/pages/intent-console.tsx
+
+```tsx
+// 1) ADD state near your other useState hooks
+const [activeWorkItemId, setActiveWorkItemId] = useState<number | null>(null);
+
+// 2) UPDATE attachEvidenceToWorkItem() to use activeWorkItemId first
+async function attachEvidenceToWorkItem() {
+  let id = activeWorkItemId;
+
+  if (!id) {
+    const raw = window.prompt("Attach evidence to which Work Item ID?", "");
+    if (!raw) return;
+
+    const parsed = Number(raw);
+    if (!Number.isFinite(parsed) || parsed <= 0) {
+      alert("Invalid Work Item ID.");
+      return;
+    }
+    id = parsed;
+  }
+
+  const r = await fetch(`/api/work-items/${id}/actions/appendEvidenceNotes`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify({ evidenceNotes: evidenceBlock }),
+  });
+
+  if (!r.ok) {
+    const t = await r.text();
+    alert(`Attach failed (${r.status}): ${t}`);
+    return;
+  }
+
+  // Keep the active id (useful even when prompted)
+  setActiveWorkItemId(id);
+  alert(`Evidence attached to Work Item ${id}.`);
+}
+
+// 3) IN onSuccess of draftCreateAllMutation, capture the ID
+// Right before setLocation(`/work-items/${result.workItem.id}`)
+setActiveWorkItemId(result.workItem.id);
+
+// 4) OPTIONAL: also set activeWorkItemId when you navigate manually to a Work Item
+// If you have a place where you select/open a work item from a list in this page,
+// call setActiveWorkItemId(theId). (Skip if not applicable.)
+
+// 5) UI LABEL: change the button label to reflect auto-targeting
+// Replace your Attach button label with this expression:
+const attachLabel = activeWorkItemId ? `Attach to Work Item #${activeWorkItemId}` : "Attach to Work Item…";
+
+// In JSX:
+<button
+  type="button"
+  className="rounded border px-3 py-1 text-sm"
+  onClick={attachEvidenceToWorkItem}
+  disabled={!fetchedFiles.length}
+  title={!fetchedFiles.length ? "Fetch files first" : "Append evidenceNotes server-side"}
+>
+  {attachLabel}
+</button>
+```
+
+END_FILE
+
+---
+
+## Optional enhancement — auto-attach right after creating Work Item (Step 4)
+
+I’d only do this if you explicitly want it, because it changes behavior. If yes, add this inside `mutationFn` after `workItemData` is returned **and only if you already have fetched files** (so it doesn’t attach empty evidence):
+
+```ts
+if (fetchedFiles.length > 0) {
+  await fetch(`/api/work-items/${workItemData.id}/actions/appendEvidenceNotes`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify({ evidenceNotes: evidenceBlock }),
+  });
+}
+```
+
+But the safe default is the first patch: **no prompt after all-in-one**, still user-driven.
+
+---
+
+## Commit (DreamTeamHub)
+
+```bash
+git add client/src/pages/intent-console.tsx
+git commit -m "DTH: auto-target evidence attachment to newly created work item"
+git push origin main
+```
+
+If you want the **auto-attach Step 4**, say “enable auto-attach,” and I’ll give you the exact guarded insertion so it won’t attach blank blocks.

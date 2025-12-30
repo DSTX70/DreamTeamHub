@@ -195,6 +195,9 @@ export default function IntentConsolePage() {
   const [fetchFilesError, setFetchFilesError] = useState<string | null>(null);
   const [ggMetaBaseUrl, setGgMetaBaseUrl] = useState<string | undefined>(undefined);
 
+  // Active Work Item ID (auto-targeted after all-in-one creation)
+  const [activeWorkItemId, setActiveWorkItemId] = useState<number | null>(null);
+
   // Fetch GG connector meta on mount (for baseUrl display)
   useEffect(() => {
     (async () => {
@@ -242,14 +245,20 @@ export default function IntentConsolePage() {
   const evidenceBlock = useMemo(() => buildEvidenceBlock(ggMetaBaseUrl, fetchedFiles), [ggMetaBaseUrl, fetchedFiles]);
 
   // Attach evidence to Work Item (server-side append)
+  // Uses activeWorkItemId if set (after all-in-one creation), otherwise prompts
   async function attachEvidenceToWorkItem() {
-    const raw = window.prompt("Attach evidence to which Work Item ID?", "");
-    if (!raw) return;
+    let id = activeWorkItemId;
 
-    const id = Number(raw);
-    if (!Number.isFinite(id) || id <= 0) {
-      toast({ title: "Invalid", description: "Invalid Work Item ID.", variant: "destructive" });
-      return;
+    if (!id) {
+      const raw = window.prompt("Attach evidence to which Work Item ID?", "");
+      if (!raw) return;
+
+      const parsed = Number(raw);
+      if (!Number.isFinite(parsed) || parsed <= 0) {
+        toast({ title: "Invalid", description: "Invalid Work Item ID.", variant: "destructive" });
+        return;
+      }
+      id = parsed;
     }
 
     try {
@@ -266,14 +275,18 @@ export default function IntentConsolePage() {
       }
 
       const j = await r.json();
+      setActiveWorkItemId(id);
       toast({
         title: "Attached",
-        description: `Evidence appended to Work Item ${id}. ${j.appendedChars ?? 0} chars added.`,
+        description: `Evidence appended to Work Item #${id}. ${j.appendedChars ?? 0} chars added.`,
       });
     } catch (e: any) {
       toast({ title: "Error", description: e?.message ?? "Failed to attach evidence.", variant: "destructive" });
     }
   }
+
+  // Dynamic label for attach button
+  const attachLabel = activeWorkItemId ? `Attach to WI #${activeWorkItemId}` : "Attach to Work Item…";
 
   const title = useMemo(() => buildTitle(intent), [intent]);
 
@@ -500,6 +513,7 @@ export default function IntentConsolePage() {
       });
       setIntent("");
       setDraft(null);
+      setActiveWorkItemId(result.workItem.id);
       setLocation(`/work-items/${result.workItem.id}`);
     },
     onError: (err: any) => {
@@ -726,7 +740,7 @@ export default function IntentConsolePage() {
                           disabled={!fetchedFiles.length}
                           data-testid="pilotg-attach-evidence"
                         >
-                          <Upload className="h-4 w-4" /> Attach to Work Item
+                          <Upload className="h-4 w-4" /> {attachLabel}
                         </Button>
                       </div>
                     </div>

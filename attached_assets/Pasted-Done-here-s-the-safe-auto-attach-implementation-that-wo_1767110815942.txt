@@ -1,0 +1,101 @@
+Done — here’s the **safe auto-attach** implementation that won’t surprise you:
+
+* If you already fetched files (so `evidenceBlock` is non-empty), the All-in-one flow will **auto-append evidenceNotes** to the newly created Work Item immediately (Step 4).
+* If you *haven’t* fetched files yet, it will **skip auto-attach** and you can still use the Attach button later.
+
+**Repo:** ✅ DreamTeamHub
+**File:** `client/src/pages/intent-console.tsx`
+
+---
+
+## Patch drop — enable auto-attach (Step 4) using refs
+
+FILE: client/src/pages/intent-console.tsx
+
+```tsx
+// 0) Ensure these imports exist (add only what’s missing)
+import React, { useEffect, useMemo, useRef, useState } from "react";
+
+// 1) Add refs near your other hooks (inside the component)
+const evidenceBlockRef = useRef<string>("");
+const hasFetchedFilesRef = useRef<boolean>(false);
+
+// Keep refs up-to-date so mutationFn can reliably access latest evidence
+useEffect(() => {
+  evidenceBlockRef.current = evidenceBlock;
+  hasFetchedFilesRef.current = Array.isArray(fetchedFiles) && fetchedFiles.length > 0;
+}, [evidenceBlock, fetchedFiles]);
+
+// 2) Add a helper to append evidence to a specific work item id (no prompt)
+async function appendEvidenceToWorkItemId(workItemId: number) {
+  const block = String(evidenceBlockRef.current || "").trim();
+  if (!block) return { ok: false, skipped: true, reason: "empty_evidence" };
+
+  const r = await fetch(`/api/work-items/${workItemId}/actions/appendEvidenceNotes`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify({ evidenceNotes: block }),
+  });
+
+  if (!r.ok) {
+    const t = await r.text();
+    throw new Error(`Auto-attach failed (${r.status}): ${t}`);
+  }
+
+  return { ok: true, skipped: false };
+}
+
+// 3) In your draftCreateAllMutation.mutationFn, add Step 4 right after Step 3 creates the work item
+// Find this section:
+const workItemRes = await apiRequest("POST", "/api/work-items", workItemPayload);
+const workItemData = await workItemRes.json();  // ← Work Item ID is here
+
+// INSERT immediately after that:
+let evidenceAutoAttached = false;
+if (hasFetchedFilesRef.current && String(evidenceBlockRef.current || "").trim().length > 0) {
+  await appendEvidenceToWorkItemId(workItemData.id);
+  evidenceAutoAttached = true;
+}
+
+return { draft: draftData, strategy: strategyData, workItem: workItemData, evidenceAutoAttached };
+
+// 4) In onSuccess, reflect the result in toast + store activeWorkItemId
+// Find your existing onSuccess:
+// onSuccess: async (result) => { ... setLocation(`/work-items/${result.workItem.id}`); }
+
+// Add before navigating:
+setActiveWorkItemId(result.workItem.id);
+
+toast({
+  title: "All created",
+  description: result.evidenceAutoAttached
+    ? "Draft → Strategy Session → Work Item. Evidence auto-attached. Opening work item…"
+    : "Draft → Strategy Session → Work Item. (No evidence auto-attach yet — fetch files then attach.) Opening work item…",
+});
+
+// Keep your existing navigation:
+setLocation(`/work-items/${result.workItem.id}`);
+```
+
+END_FILE
+
+---
+
+## Commit + push (DreamTeamHub)
+
+```bash
+git add client/src/pages/intent-console.tsx
+git commit -m "DTH: enable auto-attach evidenceNotes in all-in-one work item creation"
+git push origin main
+```
+
+---
+
+## What this gives you
+
+* ✅ All-in-one flow auto-attaches evidence **only when it exists**
+* ✅ No prompt (because we already have the created Work Item ID)
+* ✅ No silent failure: toast tells you whether it attached or skipped
+
+If you want the *next* level (auto-fetch suggested files before auto-attach), say “enable auto-fetch+attach” and I’ll wire it so Step 4 can fetch `suggestedPaths` first, then attach—all still without schema changes.
