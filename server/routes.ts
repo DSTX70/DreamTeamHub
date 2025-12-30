@@ -35,6 +35,7 @@ import { PACK_REGISTRY } from "./ai/packRegistry";
 import { createPackActionHandler } from "./ai/packFactory";
 import { postGeneratePatchDrop } from "./routes/workItemActions/generatePatchDrop";
 import { postDraftIntentStrategy } from "./routes/workItemActions/draftIntentStrategy";
+import { appendEvidenceNotes } from "./routes/workItemActions/appendEvidenceNotes";
 import multer from "multer";
 import { z } from "zod";
 import { generateLifestyleHeroesForWorkItem } from "./services/lifestyleHeroes";
@@ -1162,6 +1163,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Pilot G — Natural Language Intake → Draft Intent + Strategy
   app.post("/api/work-items/:id/actions/draftIntentStrategy", isAuthenticated, postDraftIntentStrategy);
+
+  // Append Evidence Notes (used by Intent Console to attach evidence to a Work Item)
+  app.post("/api/work-items/:id/actions/appendEvidenceNotes", isAuthenticated, appendEvidenceNotes);
   
   // Pack to Drive routes
   const { postSavePackToDrive, getWorkItemDriveFiles } = await import("./api/packToDrive.route");

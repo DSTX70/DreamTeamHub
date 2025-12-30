@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useLocation } from "wouter";
-import { Target, Users, Wand2, X, Search, ClipboardCopy, Sparkles, ArrowRight, FileCode, Download } from "lucide-react";
+import { Target, Users, Wand2, X, Search, ClipboardCopy, Sparkles, ArrowRight, FileCode, Download, Upload } from "lucide-react";
 import { useCastingPrefs } from "@/hooks/useCastingPrefs";
 import { useCastOptions, CastOption } from "@/hooks/useCastOptions";
 import { dedupeCanonSlugs, toCanonSlug } from "@/lib/canonSlugMap";
@@ -240,6 +240,40 @@ export default function IntentConsolePage() {
 
   // Evidence block computed from fetched files
   const evidenceBlock = useMemo(() => buildEvidenceBlock(ggMetaBaseUrl, fetchedFiles), [ggMetaBaseUrl, fetchedFiles]);
+
+  // Attach evidence to Work Item (server-side append)
+  async function attachEvidenceToWorkItem() {
+    const raw = window.prompt("Attach evidence to which Work Item ID?", "");
+    if (!raw) return;
+
+    const id = Number(raw);
+    if (!Number.isFinite(id) || id <= 0) {
+      toast({ title: "Invalid", description: "Invalid Work Item ID.", variant: "destructive" });
+      return;
+    }
+
+    try {
+      const r = await fetch(`/api/work-items/${id}/actions/appendEvidenceNotes`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ evidenceNotes: evidenceBlock }),
+      });
+
+      if (!r.ok) {
+        const t = await r.text();
+        throw new Error(`Attach failed (${r.status}): ${t}`);
+      }
+
+      const j = await r.json();
+      toast({
+        title: "Attached",
+        description: `Evidence appended to Work Item ${id}. ${j.appendedChars ?? 0} chars added.`,
+      });
+    } catch (e: any) {
+      toast({ title: "Error", description: e?.message ?? "Failed to attach evidence.", variant: "destructive" });
+    }
+  }
 
   const title = useMemo(() => buildTitle(intent), [intent]);
 
@@ -682,6 +716,17 @@ export default function IntentConsolePage() {
                           data-testid="pilotg-copy-evidence-block"
                         >
                           <ClipboardCopy className="h-4 w-4" /> Copy Evidence Block
+                        </Button>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="default"
+                          className="gap-2"
+                          onClick={attachEvidenceToWorkItem}
+                          disabled={!fetchedFiles.length}
+                          data-testid="pilotg-attach-evidence"
+                        >
+                          <Upload className="h-4 w-4" /> Attach to Work Item
                         </Button>
                       </div>
                     </div>

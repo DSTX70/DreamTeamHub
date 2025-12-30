@@ -1,0 +1,167 @@
+Awesome. Option A = **server-side append into `evidenceNotes`** (no renames, no schema change), plus a tiny UI button in Intent Console to call it.
+
+**Repo to paste into:** ✅ **DreamTeamHub**
+
+---
+
+## 1) Backend: new Work Item action `appendEvidenceNotes`
+
+### FILE: `server/routes/workItemActions/appendEvidenceNotes.ts` (new)
+
+```ts
+import type { Request, Response } from "express";
+
+/**
+ * POST /api/work-items/:id/actions/appendEvidenceNotes
+ * Body: { evidenceNotes: string }
+ *
+ * Appends the incoming evidenceNotes onto the existing workItem.evidenceNotes.
+ *
+ * NOTE: This file assumes you can load + update a work item via the same persistence
+ * layer used by generatePatchDrop. If your helper names differ, copy the exact
+ * imports + calls from generatePatchDrop.ts (where it updates evidenceNotes today).
+ */
+
+// ✅ Replace these imports with the exact ones used in generatePatchDrop.ts
+import { storage } from "../../ai/persistence"; // <-- adjust to your real persistence export
+
+export async function appendEvidenceNotes(req: Request, res: Response) {
+  try {
+    const workItemId = Number(req.params.id);
+    if (!Number.isFinite(workItemId) || workItemId <= 0) {
+      return res.status(400).json({ ok: false, error: "Invalid workItem id" });
+    }
+
+    const { evidenceNotes } = req.body ?? {};
+    const incoming = String(evidenceNotes ?? "").trim();
+    if (!incoming) {
+      return res.status(400).json({ ok: false, error: "Missing evidenceNotes" });
+    }
+
+    // ✅ Adjust these two calls to match your persistence API.
+    // Search in server for `updateWorkItem(` and mirror the same access pattern.
+    const existing = await storage.getWorkItem(workItemId); // <-- adjust if needed
+    if (!existing) {
+      return res.status(404).json({ ok: false, error: "Work item not found" });
+    }
+
+    const prior = String(existing.evidenceNotes ?? "").trim();
+    const merged = prior ? `${prior}\n\n${incoming}` : incoming;
+
+    await storage.updateWorkItem(workItemId, { evidenceNotes: merged }); // <-- adjust if needed
+
+    return res.json({
+      ok: true,
+      workItemId,
+      appendedChars: incoming.length,
+      totalChars: merged.length,
+    });
+  } catch (err: any) {
+    return res.status(500).json({ ok: false, error: err?.message ?? "appendEvidenceNotes failed" });
+  }
+}
+```
+
+END_FILE
+
+### Wire it into your Work Item Actions router
+
+Wherever you register other action endpoints like `draftIntentStrategy` and `generatePatchDrop`, add:
+
+```ts
+import { appendEvidenceNotes } from "./workItemActions/appendEvidenceNotes";
+```
+
+and the route:
+
+```ts
+router.post(
+  "/api/work-items/:id/actions/appendEvidenceNotes",
+  isAuthenticated,
+  appendEvidenceNotes
+);
+```
+
+Because I don’t have your exact router file path, do this:
+
+* Find the file that currently registers:
+
+  * `/api/work-items/:id/actions/generatePatchDrop`
+  * `/api/work-items/:id/actions/draftIntentStrategy`
+* Add the import + `router.post(...)` line next to those.
+
+(You already know this spot exists because Intent Console hits `/api/work-items/0/actions/draftIntentStrategy` and Work Item Detail hits `/api/work-items/:id/actions/generatePatchDrop`.)
+
+---
+
+## 2) Frontend: add “Attach Evidence to Work Item” button in Intent Console
+
+**File:** `client/src/pages/intent-console.tsx`
+
+Add this helper inside the component (near your existing fetch helpers):
+
+```ts
+async function attachEvidenceToWorkItem() {
+  // Prompt keeps it robust even when you didn’t create the WI from the all-in-one flow
+  const raw = window.prompt("Attach evidence to which Work Item ID?", "");
+  if (!raw) return;
+
+  const id = Number(raw);
+  if (!Number.isFinite(id) || id <= 0) {
+    alert("Invalid Work Item ID.");
+    return;
+  }
+
+  const r = await fetch(`/api/work-items/${id}/actions/appendEvidenceNotes`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ evidenceNotes: evidenceBlock }),
+  });
+
+  if (!r.ok) {
+    const t = await r.text();
+    alert(`Attach failed (${r.status}): ${t}`);
+    return;
+  }
+
+  alert(`Evidence attached to Work Item ${id}.`);
+}
+```
+
+Then next to your existing **Copy Evidence Block** button, add:
+
+```tsx
+<button
+  type="button"
+  className="rounded border px-3 py-1 text-sm"
+  onClick={attachEvidenceToWorkItem}
+  disabled={!fetchedFiles.length}
+  title={!fetchedFiles.length ? "Fetch files first" : "Append evidenceNotes server-side"}
+>
+  Attach to Work Item
+</button>
+```
+
+This keeps your existing copy flow intact but adds the “no paste” path.
+
+---
+
+## 3) Ship commands (DreamTeamHub repo)
+
+```bash
+git add server/routes/workItemActions/appendEvidenceNotes.ts
+# plus the router file you updated to register the endpoint
+# plus client/src/pages/intent-console.tsx
+git commit -m "DTH: add appendEvidenceNotes action + intent-console attach button"
+git push origin main
+```
+
+---
+
+## Definition of Done
+
+* From Intent Console: **Fetch Suggested Files → Attach to Work Item**
+* Work Item Detail shows `evidenceNotes` updated **without manual paste**
+* Pilot F “Generate Patch Drop” uses appended evidence
+
+If you paste the file path where `/actions/generatePatchDrop` is registered on the server, I can return a *fully exact* FILE patch for that router (no “find the spot” step).
