@@ -1,0 +1,429 @@
+You’re hitting the key distinction:
+
+* **Pasted evidence text** can be included in prompts immediately.
+* **Uploaded files** are usually just stored as attachments unless we explicitly **extract their contents** and **append them to the Recommendation/Drop inputs**.
+
+So to “make the file get read,” we need two things:
+
+1. **Server-side evidence store + text extraction** (for `.har`, `.json`, `.txt`, `.log`, etc.)
+2. **Client-side wiring** so “Generate Recommendation / Generate Drop” sends (or the server auto-loads) the evidence bundle.
+
+Below is a **DreamTeamHub patch drop** that enables this end-to-end:
+
+* Adds **Evidence upload endpoint**
+* Stores files on disk per workItemId
+* Extracts text from safe filetypes
+* Adds an **Evidence textarea** (where you paste extra info)
+* Ensures evidence is appended into the **model input** for Recommendation/Drop calls
+* Adds an **Upload Evidence** button (functional) + evidence list UI
+
+It also answers your “where do I paste additional evidence?”: the **Evidence textarea** on the Work Item detail page (shown when BLOCKED), and it will be included automatically.
+
+---
+
+## DROP — DreamTeamHub (manual apply)
+
+**Repo:** `DreamTeamHub`
+
+### 1) Add a simple evidence store + extractor
+
+```ts
+FILE: server/services/evidenceStore.ts
+import fs from "fs";
+import path from "path";
+import crypto from "crypto";
+
+export type EvidenceItem = {
+  id: string;
+  workItemId: string;
+  filename: string;
+  mime: string;
+  size: number;
+  storedPath: string;
+  createdAt: number;
+  extractedText?: string; // only for text-like files
+};
+
+const ROOT = process.env.DTH_EVIDENCE_DIR || path.join(process.cwd(), ".dth_evidence");
+const MAX_BYTES = 2_000_000; // 2MB per file (adjust as needed)
+const MAX_EXTRACT_CHARS = 120_000; // cap prompt bloat
+
+const TEXT_EXTS = new Set([".txt", ".log", ".json", ".har", ".md", ".csv"]);
+const TEXT_MIMES = [
+  "text/",
+  "application/json",
+  "application/har+json",
+];
+
+function ensureDir(p: string) {
+  fs.mkdirSync(p, { recursive: true });
+}
+
+function safeId() {
+  return crypto.randomBytes(16).toString("hex");
+}
+
+function isTextLike(filename: string, mime: string) {
+  const ext = path.extname(filename).toLowerCase();
+  if (TEXT_EXTS.has(ext)) return true;
+  return TEXT_MIMES.some((m) => mime?.startsWith(m));
+}
+
+function truncate(s: string, maxChars = MAX_EXTRACT_CHARS) {
+  if (s.length <= maxChars) return s;
+  return s.slice(0, maxChars) + `\n\n/* TRUNCATED_AT_${maxChars}_CHARS */\n`;
+}
+
+export function getEvidenceDir(workItemId: string) {
+  const dir = path.join(ROOT, workItemId);
+  ensureDir(dir);
+  return dir;
+}
+
+export function listEvidence(workItemId: string): EvidenceItem[] {
+  const dir = getEvidenceDir(workItemId);
+  const metaPath = path.join(dir, "meta.json");
+  if (!fs.existsSync(metaPath)) return [];
+  try {
+    const raw = fs.readFileSync(metaPath, "utf8");
+    const arr = JSON.parse(raw);
+    return Array.isArray(arr) ? (arr as EvidenceItem[]) : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveMeta(workItemId: string, items: EvidenceItem[]) {
+  const dir = getEvidenceDir(workItemId);
+  fs.writeFileSync(path.join(dir, "meta.json"), JSON.stringify(items, null, 2), "utf8");
+}
+
+export function addEvidence(params: {
+  workItemId: string;
+  filename: string;
+  mime: string;
+  buffer: Buffer;
+}): EvidenceItem {
+  const { workItemId, filename, mime, buffer } = params;
+
+  if (buffer.byteLength > MAX_BYTES) {
+    throw new Error(`Evidence file too large (${buffer.byteLength} bytes). Max is ${MAX_BYTES}.`);
+  }
+
+  const dir = getEvidenceDir(workItemId);
+  const id = safeId();
+  const storedPath = path.join(dir, `${id}-${filename.replace(/[^a-zA-Z0-9._-]/g, "_")}`);
+  fs.writeFileSync(storedPath, buffer);
+
+  let extractedText: string | undefined;
+  if (isTextLike(filename, mime)) {
+    try {
+      extractedText = truncate(buffer.toString("utf8"));
+    } catch {
+      // ignore extraction errors
+    }
+  }
+
+  const item: EvidenceItem = {
+    id,
+    workItemId,
+    filename,
+    mime: mime || "application/octet-stream",
+    size: buffer.byteLength,
+    storedPath,
+    createdAt: Date.now(),
+    extractedText,
+  };
+
+  const items = listEvidence(workItemId);
+  items.unshift(item);
+  saveMeta(workItemId, items);
+
+  return item;
+}
+
+/**
+ * Returns a prompt-ready block including extracted text where possible.
+ * For images/binaries, includes metadata only (no OCR).
+ */
+export function buildEvidencePromptBlock(workItemId: string): string {
+  const items = listEvidence(workItemId);
+  if (!items.length) return "";
+
+  const lines: string[] = [];
+  lines.push("==== EVIDENCE (Uploaded Files) ====");
+
+  for (const it of items.slice(0, 10)) {
+    lines.push(`EVIDENCE_FILE: ${it.filename}`);
+    lines.push(`mime: ${it.mime} | size: ${it.size} | id: ${it.id}`);
+
+    if (it.extractedText && it.extractedText.trim()) {
+      lines.push("BEGIN_EXTRACTED_TEXT");
+      lines.push(it.extractedText);
+      lines.push("END_EXTRACTED_TEXT");
+    } else {
+      lines.push("NOTE: No extracted text (binary/image). If needed, paste key details into Evidence Notes.");
+    }
+    lines.push("");
+  }
+
+  lines.push("==== END EVIDENCE ====");
+  return lines.join("\n");
+}
+END_FILE
+```
+
+---
+
+### 2) Add routes for evidence upload + list
+
+This uses **route-local multipart parsing** without extra dependencies by accepting raw file bytes.
+The client will upload with `fetch` + `FormData`, and we’ll read it with a tiny helper.
+
+```ts
+FILE: server/routes/workItemEvidence.ts
+import express from "express";
+import type { Request, Response } from "express";
+import { addEvidence, listEvidence } from "../services/evidenceStore";
+
+const router = express.Router();
+
+// Helper: read a single file from multipart/form-data using busboy (no heavy deps)
+import Busboy from "busboy";
+
+router.get("/api/work-items/:id/evidence", (req: Request, res: Response) => {
+  const workItemId = req.params.id;
+  return res.json({ ok: true, items: listEvidence(workItemId) });
+});
+
+router.post("/api/work-items/:id/evidence/upload", (req: Request, res: Response) => {
+  const workItemId = req.params.id;
+
+  const bb = Busboy({ headers: req.headers });
+  let saved: any[] = [];
+  let done = false;
+
+  bb.on("file", (name, file, info) => {
+    const { filename, mimeType } = info;
+    const chunks: Buffer[] = [];
+    file.on("data", (d: Buffer) => chunks.push(d));
+    file.on("limit", () => {
+      // busboy limit not set here; we enforce in addEvidence
+    });
+    file.on("end", () => {
+      try {
+        const buffer = Buffer.concat(chunks);
+        const item = addEvidence({
+          workItemId,
+          filename: filename || "evidence.bin",
+          mime: mimeType || "application/octet-stream",
+          buffer,
+        });
+        saved.push({
+          id: item.id,
+          filename: item.filename,
+          mime: item.mime,
+          size: item.size,
+          createdAt: item.createdAt,
+          extractedTextChars: item.extractedText ? item.extractedText.length : 0,
+        });
+      } catch (e: any) {
+        saved.push({ filename, error: e?.message || "upload failed" });
+      }
+    });
+  });
+
+  bb.on("finish", () => {
+    if (done) return;
+    done = true;
+    return res.json({ ok: true, saved });
+  });
+
+  req.pipe(bb);
+});
+
+export default router;
+END_FILE
+```
+
+> **Note:** This requires `busboy` installed. If you already have it, great. If not, install it:
+> `npm i busboy`
+
+If you’d rather not add a dependency, tell me and I’ll rewrite this to use an existing uploader in your repo (many DTH stacks already have one).
+
+---
+
+### 3) Wire the evidence router
+
+Add this to your main server router file (where you wired other routes), e.g. `server/routes.ts`:
+
+```ts
+FILE: server/routes.ts
+// ...keep existing imports...
+import workItemEvidenceRouter from "./routes/workItemEvidence";
+
+// ...inside your app/router wiring...
+app.use(workItemEvidenceRouter);
+
+// ...rest unchanged...
+END_FILE
+```
+
+(If your project uses a different wiring pattern, put the `app.use(...)` alongside your other `app.use(route)` lines.)
+
+---
+
+### 4) Ensure Recommendation/Drop input includes Evidence Notes + uploaded evidence text
+
+We’ll append evidence blocks to the `lockedRecommendation` before the model sees it, and we’ll also allow the BLOCKED banner textarea to be sent.
+
+Update `server/routes/workItemActions/generatePatchDrop.ts` (the endpoint) to include evidence:
+
+```ts
+FILE: server/routes/workItemActions/generatePatchDrop.ts
+// ...keep existing imports...
+import { buildEvidencePromptBlock } from "../../services/evidenceStore";
+
+// Inside postGeneratePatchDrop, after reading lockedRecommendation:
+const evidenceNotes = (req.body?.evidenceNotes && String(req.body.evidenceNotes)) || "";
+const evidenceFilesBlock = buildEvidencePromptBlock(workItemId);
+
+// Append evidence to the recommendation text (so the model sees it)
+const augmentedRecommendation =
+  lockedRecommendation +
+  (evidenceNotes.trim() ? `\n\n==== EVIDENCE NOTES ====\n${evidenceNotes.trim()}\n==== END EVIDENCE NOTES ====\n` : "") +
+  (evidenceFilesBlock ? `\n\n${evidenceFilesBlock}\n` : "");
+
+// Replace uses of lockedRecommendation below with augmentedRecommendation:
+if (!hasAnyFileBlocks(augmentedRecommendation)) {
+  return res.json(blockedDrop({ repo, lockedRecommendation: augmentedRecommendation }));
+}
+
+const input = {
+  title: title || `Work Item ${workItemId}`,
+  repoHint: repo,
+  lockedRecommendation: augmentedRecommendation,
+  notes: notes || "",
+};
+END_FILE
+```
+
+(Leave the rest of the file unchanged.)
+
+---
+
+### 5) Client: add evidence upload + evidence notes to the BLOCKED banner and send on Generate Drop
+
+In `work-item-detail.tsx`:
+
+* Add state: `evidenceNotes`, `evidenceItems`
+* Add a file input + upload handler that calls `/api/work-items/:id/evidence/upload`
+* In your `genDrop` mutation, include `evidenceNotes` in the POST body
+
+Here are the **minimal inserts**:
+
+```ts
+// Add near other state in work-item-detail.tsx:
+const [evidenceNotes, setEvidenceNotes] = useState("");
+const [evidenceItems, setEvidenceItems] = useState<any[]>([]);
+const evidenceFileInputRef = useRef<HTMLInputElement | null>(null);
+
+async function refreshEvidence() {
+  try {
+    const res = await fetch(`/api/work-items/${workItemId}/evidence`, { credentials: "include" });
+    const json = await res.json();
+    if (json?.ok) setEvidenceItems(json.items || []);
+  } catch {
+    // ignore
+  }
+}
+
+async function uploadEvidenceFiles(files: FileList | null) {
+  if (!files || !files.length) return;
+  const fd = new FormData();
+  for (const f of Array.from(files)) fd.append("file", f, f.name);
+
+  const res = await fetch(`/api/work-items/${workItemId}/evidence/upload`, {
+    method: "POST",
+    credentials: "include",
+    body: fd,
+  });
+
+  const json = await res.json().catch(() => null);
+  if (!res.ok || !json?.ok) {
+    toast({ title: "Upload failed", description: json?.error || `HTTP ${res.status}`, variant: "destructive" });
+    return;
+  }
+
+  toast({ title: "Uploaded", description: `Saved ${json.saved?.length || 0} file(s).` });
+  await refreshEvidence();
+}
+```
+
+Then, in your BLOCKED banner JSX, add:
+
+```tsx
+<input
+  ref={evidenceFileInputRef}
+  type="file"
+  multiple
+  className="hidden"
+  onChange={(e) => uploadEvidenceFiles(e.target.files)}
+/>
+
+<Button
+  type="button"
+  variant="outline"
+  onClick={() => evidenceFileInputRef.current?.click()}
+>
+  Upload evidence files
+</Button>
+
+<Textarea
+  value={evidenceNotes}
+  onChange={(e) => setEvidenceNotes(e.target.value)}
+  placeholder="Paste Network request details (URL/Method/Status/Payload/Response) and any Console stack traces here..."
+  className="mt-2 min-h-28"
+/>
+
+{evidenceItems?.length ? (
+  <div className="mt-3 text-xs">
+    <div className="font-medium">Uploaded evidence:</div>
+    <ul className="list-disc ml-5">
+      {evidenceItems.slice(0, 8).map((it, idx) => (
+        <li key={idx}>{it.filename} ({Math.round((it.size || 0)/1024)} KB)</li>
+      ))}
+    </ul>
+  </div>
+) : null}
+```
+
+Finally, update the `genDrop` mutation request body to send evidence notes:
+
+```ts
+body: JSON.stringify({
+  repoHint: "GigsterGarage",
+  title: workItem?.title || `Work Item ${workItemId}`,
+  lockedRecommendation,
+  evidenceNotes, // ✅ send pasted evidence
+}),
+```
+
+And call `refreshEvidence()` once when the page loads (e.g., in `useEffect(() => { refreshEvidence(); }, [workItemId]);`).
+
+---
+
+## Where to paste additional evidence text?
+
+**Answer:** Paste it into the **Evidence Notes textarea** in the BLOCKED banner (that gets sent as `evidenceNotes` and is appended into the prompt).
+
+## How to “enable file reading”?
+
+**Answer:** With this patch:
+
+* Uploading `.har/.json/.txt/.log` will be **extracted as text** server-side and appended into the prompt automatically.
+* Uploading images/screenshots will be attached (listed), but not OCR’d—so paste key details into Evidence Notes.
+
+---
+
+If you tell me whether `busboy` is already in your DreamTeamHub dependencies, I can tailor the upload endpoint to match your current uploader stack (so you don’t add any new packages).
