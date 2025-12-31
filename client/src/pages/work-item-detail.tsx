@@ -787,36 +787,48 @@ export default function WorkItemDetail() {
                 </div>
               )}
 
-              <div className="border-t border-amber-500/30 pt-3">
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  className="text-amber-700 dark:text-amber-100 hover:bg-amber-400/10 w-full justify-between"
-                  onClick={() => setShowEvidenceInput(!showEvidenceInput)}
-                  data-testid="button-toggle-evidence-input"
-                >
-                  <span className="flex items-center gap-2">
-                    <FileText className="h-3 w-3" />
-                    Paste Network/Console evidence
-                  </span>
-                  <ChevronDown className={`h-4 w-4 transition-transform ${showEvidenceInput ? "rotate-180" : ""}`} />
-                </Button>
-                
-                {showEvidenceInput && (
-                  <div className="mt-2 space-y-2">
-                    <Textarea
-                      placeholder="Paste your Network request details (URL, Method, Status, Payload, Response) and Console errors here..."
-                      value={additionalEvidence}
-                      onChange={(e) => setAdditionalEvidence(e.target.value)}
-                      className="min-h-[120px] font-mono text-xs bg-background/50"
-                      data-testid="textarea-additional-evidence"
-                    />
-                    <div className="text-xs text-amber-600 dark:text-amber-200/80">
-                      After pasting evidence and uploading files, click <strong>Generate Recommendation</strong> → <strong>Generate Drop</strong> to retry.
+              {(() => {
+                const isBugEvidence = Boolean(lastDropResult.evidenceRequest?.includes("DevTools"));
+                if (isBugEvidence) {
+                  return (
+                    <div className="border-t border-amber-500/30 pt-3">
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="text-amber-700 dark:text-amber-100 hover:bg-amber-400/10 w-full justify-between"
+                        onClick={() => setShowEvidenceInput(!showEvidenceInput)}
+                        data-testid="button-toggle-evidence-input"
+                      >
+                        <span className="flex items-center gap-2">
+                          <FileText className="h-3 w-3" />
+                          Paste Network/Console evidence
+                        </span>
+                        <ChevronDown className={`h-4 w-4 transition-transform ${showEvidenceInput ? "rotate-180" : ""}`} />
+                      </Button>
+                      
+                      {showEvidenceInput && (
+                        <div className="mt-2 space-y-2">
+                          <Textarea
+                            placeholder="Paste your Network request details (URL, Method, Status, Payload, Response) and Console errors here..."
+                            value={additionalEvidence}
+                            onChange={(e) => setAdditionalEvidence(e.target.value)}
+                            className="min-h-[120px] font-mono text-xs bg-background/50"
+                            data-testid="textarea-additional-evidence"
+                          />
+                          <div className="text-xs text-amber-600 dark:text-amber-200/80">
+                            After pasting evidence and uploading files, click <strong>Generate Recommendation</strong> → <strong>Generate Drop</strong> to retry.
+                          </div>
+                        </div>
+                      )}
                     </div>
+                  );
+                }
+                return (
+                  <div className="border-t border-amber-500/30 pt-3 text-xs text-amber-600 dark:text-amber-200/80">
+                    UI task: no DevTools required. Use <strong>Fetch + Attach Context</strong> above to pull repo files.
                   </div>
-                )}
-              </div>
+                );
+              })()}
             </div>
           )}
 
