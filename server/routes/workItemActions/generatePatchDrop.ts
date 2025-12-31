@@ -6,6 +6,7 @@ import {
   extractEvidenceFromWorkItemFiles,
   buildEvidencePromptBlock,
 } from "../../services/evidenceExtractor";
+import { storage } from "../../storage";
 
 function hasAnyFileBlocks(text: string): boolean {
   return /^\s*FILE:\s+/m.test(text || "");
@@ -252,8 +253,24 @@ export async function postGeneratePatchDrop(req: Request, res: Response) {
       console.warn("[generatePatchDrop] Evidence extraction warning:", err?.message);
     }
 
+    let storedEvidenceNotes = "";
+    try {
+      const numericWorkItemId = parseInt(workItemId, 10);
+      if (!isNaN(numericWorkItemId)) {
+        const wi = await storage.getWorkItem(numericWorkItemId);
+        storedEvidenceNotes = String(wi?.evidenceNotes || "");
+      }
+    } catch (err: any) {
+      console.warn("[generatePatchDrop] Could not load stored evidenceNotes:", err?.message);
+    }
+
+    const mergedEvidenceNotes = [storedEvidenceNotes, evidenceNotes || ""]
+      .map((s) => String(s || "").trim())
+      .filter(Boolean)
+      .join("\n\n");
+
     const evidenceBlock = buildEvidencePromptBlock({
-      evidenceNotes: evidenceNotes || "",
+      evidenceNotes: mergedEvidenceNotes,
       extractedFileText,
     });
 

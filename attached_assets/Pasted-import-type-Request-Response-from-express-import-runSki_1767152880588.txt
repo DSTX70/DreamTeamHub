@@ -1,0 +1,145 @@
+import type { Request, Response } from "express";
+import { runSkill } from "../../ai/runSkill";
+import { PatchDropSchema } from "../../ai/schemas/patchDrop";
+import { validatePatchDropFormat } from "../../ai/drops/validatePatchDrop";
+import {
+  extractEvidenceFromWorkItemFiles,
+  buildEvidencePromptBlock,
+} from "../../services/evidenceExtractor";
+
+// ✅ ADD THIS import (it already exists in appendEvidenceNotes.ts)
+import { storage } from "../../ai/persistence";
+
+function hasAnyFileBlocks(text: string): boolean {
+  return /^\s*FILE:\s+/m.test(text || "");
+}
+
+// ... keep the rest of the file unchanged ...
+
+export async function postGeneratePatchDrop(req: Request, res: Response) {
+  try {
+    const workItemId = req.params.id;
+    const { title, repoHint, lockedRecommendation, notes, evidenceNotes } =
+      (req.body || {}) as any;
+
+    if (
+      !lockedRecommendation ||
+      typeof lockedRecommendation !== "string" ||
+      lockedRecommendation.trim().length < 20
+    ) {
+      return res.status(400).json({
+        ok: false,
+        error:
+          "lockedRecommendation is required (include the saved Recommendation text, ideally with FILE blocks).",
+      });
+    }
+
+    const repo = repoHint || "GigsterGarage";
+
+    // Extract text from uploaded evidence files (HAR, JSON, TXT, LOG, etc.)
+    let extractedFileText = "";
+    try {
+      const numericWorkItemId = parseInt(workItemId, 10);
+      if (!isNaN(numericWorkItemId)) {
+        extractedFileText = await extractEvidenceFromWorkItemFiles(numericWorkItemId);
+      }
+    } catch (err: any) {
+      console.warn("[generatePatchDrop] Evidence extraction warning:", err?.message);
+    }
+
+    // ✅ NEW: Load stored evidenceNotes from the Work Item (server-attached context lives here)
+    let storedEvidenceNotes = "";
+    try {
+      const numericWorkItemId = parseInt(workItemId, 10);
+      if (!isNaN(numericWorkItemId)) {
+        const wi = await storage.getWorkItem(numericWorkItemId);
+        storedEvidenceNotes = String(wi?.evidenceNotes || "");
+      }
+    } catch (err: any) {
+      console.warn("[generatePatchDrop] Could not load stored evidenceNotes:", err?.message);
+    }
+
+    // ✅ NEW: Merge stored + incoming evidenceNotes so client does not need to re-send attached context
+    const mergedEvidenceNotes = [storedEvidenceNotes, evidenceNotes || ""]
+      .map((s) => String(s || "").trim())
+      .filter(Boolean)
+      .join("\n\n");
+
+    // Build combined evidence block (now includes stored evidenceNotes + user pasted + extracted files)
+    const evidenceBlock = buildEvidencePromptBlock({
+      evidenceNotes: mergedEvidenceNotes,
+      extractedFileText,
+    });
+
+    // Augment recommendation with evidence
+    const augmentedRecommendation = evidenceBlock
+      ? `${lockedRecommendation}\n\n${evidenceBlock}`
+      : lockedRecommendation;
+
+    // ✅ PRE-FLIGHT GATE: If no FILE blocks, do NOT call the model. Return BLOCKED (task-aware).
+    if (!hasAnyFileBlocks(augmentedRecommendation)) {
+      return res.json(blockedDrop({ repo, lockedRecommendation: augmentedRecommendation }));
+    }
+
+    const input = {
+      title: title || `Work Item ${workItemId}`,
+      repoHint: repo,
+      lockedRecommendation: augmentedRecommendation,
+      notes: notes || "",
+    };
+
+    const raw = await runSkill({
+      skillName: "generatePatchDrop",
+      input,
+    });
+
+    const parsed = PatchDropSchema.safeParse(raw);
+    if (!parsed.success) {
+      return res.status(400).json({
+        ok: false,
+        error: "Model output did not match PatchDrop schema",
+        details: parsed.error.flatten(),
+        rawModelOutput: raw,
+      });
+    }
+
+    const data: any = parsed.data;
+    const validation = validatePatchDropFormat(data.dropText);
+    if (!validation.ok) {
+      return res.status(400).json({
+        ok: false,
+        error: "Generated drop failed format validation",
+        details: { validationErrors: validation.errors },
+        repo: data.repo,
+        dropText: data.dropText,
+        blocked: data.blocked === true,
+        noPatchRequired: data.noPatchRequired === true,
+        rationale: data.rationale,
+        evidence: data.evidence,
+        evidenceRequest: data.evidenceRequest,
+      });
+    }
+
+    return res.json({
+      ok: true,
+      repo: data.repo,
+      dropText: data.dropText,
+      blocked: data.blocked === true,
+      noPatchRequired: data.noPatchRequired === true,
+      ...(data.blocked === true
+        ? {
+            evidenceRequest: data.evidenceRequest,
+            suggestedFileFetchPaths: data.suggestedFileFetchPaths,
+          }
+        : {}),
+      ...(data.noPatchRequired === true
+        ? { rationale: data.rationale, evidence: data.evidence }
+        : {}),
+    });
+  } catch (err: any) {
+    return res.status(500).json({
+      ok: false,
+      error: err?.message || "Unknown error",
+    });
+  }
+}
