@@ -386,17 +386,27 @@ export default function WorkItemDetail() {
         throw new Error(`Attach failed (${a.status}): ${t}`);
       }
 
-      return { okCount, total: files.length };
+      return { okCount, totalCount: files.length, evidencePack };
     },
-    onSuccess: async (r) => {
+    onSuccess: (data: { okCount: number; totalCount: number; evidencePack: string }) => {
       toast({
-        title: "Repo context attached",
-        description: `Attached ${r.okCount} file(s). Re-run Generate Drop.`,
+        title: "Context attached",
+        description: `Fetched ${data.okCount}/${data.totalCount} files. Re-run Generate Drop.`,
       });
-      await queryClient.invalidateQueries({ queryKey: ["/api/work-items", workItemId, "stage"] });
+
+      if (typeof data.evidencePack === "string" && data.evidencePack.trim().length > 0) {
+        setAdditionalEvidence((prev) => {
+          const p = (prev || "").trim();
+          const pack = data.evidencePack.trim();
+          if (p.includes(pack.slice(0, 120))) return prev;
+          return p ? `${p}\n\n${pack}` : pack;
+        });
+      }
+
+      queryClient.invalidateQueries({ queryKey: ["/api/work-items", workItemId] });
     },
-    onError: (e: any) => {
-      toast({ title: "Fetch+attach failed", description: e?.message || "Unknown error", variant: "destructive" });
+    onError: (err: any) => {
+      toast({ title: "Fetch failed", description: err?.message || "Unknown error", variant: "destructive" });
     },
   });
 

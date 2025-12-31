@@ -1,0 +1,68 @@
+const fetchAndAttachRepoContext = useMutation({
+  mutationFn: async (paths: string[]) => {
+    if (!paths?.length) throw new Error("No suggested file paths to fetch.");
+
+    // 1) Fetch files via connector
+    const r = await fetch("/api/connectors/gigsterGarage/files", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify({ paths, pathsText: paths.join("\n") }),
+    });
+
+    const j = await r.json().catch(() => null);
+    if (!r.ok) throw new Error(j?.error || `Connector fetch failed (${r.status})`);
+
+    const files = normalizeFilesResponse(j);
+    const okCount = files.filter((f) => f.ok && (f.content ?? "").trim().length > 0).length;
+    if (okCount === 0) throw new Error("Fetched zero usable files (paths may be wrong).");
+
+    // 2) Build FILE-block evidence pack
+    const evidencePack = buildRepoContextEvidencePack("GigsterGarage", files);
+
+    // 3) Append to work item evidenceNotes server-side
+    const a = await fetch(`/api/work-items/${workItemId}/actions/appendEvidenceNotes`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify({ evidenceNotes: evidencePack }),
+    });
+
+    if (!a.ok) {
+      const aErr = await a.json().catch(() => ({}));
+      throw new Error(aErr?.error || "Failed to append evidence notes");
+    }
+
+    // ✅ CHANGE: return evidencePack so UI can reuse it (no paste)
+    return { okCount, totalCount: files.length, evidencePack };
+  },
+
+  // ✅ CHANGE: accept returned evidencePack and populate additionalEvidence automatically
+  onSuccess: (data: any) => {
+    toast({
+      title: "Context attached",
+      description: `Fetched ${data.okCount}/${data.totalCount} files. Re-run Generate Drop.`,
+    });
+
+    // Auto-fill the evidenceNotes payload source used by genDrop (no manual paste)
+    if (typeof data.evidencePack === "string" && data.evidencePack.trim().length > 0) {
+      setAdditionalEvidence((prev) => {
+        const p = (prev || "").trim();
+        const pack = data.evidencePack.trim();
+        // Avoid duplicating if user clicks multiple times
+        if (p.includes(pack.slice(0, 120))) return prev;
+        return p ? `${p}\n\n${pack}` : pack;
+      });
+    }
+
+    queryClient.invalidateQueries({ queryKey: ["/api/work-items", workItemId] });
+  },
+
+  onError: (err: any) => {
+    toast({
+      title: "Fetch failed",
+      description: err?.message || "Unknown error",
+      variant: "destructive",
+    });
+  },
+});
