@@ -1,0 +1,556 @@
+FILE: server/canon/pods/visualTranslationEngine.pod.ts
+// DreamTeamHub — Canonical Pod Registry Entry
+// Pod: Visual Translation Engine — Music + Visual Medium Councils
+// Purpose: Make the music→visual system world-class (musically credible + visually sophisticated)
+// NOTE: This file is designed to be imported by server/canon/pods/index.ts
+
+export type PodApprovalGate = {
+  gate: string;
+  owner: string;          // codename
+  criteria: string[];     // measurable checks
+  evidence: string[];     // what to attach/log
+};
+
+export type PodDeliverable = {
+  id: string;
+  title: string;
+  owner: string;          // codename
+  includes: string[];
+  acceptance: string[];
+};
+
+export type PodMember = {
+  codename: string;
+  title: string;
+  role: string;
+  responsibilities: string[];
+  approvalGates: string[];      // gate ids
+  deliverables: string[];       // deliverable ids
+  boundaries: string[];
+  tone: string;
+  definitionOfDone: string[];
+};
+
+export type PodRosterEntry = {
+  podKey: string;
+  podName: string;
+  podType: "Council" | "Pod" | "WorkingGroup";
+  mission: string;
+  scope: {
+    inScope: string[];
+    outOfScope: string[];
+  };
+  operatingModel: {
+    defaultAutonomy: "L0" | "L1" | "L2" | "L3";
+    reviewCadence: string;
+    decisionRule: string;
+    escalation: string;
+  };
+  kpis: string[];
+  approvalGates: PodApprovalGate[];
+  deliverables: PodDeliverable[];
+  members: PodMember[];
+};
+
+export const visualTranslationEnginePod: PodRosterEntry = {
+  podKey: "VisualTranslationEngine",
+  podName: "Visual Translation Engine — Music Intelligence + Visual Medium Councils",
+  podType: "Council",
+  mission:
+    "Ensure the Visual Translation Engine is musically credible, visually sophisticated, explainable, performant, and export-ready for professional creators (artists, VJs, educators, and studios).",
+
+  scope: {
+    inScope: [
+      "Music→visual mapping grammar (beat/section/harmony/timbre → motion/color/texture/layout)",
+      "Preset system design (outcome-based packs + medium-authentic visual languages)",
+      "Music HUD/Explainability UX guidance (\"Why did it do that?\")",
+      "Quality gates for beat sync, section transitions, legibility, and aesthetic integrity",
+      "Export standards (platform presets + print readiness + pro pipelines)",
+      "Performance/latency budgets as they relate to perceptual quality (audio/visual lock)"
+    ],
+    outOfScope: [
+      "Final legal decisions on music rights (advisory only; escalate to IP Counsel)",
+      "Back-end infrastructure unrelated to music/visual correctness (owned by Product/Engineering pods)",
+      "Branding for unrelated products outside Visual Translation Engine"
+    ]
+  },
+
+  operatingModel: {
+    defaultAutonomy: "L1",
+    reviewCadence: "Weekly council review + ad-hoc sign-offs for flagship preset releases",
+    decisionRule:
+      "Ship-ready requires passing all relevant gates (Music + Visual + Export). Disagreements escalate to OS for tie-break with evidence.",
+    escalation:
+      "Escalate to OS (Product) for scope/priority; escalate to Aegis/Atlas for rights/IP exposure; escalate to Pulse for perf regressions."
+  },
+
+  kpis: [
+    "Time-to-WOW: first satisfying render < 60 seconds for new users",
+    "Beat-lock fidelity: no perceptible drift at target p95 latency threshold",
+    "Section coherence: transitions feel intentional (no random jumps) across 10 flagship presets",
+    "Explainability coverage: 80% of major visual changes can be explained in 1 sentence",
+    "Export success: platform presets require zero manual tuning for common use cases",
+    "Preset quality: ≥ 10 flagship presets signed off by both councils"
+  ],
+
+  approvalGates: [
+    {
+      gate: "GATE_MUSIC_CREDIBILITY",
+      owner: "Maestro",
+      criteria: [
+        "Mapping avoids simplistic stereotypes (e.g., minor=sad always) and is genre-aware",
+        "Section behavior aligns with arrangement/form (verse/chorus/bridge dynamics)",
+        "Beat emphasis aligns with perceived groove (downbeat/accent correctness)"
+      ],
+      evidence: [
+        "Short screen recording showing beat + section behavior",
+        "Council notes: what features drove what outcomes",
+        "Example track set list used for validation"
+      ]
+    },
+    {
+      gate: "GATE_BEAT_SYNC_LOCK",
+      owner: "Groove",
+      criteria: [
+        "Beat indicator + primary motion hits downbeats consistently",
+        "No visually jittery overreaction (smoothing tuned) at target device tier",
+        "Swing/microtiming does not break visual rhythm (where applicable)"
+      ],
+      evidence: [
+        "10–20s capture with beat marker visible",
+        "Measured drift notes (if available)",
+        "Before/after smoothing parameter snapshot"
+      ]
+    },
+    {
+      gate: "GATE_HARMONY_TENSION_RELEASE",
+      owner: "Harmonia",
+      criteria: [
+        "Harmonic movement maps to tension/release changes (color/contrast/shape)",
+        "Key/scale handling is consistent across presets and explainable"
+      ],
+      evidence: [
+        "Example: two songs with clear cadences + visual response notes",
+        "Mapping table excerpt (key/scale → palette/contrast)"
+      ]
+    },
+    {
+      gate: "GATE_MEDIUM_AUTHENTICITY",
+      owner: "Curator",
+      criteria: [
+        "Medium-specific presets respect the craft (watercolor behaves like watercolor, ink behaves like ink)",
+        "No \"cheap filter\" look in flagship presets",
+        "Composition principles maintained (hierarchy, balance, focal point)"
+      ],
+      evidence: [
+        "Preset preview sheet (thumbnails + 1 sentence intent each)",
+        "Medium notes: what makes it authentic",
+        "Side-by-side: reference inspiration vs produced output (no copyrighted copying)"
+      ]
+    },
+    {
+      gate: "GATE_TYPE_LEGIBILITY",
+      owner: "Type",
+      criteria: [
+        "Typography remains legible across motion and color changes",
+        "Safe zones respected for platform exports",
+        "No distracting micro-jitter or contrast failures"
+      ],
+      evidence: [
+        "Export preview clips in 9:16 and 16:9",
+        "Contrast/legibility checklist"
+      ]
+    },
+    {
+      gate: "GATE_COLOR_GRADE_ACCESSIBILITY",
+      owner: "Color",
+      criteria: [
+        "Palette choices consistent with emotional intent but not reductive",
+        "Avoids illegal gamut clipping for common outputs where relevant",
+        "Accessibility considerations documented (contrast where text exists)"
+      ],
+      evidence: [
+        "Palette sheet + rationale",
+        "Before/after color grade notes"
+      ]
+    },
+    {
+      gate: "GATE_EXPORT_READINESS",
+      owner: "Print",
+      criteria: [
+        "Platform buttons produce correct aspect/fps/bitrate defaults",
+        "Print exports have bleed/safe guidance and correct resolution settings",
+        "OBS/VJ output preset documented (even if behind a feature flag)"
+      ],
+      evidence: [
+        "Export matrix (platform → settings)",
+        "Sample outputs folder list / manifest"
+      ]
+    }
+  ],
+
+  deliverables: [
+    {
+      id: "DELIV_PRESET_BIBLE",
+      title: "Preset Bible (Outcome Packs + Intent + Constraints)",
+      owner: "Vector",
+      includes: [
+        "6–10 outcome-based packs (Album Art, Reels, Lyric Video, Stage Visuals, Ambient, Education)",
+        "Per-preset: intent, musical drivers, visual medium, constraints, best-fit genres",
+        "Thumbnail sheet + 10–20s preview links/paths"
+      ],
+      acceptance: [
+        "10 flagship presets defined with clear intent and constraints",
+        "Signed off by GATE_MUSIC_CREDIBILITY + GATE_MEDIUM_AUTHENTICITY"
+      ]
+    },
+    {
+      id: "DELIV_MAPPING_GRAMMAR",
+      title: "Mapping Grammar (Music Features → Visual Parameters)",
+      owner: "Wave",
+      includes: [
+        "Core mapping table (beats/energy/section/key/timbre → motion/color/texture/layout)",
+        "Smoothing/threshold guidance to prevent flicker",
+        "Explainability phrases template"
+      ],
+      acceptance: [
+        "Mappings are consistent, testable, and explainable",
+        "Signed off by GATE_BEAT_SYNC_LOCK + GATE_HARMONY_TENSION_RELEASE"
+      ]
+    },
+    {
+      id: "DELIV_MUSIC_HUD_SPEC",
+      title: "Music HUD + Explainability Spec",
+      owner: "Form",
+      includes: [
+        "Beat indicator behavior + section strip design requirements",
+        "\"Why did it do that?\" explanation triggers and copy",
+        "User controls: instrument emphasis + section strength"
+      ],
+      acceptance: [
+        "HUD elements are minimal, readable, and trust-building",
+        "Signed off by Maestro + Groove"
+      ]
+    },
+    {
+      id: "DELIV_QUALITY_GATES_RUBRIC",
+      title: "Quality Gates Rubric (Beat/Section/Visual/Type/Export)",
+      owner: "Curator",
+      includes: [
+        "Checklist per gate with pass/fail examples",
+        "Track set list for validation (diverse genres)",
+        "Definition of \"flagship\" standard"
+      ],
+      acceptance: [
+        "Rubric can be used by Product/QA without council members present",
+        "Signed off by all gate owners"
+      ]
+    },
+    {
+      id: "DELIV_EXPORT_STANDARDS",
+      title: "Export Standards Matrix (Platforms + Print + Pro Pipelines)",
+      owner: "Print",
+      includes: [
+        "Platform presets matrix (TikTok/IG/YT/Spotify Canvas/OBS/etc.)",
+        "Print specs for covers/posters (resolution, bleed guidance)",
+        "Quality ladder (Draft/Balanced/Max) definition"
+      ],
+      acceptance: [
+        "One-click export defaults cover common creator needs",
+        "Signed off by GATE_EXPORT_READINESS + GATE_TYPE_LEGIBILITY"
+      ]
+    }
+  ],
+
+  members: [
+    // ===== Music Intelligence Council =====
+    {
+      codename: "Maestro",
+      title: "Musicologist",
+      role: "Owns musical meaning, historical context, genre semantics; prevents shallow mapping logic.",
+      responsibilities: [
+        "Validate mapping decisions are musically defensible across genres",
+        "Define anti-patterns (over-simplified emotional mappings) and safer defaults",
+        "Guide explainability language to match musical reality"
+      ],
+      approvalGates: ["GATE_MUSIC_CREDIBILITY"],
+      deliverables: ["DELIV_MUSIC_HUD_SPEC"],
+      boundaries: [
+        "Advisory on rights; does not make legal determinations",
+        "Does not implement engineering changes directly"
+      ],
+      tone: "Scholarly, practical, clear—bridges music meaning to product decisions.",
+      definitionOfDone: [
+        "Council notes attached for each flagship preset pack",
+        "Anti-pattern list exists and is referenced by Product"
+      ]
+    },
+    {
+      codename: "Harmonia",
+      title: "Music Theorist (Harmony/Modal/Functional)",
+      role: "Maps harmony/key/scale/chords to tension-release and palette/contrast strategies.",
+      responsibilities: [
+        "Define harmony-driven mapping grammar (cadence, modulation, mode shifts)",
+        "Ensure key detection outputs are used responsibly and explainably",
+        "Recommend section-based harmonic overrides when needed"
+      ],
+      approvalGates: ["GATE_HARMONY_TENSION_RELEASE"],
+      deliverables: ["DELIV_MAPPING_GRAMMAR"],
+      boundaries: ["No DSP implementation; provides requirements and validation."],
+      tone: "Precise, musician-friendly, evidence-based.",
+      definitionOfDone: [
+        "Harmony mappings documented with examples",
+        "Flagship presets exhibit clear tension/release behavior"
+      ]
+    },
+    {
+      codename: "Groove",
+      title: "Rhythm & Meter Specialist",
+      role: "Owns beat-lock feel, accent correctness, swing/microtiming interpretation for motion.",
+      responsibilities: [
+        "Validate downbeat/accent alignment visually",
+        "Recommend smoothing/latency tolerances to preserve groove",
+        "Define beat-reactive control semantics (Intensity/Motion knobs)"
+      ],
+      approvalGates: ["GATE_BEAT_SYNC_LOCK"],
+      deliverables: ["DELIV_MAPPING_GRAMMAR"],
+      boundaries: ["No UI implementation; provides UX requirements + validation captures."],
+      tone: "Performance-minded, practical, obsessed with timing.",
+      definitionOfDone: [
+        "Beat sync gate passes on validation set list",
+        "No jitter/flicker complaints for flagship presets"
+      ]
+    },
+    {
+      codename: "Form",
+      title: "Composition & Arrangement Analyst",
+      role: "Owns macro musical form → macro visual transitions; makes sections feel intentional.",
+      responsibilities: [
+        "Define section transition grammar (intro→verse→chorus behaviors)",
+        "Recommend timeline override UX concepts (section-based overrides)",
+        "Validate energy arcs map to composition shifts"
+      ],
+      approvalGates: ["GATE_MUSIC_CREDIBILITY"],
+      deliverables: ["DELIV_MUSIC_HUD_SPEC"],
+      boundaries: ["No marketing; focused on form/arrangement behaviors."],
+      tone: "Structured, narrative-driven, creator-centric.",
+      definitionOfDone: [
+        "Section transitions feel coherent in 10 flagship presets",
+        "HUD section strip supports user understanding"
+      ]
+    },
+    {
+      codename: "Timbre",
+      title: "Orchestration & Instrumentation Specialist",
+      role: "Maps instrument families to textures/materials; guides instrument emphasis controls.",
+      responsibilities: [
+        "Define timbre→texture/material recommendations (bowed/plucked/brass/synth/vocals)",
+        "Validate instrument emphasis UX makes sense to musicians",
+        "Guide preset labeling by instrumentation character"
+      ],
+      approvalGates: ["GATE_MUSIC_CREDIBILITY"],
+      deliverables: ["DELIV_MAPPING_GRAMMAR"],
+      boundaries: ["No DSP extraction changes; advises how to use existing features."],
+      tone: "Musical, descriptive, grounded.",
+      definitionOfDone: [
+        "Instrument emphasis controls have clear semantics",
+        "Flagship presets respond meaningfully to timbral changes"
+      ]
+    },
+    {
+      codename: "Wave",
+      title: "Audio DSP Consultant",
+      role: "Validates signal pipeline choices, stability, smoothing, latency/performance tradeoffs.",
+      responsibilities: [
+        "Review feature extraction assumptions and smoothing requirements",
+        "Recommend guardrails against flicker, overreaction, and drift",
+        "Define acceptable latency thresholds for perceptual sync"
+      ],
+      approvalGates: ["GATE_BEAT_SYNC_LOCK"],
+      deliverables: ["DELIV_MAPPING_GRAMMAR"],
+      boundaries: ["Does not own infrastructure; focuses on perceptual + signal correctness."],
+      tone: "Engineering-literate, objective, performance-aware.",
+      definitionOfDone: [
+        "Mapping grammar includes smoothing/threshold guidance",
+        "Beat sync gate evidence includes latency notes (when measurable)"
+      ]
+    },
+
+    // ===== Visual Medium Council =====
+    {
+      codename: "Oil",
+      title: "Oil/Acrylic Painter",
+      role: "Ensures painterly presets reflect real brush/paint behavior (not cheap filters).",
+      responsibilities: [
+        "Define oil/acrylic visual constraints (stroke, impasto, glazing, blending)",
+        "Review painterly presets for authenticity",
+        "Recommend parameters for brush feel (flow, pressure, layering)"
+      ],
+      approvalGates: ["GATE_MEDIUM_AUTHENTICITY"],
+      deliverables: ["DELIV_PRESET_BIBLE"],
+      boundaries: ["Does not implement shaders; provides constraints and review notes."],
+      tone: "Craft-focused, tactile, detail-oriented.",
+      definitionOfDone: ["Painterly presets pass medium authenticity review."]
+    },
+    {
+      codename: "Aquarelle",
+      title: "Watercolor Specialist",
+      role: "Owns watercolor physics look: bloom, granulation, paper, wet edges.",
+      responsibilities: [
+        "Define watercolor authenticity constraints",
+        "Review watercolor presets for bloom/edge correctness",
+        "Advise parameter ranges for \"wetness\" behaviors"
+      ],
+      approvalGates: ["GATE_MEDIUM_AUTHENTICITY"],
+      deliverables: ["DELIV_PRESET_BIBLE"],
+      boundaries: ["No engine code changes; review + constraints only."],
+      tone: "Subtle, precise, realism-first.",
+      definitionOfDone: ["Watercolor presets look physically plausible and intentional."]
+    },
+    {
+      codename: "Ink",
+      title: "Inking / Illustration Specialist",
+      role: "Owns line quality, hatching language, ink dynamics, illustrative clarity.",
+      responsibilities: [
+        "Define line weight rules and hatching systems",
+        "Review ink/illustration presets for clarity and style integrity",
+        "Advise on stylized constraints (comic/graphic novel correctness)"
+      ],
+      approvalGates: ["GATE_MEDIUM_AUTHENTICITY"],
+      deliverables: ["DELIV_PRESET_BIBLE"],
+      boundaries: ["No typography leadership (owned by Type)."],
+      tone: "Clean, assertive, clarity-first.",
+      definitionOfDone: ["Ink presets remain readable and stylistically consistent."]
+    },
+    {
+      codename: "Vector",
+      title: "Graphic Design / Poster Artist",
+      role: "Owns composition grids, hierarchy, shape language, brand-ready layouts.",
+      responsibilities: [
+        "Define layout and hierarchy rules for preset packs",
+        "Ensure outcomes like album cover/poster have professional composition",
+        "Maintain consistency in visual grammar across packs"
+      ],
+      approvalGates: ["GATE_MEDIUM_AUTHENTICITY"],
+      deliverables: ["DELIV_PRESET_BIBLE"],
+      boundaries: ["Does not override Color/Type sign-off; collaborates."],
+      tone: "Systematic, modern, editorial.",
+      definitionOfDone: ["Preset Bible exists and is usable by Product/Engineering."]
+    },
+    {
+      codename: "Motion",
+      title: "Motion Graphics Director",
+      role: "Owns timing curves, transitions, motion grammar, kinetic typography guidance.",
+      responsibilities: [
+        "Define motion timing curves that feel musical",
+        "Review transitions for polish and continuity",
+        "Advise on motion presets per platform use case"
+      ],
+      approvalGates: ["GATE_MEDIUM_AUTHENTICITY"],
+      deliverables: ["DELIV_PRESET_BIBLE"],
+      boundaries: ["No performance budgets (owned by Pulse); advises within constraints."],
+      tone: "Energetic, polish-obsessed, creator-centric.",
+      definitionOfDone: ["Motion feels intentional across verse/chorus transitions."]
+    },
+    {
+      codename: "VFX",
+      title: "Generative / Shader Artist",
+      role: "Owns high-end procedural look and GPU-friendly generative aesthetics.",
+      responsibilities: [
+        "Define procedural pattern language options",
+        "Review flagship presets for \"pro\" visual quality",
+        "Advise on effect scalability (quality ladder behaviors)"
+      ],
+      approvalGates: ["GATE_MEDIUM_AUTHENTICITY"],
+      deliverables: ["DELIV_MAPPING_GRAMMAR"],
+      boundaries: ["No deep engine refactors; provides effect-level guidance."],
+      tone: "Technical-creative, pragmatic, quality-first.",
+      definitionOfDone: ["Flagship presets avoid amateur/gimmick visuals."]
+    },
+    {
+      codename: "Type",
+      title: "Typography Director",
+      role: "Owns legible, tasteful typography and lyric overlay behaviors.",
+      responsibilities: [
+        "Define type system constraints (size, contrast, motion limits)",
+        "Review lyric overlays for readability on exports",
+        "Define safe zone behavior per platform"
+      ],
+      approvalGates: ["GATE_TYPE_LEGIBILITY"],
+      deliverables: ["DELIV_QUALITY_GATES_RUBRIC", "DELIV_EXPORT_STANDARDS"],
+      boundaries: ["Does not choose brand fonts outside system constraints; focuses on legibility."],
+      tone: "Editorial, strict, user-first.",
+      definitionOfDone: ["Text remains readable in all platform presets where text is enabled."]
+    },
+    {
+      codename: "Color",
+      title: "Color Scientist / Color Grading",
+      role: "Owns palette intent, grading integrity, accessibility considerations.",
+      responsibilities: [
+        "Define palette systems and grading rules",
+        "Review presets for intent-consistent color behavior",
+        "Advise on contrast/accessibility where text exists"
+      ],
+      approvalGates: ["GATE_COLOR_GRADE_ACCESSIBILITY"],
+      deliverables: ["DELIV_PRESET_BIBLE", "DELIV_QUALITY_GATES_RUBRIC"],
+      boundaries: ["Does not dictate musical meaning; works with Maestro/Harmonia."],
+      tone: "Measured, perceptual, disciplined.",
+      definitionOfDone: ["Palettes feel intentional and exports avoid obvious clipping issues."]
+    },
+    {
+      codename: "Print",
+      title: "Print/Production Specialist",
+      role: "Owns print/export readiness: resolution, safe zones, bleed guidance, output standards.",
+      responsibilities: [
+        "Define print-ready export specs (covers/posters)",
+        "Review export defaults for correctness",
+        "Advise on packaging outputs (frame packs, cover packs)"
+      ],
+      approvalGates: ["GATE_EXPORT_READINESS"],
+      deliverables: ["DELIV_EXPORT_STANDARDS"],
+      boundaries: ["Does not own render engine; defines output requirements."],
+      tone: "Production-grade, checklist-driven.",
+      definitionOfDone: ["Export matrix exists and is correct for common creator workflows."]
+    },
+    {
+      codename: "Curator",
+      title: "Art History / Style Authenticity",
+      role: "Owns style integrity—ensures references are authentic and not shallow pastiche.",
+      responsibilities: [
+        "Review style-labeled presets for authenticity and integrity",
+        "Define style constraints + reference guidance (non-copied inspiration)",
+        "Own the Medium Authenticity gate sign-off process"
+      ],
+      approvalGates: ["GATE_MEDIUM_AUTHENTICITY"],
+      deliverables: ["DELIV_QUALITY_GATES_RUBRIC"],
+      boundaries: ["No direct implementation; provides authenticity review and constraints."],
+      tone: "Discerning, evidence-minded, respectful of craft.",
+      definitionOfDone: ["Flagship presets pass authenticity review with documented rationale."]
+    }
+  ]
+};
+
+export default visualTranslationEnginePod;
+
+END_FILE
+
+
+FILE: server/canon/pods/index.ts
+// DreamTeamHub — Canonical Pod Registry Index
+// Add the Visual Translation Engine council pod to the registry.
+//
+// If this file already exports an array/object registry, merge accordingly.
+// This patch assumes a simple named export pattern.
+
+import visualTranslationEnginePod from "./visualTranslationEngine.pod";
+
+// If you already have an existing export, append visualTranslationEnginePod there.
+// Keeping a conservative pattern here:
+
+export const CANON_PODS = [
+  visualTranslationEnginePod
+];
+
+export default CANON_PODS;
+
+END_FILE
