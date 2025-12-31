@@ -94,6 +94,37 @@ function blockedTitleFromDropText(dropText?: string) {
   return m?.[1]?.trim() || "BLOCKED";
 }
 
+type FetchedFile = { path: string; ok: boolean; content?: string; error?: string };
+
+function normalizeFilesResponse(j: any): FetchedFile[] {
+  const files = Array.isArray(j) ? j : j?.files ?? j?.data ?? [];
+  if (!Array.isArray(files)) return [];
+  return files.map((f: any) => ({
+    path: String(f?.path ?? f?.name ?? "").trim(),
+    ok: Boolean(f?.ok ?? (typeof f?.content === "string")),
+    content: typeof f?.content === "string" ? f.content : f?.text,
+    error: f?.error ? String(f.error) : undefined,
+  }));
+}
+
+function buildRepoContextEvidencePack(repo: string, files: FetchedFile[]) {
+  const header =
+    `## Repo Context (Fetched via DTH Connector)\n` +
+    `Repo: ${repo}\n` +
+    `Fetched at: ${new Date().toISOString()}\n\n`;
+
+  const body = files
+    .map((f) => {
+      if (!f.ok) {
+        return `### ${f.path}\n⚠️ Fetch failed: ${f.error ?? "unknown error"}\n`;
+      }
+      return `FILE: ${f.path}\n${f.content ?? ""}\nEND_FILE\n`;
+    })
+    .join("\n");
+
+  return (header + body).trim() + "\n";
+}
+
 function extractStrategyProvenance(workItem: any): string | null {
   if (!workItem) return null;
 
