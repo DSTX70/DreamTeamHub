@@ -1,3 +1,22 @@
+You’re exactly right: `blockedDrop()` is currently **hard-coded to demand DevTools Network/Console evidence**, even when the work is **UI/copy/layout** and the real missing ingredient is simply **repo context FILE blocks** (and sometimes a UI spec).
+
+Below is a **task-aware gating patch** that fixes this permanently by:
+
+* Classifying the task (`ui_change` vs `bug_fix` vs `unknown`)
+* Requesting **UI spec** for UI tasks (no DevTools required)
+* Requesting **Network/Console evidence** only for bug tasks
+* Always explaining the true blocker: **missing repo FILE blocks** (fetch via connector)
+
+---
+
+## Patch drop — task-aware BLOCKED gating (DreamTeamHub repo)
+
+**Repo to paste into:** ✅ **DreamTeamHub**
+**File:** `server/routes/workItemActions/generatePatchDrop.ts`
+
+FILE: server/routes/workItemActions/generatePatchDrop.ts
+
+```ts
 import type { Request, Response } from "express";
 import { runSkill } from "../../ai/runSkill";
 import { PatchDropSchema } from "../../ai/schemas/patchDrop";
@@ -19,6 +38,7 @@ function extractApiHints(text: string): string[] {
 
 function extractFilePathHints(text: string): string[] {
   const t = text || "";
+  // Common repo path patterns we often see in recommendations/evidence packs
   const matches =
     t.match(
       /(?:^|\s)(?:client|server|shared|packages|src|apps|lib|routes|components)\/[a-zA-Z0-9/_\-.]+\.(?:ts|tsx|js|jsx|json|md|yml|yaml|css|scss|html)(?:\s|$)/gm
@@ -35,6 +55,7 @@ type TaskType = "ui_change" | "bug_fix" | "unknown";
 function classifyTaskType(text: string): TaskType {
   const t = (text || "").toLowerCase();
 
+  // Bug/runtime signals (priority)
   const bugSignals = [
     "error",
     "exception",
@@ -59,6 +80,7 @@ function classifyTaskType(text: string): TaskType {
     "status code",
   ];
 
+  // UI/copy/layout signals
   const uiSignals = [
     "banner",
     "copy",
@@ -95,6 +117,7 @@ function classifyTaskType(text: string): TaskType {
 
 function hasUiSpec(text: string): boolean {
   const t = (text || "").toLowerCase();
+  // We treat any structured “spec-like” content as sufficient for UI tasks.
   const specMarkers = [
     "banner goal",
     "location:",
@@ -140,7 +163,7 @@ function buildEvidenceRequest(params: {
     const needsSpec = !hasUiSpec(params.lockedRecommendation);
 
     evidenceRequest =
-      `### What's missing (UI task)\n` +
+      `### What’s missing (UI task)\n` +
       `This appears to be a UI/copy/layout change. DevTools Network evidence is NOT required.\n\n` +
       (needsSpec
         ? `Please paste a UI spec (any structured description is fine):\n` +
@@ -156,11 +179,12 @@ function buildEvidenceRequest(params: {
     suggestedFileFetchPaths = filePathHints.length
       ? filePathHints
       : [
+          // Conservative defaults for UI work (safe guesses)
           "client/src/pages/admin.tsx",
         ];
   } else if (params.taskType === "bug_fix") {
     evidenceRequest =
-      `### What's missing (Bug/runtime task)\n` +
+      `### What’s missing (Bug/runtime task)\n` +
       `This appears to be a runtime/bug fix. Please paste ONE failing request + console evidence.\n\n` +
       `Please paste ONE failing Network request from DevTools → Network (Fetch/XHR):\n` +
       `- URL\n- Method\n- Status\n- Request payload\n- Response body\n\n` +
@@ -171,14 +195,16 @@ function buildEvidenceRequest(params: {
     suggestedFileFetchPaths = filePathHints.length
       ? filePathHints
       : [
+          // Bug-oriented defaults
           "client/src/pages/admin.tsx",
           "server/routes.ts",
         ];
   } else {
+    // unknown: be conservative, request UI spec + bug evidence only if relevant, but don’t force devtools.
     const needsSpec = !hasUiSpec(params.lockedRecommendation);
 
     evidenceRequest =
-      `### What's missing\n` +
+      `### What’s missing\n` +
       `Task type is unclear. Start by ensuring we have repo FILE blocks (context) for the relevant code.\n\n` +
       (needsSpec
         ? `If this is a UI/copy/layout change, paste a short UI spec:\n` +
@@ -190,6 +216,7 @@ function buildEvidenceRequest(params: {
     suggestedFileFetchPaths = filePathHints.length ? filePathHints : [];
   }
 
+  // De-dupe suggestions
   suggestedFileFetchPaths = Array.from(new Set(suggestedFileFetchPaths)).slice(0, 12);
 
   return { evidenceRequest, suggestedFileFetchPaths };
@@ -242,6 +269,7 @@ export async function postGeneratePatchDrop(req: Request, res: Response) {
 
     const repo = repoHint || "GigsterGarage";
 
+    // Extract text from uploaded evidence files (HAR, JSON, TXT, LOG, etc.)
     let extractedFileText = "";
     try {
       const numericWorkItemId = parseInt(workItemId, 10);
@@ -252,15 +280,18 @@ export async function postGeneratePatchDrop(req: Request, res: Response) {
       console.warn("[generatePatchDrop] Evidence extraction warning:", err?.message);
     }
 
+    // Build combined evidence block
     const evidenceBlock = buildEvidencePromptBlock({
       evidenceNotes: evidenceNotes || "",
       extractedFileText,
     });
 
+    // Augment recommendation with evidence
     const augmentedRecommendation = evidenceBlock
       ? `${lockedRecommendation}\n\n${evidenceBlock}`
       : lockedRecommendation;
 
+    // ✅ PRE-FLIGHT GATE: If no FILE blocks, do NOT call the model. Return BLOCKED (task-aware).
     if (!hasAnyFileBlocks(augmentedRecommendation)) {
       return res.json(blockedDrop({ repo, lockedRecommendation: augmentedRecommendation }));
     }
@@ -327,3 +358,35 @@ export async function postGeneratePatchDrop(req: Request, res: Response) {
     });
   }
 }
+```
+
+END_FILE
+
+---
+
+## What this fixes immediately
+
+* UI tasks (banner/copy/layout) will no longer demand DevTools Network/Console evidence.
+* Blocked messaging becomes accurate: **Missing Repo Context FILE blocks** (and optionally UI spec if missing).
+* Bug tasks still request DevTools evidence (until we ship Track 2 diagnostics pull, which will replace that need entirely).
+
+---
+
+## Ship commands (DreamTeamHub)
+
+```bash
+git add server/routes/workItemActions/generatePatchDrop.ts
+git commit -m "DTH: task-aware BLOCKED gating for patch drops (UI vs bug)"
+git push origin main
+```
+
+---
+
+## Next after this
+
+If you want the “never touch DevTools” endgame, we’ll implement **Track 2**:
+
+* GigsterGarage collects diagnostics (console + failed fetch) automatically
+* DTH pulls `/api/connectors/gigsterGarage/diagnostics` and appends to `evidenceNotes` automatically when blocked
+
+But the patch above solves the core pain point you called out: **stop asking for irrelevant evidence** and stop wasting cycles.
