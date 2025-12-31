@@ -699,6 +699,19 @@ export default function WorkItemDetail() {
                 </div>
 
                 <div className="flex gap-2 flex-shrink-0 flex-wrap justify-end">
+                  {Array.isArray(lastDropResult.suggestedFileFetchPaths) && lastDropResult.suggestedFileFetchPaths.length > 0 && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="border-amber-400/40 text-amber-700 dark:text-amber-100 hover:bg-amber-400/10"
+                      onClick={() => fetchAndAttachRepoContext.mutate(lastDropResult.suggestedFileFetchPaths!)}
+                      disabled={fetchAndAttachRepoContext.isPending}
+                      data-testid="button-fetch-attach-context"
+                    >
+                      <Download className="mr-2 h-3 w-3" />
+                      {fetchAndAttachRepoContext.isPending ? "Fetching…" : "Fetch + Attach Context"}
+                    </Button>
+                  )}
                   {lastDropResult.evidenceRequest?.includes("DevTools") && (
                     <Button
                       size="sm"
