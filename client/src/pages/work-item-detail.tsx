@@ -89,6 +89,12 @@ function safeJsonParse(s: string): any {
   try { return JSON.parse(s); } catch { return null; }
 }
 
+function extractBlockedTitle(dropText?: string): string {
+  if (!dropText) return "BLOCKED";
+  const m = dropText.match(/##\s*(BLOCKED\s*[—-]\s*[^\n]+)\s*/i);
+  return m?.[1]?.trim() || "BLOCKED";
+}
+
 function extractStrategyProvenance(workItem: any): string | null {
   if (!workItem) return null;
 
@@ -603,9 +609,11 @@ export default function WorkItemDetail() {
             <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 space-y-3" data-testid="blocked-evidence-banner">
               <div className="flex items-start justify-between gap-3">
                 <div>
-                  <div className="font-medium text-amber-600 dark:text-amber-200">BLOCKED — Missing Repo Context</div>
+                  <div className="font-medium text-amber-600 dark:text-amber-200">
+                    {extractBlockedTitle(currentDropText)}
+                  </div>
                   <div className="text-sm text-amber-700 dark:text-amber-100/90">
-                    The system can't generate a safe patch drop yet. Fetch the suggested files via the connector, or pull diagnostics if this is a bug fix.
+                    {lastDropResult.evidenceRequest || "Missing repo context FILE blocks. Fetch relevant files via connector, then retry."}
                   </div>
                 </div>
 
