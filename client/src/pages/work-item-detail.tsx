@@ -17,7 +17,7 @@ import { LifestyleHeroPreview } from "@/components/workItems/LifestyleHeroPrevie
 import NextActionsPanel from "@/components/workItems/NextActionsPanel";
 import { getTargetContext } from "@/lib/castReceipt";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, Calendar, User, Target, Route, Compass, Users, Lightbulb, Wand2, Check, FileText, Copy, Upload, ChevronDown } from "lucide-react";
+import { ArrowLeft, Calendar, User, Target, Route, Compass, Users, Lightbulb, Wand2, Check, FileText, Copy, Upload, ChevronDown, Download } from "lucide-react";
 import { Link } from "wouter";
 import { format } from "date-fns";
 import type { WorkItem } from "@shared/schema";
@@ -228,6 +228,7 @@ export default function WorkItemDetail() {
   } | null>(null);
   const [additionalEvidence, setAdditionalEvidence] = useState("");
   const [showEvidenceInput, setShowEvidenceInput] = useState(false);
+  const [pullingDiagnostics, setPullingDiagnostics] = useState(false);
 
   const genDrop = useMutation({
     mutationFn: async () => {
@@ -319,6 +320,45 @@ export default function WorkItemDetail() {
       toast({ title: "Copied!", description: "Drop text copied to clipboard." });
     }
   };
+
+  async function pullGgDiagnosticsAndAttach() {
+    if (!workItemId) return;
+    setPullingDiagnostics(true);
+    try {
+      const r = await fetch("/api/connectors/gigsterGarage/diagnostics", { credentials: "include" });
+      const j = await r.json();
+
+      if (!r.ok || j.ok === false) {
+        throw new Error(j.error || `HTTP ${r.status}`);
+      }
+
+      const md =
+        "## GigsterGarage Diagnostics (auto-pulled)\n" +
+        `Pulled at: ${new Date().toISOString()}\n\n` +
+        "```json\n" +
+        JSON.stringify(j, null, 2).slice(0, 120000) +
+        "\n```\n";
+
+      const a = await fetch(`/api/work-items/${workItemId}/actions/appendEvidenceNotes`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ evidenceNotes: md }),
+      });
+
+      if (!a.ok) {
+        const t = await a.text();
+        throw new Error(`Attach failed (${a.status}): ${t}`);
+      }
+
+      toast({ title: "Diagnostics attached", description: "Evidence notes updated from GigsterGarage diagnostics." });
+      await queryClient.invalidateQueries({ queryKey: ["/api/work-items", workItemId, "stage"] });
+    } catch (e: any) {
+      toast({ title: "Diagnostics pull failed", description: e?.message || "Unknown error", variant: "destructive" });
+    } finally {
+      setPullingDiagnostics(false);
+    }
+  }
 
   if (isLoading) {
     return (
@@ -563,13 +603,24 @@ export default function WorkItemDetail() {
             <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 space-y-3" data-testid="blocked-evidence-banner">
               <div className="flex items-start justify-between gap-3">
                 <div>
-                  <div className="font-medium text-amber-600 dark:text-amber-200">BLOCKED — Missing Evidence</div>
+                  <div className="font-medium text-amber-600 dark:text-amber-200">BLOCKED — Missing Repo Context</div>
                   <div className="text-sm text-amber-700 dark:text-amber-100/90">
-                    The system can't generate a safe patch drop yet. Paste the requested evidence below, upload screenshots, and fetch the suggested files.
+                    The system can't generate a safe patch drop yet. Fetch the suggested files via the connector, or pull diagnostics if this is a bug fix.
                   </div>
                 </div>
 
-                <div className="flex gap-2 flex-shrink-0">
+                <div className="flex gap-2 flex-shrink-0 flex-wrap justify-end">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="border-amber-400/40 text-amber-700 dark:text-amber-100 hover:bg-amber-400/10"
+                    onClick={() => pullGgDiagnosticsAndAttach()}
+                    disabled={pullingDiagnostics}
+                    data-testid="button-pull-diagnostics"
+                  >
+                    <Download className="mr-2 h-3 w-3" />
+                    {pullingDiagnostics ? "Pulling..." : "Pull Diagnostics"}
+                  </Button>
                   {lastDropResult.evidenceRequest && (
                     <Button
                       size="sm"
