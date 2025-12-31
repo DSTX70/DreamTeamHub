@@ -1,0 +1,58 @@
+Yes — to fix this permanently (Track 1: task-aware gating), I need to see **three files**. Paste them (full file or the relevant sections is fine):
+
+### 1) `server/routes/workItemActions/generatePatchDrop.ts`
+
+I need the **preflight gate** logic that decides “BLOCKED — Missing Evidence” and what evidence it demands.
+
+### 2) `server/services/evidenceExtractor.ts`
+
+This is likely where the system decides what counts as evidence. We’ll make it **category-aware** and stop demanding DevTools evidence for non-bug tasks.
+
+### 3) `server/ai/skills/generatePatchDrop.json`
+
+This is the model prompt/spec for Pilot F. We’ll adjust it so it:
+
+* treats UI/content work as satisfied by **spec + file context**
+* only asks for network/console evidence when the task is explicitly a bug/regression
+
+---
+
+## What I’m going to change (so you know the target)
+
+### A) Replace “one-size-fits-all” evidence requirement with a classifier
+
+In `evidenceExtractor.ts`, classify the work item intent into one of:
+
+* `ui_copy_or_layout` (banner/spec tasks)
+* `bug_fix_runtime` (network/console errors)
+* `data_or_backend` (API/DB)
+* `unknown` (fallback)
+
+### B) Evidence requirements per category
+
+* **ui_copy_or_layout**: require **spec evidence** (text/location/behavior) OR a “UI Spec” section in `evidenceNotes`. ✅ No DevTools.
+* **bug_fix_runtime**: require at least one of:
+
+  * diagnostics dump (future Track 2)
+  * failing request evidence
+  * stack trace / console error
+
+### C) Update the BLOCKED banner text
+
+So it says the *right* missing evidence:
+
+* “Missing UI spec” vs “Missing failing network request”
+
+### D) Update Pilot F prompt (`generatePatchDrop.json`)
+
+So it stops requesting irrelevant evidence by default.
+
+---
+
+## Paste format
+
+Just paste each file content in order. If they’re long, paste:
+
+* the top imports + functions + the main logic blocks (especially anything that sets `BLOCKED`).
+
+Once I have those, I’ll return a **single cohesive patch drop** (DreamTeamHub repo) that implements task-aware gating and ends the “manual devtools evidence” requirement for non-bug changes.
