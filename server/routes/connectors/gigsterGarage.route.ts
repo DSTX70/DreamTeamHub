@@ -55,7 +55,7 @@ function parsePaths(body: any): ParsedPathsResult {
 
   if (Array.isArray(body.paths)) {
     return {
-      paths: body.paths.map(String).map((s) => s.trim()).filter(Boolean),
+      paths: body.paths.map(String).map((s: string) => s.trim()).filter(Boolean),
       source: "paths[]",
     };
   }
@@ -326,6 +326,42 @@ router.get("/health", async (_req: Request, res: Response) => {
       ok: false,
       error: err?.message || "Health check failed.",
     });
+  }
+});
+
+/**
+ * GET /api/connectors/gigsterGarage/diagnostics
+ * Proxies to GigsterGarage /api/dth/diagnostics for Track 2 automatic evidence pull.
+ * Returns console errors + failed network requests collected by GG's diagnostics system.
+ */
+router.get("/diagnostics", async (_req: Request, res: Response) => {
+  try {
+    const ggBase = baseUrl(envOrThrow("GIGSTER_GARAGE_BASE_URL"));
+    const token =
+      process.env.DTH_READONLY_TOKEN ||
+      process.env.GIGSTER_GARAGE_DTH_READONLY_TOKEN ||
+      process.env.GIGSTER_GARAGE_READONLY_TOKEN;
+
+    if (!token) {
+      return res.status(500).json({ ok: false, error: "Missing DTH readonly token env var" });
+    }
+
+    const url = `${ggBase}/api/dth/diagnostics`;
+    const r = await fetch(url, {
+      method: "GET",
+      headers: { "x-dth-token": token },
+    });
+
+    const text = await r.text();
+    if (!r.ok) return res.status(r.status).json({ ok: false, error: text });
+
+    try {
+      return res.json(JSON.parse(text));
+    } catch {
+      return res.json({ ok: true, raw: text });
+    }
+  } catch (e: any) {
+    return res.status(500).json({ ok: false, error: e?.message || "diagnostics proxy failed" });
   }
 });
 
