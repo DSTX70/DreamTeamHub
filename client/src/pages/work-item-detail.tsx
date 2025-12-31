@@ -284,8 +284,10 @@ export default function WorkItemDetail() {
 
       if (blocked) {
         toast({
-          title: "Blocked: Missing Evidence",
-          description: "Paste the requested Network/Console evidence, then re-run Generate Recommendation → Generate Drop.",
+          title: blockedTitleFromDropText((data as any).dropText),
+          description:
+            data.evidenceRequest ||
+            "Missing repo context FILE blocks. Fetch relevant files via connector, then retry.",
           variant: "destructive",
         });
         return;
