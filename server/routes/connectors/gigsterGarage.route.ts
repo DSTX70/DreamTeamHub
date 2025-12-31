@@ -337,13 +337,17 @@ router.get("/health", async (_req: Request, res: Response) => {
 router.get("/diagnostics", async (_req: Request, res: Response) => {
   try {
     const ggBase = baseUrl(envOrThrow("GIGSTER_GARAGE_BASE_URL"));
+    // Prefer GIGSTER_GARAGE_DTH_READONLY_TOKEN (recommended) with fallbacks
     const token =
-      process.env.DTH_READONLY_TOKEN ||
       process.env.GIGSTER_GARAGE_DTH_READONLY_TOKEN ||
+      process.env.DTH_READONLY_TOKEN ||
       process.env.GIGSTER_GARAGE_READONLY_TOKEN;
 
     if (!token) {
-      return res.status(500).json({ ok: false, error: "Missing DTH readonly token env var" });
+      return res.status(500).json({
+        ok: false,
+        error: "Missing env var: GIGSTER_GARAGE_DTH_READONLY_TOKEN (or DTH_READONLY_TOKEN fallback)",
+      });
     }
 
     const url = `${ggBase}/api/dth/diagnostics`;

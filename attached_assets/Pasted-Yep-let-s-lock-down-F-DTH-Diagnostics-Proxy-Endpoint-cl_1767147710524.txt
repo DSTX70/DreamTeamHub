@@ -1,0 +1,142 @@
+Yep — let’s lock down **F) DTH Diagnostics Proxy Endpoint** cleanly.
+
+Below is the exact verification checklist + the “known-good” implementation pattern (including the env var names you should use), and how to test it without leaking tokens.
+
+---
+
+## 1) Verify the proxy route exists and is mounted
+
+### A) Confirm the route handler exists
+
+In **DreamTeamHub** repo, open:
+
+`server/routes/connectors/gigsterGarage.route.ts`
+
+You should see something like:
+
+* `router.get("/meta", ...)`
+* `router.get("/health", ...)`
+* ✅ **`router.get("/diagnostics", ...)`**
+
+### B) Confirm it’s mounted under the correct prefix
+
+In `server/routes.ts` (or wherever you mount connector routers), confirm you have:
+
+* `app.use("/api/connectors/gigsterGarage", gigsterGarageRouter)`
+  (or equivalent)
+
+**So the final URL is:**
+`GET /api/connectors/gigsterGarage/diagnostics`
+
+---
+
+## 2) Confirm it calls the correct GigsterGarage endpoint
+
+Inside that DTH route, it should build:
+
+* `ggBase = baseUrl(envOrThrow("GIGSTER_GARAGE_BASE_URL"))`
+* `url = ${ggBase}/api/dth/diagnostics`
+
+✅ That must match what you confirmed in GigsterGarage:
+
+* `GET /api/dth/diagnostics` lives in `server/routes_dth_readonly.ts`
+
+---
+
+## 3) Confirm it sends `x-dth-token` and uses the correct env var
+
+### What GG expects
+
+GigsterGarage validates:
+
+* Header: `x-dth-token`
+* Secret: env var **`DTH_READONLY_TOKEN`** (in GG)
+
+### What DTH should use (recommended)
+
+In **DreamTeamHub**, do **not** reuse `DTH_READONLY_TOKEN` unless you really mean “DTH’s own token.”
+Instead, store GG’s expected token in:
+
+✅ **`GIGSTER_GARAGE_DTH_READONLY_TOKEN`** (in DreamTeamHub)
+
+and send that in the proxy call:
+
+* `headers: { "x-dth-token": process.env.GIGSTER_GARAGE_DTH_READONLY_TOKEN }`
+
+**Rule:** The value of `GIGSTER_GARAGE_DTH_READONLY_TOKEN` in DTH must equal the value of `DTH_READONLY_TOKEN` in GG.
+
+---
+
+## 4) Known-good DTH proxy implementation (copy/paste check)
+
+This is what your `/diagnostics` handler should effectively do:
+
+```ts
+router.get("/diagnostics", async (req, res) => {
+  const ggBase = baseUrl(envOrThrow("GIGSTER_GARAGE_BASE_URL"));
+  const token = envOrThrow("GIGSTER_GARAGE_DTH_READONLY_TOKEN");
+
+  const r = await fetch(`${ggBase}/api/dth/diagnostics`, {
+    method: "GET",
+    headers: { "x-dth-token": token },
+  });
+
+  const text = await r.text();
+  if (!r.ok) return res.status(r.status).json({ ok: false, error: text });
+
+  try {
+    return res.json(JSON.parse(text));
+  } catch {
+    return res.json({ ok: true, raw: text });
+  }
+});
+```
+
+If your current code is using a different env var name (like `DTH_READONLY_TOKEN`), it’ll work as long as it’s set correctly — but I recommend standardizing on `GIGSTER_GARAGE_DTH_READONLY_TOKEN` to avoid confusion later when you add more connectors.
+
+---
+
+## 5) How to test it safely (no token leaks)
+
+### Test A: direct GG endpoint (only in your terminal, don’t paste output with token)
+
+In your terminal:
+
+```bash
+curl -sS -H "x-dth-token: $DTH_READONLY_TOKEN" \
+  https://<GG_PUBLISHED>.replit.app/api/dth/diagnostics | head
+```
+
+Expected: JSON with `{ ok: true, events: [...] }`
+
+### Test B: DTH proxy endpoint (browser, while logged into DTH)
+
+Open in your browser (logged into DreamTeamHub):
+
+`https://<DTH_PUBLISHED>.replit.app/api/connectors/gigsterGarage/diagnostics`
+
+Expected: same JSON.
+
+**If this returns 401/403:** token mismatch or missing env var in DTH.
+**If 500:** missing env var or base URL misconfigured.
+
+---
+
+## 6) One-time env setup checklist
+
+### In **GigsterGarage** env:
+
+* `DTH_READONLY_TOKEN = <some secret>`
+* (already) `DTH_READONLY_TOKEN` is used by `/api/dth/*`
+
+### In **DreamTeamHub** env:
+
+* `GIGSTER_GARAGE_BASE_URL = https://...replit.app`
+* `GIGSTER_GARAGE_DTH_READONLY_TOKEN = <same secret as GG DTH_READONLY_TOKEN>`
+
+---
+
+### If you want, paste just this (no secrets)
+
+From DTH route file, paste the `/diagnostics` handler (10–25 lines).
+I’ll confirm it’s correct and tell you exactly which env var names it’s using so we can standardize before we move on to the Work Item “Pull GG Diagnostics” flow test.
