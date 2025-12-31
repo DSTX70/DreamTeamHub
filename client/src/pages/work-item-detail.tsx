@@ -610,17 +610,19 @@ export default function WorkItemDetail() {
                 </div>
 
                 <div className="flex gap-2 flex-shrink-0 flex-wrap justify-end">
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="border-amber-400/40 text-amber-700 dark:text-amber-100 hover:bg-amber-400/10"
-                    onClick={() => pullGgDiagnosticsAndAttach()}
-                    disabled={pullingDiagnostics}
-                    data-testid="button-pull-diagnostics"
-                  >
-                    <Download className="mr-2 h-3 w-3" />
-                    {pullingDiagnostics ? "Pulling..." : "Pull Diagnostics"}
-                  </Button>
+                  {lastDropResult.evidenceRequest?.includes("DevTools") && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="border-amber-400/40 text-amber-700 dark:text-amber-100 hover:bg-amber-400/10"
+                      onClick={() => pullGgDiagnosticsAndAttach()}
+                      disabled={pullingDiagnostics}
+                      data-testid="button-pull-diagnostics"
+                    >
+                      <Download className="mr-2 h-3 w-3" />
+                      {pullingDiagnostics ? "Pulling..." : "Pull GG Diagnostics"}
+                    </Button>
+                  )}
                   {lastDropResult.evidenceRequest && (
                     <Button
                       size="sm"
