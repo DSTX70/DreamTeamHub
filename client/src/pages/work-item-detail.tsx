@@ -89,9 +89,8 @@ function safeJsonParse(s: string): any {
   try { return JSON.parse(s); } catch { return null; }
 }
 
-function extractBlockedTitle(dropText?: string): string {
-  if (!dropText) return "BLOCKED";
-  const m = dropText.match(/##\s*(BLOCKED\s*[—-]\s*[^\n]+)\s*/i);
+function blockedTitleFromDropText(dropText?: string) {
+  const m = (dropText || "").match(/##\s*(BLOCKED\s*[—-]\s*[^\n]+)/i);
   return m?.[1]?.trim() || "BLOCKED";
 }
 
@@ -610,7 +609,7 @@ export default function WorkItemDetail() {
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <div className="font-medium text-amber-600 dark:text-amber-200">
-                    {extractBlockedTitle(currentDropText)}
+                    {blockedTitleFromDropText(currentDropText)}
                   </div>
                   <div className="text-sm text-amber-700 dark:text-amber-100/90">
                     {lastDropResult.evidenceRequest || "Missing repo context FILE blocks. Fetch relevant files via connector, then retry."}
