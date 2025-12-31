@@ -349,6 +349,55 @@ export default function WorkItemDetail() {
     },
   });
 
+  const fetchAndAttachRepoContext = useMutation({
+    mutationFn: async (paths: string[]) => {
+      if (!paths?.length) throw new Error("No suggested file paths to fetch.");
+
+      // 1) Fetch files via connector
+      const r = await fetch("/api/connectors/gigsterGarage/files", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ paths, pathsText: paths.join("\n") }),
+      });
+
+      const j = await r.json().catch(() => null);
+      if (!r.ok) throw new Error(j?.error || `Connector fetch failed (${r.status})`);
+
+      const files = normalizeFilesResponse(j);
+      const okCount = files.filter((f) => f.ok && (f.content ?? "").trim().length > 0).length;
+      if (okCount === 0) throw new Error("Fetched zero usable files (paths may be wrong).");
+
+      // 2) Build FILE-block evidence pack
+      const evidencePack = buildRepoContextEvidencePack("GigsterGarage", files);
+
+      // 3) Append to work item evidenceNotes server-side
+      const a = await fetch(`/api/work-items/${workItemId}/actions/appendEvidenceNotes`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ evidenceNotes: evidencePack }),
+      });
+
+      if (!a.ok) {
+        const t = await a.text();
+        throw new Error(`Attach failed (${a.status}): ${t}`);
+      }
+
+      return { okCount, total: files.length };
+    },
+    onSuccess: async (r) => {
+      toast({
+        title: "Repo context attached",
+        description: `Attached ${r.okCount} file(s). Re-run Generate Drop.`,
+      });
+      await queryClient.invalidateQueries({ queryKey: ["/api/work-items", workItemId, "stage"] });
+    },
+    onError: (e: any) => {
+      toast({ title: "Fetch+attach failed", description: e?.message || "Unknown error", variant: "destructive" });
+    },
+  });
+
   const currentDropText = genDrop.data?.dropText || stage?.drop?.text;
   const currentDropRepo = genDrop.data?.repo || stage?.drop?.targetRepo || "GigsterGarage";
 
