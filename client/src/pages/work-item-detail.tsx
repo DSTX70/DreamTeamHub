@@ -256,6 +256,7 @@ export default function WorkItemDetail() {
   const [dropValidationErrors, setDropValidationErrors] = useState<string[] | null>(null);
   const [lastDropResult, setLastDropResult] = useState<{
     blocked: boolean;
+    dropText?: string;
     evidenceRequest?: string;
     suggestedFileFetchPaths?: string[];
     noPatchRequired: boolean;
@@ -304,6 +305,7 @@ export default function WorkItemDetail() {
 
       setLastDropResult({
         blocked,
+        dropText: (data as any).dropText,
         evidenceRequest: data.evidenceRequest,
         suggestedFileFetchPaths: data.suggestedFileFetchPaths,
         noPatchRequired: noPatch,
@@ -691,7 +693,7 @@ export default function WorkItemDetail() {
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <div className="font-medium text-amber-600 dark:text-amber-200">
-                    {blockedTitleFromDropText(currentDropText)}
+                    {blockedTitleFromDropText(lastDropResult.dropText)}
                   </div>
                   <div className="text-sm text-amber-700 dark:text-amber-100/90">
                     {lastDropResult.evidenceRequest || "Missing repo context FILE blocks. Fetch relevant files via connector, then retry."}
